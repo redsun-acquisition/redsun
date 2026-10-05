@@ -168,6 +168,10 @@ class LightPresenter(Loggable):
         self._writing.add(device)
         try:
             while (wanted := self._wanted.pop(device, None)) is not None:
+                # a plan may have taken the light while this value waited
+                if device in self._held:
+                    self._refuse(device, "a plan holds it")
+                    break
                 try:
                     await asyncio.wait_for(light.intensity.set(wanted), self.timeout)
                 except Exception as error:

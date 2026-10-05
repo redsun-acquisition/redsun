@@ -7,7 +7,7 @@ import math
 from typing import TYPE_CHECKING
 
 import pytest
-from ophyd_async.core import SignalRW, StandardReadable, soft_signal_rw
+from ophyd_async.core import SignalRW, StandardReadable, set_mock_attr, soft_signal_rw
 
 from redsun.presenter import DescribesLights, LightPresenter
 from tests.sdk.mocks import BoundedBackend, DimmerLight, SoftLight
@@ -194,3 +194,38 @@ async def test_a_light_that_does_not_answer_is_left_out(
     assert set(presenter.lights) == {"led"}
     assert "Leaving out stuck" in caplog.text
     presenter.shutdown()
+
+
+async def test_a_queued_intensity_is_dropped_once_a_plan_holds_the_light() -> None:
+    """Write nothing more to a light a plan takes while an intensity waits."""
+    light = SlowIntensity("laser")
+    await light.connect(mock=False)
+    presenter = LightPresenter("lights", devices={"laser": light})
+
+    first = asyncio.create_task(presenter.set_intensity("laser", 20.0))
+    await asyncio.sleep(0)
+    queued = asyncio.create_task(presenter.set_intensity("laser", 50.0))
+    await asyncio.sleep(0)
+    presenter.set_locked(frozenset({"laser"}))
+    light.backend.gate.set()
+    await asyncio.gather(first, queued)
+
+    assert light.backend.written == [20.0]
+    presenter.shutdown()
+
+
+async def test_a_write_that_fails_is_reported(presenter: LightPresenter) -> None:
+    """Report a write the light refuses on `sig_failed`."""
+    failures: list[tuple[str, str]] = []
+    presenter.sig_failed.connect(lambda *args: failures.append(args))
+    light = presenter.devices["laser"]
+
+    async def refuse(
+        value: bool, wait: bool = True, timeout: float | None = None
+    ) -> None:
+        raise RuntimeError("interlock open")
+
+    set_mock_attr(light.enabled, "set", refuse)
+    await presenter.set_enabled("laser", True)
+
+    assert failures == [("laser", "interlock open")]
