@@ -14,6 +14,16 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Acquisition
+
+::: redsun.presenter.AcquisitionPresenter
+    options:
+      show_root_heading: true
+
+::: redsun.presenter.DescribesPlans
+    options:
+      show_root_heading: true
+
 ## Lights
 
 ::: redsun.presenter.LightPresenter

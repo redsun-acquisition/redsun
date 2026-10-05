@@ -1,0 +1,291 @@
+"""Tests for the acquisition presenter."""
+
+from __future__ import annotations
+
+import threading
+from typing import TYPE_CHECKING, Any
+
+import bluesky.plan_stubs as bps
+import pytest
+from bluesky.utils import MsgGenerator
+from ophyd_async.core import AsyncReadable
+
+from redsun import HasActions
+from redsun.engine.actions import ActionManager
+from redsun.path_provider import SessionPathProvider
+from redsun.presenter import AcquisitionPresenter, DescribesPlans
+from tests.sdk.mocks import MockDetector
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Mapping
+    from pathlib import Path
+
+    from redsun import PlanEntry
+
+
+class RecordedActions(ActionManager):
+    """An action manager that records the requests it receives."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.requested: list[tuple[str, bool]] = []
+
+    def request(self, name: str, on: bool = True) -> None:
+        """Record the request."""
+        self.requested.append((name, on))
+
+
+class Plans:
+    """Offers plans that rest, fail, hold the engine and read a device."""
+
+    def __init__(self, name: str = "plans") -> None:
+        self.name = name
+        self.actions = RecordedActions()
+        self.running = threading.Event()
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        """Return the plans offered."""
+        return {
+            "rest": {"plan": self.rest},
+            "broken": {"plan": self.broken},
+            "hold": {"plan": self.hold},
+            "read": {"plan": self.read},
+        }
+
+    def rest(self) -> MsgGenerator[None]:
+        """End at once."""
+        yield from bps.null()
+
+    def broken(self) -> MsgGenerator[None]:
+        """Raise after one message."""
+        yield from bps.null()
+        raise ValueError("bad target")
+
+    def hold(self) -> MsgGenerator[None]:
+        """Keep the engine busy until stopped, saying when it has begun."""
+        self.running.set()
+        yield from bps.sleep(30)
+
+    def read(self, device: AsyncReadable) -> MsgGenerator[None]:
+        """Read one device."""
+        yield from bps.rd(device)
+
+
+class Thing:
+    """A type no plan widget can show."""
+
+
+class Unreadable:
+    """Offers a plan whose signature no widget can show."""
+
+    name = "unreadable"
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        """Return the plan offered."""
+        return {"odd": {"plan": self.odd}}
+
+    def odd(self, thing: Thing) -> MsgGenerator[None]:
+        """Take an argument of a type no widget shows."""
+        yield from bps.null()
+
+
+class RecordedPaths(SessionPathProvider):
+    """A path provider that records the plan names it is given."""
+
+    def __init__(self, base_dir: Path) -> None:
+        super().__init__(base_dir=base_dir, session="s")
+        self.names: list[str | None] = []
+
+    def set_plan(self, plan: str) -> None:
+        """Record *plan*."""
+        self.names.append(plan)
+        super().set_plan(plan)
+
+    def reset_plan(self) -> None:
+        """Record the reset."""
+        self.names.append(None)
+        super().reset_plan()
+
+
+@pytest.fixture
+def plans() -> Plans:
+    return Plans()
+
+
+@pytest.fixture
+def paths(tmp_path: Path) -> RecordedPaths:
+    return RecordedPaths(tmp_path)
+
+
+@pytest.fixture
+def presenter(
+    plans: Plans, paths: RecordedPaths, detector: MockDetector
+) -> Generator[AcquisitionPresenter, None, None]:
+    acquisition = AcquisitionPresenter("acquisition", devices={"det1": detector})
+    acquisition.setup({"plans": plans, "unreadable": Unreadable()}, {}, paths)
+    yield acquisition
+    acquisition.shutdown()
+
+
+def record(
+    presenter: AcquisitionPresenter,
+) -> tuple[list[tuple[Any, ...]], threading.Event]:
+    """Record every end signal of *presenter*, and return an event set on the first."""
+    seen: list[tuple[Any, ...]] = []
+    ended = threading.Event()
+
+    def note(kind: str) -> Any:
+        def receive(*args: Any) -> None:
+            seen.append((kind, *args))
+            if kind != "started":
+                ended.set()
+
+        return receive
+
+    presenter.sig_plan_started.connect(note("started"))
+    presenter.sig_plan_done.connect(note("done"))
+    presenter.sig_plan_failed.connect(note("failed"))
+    return seen, ended
+
+
+def test_a_plan_runs_to_its_end_and_names_its_files(
+    presenter: AcquisitionPresenter, paths: RecordedPaths
+) -> None:
+    """Report a plan started then done, with its files named after it meanwhile."""
+    seen, ended = record(presenter)
+
+    presenter.launch("rest", {})
+
+    assert ended.wait(10)
+    assert seen == [("started", "rest"), ("done", "rest")]
+    assert paths.names == ["rest", None]
+
+
+def test_a_plan_that_raises_is_reported_failed(
+    presenter: AcquisitionPresenter, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Report and log a plan that raises, with its message."""
+    seen, ended = record(presenter)
+
+    presenter.launch("broken", {})
+
+    assert ended.wait(10)
+    assert seen == [("started", "broken"), ("failed", "broken", "bad target")]
+    assert "'broken' failed" in caplog.text
+
+
+def test_values_naming_an_unknown_device_are_reported_and_not_run(
+    presenter: AcquisitionPresenter,
+) -> None:
+    """Fail a launch whose values name no device of the session, without starting it."""
+    seen, ended = record(presenter)
+
+    presenter.launch("read", {"device": "ghost"})
+
+    assert ended.wait(10)
+    assert [kind for kind, *_ in seen] == ["failed"]
+
+
+def test_a_launch_while_a_plan_runs_is_refused(
+    presenter: AcquisitionPresenter, plans: Plans, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Start nothing while another plan runs, and stop the first as done."""
+    seen, ended = record(presenter)
+
+    presenter.launch("hold", {})
+    presenter.launch("rest", {})
+    assert plans.running.wait(10)
+    presenter.stop()
+
+    assert ended.wait(10)
+    assert seen == [("started", "hold"), ("done", "hold")]
+    assert "not launched" in caplog.text
+
+
+def test_a_paused_plan_reports_nothing_until_it_is_stopped(
+    presenter: AcquisitionPresenter, plans: Plans
+) -> None:
+    """Report no end on a pause, and a single done once the paused plan is stopped."""
+    seen, ended = record(presenter)
+    presenter.launch("hold", {})
+    assert plans.running.wait(10)
+
+    presenter.pause()
+    paused = ended.wait(1)
+    presenter.stop()
+
+    assert ended.wait(10)
+    assert paused is False
+    assert seen == [("started", "hold"), ("done", "hold")]
+
+
+def test_a_plan_no_widget_can_show_is_left_out(
+    presenter: AcquisitionPresenter, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Offer every readable plan and leave out the one no widget can show."""
+    assert isinstance(presenter, DescribesPlans)
+    assert set(presenter.plans) == {"rest", "broken", "hold", "read"}
+    assert any("'odd'" in r.getMessage() for r in caplog.get_records("setup"))
+
+
+def test_actions_are_relayed_and_requests_reach_the_running_plan(
+    presenter: AcquisitionPresenter, plans: Plans
+) -> None:
+    """Relay a provider's action states, and send a request to the running plan's provider."""
+    changes: list[tuple[str, object]] = []
+    presenter.sig_action_changed.connect(lambda *args: changes.append(args))
+    _, ended = record(presenter)
+
+    plans.actions.sig_changed.emit("go", "offered")
+    presenter.launch("hold", {})
+    assert plans.running.wait(10)
+    presenter.request_action("go", True)
+    presenter.stop()
+
+    assert ended.wait(10)
+    assert isinstance(plans, HasActions)
+    assert changes == [("go", "offered")]
+    assert plans.actions.requested == [("go", True)]
+
+
+def test_an_action_with_no_plan_running_is_refused(
+    presenter: AcquisitionPresenter, plans: Plans, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Refuse an action request while no plan runs."""
+    presenter.request_action("go", True)
+
+    assert plans.actions.requested == []
+    assert "refused" in caplog.text
+
+
+def test_a_refused_base_directory_is_logged(
+    presenter: AcquisitionPresenter,
+    paths: RecordedPaths,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log a base directory the path provider refuses, and report a new one."""
+    changes: list[object] = []
+    presenter.sig_base_dir_changed.connect(changes.append)
+
+    presenter.set_base_dir(tmp_path / "data")
+    paths.lock_base_dir("a plan is writing")
+    presenter.set_base_dir(tmp_path / "elsewhere")
+
+    assert changes == [tmp_path / "data"]
+    assert "base directory" in caplog.text
+
+
+def test_shutdown_aborts_a_running_plan_without_a_failure(
+    plans: Plans, paths: RecordedPaths
+) -> None:
+    """Abort a running plan at shutdown, reporting no failure."""
+    presenter = AcquisitionPresenter("acquisition", devices={})
+    presenter.setup({"plans": plans}, {}, paths)
+    seen, _ = record(presenter)
+    presenter.launch("hold", {})
+    assert plans.running.wait(10)
+
+    presenter.shutdown()
+
+    assert [kind for kind, *_ in seen] == ["started"]

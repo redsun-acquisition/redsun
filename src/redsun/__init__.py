@@ -45,6 +45,7 @@ from redsun.ports import (
 from redsun.registry import (
     CallbackType,
     DeviceMapping,
+    HasActions,
     HasPlans,
     PlanEntry,
     SessionConfig,
@@ -116,6 +117,7 @@ __all__ = [
     "DevicesOf",
     "FromConfig",
     "Frontend",
+    "HasActions",
     "HasAsyncShutdown",
     "HasPlans",
     "HasSetup",

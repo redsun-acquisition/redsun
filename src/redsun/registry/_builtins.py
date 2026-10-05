@@ -19,9 +19,12 @@ from ophyd_async.core import Device
 if TYPE_CHECKING:
     from bluesky.utils import MsgGenerator
 
+    from redsun.engine.actions import ActionManager
+
 __all__ = [
     "CallbackType",
     "DeviceMapping",
+    "HasActions",
     "HasPlans",
     "PlanEntry",
     "SessionConfig",
@@ -74,6 +77,16 @@ class PlanEntry(TypedDict, total=False):
 
     extendable: bool
     """Whether a user may attach callbacks. `True` when absent."""
+
+
+@runtime_checkable
+class HasActions(Protocol):
+    """A component whose plans offer actions to take while they run."""
+
+    @property
+    def actions(self) -> ActionManager:
+        """The actions of the component's plans."""
+        ...
 
 
 @runtime_checkable

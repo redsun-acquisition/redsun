@@ -12,6 +12,7 @@ from __future__ import annotations
 from ._builtins import (
     CallbackType,
     DeviceMapping,
+    HasActions,
     HasPlans,
     PlanEntry,
     SessionConfig,
@@ -20,6 +21,7 @@ from ._builtins import (
 __all__ = [
     "CallbackType",
     "DeviceMapping",
+    "HasActions",
     "HasPlans",
     "PlanEntry",
     "SessionConfig",

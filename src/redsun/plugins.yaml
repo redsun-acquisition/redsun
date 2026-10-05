@@ -1,4 +1,5 @@
 presenters:
+  acquisition: "redsun.presenter:AcquisitionPresenter"
   lights: "redsun.presenter:LightPresenter"
   positioner: "redsun.presenter:PositionerPresenter"
 views:

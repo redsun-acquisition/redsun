@@ -25,3 +25,7 @@ icon: lucide/code
 ::: redsun.HasPlans
     options:
       show_root_heading: true
+
+::: redsun.HasActions
+    options:
+      show_root_heading: true
