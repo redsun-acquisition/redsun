@@ -97,10 +97,10 @@ def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
     session.acquisition_view.sig_launch.emit(
         "walk", {"motor": "motor", "steps": 3, "size": 1.0}, ()
     )
-    wait_for(lambda: bool(ended))
+    # the view hears of the end on the main thread, after the presenter reports it
+    wait_for(lambda: bool(ended) and chooser.isEnabled())
 
     assert ended == ["walk"]
-    assert chooser.isEnabled()
     assert run_coro(session.motor.position.get_value()) == 3.0
 
 
