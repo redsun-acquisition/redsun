@@ -24,7 +24,7 @@ LEFT = QtNamespace.DockWidgetArea.LeftDockWidgetArea
 RIGHT = QtNamespace.DockWidgetArea.RightDockWidgetArea
 
 
-class Charts(Panel):
+class Charts(Panel):  # type: ignore[misc]
     placement: Placement = Dock("right")
 
 

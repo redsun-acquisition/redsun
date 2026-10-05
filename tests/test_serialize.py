@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 
-class Stage(MockStage):
+class Stage(MockStage):  # type: ignore[misc]
     """Device writing back the axis its configuration signal holds."""
 
     def serialize(self) -> dict[str, str]:

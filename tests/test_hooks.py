@@ -80,7 +80,7 @@ class NotAHook:
     """Declares none of the methods any point calls."""
 
 
-class ClosingPair(MockBoth):
+class ClosingPair(MockBoth):  # type: ignore[misc]
     """Serves two points, and records its shutdown."""
 
     def __init__(self, closed: list[str]) -> None:
