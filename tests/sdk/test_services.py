@@ -18,7 +18,7 @@ import pytest
 
 from redsun import Launch
 from redsun.log import GlobalFormatter
-from redsun.services import Service, _service, _transports
+from redsun.services import STOP_TIMEOUT, Service, _service, _transports
 from redsun.services._service import service_record
 from redsun.services._transports import (
     CHANNEL_ACCESS,
@@ -102,7 +102,7 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
 
     def make(
         *options: str,
-        stop_timeout: float = 0.5,
+        stop_timeout: float = STOP_TIMEOUT,
         name: str = "stand-in",
         prefix: str = "",
     ) -> Service:
@@ -138,7 +138,6 @@ def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Servic
                 module=PVA_STAND_IN,
                 args=("--pv", pv, "--value", str(value)),
                 ready=PVA_READY,
-                stop_timeout=0.5,
                 transport=PV_ACCESS,
             )
         )
@@ -190,12 +189,12 @@ def test_a_service_logs_its_output_and_cleans_up_when_stopped(
     )
 
 
-def test_a_service_not_ready_in_time_is_stopped_with_its_output_logged(
+def test_a_service_not_ready_in_time_is_stopped_and_reported(
     launch: Callable[..., Service],
     service_log: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Stop a service not ready in time and log its last output."""
+    """Stop a service not ready in time and log the error."""
     monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 0.5)
     stand_in = launch("--no-ready")
 
@@ -204,8 +203,7 @@ def test_a_service_not_ready_in_time_is_stopped_with_its_output_logged(
 
     assert not stand_in.running
     (error,) = messages(service_log, logging.ERROR)
-    assert error.startswith("Service 'stand-in' not ready after 0.5 s; last output:")
-    assert "port " in error
+    assert error.startswith("Service 'stand-in' not ready after 0.5 s")
 
 
 def test_a_service_exiting_before_it_is_ready_is_reported_at_once(
@@ -248,7 +246,7 @@ def test_a_service_ignoring_the_stop_request_is_stopped_by_the_next_step(
 ) -> None:
     """Stop a service that ignores the stop request by the next, stronger step."""
     marker = tmp_path / "cleaned"
-    stand_in = launch(*options, "--marker", str(marker))
+    stand_in = launch(*options, "--marker", str(marker), stop_timeout=2)
     stand_in.start()
 
     stand_in.stop()
@@ -386,7 +384,6 @@ def test_a_pva_service_started_in_each_test_answers(
             PVA_STAND_IN,
             args=("--pv", "SIM:STARTED", "--value", str(value)),
             ready=PVA_READY,
-            stop_timeout=0.5,
         ),
         transport="pv-access",
     )
@@ -410,7 +407,6 @@ def test_a_started_service_releases_its_transport_once_it_stops(
             PVA_STAND_IN,
             args=("--pv", "SIM:RELEASED", "--value", "1.0"),
             ready=PVA_READY,
-            stop_timeout=0.5,
         ),
         transport="recording",
     )

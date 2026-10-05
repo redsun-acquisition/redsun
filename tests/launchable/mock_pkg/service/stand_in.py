@@ -45,33 +45,34 @@ def main() -> int:
     if not options.ignore_stdin:
         threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
 
-    print(f"port {os.environ.get('EPICS_CA_SERVER_PORT')}", flush=True)
-    print(
-        f"service {os.environ.get('REDSUN_SERVICE_NAME')} "
-        f"prefix {os.environ.get('REDSUN_SERVICE_PREFIX')}",
-        flush=True,
-    )
-    if options.touch is not None:
-        options.touch.touch()
-    while options.ready_when is not None and not options.ready_when.exists():
-        time.sleep(0.05)
-    # before the readiness line, not after: a launcher returns from start()
-    # once it reads that line, so a line printed after it may not have been
-    # read yet when the caller looks
-    if options.say is not None:
-        print(options.say, flush=True)
-    if not options.no_ready:
-        print(READY, flush=True)
-    if options.exit is not None and options.exit_when is None:
-        print("exiting on request", flush=True)
-        return int(options.exit)
     try:
+        print(f"port {os.environ.get('EPICS_CA_SERVER_PORT')}", flush=True)
+        print(
+            f"service {os.environ.get('REDSUN_SERVICE_NAME')} "
+            f"prefix {os.environ.get('REDSUN_SERVICE_PREFIX')}",
+            flush=True,
+        )
+        if options.touch is not None:
+            options.touch.touch()
+        while options.ready_when is not None and not options.ready_when.exists():
+            time.sleep(0.05)
+        # before the readiness line, not after: a launcher returns from start()
+        # once it reads that line, so a line printed after it may not have been
+        # read yet when the caller looks
+        if options.say is not None:
+            print(options.say, flush=True)
+        if not options.no_ready:
+            print(READY, flush=True)
+        if options.exit is not None and options.exit_when is None:
+            print("exiting on request", flush=True)
+            return int(options.exit)
         while True:
             if options.exit_when is not None and options.exit_when.exists():
                 print("exiting on request", flush=True)
                 return int(options.exit)
             time.sleep(0.05)
     except KeyboardInterrupt:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         # before printing: with the launcher gone, nothing reads the output
         if options.marker is not None:
             options.marker.write_text("cleaned up")
