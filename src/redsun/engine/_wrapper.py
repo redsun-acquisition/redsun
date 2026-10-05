@@ -238,6 +238,13 @@ class RunEngine(BlueskyRunEngine):
         """
         return self._run_in_thread(super().resume)
 
+    def cancel_pause(self) -> None:
+        """Withdraw a deferred pause that no checkpoint has reached yet."""
+        # on the engine's loop, so a checkpoint never sees the flag half-way
+        self.loop.call_soon_threadsafe(
+            setattr, self, "_deferred_pause_requested", False
+        )
+
     def stop(self) -> Future[RunEngineResult | tuple[str, ...]]:
         """Stop the plan and mark it successful, on a thread of its own.
 

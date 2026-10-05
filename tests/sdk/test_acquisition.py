@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
+import bluesky.preprocessors as bpp
 import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
@@ -17,7 +19,7 @@ from redsun.presenter import AcquisitionPresenter, DescribesPlans
 from tests.sdk.mocks import MockDetector
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping
+    from collections.abc import Callable, Generator, Mapping
     from pathlib import Path
 
     from redsun import PlanEntry
@@ -42,6 +44,7 @@ class Plans:
         self.name = name
         self.actions = RecordedActions()
         self.running = threading.Event()
+        self.cleaned = threading.Event()
 
     def plan_map(self) -> Mapping[str, PlanEntry]:
         """Return the plans offered."""
@@ -50,6 +53,7 @@ class Plans:
             "broken": {"plan": self.broken},
             "hold": {"plan": self.hold},
             "read": {"plan": self.read},
+            "guarded": {"plan": self.guarded},
         }
 
     def rest(self) -> MsgGenerator[None]:
@@ -70,6 +74,16 @@ class Plans:
         """Read one device."""
         yield from bps.rd(device)
 
+    def guarded(self) -> MsgGenerator[None]:
+        """Hold the engine until stopped, then take time to clean up."""
+        self.running.set()
+        yield from bpp.finalize_wrapper(bps.sleep(30), self.clean_up())
+
+    def clean_up(self) -> MsgGenerator[None]:
+        """Take half a second, then say the cleanup is done."""
+        yield from bps.sleep(0.5)
+        self.cleaned.set()
+
 
 class Thing:
     """A type no plan widget can show."""
@@ -82,11 +96,15 @@ class Unreadable:
 
     def plan_map(self) -> Mapping[str, PlanEntry]:
         """Return the plan offered."""
-        return {"odd": {"plan": self.odd}}
+        return {"odd": {"plan": self.odd}, "flat": {"plan": self.flat}}
 
     def odd(self, thing: Thing) -> MsgGenerator[None]:
         """Take an argument of a type no widget shows."""
         yield from bps.null()
+
+    def flat(self) -> MsgGenerator[None]:
+        """Return a plan instead of being a generator function."""
+        return bps.null()
 
 
 class RecordedPaths(SessionPathProvider):
@@ -125,6 +143,16 @@ def presenter(
     acquisition.setup({"plans": plans, "unreadable": Unreadable()}, {}, paths)
     yield acquisition
     acquisition.shutdown()
+
+
+def wait_until(condition: Callable[[], bool], timeout: float = 5) -> bool:
+    """Return whether *condition* holds within *timeout* seconds."""
+    deadline = time.monotonic() + timeout
+    while not condition():
+        if time.monotonic() > deadline:
+            return False
+        time.sleep(0.01)
+    return True
 
 
 def record(
@@ -222,10 +250,12 @@ def test_a_paused_plan_reports_nothing_until_it_is_stopped(
 def test_a_plan_no_widget_can_show_is_left_out(
     presenter: AcquisitionPresenter, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Offer every readable plan and leave out the one no widget can show."""
+    """Offer every readable plan and leave out, with a warning, each one that cannot be read."""
+    warnings = " ".join(r.getMessage() for r in caplog.get_records("setup"))
+
     assert isinstance(presenter, DescribesPlans)
-    assert set(presenter.plans) == {"rest", "broken", "hold", "read"}
-    assert any("'odd'" in r.getMessage() for r in caplog.get_records("setup"))
+    assert set(presenter.plans) == {"rest", "broken", "hold", "read", "guarded"}
+    assert ("'odd'" in warnings, "'flat'" in warnings) == (True, True)
 
 
 def test_actions_are_relayed_and_requests_reach_the_running_plan(
@@ -276,19 +306,40 @@ def test_a_refused_base_directory_is_logged(
     assert "base directory" in caplog.text
 
 
-def test_shutdown_aborts_a_running_plan_without_a_failure(
+def test_shutdown_aborts_a_running_plan_after_its_cleanup_without_a_report(
     plans: Plans, paths: RecordedPaths
 ) -> None:
-    """Abort a running plan at shutdown, reporting no failure."""
+    """Return from shutdown once the aborted plan has cleaned up, reporting no end."""
     presenter = AcquisitionPresenter("acquisition", devices={})
     presenter.setup({"plans": plans}, {}, paths)
-    seen, _ = record(presenter)
-    presenter.launch("hold", {})
+    seen, ended = record(presenter)
+    presenter.launch("guarded", {})
     assert plans.running.wait(10)
 
     presenter.shutdown()
+    cleaned = plans.cleaned.is_set()
 
+    assert cleaned
+    assert not ended.wait(1)
     assert [kind for kind, *_ in seen] == ["started"]
+
+
+def test_resuming_before_the_pause_is_reached_withdraws_it(
+    presenter: AcquisitionPresenter, plans: Plans
+) -> None:
+    """Withdraw a pause no checkpoint has reached, and report the plan done when stopped."""
+    seen, ended = record(presenter)
+    presenter.launch("hold", {})
+    assert plans.running.wait(10)
+
+    presenter.pause()
+    presenter.resume()
+    withdrawn = wait_until(lambda: not presenter.engine().deferred_pause_requested)
+    presenter.stop()
+
+    assert ended.wait(10)
+    assert withdrawn
+    assert seen == [("started", "hold"), ("done", "hold")]
 
 
 def test_the_base_directory_is_described(

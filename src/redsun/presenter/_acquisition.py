@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping, Sequence  # noqa: TC003
+from concurrent.futures import wait
 from dataclasses import KW_ONLY, dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -123,6 +124,7 @@ class AcquisitionPresenter(Loggable):
         self._futures: set[Future[Any]] = set()
         self._running: str | None = None
         self._error: BaseException | None = None
+        self._closed = False
 
     @provides
     def engine(self) -> RunEngine:
@@ -145,7 +147,7 @@ class AcquisitionPresenter(Loggable):
             for plan, entry in component.plan_map().items():
                 try:
                     self._specs[plan] = create_plan_spec(entry["plan"], self.devices)
-                except (UnresolvableAnnotationError, ValueError) as error:
+                except (UnresolvableAnnotationError, TypeError, ValueError) as error:
                     self.logger.warning(f"Leaving out {plan!r}: {error}")
                     continue
                 self._entries[plan] = entry
@@ -222,7 +224,10 @@ class AcquisitionPresenter(Loggable):
 
     @slot
     def resume(self) -> None:
-        """Resume the paused plan."""
+        """Resume the paused plan, or withdraw a pause it has not reached yet."""
+        if self._engine.state != "paused":
+            self._engine.cancel_pause()
+            return
         self._track(self._engine.resume())
 
     @slot
@@ -254,15 +259,20 @@ class AcquisitionPresenter(Loggable):
             self.logger.warning(f"Keeping the base directory: {error}")
 
     def shutdown(self) -> None:
-        """Abort a running or paused plan, reporting neither its end nor a failure."""
+        """Abort a running or paused plan, reporting neither its end nor a failure.
+
+        Returns once the plan's cleanup has run, or after ten seconds.
+        """
+        self._closed = True
         if not self._futures and self._engine.state != "paused":
             return
         bluesky_log = logging.getLogger("bluesky")
         abort_filter = AbortFilter()
         bluesky_log.addFilter(abort_filter)
         try:
-            with self.sig_plan_done.blocked(), self.sig_plan_failed.blocked():
-                self._engine.abort().result(timeout=10)
+            # aborting a running plan only cancels it: its cleanup ends the run's future
+            pending = [*self._futures, self._engine.abort()]
+            wait(pending, timeout=10)
         finally:
             bluesky_log.removeFilter(abort_filter)
 
@@ -282,6 +292,8 @@ class AcquisitionPresenter(Loggable):
 
     def _on_future_done(self, future: Future[Any]) -> None:
         self._futures.discard(future)
+        if self._closed:
+            return
         error = future.exception()
         # a pause or a stop also ends the run's future with an interruption
         if error is not None and not isinstance(
