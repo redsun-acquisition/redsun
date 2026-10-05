@@ -421,10 +421,12 @@ class PositionerPresenter(Loggable):
                     if isinstance(axis, AsyncConfigurable)
                     else None
                 )
-        except Exception as error:  # noqa: BLE001
-            self.logger.warning(f"Leaving out {label(device, name)}: {error!r}")
+        except BaseException as error:
             for unsubscribe in unsubscribers:
                 unsubscribe()
+            if not isinstance(error, Exception):
+                raise
+            self.logger.warning(f"Leaving out {label(device, name)}: {error!r}")
             return None, None
         self._unsubscribers.extend(unsubscribers)
         return info, configuration

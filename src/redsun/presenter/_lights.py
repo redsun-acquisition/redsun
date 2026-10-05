@@ -227,10 +227,12 @@ class LightPresenter(Loggable):
                     light.intensity.subscribe_reading(level)
                 if isinstance(light, AsyncConfigurable):
                     await self._configuration.add(name, light)
-        except Exception as error:  # noqa: BLE001
-            self.logger.warning(f"Leaving out {name}: {error!r}")
+        except BaseException as error:
             for unsubscribe in unsubscribers:
                 unsubscribe()
+            if not isinstance(error, Exception):
+                raise
+            self.logger.warning(f"Leaving out {name}: {error!r}")
             return None
         self._unsubscribers.extend(unsubscribers)
         return info
