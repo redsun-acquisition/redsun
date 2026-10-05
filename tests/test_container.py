@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType, cast
 
 import pydantic
 import pytest
-from event_model import DocumentRouter
 from mock_bundle.devices import MockStage
+from mock_bundle.presenters import MockLatePresenter, MockRegistrar
 from ophyd_async.core import (
     Device,
 )
@@ -179,23 +179,11 @@ class Widget:
         self.seen = where
 
 
-class Late:
-    """Presenter asking for the callback catalogue."""
+class Registrar(MockRegistrar):
+    """Document router presenter that records being shut down."""
 
     def __init__(self, name: str) -> None:
-        self.name = name
-        self.callbacks: Mapping[str, CallbackType] = {}
-
-    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
-        self.callbacks = callbacks
-
-
-class Registrar(DocumentRouter):
-    """Presenter that is a document router, and so a callback."""
-
-    def __init__(self, name: str) -> None:
-        super().__init__()
-        self.name = name
+        super().__init__(name)
         self.closed = False
 
     def shutdown(self) -> None:
@@ -214,21 +202,21 @@ class Tunable:
         self.readings = readings
 
 
-class Recorder:
-    """Presenter nothing depends on."""
+class Dependency:
+    """Presenter that `Dependent` takes in its `setup`."""
 
     def __init__(self, name: str) -> None:
         self.name = name
 
 
 class Dependent:
-    """Presenter taking `Recorder` once every component exists."""
+    """Presenter taking `Dependency` once every component exists."""
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.other: Recorder | None = None
+        self.other: Dependency | None = None
 
-    def setup(self, other: Recorder) -> None:
+    def setup(self, other: Dependency) -> None:
         self.other = other
 
 
@@ -281,7 +269,7 @@ class App(Session):
     motor: Annotated[AsDevice[MockStage], FromConfig("stage")]
     ctrl: AsPresenter[Ctrl]
     registrar: AsPresenter[Registrar]
-    late: AsPresenter[Late]
+    late: AsPresenter[MockLatePresenter]
     tunable: AsPresenter[Tunable]
     widget: Annotated[AsView[Widget], Declare(label="inline")]
 
@@ -412,9 +400,9 @@ class HoldingAPresenter:
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.ctrl: Recorder | None = None
+        self.ctrl: Dependency | None = None
 
-    def setup(self, ctrl: Recorder) -> None:
+    def setup(self, ctrl: Dependency) -> None:
         self.ctrl = ctrl
 
 
@@ -434,14 +422,14 @@ class PresenterOnAViewValue(Session):
 
 
 class ViewOnAPresenter(Session):
-    recorder: AsPresenter[Recorder]
+    recorder: AsPresenter[Dependency]
     holder: AsView[HoldingAPresenter]
 
 
 class TakingAComponent:
     """A presenter naming another component's class in its constructor."""
 
-    def __init__(self, name: str, *, other: Recorder) -> None:
+    def __init__(self, name: str, *, other: Dependency) -> None:
         self.name = name
         self.other = other
 
@@ -463,7 +451,7 @@ class TakingTheCatalogue:
 
 
 class ComponentInAConstructor(Session):
-    recorder: AsPresenter[Recorder]
+    recorder: AsPresenter[Dependency]
     taker: AsPresenter[TakingAComponent]
 
 
@@ -917,7 +905,7 @@ class NeedsBroken:
 class ToleratedApp(Session):
     frontend = Toy
 
-    ok: AsPresenter[Recorder]
+    ok: AsPresenter[Dependency]
     bad: AsPresenter[BrokenPresenter]
     panel: AsView[Attached]
     broken_panel: AsView[BrokenView]
@@ -926,7 +914,7 @@ class ToleratedApp(Session):
 class DependsOnBrokenApp(Session):
     bad: AsPresenter[BrokenPresenter]
     dependent: AsPresenter[NeedsBroken]
-    ok: AsPresenter[Recorder]
+    ok: AsPresenter[Dependency]
 
 
 class Marker:
@@ -1069,7 +1057,7 @@ def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
 def test_framework_objects_are_injectable(app: App) -> None:
     """Inject the device map and the callback catalogue like any other dependency."""
     assert dict(app.ctrl.devices) == {"motor": app.motor}
-    assert app.late.callbacks == {"registrar": app.registrar}
+    assert app.late.seen == {"registrar": app.registrar}
     assert app.widget.callbacks == {"registrar": app.registrar}
 
 
@@ -1346,7 +1334,7 @@ def test_a_component_nothing_reaches_is_reported(
     """Log a component that shares nothing, asks for nothing and is wired to nothing."""
 
     class Inert(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
     build(Inert)
     assert (
@@ -1362,7 +1350,7 @@ def test_a_component_another_is_built_from_is_not_reported(
 
     class WithAnIdlePeer(Session):
         second: Annotated[AsPresenter[Dependent], Alias("second")]
-        first: Annotated[AsPresenter[Recorder], Alias("first")]
+        first: Annotated[AsPresenter[Dependency], Alias("first")]
         idle: AsPresenter[Idle]
 
     build(WithAnIdlePeer)
@@ -1783,13 +1771,13 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
 
     class Half(Session):
         broken: AsPresenter[Unmakeable]
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
     class Refused(Session):
         broken: AsPresenter[PositionalName]
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
@@ -1825,7 +1813,7 @@ def test_a_strict_session_stops_on_a_component_it_could_not_build() -> None:
 
     class Half(Session):
         broken: AsPresenter[Unmakeable]
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         def start_runtime(self) -> None:
             self.on_release(lambda: released.append("runtime"))
@@ -1889,7 +1877,7 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
     """Raise for a wiring rule naming an undeclared component or of the wrong shape."""
 
     class Wrong(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
@@ -1922,7 +1910,7 @@ def test_a_wire_that_yields_nothing_is_fatal() -> None:
     """Raise WiringError when `wire` returns None."""
 
     class Empty(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         def wire(self) -> None:  # type: ignore[override]
             return None
@@ -1935,7 +1923,7 @@ def test_a_link_whose_first_item_is_not_a_signal_is_fatal() -> None:
     """Raise WiringError for a link whose first item is not a signal."""
 
     class Miswired(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         def wire(self) -> Iterator[Link]:
             yield cast("Link", ("not-a-signal", lambda: None))

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 
-class Recorder:
+class PlainPresenter:
     """A presenter, so a session has something to build."""
 
     def __init__(self, name: str) -> None:
@@ -28,7 +28,7 @@ class Recorder:
 class App(Session):
     config: ClassVar[dict[str, Any]] = {"session": "settings-session"}
 
-    recorder: AsPresenter[Recorder]
+    plain: AsPresenter[PlainPresenter]
 
 
 class QtApp(QtSession):

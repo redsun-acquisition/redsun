@@ -41,19 +41,8 @@ class Resettable(Protocol):
     def reset(self) -> None: ...
 
 
-class Motor:
-    """Presenter that can be reset."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.resets = 0
-
-    def reset(self) -> None:
-        self.resets += 1
-
-
-class Detector:
-    """Another one, so the answer has more than one entry."""
+class Part:
+    """Presenter that can be reset, declared twice so the answer has two entries."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -317,8 +306,8 @@ class MisshapenDevices:
 
 class App(Session):
     session: AsPresenter[Resetter]
-    motor: AsPresenter[Motor]
-    detector: AsPresenter[Detector]
+    motor: AsPresenter[Part]
+    detector: Annotated[AsPresenter[Part], Alias("detector")]
     readout: AsPresenter[Readout]
 
 
@@ -330,13 +319,13 @@ class PeerApp(Session):
 
 class AccidentalApp(Session):
     bookkeeper: AsPresenter[Bookkeeper]
-    motor: AsPresenter[Motor]
+    motor: AsPresenter[Part]
 
 
 class LooseApp(Session):
     session: AsPresenter[Resetter]
     loose: AsPresenter[Loose]
-    motor: AsPresenter[Motor]
+    motor: AsPresenter[Part]
 
 
 class OneApp(Session):
@@ -411,7 +400,7 @@ class NoDeviceApp(Session):
 class BothCensusApp(Session):
     stage: AsDevice[Stage]
     both: AsPresenter[AsksBoth]
-    motor: AsPresenter[Motor]
+    motor: AsPresenter[Part]
 
 
 class MisshapenDevicesApp(Session):

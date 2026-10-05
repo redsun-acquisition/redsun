@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, NewType, TypeAlias
 import pytest
 from event_model import DocumentRouter
 from event_model.documents import Document
+from mock_bundle.presenters import MockLatePresenter
 
 from redsun import (
     AsPresenter,
@@ -32,17 +33,6 @@ SpelledOutCallback: TypeAlias = Callable[[str, Document], None] | DocumentRouter
 @dataclass(frozen=True)
 class Panel(Placement):
     side: str
-
-
-class Listener:
-    """Presenter asking for every router the session built."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.callbacks: Mapping[str, CallbackType] = {}
-
-    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
-        self.callbacks = callbacks
 
 
 class SpelledOutListener:
@@ -125,7 +115,7 @@ class RoutingView(DocumentRouter):
 
 
 class DeclaredAboveTheRouters(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     sharing: AsPresenter[Sharing]
     needing: AsPresenter[Needing]
 
@@ -137,13 +127,13 @@ class SpelledOutAboveTheRouters(Session):
 
 
 class WithAPlainRouter(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     plain: AsPresenter[Plain]
     idle: AsPresenter[Idle]
 
 
 class WithABrokenRouter(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     broken: AsPresenter[Broken]
     plain: AsPresenter[Plain]
 
@@ -154,7 +144,7 @@ class WithACuriousRouter(Session):
 
 
 class ListeningToAView(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     display: AsView[RoutingView]
 
 
@@ -163,7 +153,7 @@ def test_the_catalogue_holds_every_router_in_declaration_order(
 ) -> None:
     """List routers in the order they are declared, not by name."""
     app = build(DeclaredAboveTheRouters)
-    assert list(app.listener.callbacks.items()) == [
+    assert list(app.listener.seen.items()) == [
         ("sharing", app.sharing),
         ("needing", app.needing),
     ]
@@ -183,7 +173,7 @@ def test_a_listener_writing_the_type_out_receives_the_same_catalogue(
 def test_a_router_that_fails_to_build_is_absent(build: BuildSession) -> None:
     """Leave out a router that fails to build, and still build the listener."""
     app = build(WithABrokenRouter)
-    assert list(app.listener.callbacks) == ["plain"]
+    assert list(app.listener.seen) == ["plain"]
 
 
 def test_a_router_asking_for_the_catalogue_is_in_it(build: BuildSession) -> None:

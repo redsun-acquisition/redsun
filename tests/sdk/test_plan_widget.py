@@ -37,7 +37,7 @@ def _application(qapp: QtW.QApplication) -> None:
     """
 
 
-class Recorder:
+class Callback:
     """A document callback of the ordinary shape."""
 
     def __init__(self, name: str) -> None:
@@ -46,7 +46,7 @@ class Recorder:
     def __call__(self, name: str, doc: Any) -> None: ...
 
 
-CALLBACKS = {name: Recorder(name) for name in ("a", "b", "c", "own")}
+CALLBACKS = {name: Callback(name) for name in ("a", "b", "c", "own")}
 """Every callback the tests hand a plan widget, by name."""
 
 CATALOGUE = {name: CALLBACKS[name] for name in ("a", "b", "c")}
