@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 
 import pytest
@@ -30,3 +31,10 @@ def detector() -> MockDetector:
     device = MockDetector("det1")
     run_coro(device.connect())
     return device
+
+
+@pytest.fixture
+def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
+    """Capture everything the `redsun` logger tree records, services included."""
+    caplog.set_level(logging.DEBUG, logger="redsun")
+    return caplog

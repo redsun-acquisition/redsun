@@ -6,7 +6,6 @@ import asyncio
 import io
 import logging
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -27,6 +26,7 @@ from redsun.services._transports import (
     ChannelAccess,
     PVAccess,
 )
+from tests.sdk.helpers import messages
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -35,14 +35,13 @@ PROCESS_STAND_IN = "mock_pkg.service.process_stand_in"
 PROCESS_READY = "process stand-in ready"
 REACHABLE_STAND_IN = "mock_pkg.service.reachable_stand_in"
 REACHABLE_READY = "reachable stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 
 
 @pytest.fixture
-def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+def launch(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., Service]]:
     """Make process stand-ins, restoring the CA address list and stopping them after."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, ChannelAccess())
     made: list[Service] = []
 
@@ -62,17 +61,6 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     yield make
     for launched in made:
         launched.stop()
-
-
-@pytest.fixture
-def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
-    """Capture everything the `redsun` logger tree records, services included."""
-    caplog.set_level(logging.DEBUG, logger="redsun")
-    return caplog
-
-
-def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
-    return [r.getMessage() for r in caplog.records if r.levelno == level]
 
 
 @pytest.mark.parametrize("options", [(), ("--blocking",)])
@@ -180,12 +168,12 @@ def test_a_service_logs_at_the_level_its_session_records_at(
 
 @pytest.mark.parametrize("options", [(), ("--late",)])
 def test_a_pva_service_is_ready_once_its_pv_answers(
+    launchable: None,
     options: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
     service_log: pytest.LogCaptureFixture,
 ) -> None:
     """Count a PVAccess service ready once its own PV answers, at once or after it starts late."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
     service = Service(

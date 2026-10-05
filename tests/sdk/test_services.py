@@ -27,6 +27,7 @@ from redsun.services._transports import (
     ChannelAccess,
     PVAccess,
 )
+from tests.sdk.helpers import messages
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -37,7 +38,6 @@ STAND_IN = "mock_pkg.service.stand_in"
 PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
 PVA_READY = "pva stand-in ready"
 READY = "stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 STDLIB_WARNING = json.dumps(
     {
         "name": "caproto.ioc.camera",
@@ -93,10 +93,10 @@ def recording_transport(
 
 
 @pytest.fixture
-def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+def launch(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., Service]]:
     """Make stand-in services, restoring the CA address list and stopping them after."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, ChannelAccess())
     made: list[Service] = []
 
@@ -124,9 +124,10 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
 
 
 @pytest.fixture
-def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+def launch_pva(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., Service]]:
     """Make stand-in PVA services, restoring the address list and stopping them after."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
     made: list[Service] = []
@@ -146,17 +147,6 @@ def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Servic
     yield make
     for launched in made:
         launched.stop()
-
-
-@pytest.fixture
-def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
-    """Capture everything the `redsun` logger tree records, services included."""
-    caplog.set_level(logging.DEBUG, logger="redsun")
-    return caplog
-
-
-def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
-    return [r.getMessage() for r in caplog.records if r.levelno == level]
 
 
 def logged_ports(caplog: pytest.LogCaptureFixture) -> list[str]:
@@ -370,13 +360,12 @@ def test_a_transport_lists_its_address_again_once_the_list_is_cleared(
 
 @pytest.mark.parametrize("value", [1.0, 2.0])
 def test_a_pva_service_started_in_each_test_answers(
+    launchable: None,
     start_service: StartService,
-    monkeypatch: pytest.MonkeyPatch,
     value: float,
 ) -> None:
     """Reach a PVA service started in each of two tests of one process."""
     p4p = pytest.importorskip("p4p.client.thread")
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
 
     start_service(
         "started",
@@ -393,13 +382,12 @@ def test_a_pva_service_started_in_each_test_answers(
 
 
 def test_a_started_service_releases_its_transport_once_it_stops(
+    launchable: None,
     recording_transport: RecordingTransport,
     start_service: StartService,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Release a started service's transport after the test, as a session does."""
     pytest.importorskip("p4p")
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
 
     start_service(
         "released",
@@ -543,12 +531,11 @@ def test_arguments_without_a_module_are_refused() -> None:
 
 
 def test_a_service_ends_when_the_process_that_launched_it_dies(
+    launchable: None,
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     wait_until: Callable[..., bool],
 ) -> None:
     """Clean up and exit a service once the process that launched it dies."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     marker = tmp_path / "cleaned"
     parent = subprocess.Popen(
         [
