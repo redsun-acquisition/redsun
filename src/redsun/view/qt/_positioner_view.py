@@ -14,7 +14,7 @@ from redsun.log import Loggable
 from redsun.ports import slot
 from redsun.presenter import DescribesAxes  # noqa: TC001
 from redsun.qt import Dock
-from redsun.view.qt.treeview import DescriptorTreeView
+from redsun.view.qt.treeview import ConfigurationTab
 
 from ..._settings import Settings  # noqa: TC001
 from ._positioner_group import PositionerGroup, StepBox, tool_button
@@ -178,7 +178,7 @@ class PositionerView(QtW.QWidget, Loggable):
         self._groups: dict[str, PositionerGroup] = {}
         self._locked: frozenset[str] = frozenset()
         self._settings: Settings | None = None
-        self._tree: DescriptorTreeView | None = None
+        self._configuration_tab: ConfigurationTab | None = None
         self._configuration = QtW.QVBoxLayout()
         self._entries: list[SavedPosition] = []
         self._entry_buttons: list[tuple[str, QtW.QToolButton]] = []
@@ -280,14 +280,9 @@ class PositionerView(QtW.QWidget, Loggable):
             ]
             for device, axes in positioner.axes.items()
         }
-        if descriptors:
-            self._tree = DescriptorTreeView(descriptors, readings, self)
-            self._tree.sig_property_changed.connect(self._configure)
-            self._configuration.addWidget(self._tree)
-        else:
-            self._configuration.addWidget(
-                QtW.QLabel("No axis has a configuration.", self)
-            )
+        self._configuration_tab = ConfigurationTab(positioner.configuration, self)
+        self._configuration_tab.sig_configure.connect(self.sig_configure.emit)
+        self._configuration.addWidget(self._configuration_tab)
         for group in self._groups.values():
             group.sig_save.connect(self._save)
         stored_positions = settings.get(self._key("saved_positions"), [])
@@ -330,8 +325,8 @@ class PositionerView(QtW.QWidget, Loggable):
     def update_configuration(self, key: str, value: object) -> None:
         """Show *value*, read back from the configuration signal *key*."""
         self._values[key] = value
-        if self._tree is not None:
-            self._tree.set_value(key, value)
+        if self._configuration_tab is not None:
+            self._configuration_tab.update_value(key, value)
 
     @slot
     def set_locked(self, names: frozenset[str]) -> None:
@@ -339,8 +334,8 @@ class PositionerView(QtW.QWidget, Loggable):
         self._locked = names
         for device, group in self._groups.items():
             group.set_locked(device in names)
-            if self._tree is not None:
-                self._tree.set_enabled(device, device not in names)
+        if self._configuration_tab is not None:
+            self._configuration_tab.set_locked(names)
         self._lock_entries()
 
     def _key(self, setting: str) -> str:
@@ -478,9 +473,6 @@ class PositionerView(QtW.QWidget, Loggable):
     def _lock_entries(self) -> None:
         for device, button in self._entry_buttons:
             button.setEnabled(device not in self._locked)
-
-    def _configure(self, owner: str, prop: str, value: object) -> None:
-        self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
 
     def _set_repeat_interval(self, milliseconds: int) -> None:
         for group in self._groups.values():

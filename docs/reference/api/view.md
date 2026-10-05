@@ -29,6 +29,7 @@ icon: lucide/code
     options:
       members:
         - DescriptorTreeView
+        - ConfigurationTab
 
 ## Built-ins
 

@@ -19,7 +19,9 @@ from qtpy import QtCore, QtGui, QtWidgets
 if TYPE_CHECKING:
     from bluesky.protocols import Descriptor, Reading
 
-__all__ = ["DescriptorTreeView"]
+    from redsun.utils.devices import Configuration
+
+__all__ = ["ConfigurationTab", "DescriptorTreeView"]
 
 
 def _split_key(key: str) -> tuple[str, str]:
@@ -395,3 +397,44 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
             self._add_leaf(parent, full_key, prop, desc, readonly)
         self.expandAll()
         self.resizeColumnToContents(0)
+
+
+class ConfigurationTab(QtWidgets.QWidget):
+    """The configuration of a set of devices, shown and edited in a tree.
+
+    Says "No device has a configuration." when there is none.
+    """
+
+    sig_configure = Signal(str, object)
+    """Key and value of an edit."""
+
+    def __init__(
+        self, configuration: Configuration, parent: QtWidgets.QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._owners = {_split_key(key)[0] for key in configuration.descriptors}
+        self._tree: DescriptorTreeView | None = None
+        if configuration.descriptors:
+            self._tree = DescriptorTreeView(
+                configuration.descriptors, configuration.readings, self
+            )
+            self._tree.sig_property_changed.connect(self._configure)
+            layout.addWidget(self._tree)
+        else:
+            layout.addWidget(QtWidgets.QLabel("No device has a configuration.", self))
+
+    def update_value(self, key: str, value: object) -> None:
+        """Show *value*, read back from the configuration signal *key*."""
+        if self._tree is not None:
+            self._tree.set_value(key, value)
+
+    def set_locked(self, names: frozenset[str]) -> None:
+        """Disable the rows of the owners in *names*, and enable the rest."""
+        if self._tree is not None:
+            for owner in self._owners:
+                self._tree.set_enabled(owner, owner not in names)
+
+    def _configure(self, owner: str, prop: str, value: object) -> None:
+        self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
