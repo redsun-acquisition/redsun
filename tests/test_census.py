@@ -75,6 +75,13 @@ class Readout:
         self.name = name
 
 
+class Idle:
+    """Presenter that shares nothing, asks for nothing and is wired to nothing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
 class Resetter:
     """Presenter driving every resettable component in the session."""
 
@@ -345,6 +352,7 @@ class AccidentalApp(Session):
 class LooseApp(Session):
     session: AsPresenter[Resetter]
     loose: AsPresenter[Loose]
+    motor: AsPresenter[Motor]
 
 
 class OneApp(Session):
@@ -406,6 +414,10 @@ class DeviceApp(Session):
     spare: Annotated[AsDevice[Stage], Alias("spare")]
     shutter: AsDevice[Shutter]
     motors: AsPresenter[MotorPresenter]
+
+
+class DeviceAppWithAnIdlePeer(DeviceApp):
+    idle: AsPresenter[Idle]
 
 
 class NoDeviceApp(Session):
@@ -571,9 +583,11 @@ def test_a_mismatched_signature_is_not_a_match(
 ) -> None:
     """Leave out a component whose method cannot be called as the protocol says."""
     app = build(LooseApp)
-    assert "loose" not in app.session.resettable
-    # Membership compares signatures, so a call the protocol permits works.
+
     app.session.reset_all()
+
+    assert list(app.session.resettable) == ["motor"]
+    assert app.motor.resets == 1
 
 
 def test_the_session_answers_as_it_answered_the_component(
@@ -728,7 +742,8 @@ def test_a_component_asking_only_for_devices_is_not_warned_about(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Do not report as unused a component that asks only for a device census."""
-    build(DeviceApp)
+    build(DeviceAppWithAnIdlePeer)
+    assert "'idle' shares nothing" in caplog.text
     assert "'motors' shares nothing" not in caplog.text
 
 

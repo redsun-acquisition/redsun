@@ -48,6 +48,7 @@ def test_a_type_imported_only_for_type_checking_is_reported(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Skip a component whose annotation names a type absent at runtime, and say which."""
-    build(HiddenLab)
+    session = build(HiddenLab)
 
+    assert dict(session.presenters) == {}
     assert "'HiddenMapping' is not available at runtime" in caplog.text

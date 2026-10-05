@@ -260,6 +260,13 @@ class Dependent:
         teardown_order.append(self.name)
 
 
+class Idle:
+    """Presenter that shares nothing, asks for nothing and is wired to nothing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
 class OrderedApp(Session):
     second: Annotated[AsPresenter[Dependent], Alias("second")]
     first: Annotated[AsPresenter[Recorder], Alias("first")]
@@ -1056,9 +1063,7 @@ def test_framework_objects_are_injectable(app: App) -> None:
 
 def test_the_container_itself_is_not_injectable() -> None:
     """Refuse a component that asks for the session itself."""
-    # The exception type belongs to whatever resolves the graph, so only the name of
-    # the key it could not find is pinned.
-    with pytest.raises(Exception, match="Session"):
+    with pytest.raises(TypeError, match=r"'greedy' asks for 'session' \(Session\)"):
         LocatorApp().build()
 
 
@@ -1349,7 +1354,12 @@ def test_a_component_another_is_built_from_is_not_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """Do not report a component that another component is built from."""
-    build(OrderedApp)
+
+    class WithAnIdlePeer(OrderedApp):
+        idle: AsPresenter[Idle]
+
+    build(WithAnIdlePeer)
+    assert "'idle' shares nothing" in caplog.text
     assert "'first' shares nothing" not in caplog.text
 
 

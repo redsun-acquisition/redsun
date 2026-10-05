@@ -56,6 +56,13 @@ class SpelledOutListener:
         self.callbacks = callbacks
 
 
+class Idle:
+    """Presenter that shares nothing, asks for nothing and is wired to nothing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
 class Plain(DocumentRouter):
     """Router asking for nothing and sharing nothing."""
 
@@ -119,8 +126,8 @@ class RoutingView(DocumentRouter):
 
 class DeclaredAboveTheRouters(Session):
     listener: AsPresenter[Listener]
-    first: AsPresenter[Needing]
-    second: AsPresenter[Sharing]
+    sharing: AsPresenter[Sharing]
+    needing: AsPresenter[Needing]
 
 
 class SpelledOutAboveTheRouters(Session):
@@ -132,6 +139,7 @@ class SpelledOutAboveTheRouters(Session):
 class WithAPlainRouter(Session):
     listener: AsPresenter[Listener]
     plain: AsPresenter[Plain]
+    idle: AsPresenter[Idle]
 
 
 class WithABrokenRouter(Session):
@@ -153,11 +161,11 @@ class ListeningToAView(Session):
 def test_the_catalogue_holds_every_router_in_declaration_order(
     build: BuildSession,
 ) -> None:
-    """List routers in declaration order, though `second` is built before `first`."""
+    """List routers in the order they are declared, not by name."""
     app = build(DeclaredAboveTheRouters)
     assert list(app.listener.callbacks.items()) == [
-        ("first", app.first),
-        ("second", app.second),
+        ("sharing", app.sharing),
+        ("needing", app.needing),
     ]
 
 
@@ -190,6 +198,7 @@ def test_a_router_in_the_catalogue_is_not_reported_unused(
     """Do not report a router in the catalogue as sharing nothing."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         build(WithAPlainRouter)
+    assert "'idle' shares nothing" in caplog.text
     assert "'plain' shares nothing" not in caplog.text
 
 
