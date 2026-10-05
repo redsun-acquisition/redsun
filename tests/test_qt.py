@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pytest
 import yaml
@@ -51,6 +51,7 @@ from redsun.qt import (
     Dock,
     MenuItem,
     Qt,
+    QtHook,
     QtSession,
     ToolBarItem,
     attach,
@@ -288,23 +289,22 @@ session.app.aboutToQuit.connect(session.shutdown)
 session.shutdown()
 """
 
-TEARDOWN_ORDER: list[str] = []
-
 
 class Closing(QWidget):
     """A view that records its own teardown and its widget's."""
 
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str, parent: QWidget) -> None:
+    def __init__(self, name: str, parent: QWidget, record: list[str]) -> None:
         super().__init__(parent)
         self.name = name
+        self.record = record
 
     def shutdown(self) -> None:
-        TEARDOWN_ORDER.append("shutdown")
+        self.record.append("shutdown")
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        TEARDOWN_ORDER.append("closed")
+        self.record.append("closed")
         if event is not None:
             super().closeEvent(event)
 
@@ -464,10 +464,11 @@ class PromptApp(QtSession):
 class AlwaysCloses:
     """Hook answering the close itself, in place of the prompt."""
 
-    asked = 0
+    def __init__(self) -> None:
+        self.asked = 0
 
     def confirm_close(self) -> bool:
-        type(self).asked += 1
+        self.asked += 1
         return True
 
 
@@ -815,9 +816,9 @@ def test_a_view_is_shut_down_before_its_widget_is_destroyed(
     qapp: QApplication, build: BuildSession
 ) -> None:
     """Call a view's shutdown before its widget is closed."""
-    TEARDOWN_ORDER.clear()
-    build(ClosingApp).shutdown()
-    assert TEARDOWN_ORDER == ["shutdown", "closed"]
+    record: list[str] = []
+    build(ClosingApp, {"views": {"panel": {"record": record}}}).shutdown()
+    assert record == ["shutdown", "closed"]
 
 
 def test_the_save_action_writes_where_the_dialog_points(
@@ -994,13 +995,13 @@ def test_a_hook_answers_the_close_in_place_of_the_prompt(
     build: BuildSession,
 ) -> None:
     """Ask the close hook instead of showing the close prompt."""
-    AlwaysCloses.asked = 0
     session = build(HookedApp)
     session.tunable.step = 5.0
     shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
     assert session.main_window.close()
-    assert AlwaysCloses.asked == 1
+    hook = cast("AlwaysCloses", session.hooks[QtHook.CONFIRM_CLOSE])
+    assert hook.asked == 1
     assert shown == []
 
 
