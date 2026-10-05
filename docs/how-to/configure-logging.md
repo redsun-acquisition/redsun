@@ -111,6 +111,9 @@ views:
     plugin_id: logs
 ```
 
+![The log view at the bottom of a window, showing the records of a session as
+it builds](images/log-view.png)
+
 It sits at the bottom of the main window and shows every record of the
 session, including those from the build, coloured by level. Application records
 are on the **Application** tab. A **Services** tab appears once a service logs
@@ -127,6 +130,14 @@ pushes application records out. Its controls:
 
 Without session log files, as outside a session, `Save logs...` writes the
 records held in memory and `Open log folder` is disabled.
+
+??? example "The session of the picture"
+
+    A session written in Python declares the view as any other:
+
+    ```{.python}
+    --8<-- "docs/examples/log_view.py:session"
+    ```
 
 ## Send records somewhere else as well
 

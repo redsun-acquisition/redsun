@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
@@ -73,6 +74,26 @@ def test_a_file_holding_something_other_than_an_object_is_ignored(
 
     assert Settings(tmp_path / "list.json").get("anything") is None
     assert "expected an object" in caplog.text
+
+
+def test_a_write_that_fails_halfway_keeps_the_previous_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep every setting already written when writing a new one fails midway."""
+    path = tmp_path / "settings.json"
+    Settings(path).set("saved", [1, 2, 3])
+
+    def write_half(self: Path, text: str, *args: object, **kwargs: object) -> int:
+        with self.open("w", encoding="utf-8") as stream:
+            stream.write(text[: len(text) // 2])
+        raise OSError("disk full")
+
+    monkeypatch.setattr(pathlib.Path, "write_text", write_half)
+    with pytest.raises(OSError, match="disk full"):
+        Settings(path).set("theme", "dark")
+    monkeypatch.undo()
+
+    assert Settings(path).get("saved") == [1, 2, 3]
 
 
 def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:

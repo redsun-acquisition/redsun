@@ -15,6 +15,9 @@ EXAMPLES = [
     "connect_on_demand",
     "console_frontend",
     "continuous_plan",
+    "log_view",
+    "positioner",
+    "positioner_custom",
 ]
 
 

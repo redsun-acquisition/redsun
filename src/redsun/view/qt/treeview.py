@@ -290,6 +290,18 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._pending.pop(key, None)
         self._show(key, value)
 
+    def set_enabled(self, owner: str, enabled: bool) -> None:
+        """Enable or disable the editors of every row of *owner*.
+
+        Parameters
+        ----------
+        owner
+            Device name, the part of a key before its first `-`.
+        """
+        for key, widget in self._widgets.items():
+            if _split_key(key)[0] == owner:
+                widget.setEnabled(enabled)
+
     def revert(self, key: str) -> None:
         """Put back the value *key* had before the edit pending on it.
 

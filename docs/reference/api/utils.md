@@ -9,3 +9,15 @@ icon: lucide/code
       members:
         - parse_key
         - parse_map_key
+
+::: redsun.utils.devices
+    options:
+      members:
+        - Axis
+        - AxisInfo
+        - Configuration
+        - describe_axis
+        - find_axes
+        - limits
+        - read_configuration
+        - walk_axes
