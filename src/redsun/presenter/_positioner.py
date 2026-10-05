@@ -16,10 +16,7 @@ from ophyd_async.core import (
     AsyncConfigurable,
     AsyncReadable,
     AsyncStatus,
-    Device,
-    SignalR,
     WatchableAsyncStatus,
-    walk_devices,
 )
 from psygnal import Signal
 
@@ -29,19 +26,19 @@ from redsun.ports import slot
 from redsun.registry import DeviceMapping  # noqa: TC001
 from redsun.utils.devices import (
     AxisInfo,
-    Configuration,
     describe_axis,
     find_axes,
     limits,
-    read_configuration,
 )
+
+from ._device_configuration import DeviceConfiguration
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping
 
     from bluesky.protocols import Reading
 
-    from redsun.utils.devices import Axis
+    from redsun.utils.devices import Axis, Configuration
 
 
 def label(device: str, axis: str) -> str:
@@ -121,8 +118,8 @@ class PositionerPresenter(Loggable):
             if (self.include is None or device in self.include)
             and (axes := find_axes(item))
         }
-        self._configuration = Configuration(descriptors={}, readings={}, writable={})
-        self._owners: dict[str, str] = {}
+        self._configuration = DeviceConfiguration(self.name)
+        self._configuration.sig_changed.connect(self.sig_configuration.emit)
         self._unsubscribers: list[Callable[[], None]] = []
         self._held: frozenset[str] = frozenset()
         self._from_setpoint: set[str] = set()
@@ -147,7 +144,7 @@ class PositionerPresenter(Loggable):
         An entry whose signal cannot be written has `:readonly` appended to
         its source.
         """
-        return self._configuration
+        return self._configuration.configuration
 
     def check(self, device: str, axis: str, target: float) -> None:
         """Refuse *target* for *axis* of *device*, or return.
@@ -261,6 +258,7 @@ class PositionerPresenter(Loggable):
         device.
         """
         self._held = names
+        self._configuration.set_locked(names)
 
     @slot
     async def configure(self, key: str, value: object) -> None:
@@ -274,21 +272,7 @@ class PositionerPresenter(Loggable):
         KeyError
             If *key* names no writable configuration signal.
         """
-        signal = self._configuration.writable[key]
-        if self._owners[key] in self._held:
-            self.logger.warning(f"Not setting {key}: a plan holds its device")
-        else:
-            try:
-                await signal.set(value)
-            except Exception:
-                self.logger.exception(f"Setting {key} to {value!r} failed")
-        try:
-            current = await signal.get_value()
-        except Exception:
-            self.logger.exception(f"Reading {key} back failed")
-            return
-        self.sig_configuration.emit(key, current)
-        device = self._owners[key]
+        device = await self._configuration.configure(key, value)
         for axis in self._axes[device]:
             try:
                 await self._read_limits(device, axis)
@@ -404,10 +388,6 @@ class PositionerPresenter(Loggable):
                 axis_info = dataclasses.replace(
                     axis_info, configuration=tuple(configuration.descriptors)
                 )
-                self._configuration.descriptors.update(configuration.descriptors)
-                self._configuration.readings.update(configuration.readings)
-                self._configuration.writable.update(configuration.writable)
-                self._owners.update(dict.fromkeys(configuration.descriptors, device))
             info.setdefault(device, {})[name] = axis_info
         self._axes = {device: axes for device, axes in self._axes.items() if axes}
         stoppable = {
@@ -435,24 +415,12 @@ class PositionerPresenter(Loggable):
                 relay = partial(self._relay, device, name, info.key)
                 unsubscribers.append(partial(axis.clear_sub, relay))
                 axis.subscribe(relay)
+                # last in the block, so a timeout during it leaves nothing behind
                 configuration = (
-                    await read_configuration(axis)
+                    await self._configuration.add(device, axis)
                     if isinstance(axis, AsyncConfigurable)
                     else None
                 )
-                children = (
-                    walk_devices(axis).values() if isinstance(axis, Device) else ()
-                )
-                for signal in children:
-                    if (
-                        configuration is not None
-                        and isinstance(signal, SignalR)
-                        and signal.name in configuration.readings
-                    ):
-                        unsubscribers.append(
-                            partial(signal.clear_sub, self._relay_configuration)
-                        )
-                        signal.subscribe_reading(self._relay_configuration)
         except Exception as error:  # noqa: BLE001
             self.logger.warning(f"Leaving out {label(device, name)}: {error!r}")
             for unsubscribe in unsubscribers:
@@ -465,6 +433,7 @@ class PositionerPresenter(Loggable):
         for unsubscribe in self._unsubscribers:
             unsubscribe()
         self._unsubscribers.clear()
+        self._configuration.remove_all()
 
     def _relay(
         self,
@@ -482,10 +451,3 @@ class PositionerPresenter(Loggable):
             self.logger.exception(
                 f"Relaying a readback of {label(device, axis)} failed"
             )
-
-    def _relay_configuration(self, reading: dict[str, Reading[object]]) -> None:
-        try:
-            for key, entry in reading.items():
-                self.sig_configuration.emit(key, entry["value"])
-        except Exception:
-            self.logger.exception("Relaying a configuration value failed")
