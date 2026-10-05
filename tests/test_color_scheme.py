@@ -129,7 +129,7 @@ def test_a_mode_the_control_does_not_offer_is_refused() -> None:
         Sepia().build()
 
 
-def test_the_control_says_it_can_be_clicked() -> None:
+def test_the_control_says_it_can_be_clicked(qapp: QApplication) -> None:
     """End the control's tooltip by saying a click changes the mode."""
     assert (
         ColorSchemeButton(ColorSchemeMode.DARK).toolTip().endswith("(click to change)")
