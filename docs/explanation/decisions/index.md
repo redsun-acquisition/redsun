@@ -29,3 +29,4 @@ never edited; a later one replaces it.
 - [18. Wire yields links](0018-wire-yields-links.md)
 - [19. Copy plan progress from bluesky](0019-copy-plan-progress-from-bluesky.md)
 - [20. A built-in positioner](0020-a-built-in-positioner.md)
+- [21. A built-in light stack](0021-a-built-in-light-stack.md)

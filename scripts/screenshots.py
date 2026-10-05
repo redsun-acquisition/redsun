@@ -79,6 +79,11 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (460, 560),
         None,
     ),
+    Path("docs/examples/lights.py"): (
+        Path("docs/how-to/images/lights.png"),
+        (420, 360),
+        None,
+    ),
     Path("docs/examples/log_view.py"): (
         Path("docs/how-to/images/log-view.png"),
         (820, 360),
