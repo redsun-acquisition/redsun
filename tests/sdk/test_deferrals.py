@@ -98,7 +98,7 @@ def test_a_change_asked_for_from_a_loop_does_not_block_it(
     async def ask() -> None:
         deferrals.request(recorder.apply)
 
-    run_coro(ask())
+    run_coro(ask(), timeout=5)
 
     assert wait_until(recorder.applied.is_set, timeout=2.0)
 

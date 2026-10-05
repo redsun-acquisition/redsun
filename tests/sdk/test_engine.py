@@ -40,7 +40,7 @@ def _running(engine: RunEngine) -> threading.Event:
         if new == "running":
             running.set()
 
-    engine.state_hook = on_state  # type: ignore[assignment]
+    engine.sig_state_changed.connect(on_state)
     return running
 
 
@@ -187,9 +187,10 @@ def test_an_unsubscribed_callback_receives_nothing(
     assert seen == []
 
 
-def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
+def test_pausable_engine(
+    RE: RunEngine, detector: MockDetector, wait_until: Callable[..., bool]
+) -> None:
     """Pause a plan at a checkpoint, resume it, then stop it."""
-    future_set = set()
 
     def pausable_plan() -> Any:
         yield from bps.checkpoint()
@@ -198,28 +199,21 @@ def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
 
     running = _running(RE)
     fut = RE(pausable_plan())
-    future_set.add(fut)
-    fut.add_done_callback(future_set.discard)
-
     assert running.wait(5)
 
     RE.request_pause(defer=True)
+    with pytest.raises(RunEngineInterrupted):
+        fut.result(timeout=5)
+    assert RE.state == "paused"
 
-    wait(future_set)
+    resumed = RE.resume()
+    assert wait_until(lambda: RE.state == "running", timeout=5)
+    stopped = RE.stop().result(timeout=5)
 
-    assert len(future_set) == 0
-
-    fut = RE.resume()
-    future_set.add(fut)
-    fut.add_done_callback(future_set.discard)
-
-    assert len(future_set) == 1
-
-    RE.stop()
-
-    wait(future_set)
-
-    assert len(future_set) == 0
+    with pytest.raises(RunEngineInterrupted):
+        resumed.result(timeout=5)
+    assert isinstance(stopped, RunEngineResult)
+    assert stopped.exit_status == "success"
 
 
 def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:

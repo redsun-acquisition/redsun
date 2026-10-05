@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
 
 import pytest
@@ -20,17 +21,27 @@ def test_the_dialog_renders_markdown_and_returns_once_accepted(
 ) -> None:
     """Render the Markdown text and return `Accepted` once OK is clicked."""
     seen: list[tuple[str, str]] = []
+    deadline = time.perf_counter() + 5
+    timer = QtCore.QTimer()
+    timer.setInterval(10)
 
     def accept() -> None:
         dialog = qapp.activeModalWidget()
-        # closed whatever it is, so a wrong dialog fails the test, not hangs it
         if isinstance(dialog, PlanInfoDialog):
+            timer.stop()
             seen.append((dialog.windowTitle(), dialog.text_edit.toPlainText()))
             dialog.ok_button.click()
         elif isinstance(dialog, QtWidgets.QDialog):
+            timer.stop()
             dialog.reject()
+        elif time.perf_counter() > deadline:
+            timer.stop()
+            for widget in qapp.topLevelWidgets():
+                if isinstance(widget, QtWidgets.QDialog):
+                    widget.reject()
 
-    QtCore.QTimer.singleShot(0, accept)
+    timer.timeout.connect(accept)
+    timer.start()
 
     result = PlanInfoDialog.show_dialog("Plan information", "**Scan** a region")
 
