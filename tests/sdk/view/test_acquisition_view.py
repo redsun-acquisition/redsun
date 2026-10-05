@@ -130,10 +130,20 @@ def test_a_failure_stays_shown_until_the_next_run(
 def test_run_waits_for_a_device_to_be_chosen(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
-    """Keep Run disabled while a plan's device list is empty."""
+    """Enable Run only while a plan needing devices has one chosen."""
     view = make_view(settings, parent)
+    button = run_button(view, "count")
+    [detector] = [
+        box for box in view.findChildren(QtWidgets.QCheckBox) if box.text() == "det1"
+    ]
 
-    assert not run_button(view, "count").isEnabled()
+    enabled = [button.isEnabled()]
+    detector.click()
+    enabled.append(button.isEnabled())
+    detector.click()
+    enabled.append(button.isEnabled())
+
+    assert enabled == [False, True, False]
     assert run_button(view, "rest").isEnabled()
 
 
@@ -161,11 +171,14 @@ def test_the_last_plan_chosen_is_offered_again(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
     """Select again, in a later session, the plan chosen last."""
-    choose(make_view(settings, parent), "count")
+    first = make_view(settings, parent)
+    offered = child(first, QtWidgets.QComboBox, "plans").currentText()
+    choose(first, "rest")
 
     later = make_view(settings, parent)
 
-    assert child(later, QtWidgets.QComboBox, "plans").currentText() == "count"
+    assert offered == "count"
+    assert child(later, QtWidgets.QComboBox, "plans").currentText() == "rest"
 
 
 def test_the_base_directory_is_shown_and_asked_for(

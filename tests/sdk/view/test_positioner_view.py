@@ -58,9 +58,13 @@ class Positioner:
                 "source": "soft://v",
                 "dtype": "number",
                 "shape": [],
-            }
+            },
+            "focus-velocity": {"source": "soft://v", "dtype": "number", "shape": []},
         },
-        readings={"stage-axis-x-velocity": {"value": 1.0, "timestamp": 0.0}},
+        readings={
+            "stage-axis-x-velocity": {"value": 1.0, "timestamp": 0.0},
+            "focus-velocity": {"value": 1.0, "timestamp": 0.0},
+        },
         writable={},
     )
 
@@ -134,6 +138,16 @@ def type_into(edit: QtWidgets.QLineEdit, text: str) -> None:
                 kind, key, QtCore.Qt.KeyboardModifier.NoModifier, char
             )
             QtWidgets.QApplication.sendEvent(edit, event)
+
+
+def editor(view: PositionerView, setting: str) -> QtWidgets.QDoubleSpinBox:
+    """Return the configuration editor of the row labelled *setting* in *view*."""
+    tree = child(view, DescriptorTreeView)
+    flags = QtCore.Qt.MatchFlag.MatchExactly | QtCore.Qt.MatchFlag.MatchRecursive
+    [row] = tree.findItems(setting, flags)
+    widget = tree.itemWidget(row, 1)
+    assert isinstance(widget, QtWidgets.QDoubleSpinBox)
+    return widget
 
 
 def shown_names(view: PositionerView) -> list[str]:
@@ -214,16 +228,36 @@ def test_a_configuration_edit_is_sent_on(
     view = make_view(settings, parent)
     sent: list[tuple[str, object]] = []
     view.sig_configure.connect(lambda *args: sent.append(args))
+
+    editor(view, "x-velocity").setValue(2.0)
+
+    assert sent == [("stage-axis-x-velocity", 2.0)]
+
+
+def test_a_configuration_reading_is_shown_and_not_sent(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Show a configuration value read back from the device, and send nothing."""
+    view = make_view(settings, parent)
+    sent: list[tuple[str, object]] = []
+    view.sig_configure.connect(lambda *args: sent.append(args))
+
+    view.update_configuration("stage-axis-x-velocity", 3.0)
+
+    assert editor(view, "x-velocity").value() == 3.0
+    assert sent == []
+
+
+def test_a_stop_asked_for_by_a_group_is_sent_on(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Send on the stop a device's group asks for."""
+    view = make_view(settings, parent)
     stops: list[str] = []
     view.sig_stop.connect(stops.append)
 
-    child(view, DescriptorTreeView).sig_property_changed.emit(
-        "stage", "axis-x-velocity", 2.0
-    )
-    view.update_configuration("stage-axis-x-velocity", 2.0)
     group(view, "stage").sig_stop.emit("stage")
 
-    assert sent == [("stage-axis-x-velocity", 2.0)]
     assert stops == ["stage"]
 
 
@@ -405,17 +439,16 @@ def test_a_stored_repeat_interval_is_checked(
 def test_a_locked_device_cannot_be_configured_until_released(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
-    """Disable the configuration rows of a locked device, and enable them after."""
+    """Disable only a locked device's configuration rows, and enable them after."""
     view = make_view(settings, parent)
-    tree = child(view, DescriptorTreeView)
-    editors = [w for w in tree.findChildren(QtWidgets.QWidget) if w.isEnabled()]
+    stage, focus = editor(view, "x-velocity"), editor(view, "velocity")
 
     view.set_locked(frozenset({"stage"}))
-    locked = [w for w in editors if not w.isEnabled()]
+    locked = (stage.isEnabled(), focus.isEnabled())
     view.set_locked(frozenset())
 
-    assert locked
-    assert all(w.isEnabled() for w in editors)
+    assert locked == (False, True)
+    assert stage.isEnabled()
 
 
 def test_the_view_fits_a_narrow_dock(
@@ -508,10 +541,16 @@ def test_a_saved_position_keeps_its_offset_between_sessions(
     later.setup(OffsetPositioner(offset=3.0), settings)
     targets: list[object] = []
     later.sig_move_to.connect(lambda *args: targets.append(args))
+    go = child(later, QtWidgets.QAbstractButton, "saved-go:0")
 
-    child(later, QtWidgets.QAbstractButton, "saved-go:0").click()
+    go.click()
+    moved_at_once = len(targets)
+    warning = child(group(later, "stage"), QtWidgets.QLabel, "state").text()
+    go.click()
 
-    assert targets == []
+    assert moved_at_once == 0
+    assert "stage-axis-x-offset" in warning
+    assert targets == [("stage", {"x": 0.0})]
 
 
 def test_a_removed_position_comes_back_with_undo(

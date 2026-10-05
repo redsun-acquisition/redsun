@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar
 
 import pytest
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from redsun import Settings
 from redsun.utils.devices import Configuration, LightInfo, Readback
@@ -65,6 +65,17 @@ def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
     return found
 
 
+def press(widget: QtWidgets.QWidget, *keys: str | QtCore.Qt.Key) -> None:
+    """Press and release each of *keys* on *widget*: a character or a named key."""
+    for key in keys:
+        code, text = (0, key) if isinstance(key, str) else (key, "")
+        for kind in (QtCore.QEvent.Type.KeyPress, QtCore.QEvent.Type.KeyRelease):
+            event = QtGui.QKeyEvent(
+                kind, code, QtCore.Qt.KeyboardModifier.NoModifier, text
+            )
+            QtWidgets.QApplication.sendEvent(widget, event)
+
+
 def test_the_toggle_asks_and_follows_the_readback(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
@@ -98,10 +109,13 @@ def test_a_slider_writes_on_release_and_the_field_on_enter(
     slider.setValue(slider.maximum() // 2)
     during = list(asked)
     slider.setSliderDown(False)
-    field.setValue(25.0)
-    field.editingFinished.emit()
+    field.selectAll()
+    press(field, "2", "5")
+    typed = list(asked)
+    press(field, QtCore.Qt.Key.Key_Return)
 
     assert during == []
+    assert typed == [("laser", 50.0)]
     assert asked == [("laser", 50.0), ("laser", 25.0)]
 
 
@@ -118,14 +132,14 @@ def test_writing_while_dragging_is_throttled(
     for step in range(2, 7):
         slider.setValue(step * 100)
     first = list(asked)
-    deadline = QtCore.QDeadlineTimer(150)
-    while not deadline.hasExpired():
+    deadline = QtCore.QDeadlineTimer(2000)
+    while asked[-1] != ("laser", 60.0) and not deadline.hasExpired():
         QtWidgets.QApplication.processEvents()
+    dragged = list(asked)
     slider.setSliderDown(False)
 
     assert first == [("laser", 20.0)]
-    assert asked[-1] == ("laser", 60.0)
-    assert len(asked) < 5
+    assert dragged == [("laser", 20.0), ("laser", 60.0)]
 
 
 def test_a_readback_waits_while_the_user_drags(
@@ -235,7 +249,7 @@ def test_a_failed_write_shows_the_intensity_read_back(
 def test_a_fine_precision_over_a_wide_range_still_builds(
     qapp: QtWidgets.QApplication,
 ) -> None:
-    """Build the slider of an intensity with many decimals over a wide range."""
+    """Reach the top of a wide range with the slider of a finely resolved intensity."""
     light = LightGroup(
         "laser",
         LightInfo(False, Readback(1.0, "mW", 9, (0.0, 5000.0))),
@@ -243,9 +257,12 @@ def test_a_fine_precision_over_a_wide_range_still_builds(
     )
 
     slider = child(light, QtWidgets.QSlider, "slider")
+    field = child(light, QtWidgets.QDoubleSpinBox, "intensity")
 
-    assert slider.maximum() < 2**31
-    assert child(light, QtWidgets.QDoubleSpinBox, "intensity").decimals() == 9
+    slider.setValue(slider.maximum())
+
+    assert field.value() == pytest.approx(5000.0)
+    assert field.decimals() == 9
 
 
 def test_the_state_line_shows_only_while_a_failure_stands(
