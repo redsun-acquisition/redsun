@@ -49,10 +49,10 @@ class LightGroup(QtW.QGroupBox):
         self._latest: float | None = None
         layout = QtW.QVBoxLayout(self)
 
-        self._toggle = QtW.QPushButton("On", self)
+        self._toggle = QtW.QPushButton(self)
         self._toggle.setObjectName("toggle")
         self._toggle.setCheckable(True)
-        self._toggle.setChecked(info.enabled)
+        self.set_enabled(info.enabled)
         self._toggle.setAccessibleName(f"Switch {device}")
         # the button shows the state read back; a click only asks
         self._toggle.clicked.connect(self._ask_toggle)
@@ -104,8 +104,9 @@ class LightGroup(QtW.QGroupBox):
         layout.addWidget(self._state)
 
     def set_enabled(self, on: bool) -> None:
-        """Show whether the light is on, as read back."""
+        """Show whether the light is on, as read back, in the button's text as well."""
         self._toggle.setChecked(on)
+        self._toggle.setText("On" if on else "Off")
 
     def set_intensity(self, value: float) -> None:
         """Show the intensity read back, unless the user is dragging or typing."""

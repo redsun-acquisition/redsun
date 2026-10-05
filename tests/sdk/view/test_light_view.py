@@ -75,11 +75,12 @@ def test_the_toggle_asks_and_follows_the_readback(
     toggle = child(group(view, "laser"), QtWidgets.QAbstractButton, "toggle")
 
     toggle.click()
-    before = toggle.isChecked()
+    before = (toggle.isChecked(), toggle.text())
     view.update_enabled("laser", True)
 
     assert asked == [("laser", True)]
-    assert (before, toggle.isChecked()) == (False, True)
+    assert before == (False, "Off")
+    assert (toggle.isChecked(), toggle.text()) == (True, "On")
 
 
 def test_a_slider_writes_on_release_and_the_field_on_enter(
