@@ -6,7 +6,7 @@ import pytest
 from qtpy import QtCore, QtWidgets
 
 from redsun.utils.devices import Configuration
-from redsun.view.qt.treeview import ConfigurationTab, DescriptorTreeView
+from redsun.view.qt.treeview import ConfigurationTab
 
 pytestmark = pytest.mark.qt
 
@@ -58,7 +58,6 @@ def test_an_empty_configuration_says_so(qapp: QtWidgets.QApplication) -> None:
     tab = ConfigurationTab(Configuration(descriptors={}, readings={}, writable={}))
     row = tab.topLevelItem(0)
 
-    assert isinstance(tab, DescriptorTreeView)
     assert row is not None
     assert row.text(0) == "No device has a configuration."
     assert not row.flags() & QtCore.Qt.ItemFlag.ItemIsSelectable

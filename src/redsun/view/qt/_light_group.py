@@ -19,13 +19,17 @@ THROTTLE_MS = 100
 DEFAULT_PRECISION = 2
 """Decimals of an intensity whose descriptor gives none."""
 
+MAX_STEPS = 1_000_000
+"""Most steps a slider spans from zero, well inside the integers Qt takes."""
+
 
 class LightGroup(QtW.QGroupBox):
     """A light's on/off button and, when it has one, its intensity.
 
     The controls show what the light reads back. The intensity is written when
-    the slider is let go, when Enter is pressed in the field, and, with
-    `write_while_dragging`, during a drag at most every 100 ms.
+    the slider is let go or stepped, when the field is changed (on Enter, on
+    leaving it, or with its arrows), and, with `write_while_dragging`, during a
+    drag at most every 100 ms.
     """
 
     sig_enabled = Signal(str, bool)
@@ -47,6 +51,8 @@ class LightGroup(QtW.QGroupBox):
         self._dragging_writes = write_while_dragging
         self._pending: float | None = None
         self._latest: float | None = None
+        self._editing = False
+        self._wrote = False
         layout = QtW.QVBoxLayout(self)
 
         self._toggle = QtW.QPushButton(self)
@@ -63,10 +69,14 @@ class LightGroup(QtW.QGroupBox):
         self._field: QtW.QDoubleSpinBox | None = None
         if info.intensity is not None:
             decimals = DEFAULT_PRECISION if info.precision is None else info.precision
-            self._scale = 10**decimals
             row = QtW.QHBoxLayout()
             low, high = info.limits
             if low is not None and high is not None:
+                # the slider steps more coarsely than the field when the range
+                # in steps of the last decimal would not fit in Qt's integers
+                self._scale = float(10**decimals)
+                while max(abs(low), abs(high)) * self._scale > MAX_STEPS:
+                    self._scale /= 10
                 self._slider = QtW.QSlider(QtCore.Qt.Orientation.Horizontal, self)
                 self._slider.setObjectName("slider")
                 self._slider.setAccessibleName(f"{device} intensity")
@@ -88,7 +98,10 @@ class LightGroup(QtW.QGroupBox):
             )
             self._field.setKeyboardTracking(False)
             self._field.setValue(info.intensity)
-            self._field.editingFinished.connect(self._field_entered)
+            self._field.valueChanged.connect(self._field_changed)
+            self._field.editingFinished.connect(self._field_done)
+            if (edit := self._field.lineEdit()) is not None:
+                edit.textEdited.connect(self._start_editing)
             row.addWidget(self._field)
             row.addWidget(QtW.QLabel(info.units or "", self))
             layout.addLayout(row)
@@ -119,6 +132,8 @@ class LightGroup(QtW.QGroupBox):
         """Show why the last write failed."""
         self._state.setText(f"failed: {message}")
         self._state.setToolTip(message)
+        if self._latest is not None and not self._busy():
+            self._show(self._latest)
 
     def set_locked(self, locked: bool) -> None:
         """Disable the controls while *locked*; readbacks keep updating."""
@@ -131,8 +146,7 @@ class LightGroup(QtW.QGroupBox):
 
     def _busy(self) -> bool:
         dragging = self._slider is not None and self._slider.isSliderDown()
-        typing = self._field is not None and self._field.hasFocus()
-        return dragging or typing
+        return dragging or self._editing
 
     def _show(self, value: float) -> None:
         if self._field is not None:
@@ -172,8 +186,19 @@ class LightGroup(QtW.QGroupBox):
         self._pending = None
         self.sig_intensity.emit(self._device, self._slider.value() / self._scale)
 
-    def _field_entered(self) -> None:
-        assert self._field is not None
-        self.sig_intensity.emit(self._device, self._field.value())
-        if self._latest is not None and not self._busy():
+    def _start_editing(self, text: str) -> None:
+        self._editing = True
+        self._wrote = False
+
+    def _field_changed(self, value: float) -> None:
+        # with keyboard tracking off, only Enter, focus loss after a change,
+        # and the arrows reach here
+        self._wrote = True
+        self.sig_intensity.emit(self._device, value)
+
+    def _field_done(self) -> None:
+        self._editing = False
+        # left without a change: show what the light reported meanwhile
+        if not self._wrote and self._latest is not None and not self._busy():
             self._show(self._latest)
+        self._wrote = False

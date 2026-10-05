@@ -78,7 +78,9 @@ slider and intensity field, and an LED that is on](images/lights.png)
   confirms it.
 - The slider and the number field show the intensity the light reads back,
   except while you drag the slider or type in the field. The intensity is
-  written when you let the slider go and when you press Enter.
+  written when you let the slider go, when you press Enter or leave the field
+  after changing it, and at each step of the field's arrows or the slider's
+  keys. Leaving the field unchanged writes nothing.
 - With "Write while dragging" ticked in the Advanced tab, the intensity is also
   written during a drag, at most every 100 ms. The view's
   `write_while_dragging` keyword sets the default; once ticked or cleared in the

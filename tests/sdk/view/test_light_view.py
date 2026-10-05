@@ -192,3 +192,57 @@ def test_a_held_light_cannot_be_used_until_released(
     view.set_locked(frozenset())
 
     assert (locked, toggle.isEnabled()) == (False, True)
+
+
+def test_leaving_the_field_untouched_writes_nothing_and_shows_the_readback(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Write nothing when the field loses focus unchanged, and show what came meanwhile."""
+    view = make_view(settings, parent)
+    asked: list[tuple[str, float]] = []
+    view.sig_intensity.connect(lambda *args: asked.append(args))
+    field = child(group(view, "laser"), QtWidgets.QDoubleSpinBox, "intensity")
+    edit = field.lineEdit()
+    assert edit is not None
+
+    edit.textEdited.emit(edit.text())
+    view.update_intensity("laser", 70.0)
+    field.editingFinished.emit()
+
+    assert asked == []
+    assert field.value() == pytest.approx(70.0)
+
+
+def test_a_failed_write_shows_the_intensity_read_back(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Show what the light reads back, not what was asked, once a write fails."""
+    view = make_view(settings, parent)
+    laser = group(view, "laser")
+    slider = child(laser, QtWidgets.QSlider, "slider")
+    field = child(laser, QtWidgets.QDoubleSpinBox, "intensity")
+
+    view.update_intensity("laser", 80.0)
+    slider.setSliderDown(True)
+    slider.setValue(300)
+    slider.setSliderDown(False)
+    view.set_failed("laser", "TimeoutError")
+
+    assert field.value() == pytest.approx(80.0)
+    assert slider.value() == 800
+
+
+def test_a_fine_precision_over_a_wide_range_still_builds(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Build the slider of an intensity with many decimals over a wide range."""
+    light = LightGroup(
+        "laser",
+        LightInfo(False, 1.0, "mW", 9, (0.0, 5000.0)),
+        write_while_dragging=False,
+    )
+
+    slider = child(light, QtWidgets.QSlider, "slider")
+
+    assert slider.maximum() < 2**31
+    assert child(light, QtWidgets.QDoubleSpinBox, "intensity").decimals() == 9
