@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import math
+from concurrent.futures import CancelledError
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import pytest
 from ophyd_async.core import SignalRW, StandardReadable, set_mock_attr, soft_signal_rw
@@ -234,18 +235,6 @@ async def test_a_write_that_fails_is_reported(presenter: LightPresenter) -> None
     assert failures == [("laser", "interlock open")]
 
 
-@dataclass(eq=False, kw_only=True)
-class Remembered(LightPresenter):
-    """A light presenter that keeps every instance it starts to build."""
-
-    built: ClassVar[list[LightPresenter]] = []
-
-    def __post_init__(self) -> None:
-        """Remember this instance, then build it."""
-        Remembered.built.append(self)
-        super().__post_init__()
-
-
 async def test_a_cancelled_start_leaves_no_light_followed() -> None:
     """Follow no light once the start is cancelled while one is being read."""
     light = DimmerLight("laser")
@@ -255,11 +244,21 @@ async def test_a_cancelled_start_leaves_no_light_followed() -> None:
         raise asyncio.CancelledError
 
     set_mock_attr(light, "read_configuration", cancelled)
-    Remembered.built.clear()
-    with pytest.raises(BaseException):  # noqa: B017
+    built: list[LightPresenter] = []
+
+    @dataclass(eq=False, kw_only=True)
+    class Remembered(LightPresenter):
+        """A light presenter that keeps every instance it starts to build."""
+
+        def __post_init__(self) -> None:
+            """Remember this instance, then build it."""
+            built.append(self)
+            super().__post_init__()
+
+    with pytest.raises(CancelledError):
         Remembered("lights", devices={"laser": light})
     seen: list[tuple[str, bool]] = []
-    Remembered.built[0].sig_enabled.connect(lambda *args: seen.append(args))
+    built[0].sig_enabled.connect(lambda *args: seen.append(args))
 
     await light.enabled.set(True)
 
