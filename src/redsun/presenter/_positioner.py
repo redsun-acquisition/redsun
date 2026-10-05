@@ -15,8 +15,10 @@ from bluesky.utils import maybe_await
 from ophyd_async.core import (
     AsyncConfigurable,
     AsyncReadable,
+    AsyncStatus,
     Device,
     SignalR,
+    WatchableAsyncStatus,
     walk_devices,
 )
 from psygnal import Signal
@@ -349,6 +351,11 @@ class PositionerPresenter(Loggable):
             self.check(device, axis, target)
             self.logger.info(f"Moving {label(device, axis)} to {target}")
             status = item.set(target)
+            if not isinstance(status, AsyncStatus | WatchableAsyncStatus):
+                raise TypeError(
+                    f"{label(device, axis)}: set returned "
+                    f"{type(status).__name__}, not an ophyd-async status"
+                )
             self._moves[device] = status.task
             try:
                 # waiting on the task rather than awaiting it lets a stop cancel

@@ -24,6 +24,7 @@ from tests.sdk.mocks import (
     LaggingAxis,
     LimitedAxis,
     MockDetector,
+    PlainStatusAxis,
     QuietStage,
     SoftAxis,
     Stage,
@@ -638,3 +639,18 @@ async def test_cancelling_the_slot_cancels_the_move(
     await asyncio.sleep(0.05)
 
     assert await position(stage.axis["x"]) == pytest.approx(0.0)
+
+
+async def test_a_move_whose_status_is_not_from_ophyd_async_is_refused() -> None:
+    """Report a move whose `set` returns another kind of status, saying why."""
+    axis = PlainStatusAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+    failures: list[tuple[str, str]] = []
+    positioner.sig_failed.connect(lambda *args: failures.append(args))
+
+    await positioner.move_to("focus", {"focus": 1.0})
+
+    assert len(failures) == 1
+    assert "not an ophyd-async status" in failures[0][1]
+    positioner.shutdown()
