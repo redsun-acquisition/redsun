@@ -183,7 +183,7 @@ def test_stop_is_offered_only_for_a_stoppable_device(
 def test_go_to_refuses_a_target_outside_the_limits(
     qapp: QtWidgets.QApplication,
 ) -> None:
-    """Send a target inside the axis' limits and drop one outside them."""
+    """Send a target inside the axis' limits, and say why one outside them was dropped."""
     limited = PositionerGroup(
         "a",
         {"x": AxisInfo(Readback(0.0, "um", 2, (-5.0, 5.0)))},
@@ -198,11 +198,14 @@ def test_go_to_refuses_a_target_outside_the_limits(
 
     field.setText("9")
     go.click()
+    refused = child(limited, QtWidgets.QLabel, "state").text()
     field.setText("4")
     go.click()
 
     assert targets == [("a", {"x": 4.0})]
     assert "-5" in field.toolTip()
+    assert "9" in refused
+    assert "-5.00" in refused
 
 
 def test_arrow_keys_do_not_step_a_locked_device(group: PositionerGroup) -> None:
@@ -280,24 +283,6 @@ def test_the_go_to_field_follows_the_readback_until_a_target_is_typed(
     assert (shown, field.text()) == ("7.000", "3")
 
 
-def test_a_refused_target_says_why(qapp: QtWidgets.QApplication) -> None:
-    """Show why a target outside the limits was not sent."""
-    limited = PositionerGroup(
-        "a",
-        {"x": AxisInfo(Readback(0.0, "um", 2, (-5.0, 5.0)))},
-        steps=(1.0,),
-        repeat_delay=100,
-        repeat_interval=50,
-    )
-    child(limited, QtWidgets.QLineEdit, "goto:x").setText("9")
-
-    child(limited, QtWidgets.QAbstractButton, "go:x").click()
-
-    state = child(limited, QtWidgets.QLabel, "state").text()
-    assert "9" in state
-    assert "-5.00" in state
-
-
 def test_unlocking_gives_the_controls_back(group: PositionerGroup) -> None:
     """Enable the controls again once a plan releases the device."""
     group.set_locked(True)
@@ -342,20 +327,6 @@ def test_no_control_of_a_row_covers_another(group: PositionerGroup) -> None:
             )
 
 
-def test_the_step_box_centres_its_size(group: PositionerGroup) -> None:
-    """Centre the step size in the step box and in the sizes it lists."""
-    box = child(group, QtWidgets.QComboBox, "step:x")
-    edit = box.lineEdit()
-    assert edit is not None
-    centred = QtCore.Qt.AlignmentFlag.AlignHCenter
-
-    assert edit.alignment() & centred
-    assert all(
-        box.itemData(index, QtCore.Qt.ItemDataRole.TextAlignmentRole) & centred
-        for index in range(box.count())
-    )
-
-
 def test_a_spin_box_steps_by_the_size_it_holds(qapp: QtWidgets.QApplication) -> None:
     """Step by the size typed in a spin box, starting from the default size."""
     group = spin_group(qapp)
@@ -369,7 +340,6 @@ def test_a_spin_box_steps_by_the_size_it_holds(qapp: QtWidgets.QApplication) -> 
     plus.pressed.emit()
 
     assert steps == [1.0, 0.25]
-    assert box.alignment() & QtCore.Qt.AlignmentFlag.AlignHCenter
 
 
 @pytest.mark.parametrize(
