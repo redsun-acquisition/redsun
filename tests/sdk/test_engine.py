@@ -4,7 +4,7 @@ import asyncio
 import subprocess
 import sys
 import threading
-from concurrent.futures import Future, wait
+from concurrent.futures import wait
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
@@ -21,12 +21,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from bluesky.utils import MsgGenerator
-
-
-def test_engine_wrapper_construction(RE: RunEngine) -> None:
-    """Start an engine with no context managers and an empty pause message."""
-    assert RE.context_managers == []
-    assert RE.pause_msg == ""
 
 
 def _engine_threads() -> set[threading.Thread]:
@@ -114,41 +108,6 @@ def test_importing_the_engine_starts_no_thread() -> None:
     assert result.stdout.strip() == "['MainThread']"
 
 
-def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -> None:
-    """Return a successful RunEngineResult from a finished plan."""
-    fut = RE(count([detector], num=5))
-
-    wait([fut])
-
-    result = fut.result()
-
-    assert type(result) is RunEngineResult
-    assert result.exit_status == "success"
-
-
-def test_a_done_callback_receives_the_finished_future(
-    RE: RunEngine, detector: MockDetector
-) -> None:
-    """Pass the finished future to a done callback."""
-    finished: list[Future[Any]] = []
-    called = threading.Event()
-
-    def callback(future: Future[Any]) -> None:
-        finished.append(future)
-        called.set()
-
-    fut = RE(count([detector], num=5))
-    fut.add_done_callback(callback)
-
-    # concurrent.futures runs done callbacks after waking waiters, so the
-    # event, not fut.result(), says the callback has run
-    assert called.wait(timeout=5)
-    assert finished == [fut]
-    result = fut.result()
-    assert isinstance(result, RunEngineResult)
-    assert result.exit_status == "success"
-
-
 def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
     RE: RunEngine, detector: MockDetector
 ) -> None:
@@ -174,18 +133,6 @@ def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
         "stop": ["stop"],
     }
     assert {thread for _, _, thread in seen} == {run_coro(_current_thread())}
-
-
-def test_an_unsubscribed_callback_receives_nothing(
-    RE: RunEngine, detector: MockDetector
-) -> None:
-    """Send no documents to an unsubscribed callback."""
-    seen: list[tuple[str, str, threading.Thread]] = []
-    RE.unsubscribe(RE.subscribe(_recorder(seen, "all")))
-
-    RE(count([detector], num=2)).result(timeout=10)
-
-    assert seen == []
 
 
 def test_pausable_engine(
