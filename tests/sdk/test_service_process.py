@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from p4p.client.thread import Context
 
 from redsun.services import Service, identity, ready, wait_for_stop
 from redsun.services._process import (
@@ -18,6 +21,7 @@ from redsun.services._process import (
 )
 from redsun.services._transports import (
     CHANNEL_ACCESS,
+    LOOPBACK,
     PV_ACCESS,
     TRANSPORTS,
     ChannelAccess,
@@ -103,7 +107,9 @@ def test_a_stale_ready_text_in_the_session_does_not_reach_a_service(
     service.start()
     service.stop()
 
-    assert "stale ready text" not in messages(service_log, logging.DEBUG)
+    output = messages(service_log, logging.DEBUG)
+    assert "asked to stop" in output
+    assert "stale ready text" not in output
 
 
 def test_ready_prints_nothing_without_a_declared_text(
@@ -122,6 +128,7 @@ async def test_a_service_run_alone_has_no_identity_and_keeps_waiting(
 ) -> None:
     """Report no identity and keep waiting for a stop request when no session launched the process."""
     monkeypatch.delenv(NAME_VARIABLE, raising=False)
+    monkeypatch.setattr(sys, "stdin", io.StringIO(""))
 
     assert identity() is None
     with pytest.raises(TimeoutError):
@@ -192,9 +199,12 @@ def test_a_pva_service_is_ready_once_its_pv_answers(
 
     try:
         service.start()
+        with Context("pva", conf={"EPICS_PVA_ADDR_LIST": LOOPBACK}) as client:
+            answered = client.get("REACH:VALUE", timeout=1.0)
     finally:
         service.stop()
 
+    assert answered == 0.0
     info = messages(service_log, logging.INFO)
     assert "Service 'reachable' started" in info
     assert "Service 'reachable' stopped with exit code 0" in info
