@@ -34,8 +34,14 @@ __all__ = [
     "Axis",
     "AxisInfo",
     "Configuration",
+    "DimmableLight",
+    "Light",
+    "LightInfo",
     "describe_axis",
+    "describe_light",
+    "dimmable",
     "find_axes",
+    "is_light",
     "limits",
     "read_configuration",
     "walk_axes",
@@ -212,4 +218,84 @@ async def read_configuration(device: AsyncConfigurable) -> Configuration:
         descriptors=marked,
         readings=dict(readings),
         writable=writable,
+    )
+
+
+@runtime_checkable
+class Light(Protocol):
+    """A light source that can be switched on and off."""
+
+    @property
+    def enabled(self) -> SignalRW[bool]:
+        """On when `True`."""
+        ...
+
+
+@runtime_checkable
+class DimmableLight(Light, Protocol):
+    """A light whose intensity can also be set."""
+
+    @property
+    def intensity(self) -> SignalRW[float]:
+        """How bright the light is, in the units its descriptor gives."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class LightInfo:
+    """What a view shows of a light before its first readback arrives."""
+
+    enabled: bool
+    """Whether the light was on when described."""
+
+    intensity: float | None = None
+    """Intensity when described; `None` for a light that has none."""
+
+    units: str | None = None
+    """Units of the intensity, from its descriptor."""
+
+    precision: int | None = None
+    """Decimals the intensity's descriptor asks for."""
+
+    limits: tuple[float | None, float | None] = (None, None)
+    """Lowest and highest intensity the descriptor allows; `None` for no bound."""
+
+
+def is_light(item: object) -> TypeGuard[Light]:
+    """Tell whether *item* is a light: its `enabled` is a boolean signal it can write.
+
+    A device whose `intensity` is not a numeric signal it can write counts as
+    a light without intensity.
+    """
+    enabled = getattr(item, "enabled", None)
+    return isinstance(enabled, SignalRW) and enabled.datatype is bool
+
+
+def dimmable(light: Light) -> TypeGuard[DimmableLight]:
+    """Tell whether *light* has an intensity that is a numeric signal it can write."""
+    intensity = getattr(light, "intensity", None)
+    return isinstance(intensity, SignalRW) and intensity.datatype in (int, float)
+
+
+async def describe_light(light: Light) -> LightInfo:
+    """Return the state of *light* and what its intensity's descriptor says."""
+    enabled = await light.enabled.get_value()
+    if not dimmable(light):
+        return LightInfo(enabled=bool(enabled))
+    value, described = await asyncio.gather(
+        light.intensity.get_value(), light.intensity.describe()
+    )
+    descriptor: Mapping[str, Any] = described.get(light.intensity.name, {})
+    units = descriptor.get("units")
+    precision = descriptor.get("precision")
+    return LightInfo(
+        enabled=bool(enabled),
+        intensity=float(value),
+        units=units if isinstance(units, str) else None,
+        precision=precision
+        if isinstance(precision, int)
+        and not isinstance(precision, bool)
+        and precision >= 0
+        else None,
+        limits=limits(descriptor),
     )

@@ -14,8 +14,15 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun.utils.devices import describe_axis, find_axes, limits
-from tests.sdk.mocks import SoftAxis, Stage, TwinStage
+from redsun.utils.devices import (
+    LightInfo,
+    describe_axis,
+    describe_light,
+    find_axes,
+    is_light,
+    limits,
+)
+from tests.sdk.mocks import DimmerLight, SoftAxis, SoftLight, Stage, TwinStage
 
 if TYPE_CHECKING:
     from bluesky.protocols import Location
@@ -197,3 +204,38 @@ async def test_a_movable_axis_is_described_by_its_readback_not_its_first_hint() 
     info = await describe_axis(axis)
 
     assert (info.key, info.units) == (axis.position.name, "um")
+
+
+async def test_a_light_is_described_from_its_signals() -> None:
+    """Describe a dimmable light's state and its intensity's units and limits."""
+    light = DimmerLight("laser")
+    await light.connect(mock=False)
+    await light.enabled.set(True)
+
+    info = await describe_light(light)
+
+    assert info == LightInfo(True, 10.0, "mW", 1, (0.0, 100.0))
+
+
+async def test_a_light_without_intensity_is_on_or_off_only() -> None:
+    """Describe a light that has no intensity with its state alone."""
+    light = SoftLight("led")
+    await light.connect(mock=False)
+
+    assert await describe_light(light) == LightInfo(False)
+
+
+async def test_an_enabled_attribute_that_is_not_a_bool_signal_is_no_light() -> None:
+    """Refuse a device whose `enabled` is not a boolean signal."""
+
+    class Shutter(StandardReadable):
+        def __init__(self, name: str = "") -> None:
+            self.enabled = soft_signal_rw(int, 0)
+            super().__init__(name=name)
+
+    shutter = Shutter("shutter")
+    await shutter.connect(mock=False)
+    led = SoftLight("led")
+    await led.connect(mock=False)
+
+    assert (is_light(shutter), is_light(led)) == (False, True)
