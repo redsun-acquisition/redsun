@@ -10,7 +10,7 @@ from superqt import QCollapsible, QLabeledSlider
 
 from redsun import Settings
 from redsun.presenter import DescribesAxes
-from redsun.utils.devices import AxisInfo, Configuration
+from redsun.utils.devices import AxisInfo, Configuration, Readback
 from redsun.view.qt.builtins import PositionerGroup, PositionerView
 from redsun.view.qt.treeview import DescriptorTreeView
 
@@ -22,8 +22,11 @@ pytestmark = pytest.mark.qt
 T = TypeVar("T", bound=QtCore.QObject)
 
 AXES = {
-    "stage": {"x": AxisInfo(0.0, "um", 3), "theta": AxisInfo(0.0, "deg", 1)},
-    "focus": {"focus": AxisInfo(52.1, "um", 2)},
+    "stage": {
+        "x": AxisInfo(Readback(0.0, "um", 3)),
+        "theta": AxisInfo(Readback(0.0, "deg", 1)),
+    },
+    "focus": {"focus": AxisInfo(Readback(52.1, "um", 2))},
 }
 
 
@@ -67,7 +70,9 @@ class OffsetPositioner:
 
     def __init__(self, offset: float = 0.0) -> None:
         keys = ("stage-axis-x-offset", "stage-axis-x-velocity")
-        self.axes = {"stage": {"x": AxisInfo(0.0, "um", 3, configuration=keys)}}
+        self.axes = {
+            "stage": {"x": AxisInfo(Readback(0.0, "um", 3), configuration=keys)}
+        }
         self.configuration = Configuration(
             descriptors={
                 key: {

@@ -7,8 +7,9 @@ through attribute names, so they apply to any device.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from numbers import Real
 from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, runtime_checkable
 
@@ -34,10 +35,18 @@ __all__ = [
     "Axis",
     "AxisInfo",
     "Configuration",
+    "DimmableLight",
+    "Light",
+    "LightInfo",
+    "Readback",
     "describe_axis",
+    "describe_light",
+    "dimmable",
     "find_axes",
+    "is_light",
     "limits",
     "read_configuration",
+    "readback",
     "walk_axes",
 ]
 
@@ -53,20 +62,28 @@ class Axis(AsyncLocatable[float], Subscribable[float], Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class AxisInfo:
-    """What a view shows of an axis before its first readback arrives."""
+class Readback:
+    """A number as a device reads it back, with what its descriptor says of it."""
 
-    position: float
-    """Readback when the axis was described."""
+    value: float
+    """The value read."""
 
-    units: str | None
-    """Engineering units of the axis, from its descriptor."""
+    units: str | None = None
+    """Engineering units, from the descriptor."""
 
-    precision: int | None
+    precision: int | None = None
     """Decimals the descriptor asks for."""
 
     limits: tuple[float | None, float | None] = (None, None)
-    """Lowest and highest position the descriptor allows; `None` for no bound."""
+    """Lowest and highest value the descriptor allows; `None` for no bound."""
+
+
+@dataclass(frozen=True, slots=True)
+class AxisInfo:
+    """What a view shows of an axis before its next readback arrives."""
+
+    readback: Readback
+    """Position when the axis was described, with its units, precision and limits."""
 
     stoppable: bool = False
     """Whether the axis can be stopped, by itself or through its device."""
@@ -90,6 +107,9 @@ class Configuration:
 
     writable: dict[str, SignalRW[Any]]
     """The writable signals among them, by key."""
+
+    owners: dict[str, str] = field(default_factory=dict)
+    """Name of the device each key belongs to; empty when not known."""
 
 
 def is_axis(item: object) -> TypeGuard[Axis]:
@@ -131,6 +151,26 @@ def find_axes(device: Device) -> dict[str, Axis]:
     return {
         path if shared[name] > 1 else name: axis for path, (name, axis) in found.items()
     }
+
+
+def readback(value: float, descriptor: Mapping[str, Any]) -> Readback:
+    """Return *value* with the units, precision and limits *descriptor* gives.
+
+    Units that are not text, and a precision that is not a whole number of at
+    least 0, are left out.
+    """
+    units = descriptor.get("units")
+    precision = descriptor.get("precision")
+    return Readback(
+        value=value,
+        units=units if isinstance(units, str) else None,
+        precision=precision
+        if isinstance(precision, int)
+        and not isinstance(precision, bool)
+        and precision >= 0
+        else None,
+        limits=limits(descriptor),
+    )
 
 
 def limits(descriptor: Mapping[str, Any]) -> tuple[float | None, float | None]:
@@ -179,17 +219,8 @@ async def describe_axis(axis: Axis) -> AxisInfo:
     else:
         key = None
     descriptor: Mapping[str, Any] = described.get(key, {}) if key is not None else {}
-    units = descriptor.get("units")
-    precision = descriptor.get("precision")
     return AxisInfo(
-        position=float(position),
-        units=units if isinstance(units, str) else None,
-        precision=precision
-        if isinstance(precision, int)
-        and not isinstance(precision, bool)
-        and precision >= 0
-        else None,
-        limits=limits(descriptor),
+        readback=readback(float(position), descriptor),
         stoppable=isinstance(axis, Stoppable),
         key=key,
     )
@@ -213,3 +244,66 @@ async def read_configuration(device: AsyncConfigurable) -> Configuration:
         readings=dict(readings),
         writable=writable,
     )
+
+
+@runtime_checkable
+class Light(Protocol):
+    """A light source that can be switched on and off."""
+
+    @property
+    def enabled(self) -> SignalRW[bool]:
+        """On when `True`."""
+        ...
+
+
+@runtime_checkable
+class DimmableLight(Light, Protocol):
+    """A light whose intensity can also be set."""
+
+    @property
+    def intensity(self) -> SignalRW[float]:
+        """How bright the light is, in the units its descriptor gives."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class LightInfo:
+    """What a view shows of a light before its next readback arrives."""
+
+    enabled: bool
+    """Whether the light was on when described."""
+
+    intensity: Readback | None = None
+    """Intensity when described, with its units, precision and limits; `None` for a
+    light that has none."""
+
+
+def is_light(item: object) -> TypeGuard[Light]:
+    """Tell whether *item* is a light: its `enabled` is a boolean signal it can write.
+
+    A device whose `intensity` is not a numeric signal it can write counts as
+    a light without intensity.
+    """
+    enabled = getattr(item, "enabled", None)
+    return isinstance(enabled, SignalRW) and enabled.datatype is bool
+
+
+def dimmable(light: Light) -> TypeGuard[DimmableLight]:
+    """Tell whether *light* has an intensity that is a numeric signal it can write."""
+    intensity = getattr(light, "intensity", None)
+    return isinstance(intensity, SignalRW) and intensity.datatype in (int, float)
+
+
+async def describe_light(light: Light) -> LightInfo:
+    """Return the state of *light* and what its intensity's descriptor says."""
+    enabled = await light.enabled.get_value()
+    if not dimmable(light):
+        return LightInfo(enabled=bool(enabled))
+    whole = light.intensity.datatype is int
+    value, described = await asyncio.gather(
+        light.intensity.get_value(), light.intensity.describe()
+    )
+    intensity = readback(float(value), described.get(light.intensity.name, {}))
+    if whole:
+        intensity = dataclasses.replace(intensity, precision=0)
+    return LightInfo(enabled=bool(enabled), intensity=intensity)

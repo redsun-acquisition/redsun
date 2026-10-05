@@ -29,10 +29,19 @@ icon: lucide/code
     options:
       members:
         - DescriptorTreeView
+        - ConfigurationTab
 
 ## Built-ins
 
 ::: redsun.view.qt.builtins.LogView
+    options:
+      show_root_heading: true
+
+::: redsun.view.qt.builtins.LightView
+    options:
+      show_root_heading: true
+
+::: redsun.view.qt.builtins.LightGroup
     options:
       show_root_heading: true
 

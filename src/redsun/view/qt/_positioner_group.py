@@ -78,11 +78,15 @@ class AxisRow(QtW.QWidget):
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         self.setAccessibleName(f"{axis} axis")
         self.axis = axis
-        self.decimals = DEFAULT_PRECISION if info.precision is None else info.precision
-        self.position = info.position
+        self.decimals = (
+            DEFAULT_PRECISION
+            if info.readback.precision is None
+            else info.readback.precision
+        )
+        self.position = info.readback.value
         self.step = 1.0 if 1.0 in steps else steps[0]
 
-        self.readback = QtW.QLabel(self.format_value(info.position), self)
+        self.readback = QtW.QLabel(self.format_value(info.readback.value), self)
         self.readback.setObjectName(f"readback:{axis}")
         self.readback.setAccessibleName(f"{axis} position")
         font = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.FixedFont)
@@ -153,13 +157,13 @@ class AxisRow(QtW.QWidget):
         self.box.setAccessibleName(f"{axis} step size")
         self.box.setToolTip("Step size")
 
-        self.target = QtW.QLineEdit(self.format_value(info.position), self)
+        self.target = QtW.QLineEdit(self.format_value(info.readback.value), self)
         self.target.setObjectName(f"goto:{axis}")
         self.target.setAccessibleName(f"{axis} target")
         self.target.setMinimumWidth(self.fontMetrics().horizontalAdvance("0" * 6))
         self.validator = number_validator(-LIMIT, LIMIT, self.target)
         self.target.setValidator(self.validator)
-        self.set_limits(*info.limits)
+        self.set_limits(*info.readback.limits)
         self.target.returnPressed.connect(self.go)
         self.go_button = tool_button("Go", f"Go {axis} to target", self)
         self.go_button.setFixedWidth(self.fontMetrics().horizontalAdvance("Go") + 16)
@@ -176,7 +180,7 @@ class AxisRow(QtW.QWidget):
         grid.setContentsMargins(4, 2, 4, 2)
         grid.addWidget(QtW.QLabel(axis, self), 0, 0, 1, 3)
         grid.addWidget(self.readback, 0, 3, 1, 2)
-        grid.addWidget(QtW.QLabel(info.units or "", self), 0, 5)
+        grid.addWidget(QtW.QLabel(info.readback.units or "", self), 0, 5)
         grid.addWidget(self.buttons[0], 1, 0)
         grid.addWidget(self.box, 1, 1)
         grid.addWidget(self.buttons[1], 1, 2)

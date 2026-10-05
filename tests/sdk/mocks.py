@@ -12,6 +12,7 @@ from ophyd_async.core import (
     DeviceMap,
     MovableLogic,
     SignalRW,
+    SoftSignalBackend,
     StandardMovable,
     StandardReadable,
     StandardReadableFormat,
@@ -288,3 +289,53 @@ class PlainStatusAxis(SoftAxis):
     def set(self, value: float, timeout: object = None) -> PlainStatus:  # type: ignore[override]
         """Return a finished status without moving."""
         return PlainStatus()
+
+
+class BoundedBackend(SoftSignalBackend[float]):
+    """A soft float backend whose descriptor reports control limits."""
+
+    def __init__(self, low: float, high: float, value: float, units: str) -> None:
+        super().__init__(float, value, units=units, precision=1)
+        self.bounds = (low, high)
+
+    async def get_datakey(self, source: str) -> DataKey:
+        """Describe the signal, with its limits."""
+        key = await super().get_datakey(source)
+        key["limits"] = {"control": {"low": self.bounds[0], "high": self.bounds[1]}}
+        return key
+
+
+def bounded_signal(
+    low: float, high: float, value: float, units: str
+) -> SignalRW[float]:
+    """Return a soft float signal limited to *low* and *high*."""
+    return SignalRW(BoundedBackend(low, high, value, units))
+
+
+class SoftLight(StandardReadable):
+    """A light that is switched on and off, with its wavelength as configuration."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.enabled = soft_signal_rw(bool, False)
+        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
+            self.wavelength = soft_signal_rw(int, 650, units="nm")
+        super().__init__(name=name)
+
+
+class DimmerLight(SoftLight):
+    """A soft light whose intensity is set from 0 to 100 mW."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.intensity = bounded_signal(0.0, 100.0, 10.0, "mW")
+        super().__init__(name=name)
+
+
+class WholeLight(SoftLight):
+    """A soft light whose intensity is a whole number with no limits."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.intensity = soft_signal_rw(int, 5, units="%")
+        super().__init__(name)

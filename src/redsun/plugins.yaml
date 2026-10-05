@@ -1,5 +1,7 @@
 presenters:
+  lights: "redsun.presenter:LightPresenter"
   positioner: "redsun.presenter:PositionerPresenter"
 views:
+  lights: "redsun.view.qt.builtins:LightView"
   logs: "redsun.view.qt.builtins:LogView"
   positioner: "redsun.view.qt.builtins:PositionerView"

@@ -21,3 +21,11 @@ icon: lucide/code
         - limits
         - read_configuration
         - walk_axes
+        - Light
+        - DimmableLight
+        - LightInfo
+        - Readback
+        - readback
+        - is_light
+        - dimmable
+        - describe_light

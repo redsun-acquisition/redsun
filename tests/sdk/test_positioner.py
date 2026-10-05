@@ -18,6 +18,7 @@ from ophyd_async.core import (
 )
 
 from redsun.presenter import DescribesAxes, PositionerPresenter
+from redsun.utils.devices import Readback
 from tests.sdk.mocks import (
     BrokenConfigAxis,
     HangingAxis,
@@ -106,7 +107,7 @@ async def test_the_axes_are_described_and_followed(
 
     assert isinstance(presenter, DescribesAxes)
     assert set(presenter.axes["stage"]) == {"x", "theta"}
-    assert (x.position, x.units, x.precision, x.stoppable) == (0.0, "um", 3, True)
+    assert (x.readback, x.stoppable) == (Readback(0.0, "um", 3), True)
     assert set(x.configuration) == {
         stage.axis["x"].velocity.name,
         stage.axis["x"].resolution.name,
@@ -296,7 +297,7 @@ async def test_limits_come_from_the_readback_descriptor() -> None:
     await axis.connect(mock=False)
     positioner = PositionerPresenter("positioner", devices={"focus": axis})
 
-    assert positioner.axes["focus"]["focus"].limits == (-5.0, 5.0)
+    assert positioner.axes["focus"]["focus"].readback.limits == (-5.0, 5.0)
     positioner.shutdown()
 
 
@@ -312,7 +313,7 @@ async def test_limits_follow_a_configuration_write() -> None:
     await positioner.move_to("focus", {"focus": 12.0})
 
     assert seen == [("focus", "focus", 5.0, 15.0)]
-    assert positioner.axes["focus"]["focus"].limits == (5.0, 15.0)
+    assert positioner.axes["focus"]["focus"].readback.limits == (5.0, 15.0)
     assert await position(axis) == pytest.approx(12.0)
     positioner.shutdown()
 
@@ -653,4 +654,19 @@ async def test_a_move_whose_status_is_not_from_ophyd_async_is_refused() -> None:
 
     assert len(failures) == 1
     assert "not an ophyd-async status" in failures[0][1]
+    positioner.shutdown()
+
+
+async def test_an_included_device_without_an_axis_is_reported(
+    stage: Stage, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn about an included device in which no axis is found."""
+    camera = MockDetector("camera")
+    await camera.connect(mock=False)
+
+    positioner = PositionerPresenter(
+        "positioner", devices={"stage": stage, "camera": camera}, include=["camera"]
+    )
+
+    assert "camera has no axis" in caplog.text
     positioner.shutdown()

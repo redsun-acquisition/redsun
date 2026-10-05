@@ -17,9 +17,13 @@ from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from bluesky.protocols import Descriptor, Reading
 
-__all__ = ["DescriptorTreeView"]
+    from redsun.utils.devices import Configuration
+
+__all__ = ["ConfigurationTab", "DescriptorTreeView"]
 
 
 def _split_key(key: str) -> tuple[str, str]:
@@ -234,6 +238,9 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         Initial readings for the same keys; only `reading["value"]` is read.
     parent
         Parent widget.
+    owners
+        Device of each key, for names that hold a dash themselves; a key not
+        listed belongs to what comes before its first dash.
     """
 
     sig_property_changed = Signal(str, str, object)
@@ -247,9 +254,12 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         descriptors: dict[str, Descriptor],
         readings: dict[str, Reading[Any]],
         parent: QtWidgets.QWidget | None = None,
+        *,
+        owners: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(parent)
 
+        self._owners_of = dict(owners or {})
         self._descriptors = descriptors
         self._readings = {k: v["value"] for k, v in readings.items()}
         self._pending: dict[str, Any] = {}
@@ -275,6 +285,12 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
         self._build()
 
+    def _split(self, key: str) -> tuple[str, str]:
+        owner = self._owners_of.get(key)
+        if owner is not None and key.startswith(f"{owner}-"):
+            return owner, key[len(owner) + 1 :]
+        return _split_key(key)
+
     def set_value(self, key: str, value: Any) -> None:
         """Show *value* for *key*, the value the device holds.
 
@@ -299,7 +315,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
             Device name, the part of a key before its first `-`.
         """
         for key, widget in self._widgets.items():
-            if _split_key(key)[0] == owner:
+            if self._split(key)[0] == owner:
                 widget.setEnabled(enabled)
 
     def revert(self, key: str) -> None:
@@ -322,7 +338,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         """Handle a change from any editor widget."""
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
-        owner, prop = _split_key(key)
+        owner, prop = self._split(key)
         self.sig_property_changed.emit(owner, prop, value)
 
     def _add_leaf(
@@ -379,7 +395,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         owners: dict[str, QtWidgets.QTreeWidgetItem] = {}
         groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
         for full_key, desc in self._descriptors.items():
-            owner, prop = _split_key(full_key)
+            owner, prop = self._split(full_key)
             source = desc.get("source", "")
             readonly = source.split("://", 1)[-1] == "readonly" or source.endswith(
                 ":readonly"
@@ -395,3 +411,42 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
             self._add_leaf(parent, full_key, prop, desc, readonly)
         self.expandAll()
         self.resizeColumnToContents(0)
+
+
+class ConfigurationTab(DescriptorTreeView):
+    """The configuration of a set of devices, shown and edited in a tree.
+
+    With no configuration at all, the tree holds one row saying so.
+    """
+
+    sig_configure = Signal(str, object)
+    """Key and value of an edit."""
+
+    def __init__(
+        self, configuration: Configuration, parent: QtWidgets.QWidget | None = None
+    ) -> None:
+        super().__init__(
+            configuration.descriptors,
+            configuration.readings,
+            parent,
+            owners=configuration.owners,
+        )
+        self._owners = {self._split(key)[0] for key in configuration.descriptors}
+        self.sig_property_changed.connect(self._configure)
+        if not configuration.descriptors:
+            row = QtWidgets.QTreeWidgetItem(["No device has a configuration."])
+            row.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
+            self.addTopLevelItem(row)
+            row.setFirstColumnSpanned(True)
+
+    def update_value(self, key: str, value: object) -> None:
+        """Show *value*, read back from the configuration signal *key*."""
+        self.set_value(key, value)
+
+    def set_locked(self, names: frozenset[str]) -> None:
+        """Disable the rows of the owners in *names*, and enable the rest."""
+        for owner in self._owners:
+            self.set_enabled(owner, owner not in names)
+
+    def _configure(self, owner: str, prop: str, value: object) -> None:
+        self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
