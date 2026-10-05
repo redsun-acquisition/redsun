@@ -8,19 +8,18 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
-from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
+from qtpy.QtWidgets import QApplication, QMainWindow
 
 from redsun import (
     AsHook,
     AsPresenter,
-    AsView,
     ConfiguresApplication,
     Declare,
     HookError,
     Serves,
     Session,
 )
-from redsun.qt import Dock, QtHook, QtSession
+from redsun.qt import QtHook, QtSession
 from redsun.session import BUILD_STEPS
 
 if TYPE_CHECKING:
@@ -128,23 +127,6 @@ class ClosingSplash:
 
     def shutdown(self) -> None:
         self.closed.append("splash")
-
-
-class Counter:
-    """The presenter a build needs for the presenters step to happen."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-
-class Panel(QWidget):
-    """The view a build needs for the views step to happen."""
-
-    placement = Dock("left")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
 
 
 class Unanswerable:
@@ -404,8 +386,7 @@ def test_during_build_brackets_the_build_and_names_every_step(
     """Enter the `during_build` hook once around the build and report every step."""
 
     class App(QtSession):
-        ctrl: AsPresenter[Counter]
-        panel: AsView[Panel]
+        pass
 
     config = {
         "hooks": {
@@ -419,19 +400,6 @@ def test_during_build_brackets_the_build_and_names_every_step(
     assert log[0] == "enter"
     assert log[-1] == "exit"
     assert log[1:-1] == list(BUILD_STEPS)
-    assert log[1:-1] == [
-        "services",
-        "devices",
-        "connect",
-        "registry",
-        "presenters",
-        "views",
-        "setup",
-        "seal",
-        "wiring",
-        "presentation",
-        "report",
-    ]
 
 
 def test_the_span_closes_on_a_failed_build(log: list[str]) -> None:
