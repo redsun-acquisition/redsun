@@ -25,7 +25,14 @@ from redsun.utils.devices import (
     limits,
     readback,
 )
-from tests.sdk.mocks import DimmerLight, SoftAxis, SoftLight, Stage, TwinStage
+from tests.sdk.mocks import (
+    DimmerLight,
+    NumberSwitchDevice,
+    SoftAxis,
+    SoftLight,
+    Stage,
+    TwinStage,
+)
 
 if TYPE_CHECKING:
     from bluesky.protocols import Callback, Location
@@ -243,13 +250,7 @@ async def test_a_light_without_intensity_is_on_or_off_only() -> None:
 
 async def test_an_enabled_attribute_that_is_not_a_bool_signal_is_no_light() -> None:
     """Refuse a device whose `enabled` is not a boolean signal."""
-
-    class Shutter(StandardReadable):
-        def __init__(self, name: str = "") -> None:
-            self.enabled = soft_signal_rw(int, 0)
-            super().__init__(name=name)
-
-    shutter = Shutter("shutter")
+    shutter = NumberSwitchDevice("shutter")
     await shutter.connect(mock=False)
     led = SoftLight("led")
     await led.connect(mock=False)

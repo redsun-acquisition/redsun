@@ -15,9 +15,6 @@ from ophyd_async.core import (
     Device,
     SignalR,
     SignalRW,
-    StandardReadable,
-    soft_signal_r_and_setter,
-    soft_signal_rw,
 )
 
 from redsun.engine.actions import PlanAction, continuous
@@ -33,6 +30,7 @@ from redsun.presenter.plan_spec import (
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
 from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
+from tests.sdk.mocks import RoiDetector, XYStage
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -60,58 +58,19 @@ class _DetectorProtocol(Protocol):
     sensor_shape: SignalR[np.ndarray]
 
 
-class _MockAxis(Device):
-    """Minimal single-axis device for motor protocol tests."""
-
-    position: SignalRW[float]
-
-    def __init__(self, name: str = "") -> None:
-        self.position = soft_signal_rw(float, initial_value=0.0, units="mm")
-        super().__init__(name=name)
-
-
-class _MockDetector(StandardReadable):
-    """Mock detector satisfying [`_DetectorProtocol`][tests.sdk.test_plan_spec._DetectorProtocol]."""
-
-    roi: SignalRW[np.ndarray]
-    sensor_shape: SignalR[np.ndarray]
-
-    def __init__(self, name: str) -> None:
-        with self.add_children_as_readables():
-            self.roi = soft_signal_rw(
-                np.ndarray, initial_value=np.array([0, 0, 512, 512], dtype=np.int32)
-            )
-            self.sensor_shape, _ = soft_signal_r_and_setter(
-                np.ndarray, initial_value=np.array([512, 512], dtype=np.int32)
-            )
-        super().__init__(name=name)
-
-
-class MockMotorDevice(StandardReadable):
-    """Mock motor satisfying [`_MotorProtocol`][tests.sdk.test_plan_spec._MotorProtocol]."""
-
-    x: _MockAxis
-    y: _MockAxis
-
-    def __init__(self, name: str, /) -> None:
-        self.x = _MockAxis()
-        self.y = _MockAxis()
-        super().__init__(name=name)
-
-
 @pytest.fixture
-def mock_motor(name: str = "stage") -> MockMotorDevice:
+def mock_motor(name: str = "stage") -> XYStage:
     """Single mock motor device."""
-    return MockMotorDevice(name)
+    return XYStage(name)
 
 
 @pytest.fixture
-def one_detector() -> dict[str, _MockDetector]:
-    return {"cam": _MockDetector("cam")}
+def one_detector() -> dict[str, RoiDetector]:
+    return {"cam": RoiDetector("cam")}
 
 
 @pytest.fixture
-def one_motor(mock_motor: MockMotorDevice) -> dict[str, MockMotorDevice]:
+def one_motor(mock_motor: XYStage) -> dict[str, XYStage]:
     return {"stage": mock_motor}
 
 
@@ -237,7 +196,7 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].choices == [1, 2, 3]
 
     def test_single_device_param_populates_choices(
-        self, one_motor: dict[str, MockMotorDevice]
+        self, one_motor: dict[str, XYStage]
     ) -> None:
         """Offer the names of matching devices as the choices of a device parameter."""
 
@@ -270,7 +229,7 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].choices is None  # no match, but has default
 
     def test_sequence_device_param_is_multiselect(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a sequence of devices a multiple choice of the matching devices."""
 
@@ -284,7 +243,7 @@ class TestCreatePlanSpec:
         assert p.device_proto is _DetectorProtocol
 
     def test_set_device_param_is_multiselect(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a set of devices a multiple choice of the matching devices."""
 
@@ -298,7 +257,7 @@ class TestCreatePlanSpec:
         assert p.device_proto is _DetectorProtocol
 
     def test_var_positional_device_is_multiselect(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a variadic positional device parameter a multiple choice."""
 
@@ -646,9 +605,7 @@ class TestResolveArguments:
         resolved = resolve_arguments(spec, {"go": a2}, {})
         assert resolved["go"] is a2
 
-    def test_single_device_label_resolved(
-        self, one_motor: dict[str, MockMotorDevice]
-    ) -> None:
+    def test_single_device_label_resolved(self, one_motor: dict[str, XYStage]) -> None:
         """Replace a device name with the device it names."""
         spec = _make_spec(
             ParamDescription(
@@ -664,7 +621,7 @@ class TestResolveArguments:
         assert resolved["motor"] is one_motor["stage"]
 
     def test_device_sequence_labels_resolved(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Replace a list of device names with a list of the devices."""
         spec = _make_spec(
@@ -682,7 +639,7 @@ class TestResolveArguments:
         assert resolved["dets"] == [one_detector["cam"]]
 
     def test_device_set_labels_resolved(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Replace device names with a set of the devices for a set parameter."""
         spec = _make_spec(
@@ -700,7 +657,7 @@ class TestResolveArguments:
         assert resolved["dets"] == {one_detector["cam"]}
 
     def test_unknown_label_resolves_to_none_for_single(
-        self, one_motor: dict[str, MockMotorDevice]
+        self, one_motor: dict[str, XYStage]
     ) -> None:
         """Resolve an unknown device name to None."""
         spec = _make_spec(
@@ -800,7 +757,7 @@ class TestCreateParamWidget:
     ],
 )
 def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
-    annotation: Any, listed: bool, one_detector: dict[str, _MockDetector]
+    annotation: Any, listed: bool, one_detector: dict[str, RoiDetector]
 ) -> None:
     """Offer and resolve the devices of a protocol written with type arguments."""
 

@@ -9,21 +9,19 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pytest
-from ophyd_async.core import SignalRW, StandardReadable, set_mock_attr, soft_signal_rw
+from ophyd_async.core import SignalRW, set_mock_attr
 
 from redsun.presenter import DescribesLights, LightPresenter
-from tests.sdk.mocks import BoundedBackend, DimmerLight, SoftLight, WholeLight
+from tests.sdk.mocks import (
+    BoundedBackend,
+    DimmerLight,
+    NumberSwitchDevice,
+    SoftLight,
+    WholeLight,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-
-class Detector(StandardReadable):
-    """A device whose `enabled` is a number, not a light switch."""
-
-    def __init__(self, name: str = "") -> None:
-        self.enabled = soft_signal_rw(int, 1)
-        super().__init__(name=name)
 
 
 class GatedBackend(BoundedBackend):
@@ -166,7 +164,7 @@ async def test_a_device_whose_enabled_is_not_a_switch_is_left_out(
     led: SoftLight,
 ) -> None:
     """Keep only devices whose `enabled` is a boolean signal."""
-    detector = Detector("camera")
+    detector = NumberSwitchDevice("camera")
     await detector.connect(mock=False)
 
     presenter = LightPresenter(
@@ -269,7 +267,7 @@ async def test_an_included_name_that_is_no_light_is_reported(
     led: SoftLight, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Warn about included names with no `enabled` signal or a non-boolean one."""
-    detector = Detector("camera")
+    detector = NumberSwitchDevice("camera")
     await detector.connect(mock=False)
 
     presenter = LightPresenter(

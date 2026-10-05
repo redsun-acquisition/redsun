@@ -15,11 +15,11 @@ from bluesky.utils import FailedStatus, IllegalMessageSequence, RunEngineInterru
 from ophyd_async.core import AsyncStatus, Device, WatchableAsyncStatus, WatcherUpdate
 
 import redsun.engine.plan_stubs as rps
+from tests.sdk.mocks import PlainStatus
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
-    from bluesky.protocols import Status
     from bluesky.utils import MsgGenerator
 
     from redsun.engine import ProgressState, RunEngine
@@ -62,35 +62,6 @@ class SlowMover(Device):
         yield WatcherUpdate(current=0.0, initial=0.0, target=value, name=self.name)
         await asyncio.sleep(0.3)
         yield WatcherUpdate(current=value, initial=0.0, target=value, name=self.name)
-
-
-class ThreadedStatus:
-    """A status finished by a worker thread, as an `ophyd` status is."""
-
-    def __init__(self) -> None:
-        self._done = False
-        self._callbacks: list[Callable[[Status], None]] = []
-
-    @property
-    def done(self) -> bool:
-        """Whether the worker has finished the status."""
-        return self._done
-
-    @property
-    def success(self) -> bool:
-        """Whether the status finished well, which it always does here."""
-        return self._done
-
-    def add_callback(self, callback: Callable[[Status], None]) -> None:
-        self._callbacks.append(callback)
-
-    def exception(self, timeout: float | None = 0.0) -> BaseException | None:
-        return None
-
-    def finish(self) -> None:
-        self._done = True
-        for callback in self._callbacks:
-            callback(self)
 
 
 def monitored_after_declared() -> MsgGenerator[None]:
@@ -423,7 +394,7 @@ def test_a_status_finished_on_another_thread_reports_on_the_engine_thread(
     RE: RunEngine,
 ) -> None:
     """Announce every change, a scope finished by a worker included, from the engine's thread."""
-    status = ThreadedStatus()
+    status = PlainStatus(done=False)
     threads: list[int] = []
     RE.sig_progress.connect(lambda _: threads.append(threading.get_ident()))
 

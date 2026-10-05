@@ -6,11 +6,13 @@ import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from ophyd_async.core import (
     AsyncStatus,
     Device,
     DeviceMap,
     MovableLogic,
+    SignalR,
     SignalRW,
     SoftSignalBackend,
     StandardMovable,
@@ -39,22 +41,36 @@ class MockDetector(StandardReadable):
     integer: SignalRW[int]
     floating: SignalRW[float]
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        exposure: float = 1.0,
-        exposure_units: str = "ms",
-        integer: int = 0,
-        floating: float = 0.0,
-        **_: Any,
-    ) -> None:
+    def __init__(self, name: str) -> None:
         with self.add_children_as_readables():
-            self.exposure = soft_signal_rw(
-                float, initial_value=exposure, units=exposure_units
+            self.exposure = soft_signal_rw(float, initial_value=1.0, units="ms")
+            self.integer = soft_signal_rw(int, initial_value=0)
+            self.floating = soft_signal_rw(float, initial_value=0.0)
+        super().__init__(name=name)
+
+
+class RoiDetector(StandardReadable):
+    """A detector with a settable region of interest and a fixed sensor shape."""
+
+    roi: SignalRW[np.ndarray]
+    sensor_shape: SignalR[np.ndarray]
+
+    def __init__(self, name: str) -> None:
+        with self.add_children_as_readables():
+            self.roi = soft_signal_rw(
+                np.ndarray, initial_value=np.array([0, 0, 512, 512], dtype=np.int32)
             )
-            self.integer = soft_signal_rw(int, initial_value=integer)
-            self.floating = soft_signal_rw(float, initial_value=floating)
+            self.sensor_shape, _ = soft_signal_r_and_setter(
+                np.ndarray, initial_value=np.array([512, 512], dtype=np.int32)
+            )
+        super().__init__(name=name)
+
+
+class NumberSwitchDevice(StandardReadable):
+    """A device whose `enabled` is a number, not a light switch."""
+
+    def __init__(self, name: str = "") -> None:
+        self.enabled = soft_signal_rw(int, 1)
         super().__init__(name=name)
 
 
@@ -145,6 +161,18 @@ class Stage(StandardReadable):
         self.add_readables(list(self.axis.values()))
         with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
             self.speed = soft_signal_rw(float, 1.0)
+        super().__init__(name=name)
+
+
+class XYStage(StandardReadable):
+    """A device with the soft axes `x` and `y` as attributes."""
+
+    x: SoftAxis
+    y: SoftAxis
+
+    def __init__(self, name: str, /) -> None:
+        self.x = SoftAxis()
+        self.y = SoftAxis()
         super().__init__(name=name)
 
 
@@ -269,18 +297,33 @@ class HangingAxis(SoftAxis):
 
 
 class PlainStatus:
-    """A finished bluesky status that is not an ophyd-async one."""
+    """A bluesky status that is not an ophyd-async one, finished or finished later."""
 
-    done = True
-    success = True
+    def __init__(self, done: bool = True) -> None:
+        self.done = done
+        self.callbacks: list[Callable[[PlainStatus], None]] = []
+
+    @property
+    def success(self) -> bool:
+        """Whether the status is finished, which is always well."""
+        return self.done
 
     def add_callback(self, callback: Callable[[PlainStatus], None]) -> None:
-        """Call *callback* at once, the status being finished."""
-        callback(self)
+        """Call *callback* at once when finished, else when `finish` is called."""
+        if self.done:
+            callback(self)
+        else:
+            self.callbacks.append(callback)
 
     def exception(self, timeout: float | None = 0.0) -> BaseException | None:
         """Report no error."""
         return None
+
+    def finish(self) -> None:
+        """Finish the status and call the callbacks added before."""
+        self.done = True
+        for callback in self.callbacks:
+            callback(self)
 
 
 class PlainStatusAxis(SoftAxis):
