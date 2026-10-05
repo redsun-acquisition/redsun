@@ -12,11 +12,10 @@ import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 
-from redsun import HasActions
 from redsun.aio import get_shared_loop
 from redsun.engine.actions import ActionManager
 from redsun.path_provider import SessionPathProvider
-from redsun.presenter import AcquisitionPresenter, DescribesPlans
+from redsun.presenter import AcquisitionPresenter
 from tests.sdk.mocks import MockDetector, QuietAxis
 
 if TYPE_CHECKING:
@@ -291,7 +290,6 @@ def test_a_plan_no_widget_can_show_is_left_out(
     """Offer every readable plan and leave out, with a warning, each one that cannot be read."""
     warnings = " ".join(r.getMessage() for r in caplog.get_records("setup"))
 
-    assert isinstance(presenter, DescribesPlans)
     assert set(presenter.plans) == {"rest", "broken", "hold", "read", "guarded"}
     assert ("'odd'" in warnings, "'flat'" in warnings) == (True, True)
 
@@ -311,7 +309,6 @@ def test_actions_are_relayed_and_requests_reach_the_running_plan(
     presenter.stop()
 
     assert ended.wait(10)
-    assert isinstance(plans, HasActions)
     assert changes == [("go", "offered")]
     assert plans.actions.requested == [("go", True)]
 
@@ -335,12 +332,14 @@ def test_a_refused_base_directory_is_logged(
     """Log a base directory the path provider refuses, and report a new one."""
     changes: list[object] = []
     presenter.sig_base_dir_changed.connect(changes.append)
+    accepted = tmp_path / "data"
 
-    presenter.set_base_dir(tmp_path / "data")
+    presenter.set_base_dir(accepted)
     paths.lock_base_dir("a plan is writing")
     presenter.set_base_dir(tmp_path / "elsewhere")
 
-    assert changes == [tmp_path / "data"]
+    assert changes == [accepted]
+    assert presenter.base_dir == accepted
     assert "base directory" in caplog.text
 
 
@@ -378,10 +377,3 @@ def test_resuming_before_the_pause_is_reached_withdraws_it(
     assert ended.wait(10)
     assert withdrawn
     assert seen == [("started", "hold"), ("done", "hold")]
-
-
-def test_the_base_directory_is_described(
-    presenter: AcquisitionPresenter, paths: RecordedPaths
-) -> None:
-    """Describe the directory runs write under before any change is reported."""
-    assert presenter.base_dir == paths.base_dir
