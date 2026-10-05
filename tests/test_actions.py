@@ -6,42 +6,62 @@ from typing import TYPE_CHECKING
 
 import pytest
 from app_model import Application
-from mock_bundle import actions
+from mock_bundle.actions import Executed
 from qtpy.QtWidgets import QApplication, QMenu
 
-from redsun import Session
+from redsun import AsPresenter, Session, provides
 from redsun.qt import ActionError, QtSession
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable
 
 pytestmark = pytest.mark.qt
 
 SESSION = {"frontend": "qt", "session": "actions-session"}
 
 
-@pytest.fixture(autouse=True)
-def clear_record() -> Iterator[None]:
-    """Forget what earlier commands recorded, the module list outliving a test."""
-    actions.executed.clear()
-    yield
-    actions.executed.clear()
+class Recorder:
+    """Presenter providing the list the commands record into."""
+
+    def __init__(self, name: str, record: list[str]) -> None:
+        self.name = name
+        self.record = record
+
+    @provides
+    def executed(self) -> Executed:
+        return Executed(self.record)
 
 
-def session(*declared: dict[str, object]) -> QtSession:
+class ActionsApp(QtSession):
+    recorder: AsPresenter[Recorder]
+
+
+@pytest.fixture
+def executed() -> list[str]:
+    """Return what the commands ran, in order."""
+    return []
+
+
+def session(executed: list[str], *declared: dict[str, object]) -> QtSession:
     """Return an unbuilt Qt session declaring *declared* under `actions`."""
-    container = Session.from_config({**SESSION, "actions": list(declared)})
-    assert isinstance(container, QtSession)
-    return container
+    return ActionsApp(
+        {
+            "session": "actions-session",
+            "actions": list(declared),
+            "presenters": {"recorder": {"record": executed}},
+        }
+    )
 
 
 def test_the_section_registers_commands_on_the_session(
     qapp: QApplication,
     build: Callable[..., QtSession],
+    executed: list[str],
 ) -> None:
     """Register each declared command on the session and in the menus it names."""
     app = build(
         session(
+            executed,
             {
                 "id": "probe.note",
                 "title": "Note",
@@ -61,27 +81,29 @@ def test_the_section_registers_commands_on_the_session(
     menu_bar = app.main_window.setModelMenuBar({"probe/tools": "Tools"})
     tools = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Tools")
 
-    assert actions.executed == ["note", "twice", "twice"]
+    assert executed == ["note", "twice", "twice"]
     assert [entry.text() for entry in tools.actions()] == ["Note"]
 
 
 def test_releasing_the_session_takes_its_commands_with_it(
     qapp: QApplication,
     build: Callable[..., QtSession],
+    executed: list[str],
 ) -> None:
     """Unregister the session's commands when it shuts down."""
     app = build(
         session(
+            executed,
             {
                 "id": "probe.note",
                 "title": "Note",
                 "callback": "mock_bundle.actions:note",
-            }
+            },
         )
     )
     model = app.model
     model.commands.execute_command("probe.note")
-    assert actions.executed == ["note"]
+    assert executed == ["note"]
 
     app.shutdown()
 
