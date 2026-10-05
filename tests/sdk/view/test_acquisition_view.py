@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
 import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
-from qtpy import QtCore, QtWidgets
+from qtpy import QtWidgets
 
 from redsun import Settings
 from redsun.presenter.plan_spec import create_plan_spec
 from redsun.view.qt.builtins import AcquisitionView
 from tests.sdk.mocks import MockDetector
+from tests.sdk.view.helpers import child
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
     from redsun.presenter.plan_spec import PlanSpec
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 
 def rest() -> MsgGenerator[None]:
@@ -57,16 +56,6 @@ class Acquisition:
         }
 
 
-@pytest.fixture
-def settings(tmp_path: Path) -> Settings:
-    return Settings(tmp_path / "session.json")
-
-
-@pytest.fixture
-def parent(qapp: QtWidgets.QApplication) -> QtWidgets.QWidget:
-    return QtWidgets.QWidget()
-
-
 def make_view(
     settings: Settings, parent: QtWidgets.QWidget, acquisition: Any = None
 ) -> AcquisitionView:
@@ -74,13 +63,6 @@ def make_view(
     view = AcquisitionView("acquisition_view", parent)
     view.setup(acquisition or Acquisition(), settings)
     return view
-
-
-def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
-    """Return the child of *parent* of type *kind* named *name*."""
-    found = parent.findChild(kind, name)
-    assert found is not None
-    return found
 
 
 def choose(view: AcquisitionView, plan: str) -> None:

@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from itertools import pairwise
-from typing import TypeVar
 
 import pytest
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from redsun.utils.devices import AxisInfo, Readback
 from redsun.view.qt.builtins import PositionerGroup
+from tests.sdk.view.helpers import child, press
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 AXES = {
     "x": AxisInfo(Readback(12.345, "um", 3), stoppable=True),
@@ -22,10 +21,14 @@ AXES = {
 
 
 @pytest.fixture
-def group(qapp: QtWidgets.QApplication) -> PositionerGroup:
-    return PositionerGroup(
+def group(qapp: QtWidgets.QApplication) -> Generator[PositionerGroup, None, None]:
+    """Yield a group of two axes, and close it after the test."""
+    widget = PositionerGroup(
         "stage", AXES, steps=(0.1, 1.0, 10.0), repeat_delay=100, repeat_interval=50
     )
+    yield widget
+    widget.close()
+    widget.deleteLater()
 
 
 def spin_group(qapp: QtWidgets.QApplication) -> PositionerGroup:
@@ -38,20 +41,6 @@ def spin_group(qapp: QtWidgets.QApplication) -> PositionerGroup:
         repeat_interval=50,
         step_box="spinbox",
     )
-
-
-def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
-    """Return the child of *parent* of type *kind* named *name*."""
-    found = parent.findChild(kind, name)
-    assert found is not None
-    return found
-
-
-def press(widget: QtWidgets.QWidget, key: QtCore.Qt.Key, text: str = "") -> None:
-    """Send *widget* a press and release of *key*."""
-    for kind in (QtCore.QEvent.Type.KeyPress, QtCore.QEvent.Type.KeyRelease):
-        event = QtGui.QKeyEvent(kind, key, QtCore.Qt.KeyboardModifier.NoModifier, text)
-        QtWidgets.QApplication.sendEvent(widget, event)
 
 
 def test_each_axis_shows_its_position_with_its_precision(

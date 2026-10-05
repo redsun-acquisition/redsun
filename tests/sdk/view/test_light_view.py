@@ -2,21 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
-
 import pytest
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from redsun import Settings
 from redsun.utils.devices import Configuration, LightInfo, Readback
 from redsun.view.qt.builtins import LightGroup, LightView
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests.sdk.view.helpers import child, press
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 LIGHTS = {
     "laser": LightInfo(False, Readback(10.0, "mW", 1, (0.0, 100.0))),
@@ -30,16 +24,6 @@ class Lights:
 
     lights = LIGHTS
     configuration = Configuration(descriptors={}, readings={}, writable={})
-
-
-@pytest.fixture
-def settings(tmp_path: Path) -> Settings:
-    return Settings(tmp_path / "session.json")
-
-
-@pytest.fixture
-def parent(qapp: QtWidgets.QApplication) -> QtWidgets.QWidget:
-    return QtWidgets.QWidget()
 
 
 def make_view(
@@ -56,24 +40,6 @@ def group(view: LightView, device: str) -> LightGroup:
     found = [g for g in view.findChildren(LightGroup) if g.title() == device]
     assert len(found) == 1
     return found[0]
-
-
-def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
-    """Return the child of *parent* of type *kind* named *name*."""
-    found = parent.findChild(kind, name)
-    assert found is not None
-    return found
-
-
-def press(widget: QtWidgets.QWidget, *keys: str | QtCore.Qt.Key) -> None:
-    """Press and release each of *keys* on *widget*: a character or a named key."""
-    for key in keys:
-        code, text = (0, key) if isinstance(key, str) else (key, "")
-        for kind in (QtCore.QEvent.Type.KeyPress, QtCore.QEvent.Type.KeyRelease):
-            event = QtGui.QKeyEvent(
-                kind, code, QtCore.Qt.KeyboardModifier.NoModifier, text
-            )
-            QtWidgets.QApplication.sendEvent(widget, event)
 
 
 def test_the_toggle_asks_and_follows_the_readback(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import pytest
 from qtpy import QtCore, QtGui
@@ -28,13 +28,12 @@ from redsun.log import (
 )
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import LogView
+from tests.sdk.view.helpers import child
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from redsun.testing import BuildSession
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 LIGHT = "#ffffff"
 """A light console background."""
@@ -98,13 +97,6 @@ def small_service_buffer(logs: logging.Logger) -> Iterator[BufferHandler]:
     yield small
     remove_handler(small)
     add_handler(installed)
-
-
-def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
-    """Return the child of *parent* of type *kind* named *name*."""
-    found = parent.findChild(kind, name)
-    assert found is not None
-    return found
 
 
 def console(view: LogView) -> QPlainTextEdit:

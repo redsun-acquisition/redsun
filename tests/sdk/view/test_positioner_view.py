@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import Any
 
 import pytest
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 from superqt import QCollapsible, QLabeledSlider
 
 from redsun import Settings
@@ -13,13 +13,9 @@ from redsun.presenter import DescribesAxes
 from redsun.utils.devices import AxisInfo, Configuration, Readback
 from redsun.view.qt.builtins import PositionerGroup, PositionerView
 from redsun.view.qt.treeview import DescriptorTreeView
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests.sdk.view.helpers import child, type_into
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 AXES = {
     "stage": {
@@ -95,16 +91,6 @@ class OffsetPositioner:
         )
 
 
-@pytest.fixture
-def settings(tmp_path: Path) -> Settings:
-    return Settings(tmp_path / "session.json")
-
-
-@pytest.fixture
-def parent(qapp: QtWidgets.QApplication) -> QtWidgets.QWidget:
-    return QtWidgets.QWidget()
-
-
 def make_view(
     settings: Settings, parent: QtWidgets.QWidget, repeat_interval: int = 50
 ) -> PositionerView:
@@ -114,30 +100,11 @@ def make_view(
     return view
 
 
-def child(parent: QtCore.QObject, kind: type[T], name: str = "") -> T:
-    """Return the child of *parent* of type *kind*, named *name* when given."""
-    found = parent.findChild(kind, name) if name else parent.findChild(kind)
-    assert found is not None
-    return found
-
-
 def group(view: PositionerView, device: str) -> PositionerGroup:
     """Return the group of *device* in *view*."""
     found = [g for g in view.findChildren(PositionerGroup) if g.title() == device]
     assert len(found) == 1
     return found[0]
-
-
-def type_into(edit: QtWidgets.QLineEdit, text: str) -> None:
-    """Replace the text of *edit* by typing *text*, then press Enter."""
-    edit.selectAll()
-    keys = [(0, char) for char in text] + [(QtCore.Qt.Key.Key_Return, "")]
-    for key, char in keys:
-        for kind in (QtCore.QEvent.Type.KeyPress, QtCore.QEvent.Type.KeyRelease):
-            event = QtGui.QKeyEvent(
-                kind, key, QtCore.Qt.KeyboardModifier.NoModifier, char
-            )
-            QtWidgets.QApplication.sendEvent(edit, event)
 
 
 def editor(view: PositionerView, setting: str) -> QtWidgets.QDoubleSpinBox:
