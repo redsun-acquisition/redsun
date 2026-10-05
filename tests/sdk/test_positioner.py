@@ -654,3 +654,18 @@ async def test_a_move_whose_status_is_not_from_ophyd_async_is_refused() -> None:
     assert len(failures) == 1
     assert "not an ophyd-async status" in failures[0][1]
     positioner.shutdown()
+
+
+async def test_an_included_device_without_an_axis_is_reported(
+    stage: Stage, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn about an included device in which no axis is found."""
+    camera = MockDetector("camera")
+    await camera.connect(mock=False)
+
+    positioner = PositionerPresenter(
+        "positioner", devices={"stage": stage, "camera": camera}, include=["camera"]
+    )
+
+    assert "camera has no axis" in caplog.text
+    positioner.shutdown()

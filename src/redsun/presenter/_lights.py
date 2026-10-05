@@ -85,9 +85,16 @@ class LightPresenter(Loggable):
     """Seconds a light may take to be described, followed, or written."""
 
     def __post_init__(self) -> None:
-        unknown = sorted(set(self.include or ()) - set(self.devices))
-        if unknown:
-            self.logger.warning(f"No device named {', '.join(unknown)} to include")
+        for name in self.include or ():
+            if name not in self.devices:
+                self.logger.warning(
+                    f"No device named {name} has an `enabled` signal to include"
+                )
+            elif not is_light(self.devices[name]):
+                self.logger.warning(
+                    f"{name} is left out: its `enabled` is not a boolean signal "
+                    "it can write"
+                )
         self._lights = {
             name: device
             for name, device in self.devices.items()

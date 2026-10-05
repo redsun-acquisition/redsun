@@ -262,3 +262,21 @@ async def test_a_cancelled_start_leaves_no_light_followed() -> None:
     await light.enabled.set(True)
 
     assert seen == []
+
+
+async def test_an_included_name_that_is_no_light_is_reported(
+    led: SoftLight, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn about included names with no `enabled` signal or a non-boolean one."""
+    detector = Detector("camera")
+    await detector.connect(mock=False)
+
+    presenter = LightPresenter(
+        "lights",
+        devices={"led": led, "camera": detector},  # type: ignore[dict-item]
+        include=["led", "camera", "ghost"],
+    )
+
+    assert "No device named ghost has an `enabled` signal" in caplog.text
+    assert "camera is left out: its `enabled` is not a boolean signal" in caplog.text
+    presenter.shutdown()

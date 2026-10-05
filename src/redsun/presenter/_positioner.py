@@ -109,9 +109,11 @@ class PositionerPresenter(Loggable):
     """Seconds an axis may take to be described and followed at the start."""
 
     def __post_init__(self) -> None:
-        unknown = sorted(set(self.include or ()) - set(self.devices))
-        if unknown:
-            self.logger.warning(f"No device named {', '.join(unknown)} to include")
+        for name in self.include or ():
+            if name not in self.devices:
+                self.logger.warning(f"No device named {name} to include")
+            elif not find_axes(self.devices[name]):
+                self.logger.warning(f"{name} has no axis to include")
         self._axes = {
             device: axes
             for device, item in self.devices.items()
