@@ -51,6 +51,7 @@ class Plans:
             "rest": {"plan": self.rest},
             "broken": {"plan": self.broken},
             "hold": {"plan": self.hold},
+            "pausable": {"plan": self.pausable},
             "read": {"plan": self.read},
             "guarded": {"plan": self.guarded},
         }
@@ -68,6 +69,13 @@ class Plans:
         """Keep the engine busy until stopped, saying when it has begun."""
         self.running.set()
         yield from bps.sleep(30)
+
+    def pausable(self) -> MsgGenerator[None]:
+        """Keep the engine busy, with a checkpoint to pause at, until stopped."""
+        self.running.set()
+        while True:
+            yield from bps.checkpoint()
+            yield from bps.sleep(0.01)
 
     def read(self, device: Readable[Any]) -> MsgGenerator[None]:
         """Read one device."""
@@ -257,20 +265,23 @@ def test_pause_resume_and_stop_with_no_plan_running_are_ignored(
 
 
 def test_a_paused_plan_reports_nothing_until_it_is_stopped(
-    presenter: AcquisitionPresenter, plans: Plans
+    presenter: AcquisitionPresenter,
+    plans: Plans,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Report no end on a pause, and a single done once the paused plan is stopped."""
     seen, ended = record(presenter)
-    presenter.launch("hold", {})
+    presenter.launch("pausable", {})
     assert plans.running.wait(10)
 
     presenter.pause()
-    paused = ended.wait(1)
+    assert wait_until(lambda: presenter.engine().state == "paused", timeout=10)
+    reported_while_paused = ended.is_set()
     presenter.stop()
 
     assert ended.wait(10)
-    assert paused is False
-    assert seen == [("started", "hold"), ("done", "hold")]
+    assert not reported_while_paused
+    assert seen == [("started", "pausable"), ("done", "pausable")]
 
 
 def test_a_plan_no_widget_can_show_is_left_out(
@@ -279,7 +290,14 @@ def test_a_plan_no_widget_can_show_is_left_out(
     """Offer every readable plan and leave out, with a warning, each one that cannot be read."""
     warnings = " ".join(r.getMessage() for r in caplog.get_records("setup"))
 
-    assert set(presenter.plans) == {"rest", "broken", "hold", "read", "guarded"}
+    assert set(presenter.plans) == {
+        "rest",
+        "broken",
+        "hold",
+        "pausable",
+        "read",
+        "guarded",
+    }
     assert ("'odd'" in warnings, "'flat'" in warnings) == (True, True)
 
 
@@ -344,9 +362,10 @@ def test_shutdown_aborts_a_running_plan_after_its_cleanup_without_a_report(
 
     presenter.shutdown()
     cleaned = plans.cleaned.is_set()
+    reported = ended.is_set()
 
     assert cleaned
-    assert not ended.wait(1)
+    assert not reported
     assert [kind for kind, *_ in seen] == ["started"]
 
 

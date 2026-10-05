@@ -14,8 +14,7 @@ from bluesky.utils import RunEngineInterrupted
 
 from redsun.aio import get_shared_loop, run_coro
 from redsun.engine import RunEngine, RunEngineResult
-
-from .mocks import MockDetector
+from tests.sdk.mocks import MockDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable

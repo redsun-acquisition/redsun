@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -12,19 +11,7 @@ from redsun.path_provider import (
     session_directory,
 )
 
-
-@dataclass
-class PathData:
-    plan: str
-    session: str
-    date: str
-
-
-@pytest.fixture(scope="module")
-def path_data() -> PathData:
-    return PathData(
-        plan="unknown", session="test_session", date=datetime.now().strftime("%Y-%m-%d")
-    )
+NOW = datetime(2026, 7, 20)
 
 
 def test_default_base_dir_is_the_user_data_dir(
@@ -36,36 +23,35 @@ def test_default_base_dir_is_the_user_data_dir(
 
     provider = SessionPathProvider(session="s")
 
-    assert provider().directory_path.parent == session_directory("s")
+    directory = provider().directory_path
+    assert directory.parent == session_directory("s")
+    assert directory.is_relative_to(tmp_path)
 
 
-def test_path_provider_initialization(tmp_path: Path, path_data: PathData) -> None:
+def test_path_provider_initialization(tmp_path: Path) -> None:
     """Start in the session and date directory with a zero counter."""
-    expected_directory = tmp_path / path_data.session / path_data.date
-    expected_filename = f"{path_data.plan}_00000"
-
-    provider = SessionPathProvider(base_dir=tmp_path, session=path_data.session)
+    provider = SessionPathProvider(
+        base_dir=tmp_path, session="test_session", now=lambda: NOW
+    )
     path_info = provider()
 
-    assert path_info.directory_path == expected_directory
-    assert path_info.filename == expected_filename
+    assert path_info.directory_path == tmp_path / "test_session" / "2026-07-20"
+    assert path_info.filename == "unknown_00000"
 
 
-def test_path_provider_setters(tmp_path: Path, path_data: PathData) -> None:
+def test_path_provider_setters(tmp_path: Path) -> None:
     """Apply a new root and plan, and fall back to `unknown` on reset."""
     new_path = tmp_path / "new_storage"
-    new_plan = "new_plan"
 
-    expected_directory = new_path / path_data.session / path_data.date
-    expected_filename = f"{new_plan}_00000"
-
-    provider = SessionPathProvider(base_dir=tmp_path, session=path_data.session)
+    provider = SessionPathProvider(
+        base_dir=tmp_path, session="test_session", now=lambda: NOW
+    )
     provider.set_base_dir(new_path)
-    provider.set_plan(new_plan)
+    provider.set_plan("new_plan")
 
     path_info = provider()
-    assert path_info.directory_path == expected_directory
-    assert path_info.filename == expected_filename
+    assert path_info.directory_path == new_path / "test_session" / "2026-07-20"
+    assert path_info.filename == "new_plan_00000"
 
     provider.reset_plan()
     assert provider().filename == "unknown_00000"

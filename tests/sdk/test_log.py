@@ -147,9 +147,7 @@ def test_only_an_info_record_omits_its_origin(
 def test_one_stream_handler_is_installed() -> None:
     """Install exactly one stream handler, using the shared formatter."""
     installed = [
-        handler
-        for handler in logger.handlers
-        if isinstance(handler, logging.StreamHandler)
+        handler for handler in logger.handlers if type(handler) is logging.StreamHandler
     ]
 
     # The stream is not compared with `sys.stdout`: the handler holds whatever

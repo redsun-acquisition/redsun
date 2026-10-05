@@ -15,6 +15,7 @@ from bluesky.utils import FailedStatus, IllegalMessageSequence, RunEngineInterru
 from ophyd_async.core import AsyncStatus, Device, WatchableAsyncStatus, WatcherUpdate
 
 import redsun.engine.plan_stubs as rps
+from redsun.aio import run_coro
 from tests.sdk.mocks import PlainStatus
 
 if TYPE_CHECKING:
@@ -385,6 +386,7 @@ def test_a_status_outliving_its_plan_brings_no_bar_back(RE: RunEngine) -> None:
     RE(plan()).result(timeout=10)
     reported = len(seen)
     assert finished.wait(timeout=5)
+    run_coro(asyncio.sleep(0))  # whatever the callback queued on the loop has run
 
     assert seen[-1] == ()
     assert len(seen) == reported

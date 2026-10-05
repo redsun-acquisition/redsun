@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import pytest
 
 from redsun.aio import run_coro
 from redsun.engine import RunEngine
+from tests.sdk.mocks import MockDetector
 
-from .mocks import MockDetector
+if TYPE_CHECKING:
+    from bluesky.utils import Msg
 
 
 @pytest.fixture
@@ -38,3 +41,19 @@ def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
     """Capture everything the `redsun` logger tree records, services included."""
     caplog.set_level(logging.DEBUG, logger="redsun")
     return caplog
+
+
+@pytest.fixture
+def polls(RE: RunEngine) -> list[Msg]:
+    """Return a list gaining every poll for an action that `RE` runs.
+
+    A second poll says the first found nothing asked for.
+    """
+    seen: list[Msg] = []
+
+    def on_message(msg: Msg) -> None:
+        if msg.command == "wait_for_actions":
+            seen.append(msg)
+
+    RE.msg_hook = on_message  # type: ignore[assignment]
+    return seen
