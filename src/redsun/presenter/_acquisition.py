@@ -11,6 +11,7 @@ from bluesky.utils import RequestAbort, RequestStop, RunEngineInterrupted
 from psygnal import Signal
 
 from redsun.engine import Deferrals, RunEngine
+from redsun.injection import provides
 from redsun.log import Loggable
 from redsun.path_provider import SessionPathProvider  # noqa: TC001
 from redsun.ports import slot
@@ -117,6 +118,16 @@ class AcquisitionPresenter(Loggable):
         self._futures: set[Future[Any]] = set()
         self._running: str | None = None
         self._error: BaseException | None = None
+
+    @provides
+    def engine(self) -> RunEngine:
+        """Return the engine every plan runs on, shared with any component asking for one."""
+        return self._engine
+
+    @provides
+    def deferrals(self) -> Deferrals:
+        """Return the deferrals of the engine, shared with any component asking for them."""
+        return self._deferrals
 
     def setup(
         self,
