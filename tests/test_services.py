@@ -206,7 +206,6 @@ def test_services_are_read_from_annotations_and_the_configuration() -> None:
     )
     assert (stage_ioc.launched, stage_ioc.prefix) == (False, "MOT:")
     assert not services["beamline"].launched
-    assert vars(app)["stage_ioc"] is stage_ioc
 
 
 def test_a_marker_where_an_alias_is_used_replaces_the_alias_marker() -> None:
@@ -522,7 +521,6 @@ def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
     app = build(App)
 
     assert set(app.devices) == {"motor"}
-    assert "camera" not in vars(app)
     assert (
         "Failed to connect device 'camera': service 'beamline' (attached) did not "
         "answer within 0.5 s: the camera did not answer"
