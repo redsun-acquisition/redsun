@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 
     from redsun.testing import BuildSession
 
+from mock_bundle.panels import Panel
+
 from redsun import (
     AsHook,
     AsPresenter,
@@ -91,14 +93,6 @@ class Wired(QtSession):
 
     mover: AsPresenter[Mover]
     readout: AsView[Readout]
-
-
-class Panel(QWidget):
-    placement: Placement = Dock("left")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
 
 
 class Canvas(QWidget):

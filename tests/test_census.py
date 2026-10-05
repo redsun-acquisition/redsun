@@ -11,10 +11,10 @@ import logging
 from collections.abc import (
     Mapping,
 )
-from dataclasses import dataclass
 from typing import Annotated, Any, Protocol, runtime_checkable
 
 import pytest
+from mock_bundle.views import Somewhere
 from ophyd_async.core import (
     AsyncStatus,
     StandardReadable,
@@ -32,11 +32,6 @@ from redsun import (
     Session,
 )
 from redsun.injection._census import Devices
-
-
-@dataclass(frozen=True)
-class Somewhere(Placement):
-    """Stand-in placement: the core ships none, and no frontend is named here."""
 
 
 @runtime_checkable

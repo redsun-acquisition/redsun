@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 import yaml
-from ophyd_async.core import StandardReadable, StandardReadableFormat, soft_signal_rw
+from mock_bundle.devices import MockStage
 
 from redsun import (
     AsDevice,
@@ -24,13 +24,8 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 
-class Stage(StandardReadable):
+class Stage(MockStage):
     """Device writing back the axis its configuration signal holds."""
-
-    def __init__(self, name: str, axis: str = "X") -> None:
-        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
-            self.axis = soft_signal_rw(str, initial_value=axis)
-        super().__init__(name=name)
 
     def serialize(self) -> dict[str, str]:
         return {"axis": run_coro(self.axis.get_value())}

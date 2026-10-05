@@ -12,11 +12,9 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType, cast
 import pydantic
 import pytest
 from event_model import DocumentRouter
+from mock_bundle.devices import MockStage
 from ophyd_async.core import (
     Device,
-    StandardReadable,
-    StandardReadableFormat,
-    soft_signal_rw,
 )
 from psygnal import Signal
 
@@ -60,15 +58,6 @@ Descriptions = NewType("Descriptions", "dict[str, str]")
 Missing = NewType("Missing", "dict[str, int]")
 
 
-class Stage(StandardReadable):
-    """Device holding its configured axis in a configuration signal."""
-
-    def __init__(self, name: str, axis: str = "X") -> None:
-        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
-            self.axis = soft_signal_rw(str, initial_value=axis)
-        super().__init__(name=name)
-
-
 class FailsOnce:
     """Presenter that cannot be made the first time, and can afterwards."""
 
@@ -79,7 +68,7 @@ class FailsOnce:
             raise ValueError("not yet")
 
 
-class WorksOnce(Stage):
+class WorksOnce(MockStage):
     """Device that can be made the first time, and not afterwards."""
 
     def __init__(self, name: str, attempts: list[str]) -> None:
@@ -289,7 +278,7 @@ class App(Session):
         "views": {"widget": {"label": "from-config"}},
     }
 
-    motor: Annotated[AsDevice[Stage], FromConfig("stage")]
+    motor: Annotated[AsDevice[MockStage], FromConfig("stage")]
     ctrl: AsPresenter[Ctrl]
     registrar: AsPresenter[Registrar]
     late: AsPresenter[Late]
@@ -556,7 +545,7 @@ class PydanticCtrl(pydantic.BaseModel):
 
 
 class PydanticApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[PydanticCtrl], Declare(gain=7.5)]
 
 
@@ -620,17 +609,17 @@ class FrozenCtrl:
 
 
 class DataclassApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[DataclassCtrl], Declare(gain=7.5)]
 
 
 class KwOnlyApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[KwOnlyCtrl], Declare(gain=7.5)]
 
 
 class FrozenApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
 
 
@@ -714,7 +703,7 @@ class Shared(Session):
         "presenters": {"ctrl": {"gain": 1.0}},
     }
 
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: AsPresenter[Ctrl]
 
 
@@ -1045,7 +1034,7 @@ def test_build_resolves_every_declaration(app: App) -> None:
     assert app.is_built
     assert isinstance(app.ctrl, Ctrl)
     assert isinstance(app.widget, Widget)
-    assert isinstance(app.motor, Stage)
+    assert isinstance(app.motor, MockStage)
     assert app.devices == {"motor": app.motor}
     assert run_coro(app.motor.axis.get_value()) == "Z"
 
@@ -1206,7 +1195,7 @@ def test_unannotated_parameter_is_refused() -> None:
 @pytest.mark.parametrize(
     ("target", "layer"),
     [
-        (Stage, Layer.DEVICE),
+        (MockStage, Layer.DEVICE),
         (Ctrl, Layer.PRESENTER),
         (PydanticCtrl, Layer.PRESENTER),
         (KeywordName, Layer.PRESENTER),
@@ -1225,8 +1214,8 @@ def test_a_class_declared_in_the_layer_it_belongs_to_is_built(
 @pytest.mark.parametrize(
     ("target", "layer", "match"),
     [
-        (Stage, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
-        (Stage, Layer.VIEW, "is an 'ophyd_async.core.Device'"),
+        (MockStage, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
+        (MockStage, Layer.VIEW, "is an 'ophyd_async.core.Device'"),
         (VariadicDevice, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
         (Ctrl, Layer.DEVICE, "does not subclass 'ophyd_async.core.Device'"),
         (int, Layer.PRESENTER, "does not take 'name'"),
@@ -1546,7 +1535,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
     class Mixed(Session):
         config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
 
-        motor: AsDevice[Stage]
+        motor: AsDevice[MockStage]
         ctrl: AsPresenter[Ctrl]
 
     app = Mixed().build()
@@ -1564,7 +1553,7 @@ def test_the_sources_read_are_logged_one_per_line(
     class Mixed(Session):
         config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
 
-        motor: AsDevice[Stage]
+        motor: AsDevice[MockStage]
 
     caplog.set_level(logging.DEBUG, logger="redsun")
     Mixed().build().shutdown()

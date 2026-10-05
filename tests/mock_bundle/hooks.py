@@ -12,6 +12,7 @@ class MockStyle:
     """Records the application it was handed, and the style it was built with."""
 
     def __init__(self, style: str = "plain") -> None:
+        super().__init__()
         self.style = style
         self.seen: list[Any] = []
 
@@ -24,6 +25,7 @@ class MockBranding:
     """Renames the window it is shown, so the effect is visible from outside."""
 
     def __init__(self, title: str = "branded") -> None:
+        super().__init__()
         self.title = title
 
     def configure_main_view(self, view: Any) -> None:
@@ -33,7 +35,3 @@ class MockBranding:
 
 class MockBoth(MockStyle, MockBranding):
     """One provider for two points."""
-
-    def __init__(self) -> None:
-        MockStyle.__init__(self)
-        MockBranding.__init__(self)

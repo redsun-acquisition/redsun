@@ -7,8 +7,9 @@ import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
+from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtWidgets import QApplication, QDockWidget, QWidget
+from qtpy.QtWidgets import QApplication, QDockWidget
 
 from redsun import AsView, Placement
 from redsun.qt import Dock, QtSession
@@ -21,14 +22,6 @@ pytestmark = pytest.mark.qt
 
 LEFT = QtNamespace.DockWidgetArea.LeftDockWidgetArea
 RIGHT = QtNamespace.DockWidgetArea.RightDockWidgetArea
-
-
-class Panel(QWidget):
-    placement: Placement = Dock("left")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
 
 
 class Charts(Panel):

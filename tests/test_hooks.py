@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
+from mock_bundle.hooks import MockBoth, MockBranding, MockStyle
 from qtpy.QtWidgets import QApplication, QMainWindow
 
 from redsun import (
@@ -26,30 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
 pytestmark = pytest.mark.qt
-
-
-class Styler:
-    """Serves `configure_application`, recording what it was handed."""
-
-    def __init__(self, style: str = "plain") -> None:
-        self.style = style
-        self.seen: list[Any] = []
-
-    def configure_application(self, app: QApplication) -> None:
-        """Record *app* rather than styling it."""
-        self.seen.append(app)
-
-
-class Brander:
-    """Serves `configure_main_view` by retitling the window."""
-
-    def configure_main_view(self, view: QMainWindow) -> None:
-        """Retitle *view*, so the call is visible from outside."""
-        view.setWindowTitle("branded")
-
-
-class Both(Styler, Brander):
-    """One provider for two points, to show that one object serves both."""
 
 
 class Splash:
@@ -103,7 +80,7 @@ class NotAHook:
     """Declares none of the methods any point calls."""
 
 
-class ClosingPair(Both):
+class ClosingPair(MockBoth):
     """Serves two points, and records its shutdown."""
 
     def __init__(self, closed: list[str]) -> None:
@@ -150,7 +127,7 @@ def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
     """Refuse a hook on a plain session, which calls no hook points."""
 
     class Headless(Session):
-        configure_application: AsHook[Styler]
+        configure_application: AsHook[MockStyle]
 
     with pytest.raises(HookError, match="it calls none"):
         Headless().build()
@@ -163,10 +140,10 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
     """Run a hook at the hook point named by its attribute."""
 
     class App(QtSession):
-        configure_application: AsHook[Styler]
+        configure_application: AsHook[MockStyle]
 
     app = build(App)
-    installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.seen == [qapp]
 
 
@@ -178,8 +155,8 @@ def test_the_installed_hook_points_are_logged_one_per_line(
     """Log each hook point with a provider on a line of its own."""
 
     class App(QtSession):
-        configure_application: AsHook[Styler]
-        configure_main_view: AsHook[Brander]
+        configure_application: AsHook[MockStyle]
+        configure_main_view: AsHook[MockBranding]
 
     caplog.set_level(logging.DEBUG, logger="redsun")
     build(App)
@@ -213,10 +190,10 @@ def test_declare_carries_the_providers_arguments(
     """Pass Declare arguments to the hook provider's constructor."""
 
     class App(QtSession):
-        configure_application: Annotated[AsHook[Styler], Declare(style="dark")]
+        configure_application: Annotated[AsHook[MockStyle], Declare(style="dark")]
 
     app = build(App)
-    installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.style == "dark"
 
 
@@ -228,7 +205,7 @@ def test_one_annotation_serves_several_points(
 
     class App(QtSession):
         pair: Annotated[
-            AsHook[Both],
+            AsHook[MockBoth],
             Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_MAIN_VIEW),
         ]
 
@@ -267,8 +244,8 @@ def test_two_declarations_may_not_claim_one_point() -> None:
     """Refuse two declarations claiming the same hook point."""
 
     class App(QtSession):
-        first: Annotated[AsHook[Styler], Serves(QtHook.CONFIGURE_APPLICATION)]
-        second: Annotated[AsHook[Both], Serves(QtHook.CONFIGURE_APPLICATION)]
+        first: Annotated[AsHook[MockStyle], Serves(QtHook.CONFIGURE_APPLICATION)]
+        second: Annotated[AsHook[MockBoth], Serves(QtHook.CONFIGURE_APPLICATION)]
 
     with pytest.raises(HookError, match="both claim the hook point"):
         App().build()
@@ -278,7 +255,7 @@ def test_a_point_the_container_does_not_call_is_refused() -> None:
     """Refuse a hook point the session does not call, listing the valid ones."""
 
     class App(QtSession):
-        configure_applications: AsHook[Styler]
+        configure_applications: AsHook[MockStyle]
 
     with pytest.raises(HookError, match="expected one of: create_application"):
         App().build()
@@ -318,7 +295,7 @@ def test_one_point_may_not_be_named_twice_over() -> None:
     """Refuse a hook point named both on the class and in the configuration."""
 
     class App(QtSession):
-        configure_main_view: AsHook[Brander]
+        configure_main_view: AsHook[MockBranding]
         config: ClassVar[dict[str, Any]] = {
             "hooks": {
                 "configure_main_view": {"provider": "mock_bundle.hooks:MockBranding"}
@@ -430,7 +407,7 @@ def test_create_application_is_consulted_only_with_none_running(
     """Call the `create_application` hook only when no QApplication is running."""
 
     class App(QtSession):
-        configure_application: AsHook[Styler]
+        configure_application: AsHook[MockStyle]
 
     founding = {"provider": f"{__name__}:Founder", "kwargs": {"app": qapp}}
     config = {"hooks": {"create_application": founding}}
@@ -441,7 +418,7 @@ def test_create_application_is_consulted_only_with_none_running(
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
     second = build(App, config)
     founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION])
-    styler = cast("Styler", second.hooks[QtHook.CONFIGURE_APPLICATION])
+    styler = cast("MockStyle", second.hooks[QtHook.CONFIGURE_APPLICATION])
 
     assert unused.seen == []
     assert founder.seen == [sys.argv]

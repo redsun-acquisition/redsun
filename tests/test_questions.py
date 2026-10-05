@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
 from bluesky.protocols import Movable
+from mock_bundle.views import Somewhere
 
 from redsun import (
     AsPresenter,
@@ -55,10 +56,6 @@ class ViewerModel:
 
     def add_layer(self, name: str) -> None:
         self.layers.append(name)
-
-
-class Somewhere(Placement):
-    """A placement the default frontend accepts, which attaches nothing."""
 
 
 class Imager:
