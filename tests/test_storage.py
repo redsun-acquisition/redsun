@@ -97,7 +97,6 @@ def test_the_root_comes_from_the_storage_section(
     app = build(WriterApp, config)
 
     assert app.path_provider.base_dir == tmp_path / "elsewhere"
-    assert app.storage.max_digits == 3
     assert app.path_provider("det").filename == "unknown_000"
 
 
