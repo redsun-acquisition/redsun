@@ -330,3 +330,12 @@ class DimmerLight(SoftLight):
         with self.add_children_as_readables():
             self.intensity = bounded_signal(0.0, 100.0, 10.0, "mW")
         super().__init__(name=name)
+
+
+class WholeLight(SoftLight):
+    """A soft light whose intensity is a whole number with no limits."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.intensity = soft_signal_rw(int, 5, units="%")
+        super().__init__(name)

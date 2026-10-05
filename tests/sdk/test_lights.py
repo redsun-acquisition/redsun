@@ -11,7 +11,7 @@ import pytest
 from ophyd_async.core import SignalRW, StandardReadable, set_mock_attr, soft_signal_rw
 
 from redsun.presenter import DescribesLights, LightPresenter
-from tests.sdk.mocks import BoundedBackend, DimmerLight, SoftLight
+from tests.sdk.mocks import BoundedBackend, DimmerLight, SoftLight, WholeLight
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -279,4 +279,18 @@ async def test_an_included_name_that_is_no_light_is_reported(
 
     assert "No device named ghost has an `enabled` signal" in caplog.text
     assert "camera is left out: its `enabled` is not a boolean signal" in caplog.text
+    presenter.shutdown()
+
+
+async def test_a_whole_number_intensity_is_written_whole_and_without_limits() -> None:
+    """Write a whole number to an integer intensity, however large, with no limits."""
+    lamp = WholeLight("lamp")
+    await lamp.connect(mock=False)
+    presenter = LightPresenter("lights", devices={"lamp": lamp})
+
+    await presenter.set_intensity("lamp", 1_000_000.0)
+
+    value = await lamp.intensity.get_value()
+    assert (value, type(value)) == (1_000_000, int)
+    assert presenter.lights["lamp"].precision == 0
     presenter.shutdown()

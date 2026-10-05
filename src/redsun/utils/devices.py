@@ -285,6 +285,7 @@ async def describe_light(light: Light) -> LightInfo:
     enabled = await light.enabled.get_value()
     if not dimmable(light):
         return LightInfo(enabled=bool(enabled))
+    whole = light.intensity.datatype is int
     value, described = await asyncio.gather(
         light.intensity.get_value(), light.intensity.describe()
     )
@@ -295,7 +296,9 @@ async def describe_light(light: Light) -> LightInfo:
         enabled=bool(enabled),
         intensity=float(value),
         units=units if isinstance(units, str) else None,
-        precision=precision
+        precision=0
+        if whole
+        else precision
         if isinstance(precision, int)
         and not isinstance(precision, bool)
         and precision >= 0

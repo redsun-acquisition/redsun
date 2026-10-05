@@ -169,7 +169,10 @@ class LightPresenter(Loggable):
         ):
             self._refuse(device, f"intensity {value:g} is outside {low} to {high}")
             return
-        self._wanted[device] = value
+        # an integer intensity takes whole numbers only
+        self._wanted[device] = (
+            round(value) if light.intensity.datatype is int else value
+        )
         if device in self._writing:
             return
         self._writing.add(device)
