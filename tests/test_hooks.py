@@ -24,7 +24,7 @@ from redsun.qt import Dock, QtHook, QtSession
 from redsun.session import BUILD_STEPS
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator
+    from collections.abc import Callable, Generator
 
 pytestmark = pytest.mark.qt
 
@@ -56,18 +56,17 @@ class Both(Styler, Brander):
 class Splash:
     """Serves `during_build`, recording the span and every step inside it."""
 
-    entered = 0
-    exited = 0
-    steps: ClassVar[list[str]] = []
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
 
     @contextmanager
     def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
         """Open for the whole build, collecting the name of each step."""
-        type(self).entered += 1
+        self.log.append("enter")
         try:
-            yield type(self).steps.append
+            yield self.log.append
         finally:
-            type(self).exited += 1
+            self.log.append("exit")
 
 
 class Founder:
@@ -105,22 +104,30 @@ class NotAHook:
     """Declares none of the methods any point calls."""
 
 
-CLOSED: list[str] = []
-"""The hook providers shut down, in order."""
-
-
 class ClosingPair(Both):
     """Serves two points, and records its shutdown."""
 
+    def __init__(self, closed: list[str]) -> None:
+        super().__init__()
+        self.closed = closed
+
     def shutdown(self) -> None:
-        CLOSED.append("pair")
+        self.closed.append("pair")
 
 
-class ClosingSplash(Splash):
+class ClosingSplash:
     """Serves `during_build`, and records its shutdown."""
 
+    def __init__(self, closed: list[str]) -> None:
+        self.closed = closed
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        """Open for the whole build."""
+        yield lambda step: None
+
     def shutdown(self) -> None:
-        CLOSED.append("splash")
+        self.closed.append("splash")
 
 
 class Counter:
@@ -151,14 +158,10 @@ class Unanswerable:
         self.name = name
 
 
-@pytest.fixture(autouse=True)
-def _reset() -> Iterator[None]:
-    """Clear the class-level records the providers keep between tests."""
-    Splash.entered = 0
-    Splash.exited = 0
-    Splash.steps = []
-    CLOSED.clear()
-    yield
+@pytest.fixture
+def log() -> list[str]:
+    """Return what the hook providers record, in order."""
+    return []
 
 
 def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
@@ -256,20 +259,26 @@ def test_one_annotation_serves_several_points(
 def test_shutdown_reaches_each_provider_once_the_last_built_first(
     qapp: QApplication,
     build: Callable[..., QtSession],
+    log: list[str],
 ) -> None:
     """Shut down each hook provider once, in reverse build order."""
+    pair = {"provider": f"{__name__}:ClosingPair", "kwargs": {"closed": log}}
+    splash = {"provider": f"{__name__}:ClosingSplash", "kwargs": {"closed": log}}
 
     class App(QtSession):
-        pair: Annotated[
-            AsHook[ClosingPair],
-            Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_MAIN_VIEW),
-        ]
-        during_build: AsHook[ClosingSplash]
+        pass
 
-    app = build(App)
+    config = {
+        "hooks": {
+            "configure_application": pair,
+            "configure_main_view": pair,
+            "during_build": splash,
+        }
+    }
+    app = build(App, config)
     app.shutdown()
 
-    assert CLOSED == ["splash", "pair"]
+    assert log == ["splash", "pair"]
 
 
 def test_two_declarations_may_not_claim_one_point() -> None:
@@ -390,19 +399,27 @@ def test_the_configuration_may_not_name_a_point_the_session_does_not_call(
 def test_during_build_brackets_the_build_and_names_every_step(
     qapp: QApplication,
     build: Callable[..., QtSession],
+    log: list[str],
 ) -> None:
     """Enter the `during_build` hook once around the build and report every step."""
 
     class App(QtSession):
-        during_build: AsHook[Splash]
         ctrl: AsPresenter[Counter]
         panel: AsView[Panel]
 
-    build(App)
-    assert Splash.entered == 1
-    assert Splash.exited == 1
-    assert Splash.steps == list(BUILD_STEPS)
-    assert Splash.steps == [
+    config = {
+        "hooks": {
+            "during_build": {
+                "provider": f"{__name__}:Splash",
+                "kwargs": {"log": log},
+            }
+        }
+    }
+    build(App, config)
+    assert log[0] == "enter"
+    assert log[-1] == "exit"
+    assert log[1:-1] == list(BUILD_STEPS)
+    assert log[1:-1] == [
         "services",
         "devices",
         "connect",
@@ -417,17 +434,24 @@ def test_during_build_brackets_the_build_and_names_every_step(
     ]
 
 
-def test_the_span_closes_on_a_failed_build() -> None:
+def test_the_span_closes_on_a_failed_build(log: list[str]) -> None:
     """Exit the `during_build` hook when the build raises."""
 
     class App(QtSession):
-        during_build: AsHook[Splash]
         broken: AsPresenter[Unanswerable]
 
+    config = {
+        "hooks": {
+            "during_build": {
+                "provider": f"{__name__}:Splash",
+                "kwargs": {"log": log},
+            }
+        }
+    }
     with pytest.raises(TypeError, match="which nothing in the session provides"):
-        App().build()
-    assert Splash.entered == 1
-    assert Splash.exited == 1
+        App(config).build()
+    assert log.count("enter") == 1
+    assert log[-1] == "exit"
 
 
 def test_create_application_is_consulted_only_with_none_running(
