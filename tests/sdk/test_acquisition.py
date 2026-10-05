@@ -104,7 +104,7 @@ class Unreadable:
 
     def flat(self) -> MsgGenerator[None]:
         """Return a plan instead of being a generator function."""
-        return bps.null()
+        return self.odd(Thing())
 
 
 class RecordedPaths(SessionPathProvider):
