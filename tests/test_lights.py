@@ -16,7 +16,6 @@ from tests.sdk.mocks import DimmerLight, SoftLight
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from redsun.testing import BuildSession
 
@@ -43,7 +42,6 @@ class LightLab(QtSession):
 
 def test_a_light_switched_from_the_view_comes_back_switched_on(
     qapp: QtWidgets.QApplication,
-    config_home: Path,
     build: BuildSession,
     wait_until: Callable[..., bool],
 ) -> None:

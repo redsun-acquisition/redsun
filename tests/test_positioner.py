@@ -17,7 +17,6 @@ from tests.sdk.mocks import Stage
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from redsun.testing import BuildSession
 
@@ -62,7 +61,6 @@ class Lab(QtSession):
 
 def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
     qapp: QtWidgets.QApplication,
-    config_home: Path,
     build: BuildSession,
     wait_until: Callable[..., bool],
 ) -> None:
@@ -80,7 +78,7 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
 
 
 def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
-    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
+    qapp: QtWidgets.QApplication, build: BuildSession
 ) -> None:
     """Build a dataclass subclass whose inherited fields name types its module lacks."""
     session = build(TaggedLab)
@@ -90,7 +88,7 @@ def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
 
 
 def test_the_built_ins_are_declared_from_a_session_file(
-    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
+    qapp: QtWidgets.QApplication, build: BuildSession
 ) -> None:
     """Build the positioner pair by plugin id from a session file."""
     session = build(

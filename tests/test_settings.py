@@ -122,7 +122,7 @@ def test_a_session_opens_its_own_only_once_it_is_built(
 
 @pytest.mark.qt
 def test_an_action_asks_for_the_settings_by_type(
-    qapp: QApplication, config_home: Path, build: BuildSession
+    qapp: QApplication, build: BuildSession
 ) -> None:
     """Pass the session's settings to an action callback asking for them by type."""
     seen: list[Settings] = []

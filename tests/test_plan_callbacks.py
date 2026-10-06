@@ -13,7 +13,6 @@ from redsun import AsPresenter, AsView, Session
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
     from redsun import Link
     from redsun.testing import BuildSession
@@ -42,9 +41,7 @@ class PlansWithoutAMedian(Session):
         yield self.panel.sig_launch, self.acquisition.launch
 
 
-def test_a_plan_runs_with_the_callback_it_carries_first(
-    config_home: Path, build: BuildSession
-) -> None:
+def test_a_plan_runs_with_the_callback_it_carries_first(build: BuildSession) -> None:
     """Run a plan with its own callback first, listed once, then the attached ones."""
     app = build(Plans)
 
@@ -58,7 +55,7 @@ def test_a_plan_runs_with_the_callback_it_carries_first(
 
 
 def test_a_plan_runs_with_the_arguments_and_callbacks_the_view_sends(
-    config_home: Path, build: BuildSession
+    build: BuildSession,
 ) -> None:
     """Run an open plan with the arguments and only the callbacks the view attaches."""
     app = build(Plans)
@@ -72,26 +69,20 @@ def test_a_plan_runs_with_the_arguments_and_callbacks_the_view_sends(
     assert app.acquisition.subscribed == [app.registrar]
 
 
-def test_every_component_offering_plans_is_collected(
-    config_home: Path, build: BuildSession
-) -> None:
+def test_every_component_offering_plans_is_collected(build: BuildSession) -> None:
     """Collect the plans of every component offering them."""
     app = build(Plans)
     assert set(app.panel.specs) == {"stream", "median_scan"}
     assert set(app.acquisition.entries) == {"stream", "median_scan"}
 
 
-def test_a_plan_is_absent_when_the_component_owning_it_is(
-    config_home: Path, build: BuildSession
-) -> None:
+def test_a_plan_is_absent_when_the_component_owning_it_is(build: BuildSession) -> None:
     """Leave out a plan whose owning component is not in the session."""
     app = build(PlansWithoutAMedian)
     assert set(app.panel.specs) == {"stream"}
 
 
-def test_the_attached_callbacks_outlive_the_session(
-    config_home: Path, build: BuildSession
-) -> None:
+def test_the_attached_callbacks_outlive_the_session(build: BuildSession) -> None:
     """Keep attached callbacks for the next session, dropping names no longer there."""
     first = build(Plans)
     assert first.panel.attached("stream") == ["median", "registrar"]

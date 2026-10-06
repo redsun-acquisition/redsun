@@ -893,7 +893,6 @@ def test_the_action_joins_the_menu_a_window_can_show(
 
 def test_a_session_nobody_has_changed_closes_without_asking(
     qapp: QApplication,
-    config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
@@ -906,7 +905,6 @@ def test_a_session_nobody_has_changed_closes_without_asking(
 
 def test_cancelling_the_prompt_keeps_the_session_open(
     qapp: QApplication,
-    config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
@@ -922,7 +920,6 @@ def test_cancelling_the_prompt_keeps_the_session_open(
 
 def test_discarding_closes_without_writing(
     qapp: QApplication,
-    config_home: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
@@ -940,7 +937,6 @@ def test_discarding_closes_without_writing(
 
 def test_saving_writes_and_then_closes(
     qapp: QApplication,
-    config_home: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
@@ -958,7 +954,6 @@ def test_saving_writes_and_then_closes(
 
 def test_a_cancelled_save_dialog_keeps_the_session_open(
     qapp: QApplication,
-    config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
@@ -973,7 +968,6 @@ def test_a_cancelled_save_dialog_keeps_the_session_open(
 
 def test_dont_ask_again_is_remembered_between_runs(
     qapp: QApplication,
-    config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
@@ -995,7 +989,6 @@ def test_dont_ask_again_is_remembered_between_runs(
 
 def test_a_hook_answers_the_close_in_place_of_the_prompt(
     qapp: QApplication,
-    config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:

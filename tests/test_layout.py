@@ -44,7 +44,7 @@ def _dock(app: QtSession, name: str) -> QDockWidget:
 
 
 def test_a_dock_is_named_after_the_view_it_holds(
-    qapp: QApplication, config_home: Path, build: BuildSession
+    qapp: QApplication, build: BuildSession
 ) -> None:
     """Name each dock after its view, since Qt restores a dock by its object name."""
     app = build(LayoutApp)
@@ -54,7 +54,7 @@ def test_a_dock_is_named_after_the_view_it_holds(
 
 
 def test_a_layout_saved_by_one_run_is_restored_by_the_next(
-    qapp: QApplication, config_home: Path, build: BuildSession
+    qapp: QApplication, build: BuildSession
 ) -> None:
     """Restore in the next run the dock layout one run saved."""
     first = build(LayoutApp)
@@ -70,7 +70,6 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
 
 def test_a_dock_kept_away_from_its_placement_is_logged(
     qapp: QApplication,
-    config_home: Path,
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -87,7 +86,7 @@ def test_a_dock_kept_away_from_its_placement_is_logged(
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
-    qapp: QApplication, config_home: Path, build: BuildSession
+    qapp: QApplication, build: BuildSession
 ) -> None:
     """Keep the docks where the views asked when no layout was saved."""
     app = build(LayoutApp)

@@ -18,7 +18,6 @@ from redsun.view.qt.builtins import AcquisitionView
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from redsun.testing import BuildSession
 
@@ -55,7 +54,7 @@ class TwoRunners(Session):
 
 
 def test_the_engine_and_deferrals_reach_a_component_that_asks(
-    config_home: Path, build: BuildSession
+    build: BuildSession,
 ) -> None:
     """Give a component asking for a `RunEngine` and `Deferrals` the presenter's own."""
     session = build(Lab)
@@ -64,9 +63,7 @@ def test_the_engine_and_deferrals_reach_a_component_that_asks(
     assert session.follower.deferrals is session.acquisition.deferrals()
 
 
-def test_a_session_with_two_acquisition_presenters_is_refused(
-    config_home: Path,
-) -> None:
+def test_a_session_with_two_acquisition_presenters_is_refused() -> None:
     """Refuse a session in which two acquisition presenters share an engine."""
     with pytest.raises(TypeError, match="share"):
         TwoRunners().build()
@@ -75,7 +72,6 @@ def test_a_session_with_two_acquisition_presenters_is_refused(
 @pytest.mark.qt
 def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
     qapp: QtWidgets.QApplication,
-    config_home: Path,
     build: BuildSession,
     wait_until: Callable[..., bool],
 ) -> None:
@@ -99,7 +95,7 @@ def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
 
 @pytest.mark.qt
 def test_the_stack_is_declared_from_a_session_file(
-    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
+    qapp: QtWidgets.QApplication, build: BuildSession
 ) -> None:
     """Build the acquisition presenter and view a session file names by plugin id."""
     session = build(
