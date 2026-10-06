@@ -243,10 +243,11 @@ def test_a_stop_right_after_launch_stops_the_plan(
     # the engine enters its running state on the shared loop, so a held
     # loop keeps the plan launched but not started
     get_shared_loop().call_soon_threadsafe(loop_free.wait, 10)
-
-    presenter.launch("hold", {})
-    presenter.stop()
-    loop_free.set()
+    try:
+        presenter.launch("hold", {})
+        presenter.stop()
+    finally:
+        loop_free.set()
 
     assert ended.wait(10)
     assert seen == [("started", "hold"), ("done", "hold")]

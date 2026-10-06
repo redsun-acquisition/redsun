@@ -358,12 +358,14 @@ def test_backend_buffers_items_put_before_the_drain_runs() -> None:
     loop_free = threading.Event()
     # the drain starts on the shared loop, so a held loop keeps it from running
     get_shared_loop().call_soon_threadsafe(loop_free.wait, TIMEOUT)
-    set_async_backend()
-    emitter = Emitter()
-    emitter.sig_motor_move.connect(on_move)
+    try:
+        set_async_backend()
+        emitter = Emitter()
+        emitter.sig_motor_move.connect(on_move)
 
-    emitter.sig_motor_move.emit("stage", "x", 1.0)
-    loop_free.set()
+        emitter.sig_motor_move.emit("stage", "x", 1.0)
+    finally:
+        loop_free.set()
 
     assert delivered.wait(TIMEOUT)
 
