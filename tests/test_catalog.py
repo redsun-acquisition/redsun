@@ -37,7 +37,7 @@ class AddressHolder:
         self.address = address
 
 
-class Optional:
+class MaybeCatalogReader:
     """Presenter using the catalog when the session has one."""
 
     def __init__(self, name: str, *, address: CatalogAddress | None = None) -> None:
@@ -50,7 +50,7 @@ class AddressApp(Session):
 
 
 class OptionalApp(Session):
-    optional: AsPresenter[Optional]
+    optional: AsPresenter[MaybeCatalogReader]
 
 
 def test_a_component_reaches_the_catalog_by_its_address(

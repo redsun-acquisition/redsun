@@ -71,7 +71,7 @@ def test_clicking_cycles_system_light_dark_and_round(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """Cycle the mode system -> light -> dark -> system, with a new glyph each time."""
+    """Cycle the mode system -> light -> dark -> system, with a new button text each time."""
     control = _control(build(PlainApp))
     seen = []
 
@@ -85,7 +85,7 @@ def test_clicking_cycles_system_light_dark_and_round(
         ColorSchemeMode.DARK,
         ColorSchemeMode.SYSTEM,
     ]
-    assert len({glyph for _, glyph in seen[:3]}) == 3
+    assert len({text for _, text in seen[:3]}) == 3
 
 
 def test_the_control_is_pushed_to_the_right_edge(
