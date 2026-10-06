@@ -137,7 +137,7 @@ def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
 def test_pausable_engine(
     RE: RunEngine, detector: MockDetector, wait_until: Callable[..., bool]
 ) -> None:
-    """Pause a plan at a checkpoint, resume it, then stop it."""
+    """Pause a plan at a checkpoint with no message, resume it, then stop it."""
 
     def pausable_plan() -> Any:
         yield from bps.checkpoint()
@@ -149,8 +149,9 @@ def test_pausable_engine(
     assert running.wait(5)
 
     RE.request_pause(defer=True)
-    with pytest.raises(RunEngineInterrupted):
+    with pytest.raises(RunEngineInterrupted) as interrupted:
         fut.result(timeout=5)
+    assert str(interrupted.value) == ""
     assert RE.state == "paused"
 
     resumed = RE.resume()
