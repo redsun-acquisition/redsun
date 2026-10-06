@@ -7,26 +7,23 @@ the annotated type and a `problems` list, and builds its inner widgets with
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin
+from typing import Any, Literal, get_args, get_origin
 
 from magicgui import widgets as mgw
 from magicgui.types import Undefined
 from magicgui.widgets.bases import ValuedContainerWidget, Widget
+from qtpy import QtWidgets as QtW
 
 from ...presenter._shapes import (
     container_type,
     is_fixed_tuple,
     is_mapping,
     union_members,
+    unwrap,
     without_none,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
-
-REMOVE_WIDTH = 32
-"""Width in pixels of the button removing a row."""
 
 
 def problems_of(widget: Any) -> list[str]:
@@ -36,6 +33,19 @@ def problems_of(widget: Any) -> list[str]:
 
 def type_name(ann: Any) -> str:
     """Return a short name for *ann*, as a union lists its members: `list of float`."""
+    ann = unwrap(ann)
+    if ann is NoneType:
+        return "None"
+    if get_origin(ann) is Literal:
+        return " or ".join(repr(choice) for choice in get_args(ann))
+    members = union_members(ann)
+    if members:
+        return " or ".join(type_name(member) for member in members)
+    if is_mapping(ann):
+        key, value = get_args(ann)
+        return f"dict of {type_name(key)} to {type_name(value)}"
+    if is_fixed_tuple(ann):
+        return "tuple of " + ", ".join(type_name(member) for member in get_args(ann))
     built = container_type(ann)
     if built is not None:
         return f"{built.__name__} of {type_name(get_args(ann)[0])}"
@@ -43,23 +53,40 @@ def type_name(ann: Any) -> str:
 
 
 def create_value_widget(ann: Any, value: Any = Undefined, name: str = "") -> Any:
-    """Build the widget showing a value of type *ann*, starting from *value*."""
-    if get_origin(ann) is Literal:
-        choices = list(get_args(ann))
+    """Build the widget showing a value of type *ann*, starting from *value*.
+
+    A *value* that does not fit *ann* is left out, and the widget starts from
+    its own empty value.
+    """
+    try:
+        return build_value_widget(ann, value, name)
+    except (TypeError, ValueError):
+        # a default contradicting its own annotation is the plan's mistake;
+        # one input starting empty is better than a view that cannot build
+        if value is Undefined:
+            raise
+        return build_value_widget(ann, Undefined, name)
+
+
+def build_value_widget(ann: Any, value: Any, name: str) -> Any:
+    """Build the widget for *ann* by its shape; `Annotated` metadata reaches `magicgui`."""
+    bare = unwrap(ann)
+    if get_origin(bare) is Literal:
+        choices = list(get_args(bare))
         return mgw.ComboBox(
             name=name, choices=choices, value=value if value in choices else choices[0]
         )
-    members = union_members(ann)
+    members = union_members(bare)
     if NoneType in members:
         return OptionalEdit(without_none(members), value, name=name)
     if members:
         return UnionEdit(members, value, name=name)
-    if is_mapping(ann):
-        return MappingEdit(ann, value, name=name)
-    if is_fixed_tuple(ann):
-        return FixedTupleEdit(ann, value, name=name)
-    if container_type(ann) is not None:
-        return SequenceEdit(ann, value, name=name)
+    if is_mapping(bare):
+        return MappingEdit(bare, value, name=name)
+    if is_fixed_tuple(bare):
+        return FixedTupleEdit(bare, value, name=name)
+    if container_type(bare) is not None:
+        return SequenceEdit(bare, value, name=name)
     # without a value magicgui gets its sentinel rather than None: a widget
     # that cannot hold None, such as the CheckBox built for a bool, raises on
     # being handed one
@@ -67,14 +94,43 @@ def create_value_widget(ann: Any, value: Any = Undefined, name: str = "") -> Any
 
 
 def holds(ann: Any, value: Any) -> bool:
-    """Return True if *value* is of the built-in type a widget for *ann* returns."""
+    """Return True if *value* is of the type *ann* names, its items included.
+
+    A `bool` is not taken for an `int` or a `float`, and an `int` is taken
+    for a `float`.
+    """
+    ann = unwrap(ann)
+    if ann is NoneType:
+        return value is None
     if get_origin(ann) is Literal:
         return value in get_args(ann)
-    built = container_type(ann) or (
-        dict if is_mapping(ann) else tuple if is_fixed_tuple(ann) else ann
-    )
+    members = union_members(ann)
+    if members:
+        return any(holds(member, value) for member in members)
+    if is_mapping(ann):
+        key, item = get_args(ann)
+        return isinstance(value, Mapping) and all(
+            holds(key, k) and holds(item, v) for k, v in value.items()
+        )
+    if is_fixed_tuple(ann):
+        types = get_args(ann)
+        return (
+            isinstance(value, tuple)
+            and len(value) == len(types)
+            and all(holds(t, v) for t, v in zip(types, value, strict=True))
+        )
+    if container_type(ann) is not None:
+        return (
+            isinstance(value, get_origin(ann))
+            and not isinstance(value, (str, bytes))
+            and all(holds(get_args(ann)[0], item) for item in value)
+        )
+    if isinstance(value, bool) and ann is not bool:
+        return False
+    if ann is float:
+        return isinstance(value, (int, float))
     try:
-        return isinstance(value, built)
+        return isinstance(value, ann)
     except TypeError:
         return False
 
@@ -127,15 +183,23 @@ class UnionEdit(ValuedContainerWidget[Any]):
         self, members: tuple[Any, ...], value: Any = Undefined, name: str = ""
     ) -> None:
         self._members = members
-        start = next(
+        held = next(
             (
                 i
                 for i, member in enumerate(members)
                 if value is not Undefined and holds(member, value)
             ),
-            0,
+            None,
         )
-        names = [type_name(member) for member in members]
+        start = 0 if held is None else held
+        if held is None:
+            value = Undefined
+        names: list[str] = []
+        for member in members:
+            # two members of one shape, as list[int] | Sequence[int], would
+            # share a name, and the combo box would offer only one of them
+            label = type_name(member)
+            names.append(label if label not in names else f"{label} ({len(names) + 1})")
         self._choice = mgw.ComboBox(choices=names, value=names[start])
         self._edits = [
             create_value_widget(member, value if i == start else Undefined)
@@ -164,12 +228,19 @@ class UnionEdit(ValuedContainerWidget[Any]):
         return self._edits[self._chosen()].value
 
     def set_value(self, value: Any) -> None:
-        """Choose the member *value* belongs to, and show it."""
+        """Choose the member *value* belongs to, and show it.
+
+        Raises
+        ------
+        ValueError
+            If no member of the union holds *value*.
+        """
         for i, member in enumerate(self._members):
             if holds(member, value):
                 self._choice.value = self._choice.choices[i]
                 self._edits[i].value = value
                 return
+        raise ValueError(f"no member of the union holds {value!r}")
 
     @property
     def problems(self) -> list[str]:
@@ -184,8 +255,10 @@ class Row(mgw.Container[Widget]):
         self.edits = edits
         self.remove_button = mgw.PushButton(text="-")
         # a row lays its widgets out with equal stretch, which would make the
-        # button as wide as the value it removes
-        self.remove_button.max_width = REMOVE_WIDTH
+        # button as wide as the value it removes; the style sets its width
+        self.remove_button.native.setSizePolicy(
+            QtW.QSizePolicy.Policy.Maximum, QtW.QSizePolicy.Policy.Fixed
+        )
         super().__init__(
             layout="horizontal", labels=False, widgets=[*edits, self.remove_button]
         )

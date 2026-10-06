@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any
+from collections.abc import Iterable, Sequence
+from typing import Annotated, Any, Literal
 
 import pytest
 from magicgui.widgets.bases import BaseValueWidget
@@ -59,6 +59,10 @@ def text_fields(widget: Any) -> list[QtWidgets.QLineEdit]:
         (float | list[float], 0.0),
         (float | list[float], [1.0]),
         (list[int | None], [1, None]),
+        (int | bool, True),
+        (list[int] | list[str], ["a"]),
+        (dict[str, int] | dict[str, float], {"a": 1.5}),
+        (list[Annotated[float, {"min": -5.0}]], [1.0]),
     ],
 )
 def test_an_untouched_widget_returns_the_default(
@@ -139,3 +143,41 @@ def test_a_union_returns_the_chosen_members_value(
         "list of float",
     ]
     assert widget.value == [0.0]
+
+
+def test_a_union_takes_a_default_its_member_holds_in_another_container(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Start a union on the member a tuple default fits, and return it as that member's list."""
+    assert build("delay", float | Sequence[float], (0.1, 0.2)).value == [0.1, 0.2]
+
+
+def test_a_default_no_input_can_show_leaves_the_input_empty(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Build an input from its own start when the default does not fit the annotation."""
+    assert build("x", list[int], ["a"]).value == [0]
+
+
+def test_each_member_of_a_union_has_its_own_name(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Name union members apart, so each one can be chosen."""
+    widget = build("x", dict[str, int] | dict[str, float] | Literal["a", "b"], "a")
+    [choice] = widget.native.findChildren(QtWidgets.QComboBox)[:1]
+
+    assert [choice.itemText(i) for i in range(choice.count())] == [
+        "dict of str to int",
+        "dict of str to float",
+        "'a' or 'b'",
+    ]
+
+
+def test_a_union_refuses_a_value_no_member_holds(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Raise rather than drop a value set on a union that no member can show."""
+    widget = build("delay", float | list[float], 0.0)
+
+    with pytest.raises(ValueError, match="no member"):
+        widget.value = "soon"

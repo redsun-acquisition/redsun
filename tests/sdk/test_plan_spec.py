@@ -5,7 +5,7 @@ from collections.abc import Callable, Collection, Iterable, MutableMapping, Sequ
 from collections.abc import Set as AbstractSet
 from inspect import Parameter
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import pytest
 from bluesky.protocols import Readable
@@ -98,6 +98,8 @@ def test_the_annotation_predicates(
         (dict[str, list[float]], False),
         (int | None, False),
         (float | list[float], False),
+        (list[Annotated[float, {"min": -5.0}]], False),
+        (dict[str, Annotated[int, "units"]], False),
         (deque[int], True),
         (OrderedDict[str, int], True),
         (Callable[[int], int], True),

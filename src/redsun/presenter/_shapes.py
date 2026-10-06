@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import types
 from types import NoneType
-from typing import Any, Union, get_args, get_origin
+from typing import Annotated, Any, Union, get_args, get_origin
 
 
 def safe_issubclass(cls: Any, parent: Any) -> bool:
@@ -17,6 +17,13 @@ def safe_issubclass(cls: Any, parent: Any) -> bool:
         return issubclass(cls, parent)
     except TypeError:
         return False
+
+
+def unwrap(ann: Any) -> Any:
+    """Return *ann* without the metadata of `Annotated`, at its outer level."""
+    while get_origin(ann) is Annotated:
+        ann = get_args(ann)[0]
+    return ann
 
 
 def union_members(ann: Any) -> tuple[Any, ...]:

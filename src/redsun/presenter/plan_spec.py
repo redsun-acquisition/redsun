@@ -47,6 +47,7 @@ from ._shapes import (
     is_mapping,
     safe_issubclass,
     union_members,
+    unwrap,
 )
 
 if TYPE_CHECKING:
@@ -291,11 +292,12 @@ _PRIMITIVE_TYPES: frozenset[type] = frozenset(
 
 def _is_plain(ann: Any) -> bool:
     """Return True for a type one input shows: a primitive, an `Enum` or a `Literal`."""
-    return (
-        ann in _PRIMITIVE_TYPES
-        or safe_issubclass(ann, enum.Enum)
-        or get_origin(ann) is Literal
-    )
+    try:
+        primitive = ann in _PRIMITIVE_TYPES
+    except TypeError:
+        # an unhashable annotation is no primitive, and must not refuse the plan
+        primitive = False
+    return primitive or safe_issubclass(ann, enum.Enum) or get_origin(ann) is Literal
 
 
 def _can_show(ann: Any) -> bool:
@@ -304,8 +306,10 @@ def _can_show(ann: Any) -> bool:
     Imports no toolkit, so it can run before any application object exists.
     A container, mapping, tuple or union can be shown when every type inside
     it can, a mapping key being a plain type; a device, `Any`, and a container
-    no built-in satisfies cannot.
+    no built-in satisfies cannot. `Annotated` metadata is ignored at every
+    level.
     """
+    ann = unwrap(ann)
     if isdevice(ann):
         return False
     if _is_plain(ann):
