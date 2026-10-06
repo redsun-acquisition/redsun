@@ -99,13 +99,16 @@ def test_a_failure_stays_shown_until_the_next_run(
     """Show why a plan failed, free the chooser, and clear the message on its next run."""
     view = make_view(settings, parent)
     failure = child(view, QtWidgets.QLabel, "failure:rest")
+    chooser = child(view, QtWidgets.QComboBox, "plans")
 
     view.set_started("rest")
+    locked = not chooser.isEnabled()
     view.set_failed("rest", "bad target")
-    shown = (failure.isHidden(), failure.text())
+    shown = (failure.isHidden(), failure.text(), chooser.isEnabled())
     view.set_started("rest")
 
-    assert shown == (False, "failed: bad target")
+    assert locked
+    assert shown == (False, "failed: bad target", True)
     assert failure.isHidden()
 
 

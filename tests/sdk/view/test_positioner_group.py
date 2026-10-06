@@ -88,8 +88,8 @@ def test_a_step_box_left_without_a_number_keeps_the_last_step(
     assert steps == [0.1, 0.1, 0.1]
 
 
-def test_arrow_keys_step_the_focused_axis(group: PositionerGroup) -> None:
-    """Step the axis whose row has focus with Left and Right."""
+def test_arrow_keys_pressed_on_a_row_step_its_axis(group: PositionerGroup) -> None:
+    """Step the axis of the row that receives Right and Left key presses."""
     steps: list[float] = []
     group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
     row = child(group, QtWidgets.QLabel, "readback:theta").parentWidget()
@@ -218,8 +218,10 @@ def test_the_repeat_interval_reaches_every_step_button(group: PositionerGroup) -
     assert {b.autoRepeatInterval() for b in buttons if b.autoRepeat()} == {120}
 
 
-def test_arrow_keys_step_while_a_step_button_has_focus(group: PositionerGroup) -> None:
-    """Step with Right and Left while a step button has focus, as after a click."""
+def test_arrow_keys_pressed_on_a_step_button_step_the_axis(
+    group: PositionerGroup,
+) -> None:
+    """Step the axis with Right and Left key presses sent to its step button."""
     steps: list[float] = []
     group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
     plus = child(group, QtWidgets.QAbstractButton, "plus:x")
@@ -246,8 +248,10 @@ def test_every_control_has_a_name_a_screen_reader_can_say(
     assert unnamed == []
 
 
-def test_the_step_box_moves_through_its_decades(group: PositionerGroup) -> None:
-    """Step by the next decade after pressing Down in the step box."""
+def test_pressing_down_in_the_step_box_selects_the_next_step(
+    group: PositionerGroup,
+) -> None:
+    """Step by the next value of the step box after pressing Down in it."""
     steps: list[float] = []
     group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
 

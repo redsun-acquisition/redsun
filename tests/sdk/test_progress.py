@@ -155,7 +155,7 @@ def test_a_nested_scope_follows_its_parent_and_names_it(RE: RunEngine) -> None:
 def test_a_scope_used_out_of_order_is_refused(
     RE: RunEngine, plan: Callable[[], MsgGenerator[None]]
 ) -> None:
-    """Refuse a scope declared twice, one under a missing parent, or an update of none."""
+    """Refuse each use of a scope that breaks the order of declare, follow and update."""
     with pytest.raises(IllegalMessageSequence):
         RE(plan()).result(timeout=10)
 
@@ -225,7 +225,7 @@ def test_a_scope_reports_how_far_it_has_got(
     update: dict[str, Any],
     expected: tuple[float | None, float | None, float | None, float | None],
 ) -> None:
-    """Take a reported fraction as given, compute one from numbers, else report none."""
+    """Report the current, initial, target and fraction an update gives, dropping what is not a finite number."""
     seen = record(RE)
 
     def plan() -> MsgGenerator[None]:
