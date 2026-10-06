@@ -41,7 +41,7 @@ _ANNOTATIONS = [
     pytest.param(Decimal, id="decimal"),
     pytest.param(Any, id="any"),
 ]
-"""Annotations a required plan parameter might carry, on both sides of the gate.
+"""Annotations a required plan parameter might carry, accepted or refused.
 
 Each is checked twice: whether `create_plan_spec` accepts it, and whether the
 Qt view can build a control for it.
