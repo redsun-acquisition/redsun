@@ -212,7 +212,7 @@ def test_a_failed_write_shows_the_intensity_read_back(
     assert slider.value() == 800
 
 
-def test_a_fine_precision_over_a_wide_range_still_builds(
+def test_the_slider_reaches_the_top_of_a_wide_finely_resolved_range(
     qapp: QtWidgets.QApplication,
 ) -> None:
     """Reach the top of a wide range with the slider of a finely resolved intensity."""
