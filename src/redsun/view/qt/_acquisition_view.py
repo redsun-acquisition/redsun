@@ -130,7 +130,6 @@ class AcquisitionView(QtW.QWidget, Loggable):
             self.plan_widgets[plan] = widget
             self._stack.addWidget(widget.group_box)
             self._chooser.addItem(plan)
-            self._follow_device_choices(widget)
         if not self.plan_widgets:
             empty = QtW.QLabel("No plans are offered.", self)
             empty.setObjectName("no-plans")
@@ -245,18 +244,6 @@ class AcquisitionView(QtW.QWidget, Loggable):
                 button.setEnabled(True)
             case ActionState.RUNNING:
                 button.setEnabled(button.isCheckable())
-
-    def _follow_device_choices(self, widget: PlanWidget) -> None:
-        for field in widget.device_widgets:
-            field.changed.connect(lambda _value, w=widget: self._check_devices(w))
-        self._check_devices(widget)
-
-    def _check_devices(self, widget: PlanWidget) -> None:
-        empty = any(
-            isinstance(field.get_value(), list) and not field.get_value()
-            for field in widget.device_widgets
-        )
-        widget.run_button.setEnabled(not empty)
 
     def _choose_base_dir(self) -> None:
         chosen = QtW.QFileDialog.getExistingDirectory(
