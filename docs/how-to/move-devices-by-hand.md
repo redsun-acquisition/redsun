@@ -124,7 +124,8 @@ the presenter that holds the engine:
 ```
 
 With the built-in acquisition stack, pairing its presenter with the view,
-`- [acquisition, positioner_view]`, makes the view's link;
+`- [acquisition, positioner_view]`, makes the view's link, and pairing it
+with the presenter, `- [acquisition, positioner]`, makes the presenter's;
 [Run plans from the window](run-plans-from-the-window.md#share-the-engine)
 shows it.
 

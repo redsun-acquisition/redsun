@@ -252,7 +252,7 @@ class PositionerPresenter(Loggable):
         if failures:
             self.sig_failed.emit(device, f"stopping failed: {failures[0]}")
 
-    @slot
+    @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
         """Hold the devices in *names* for a plan.
 

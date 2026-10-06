@@ -43,7 +43,11 @@ class LightLab(QtSession):
 class PairedLightLab(QtSession):
     config: ClassVar[dict[str, Any]] = {
         "session": "light-lab-paired",
-        "pairs": [["lights_view", "lights"], ["acquisition", "lights_view"]],
+        "pairs": [
+            ["lights_view", "lights"],
+            ["acquisition", "lights_view"],
+            ["acquisition", "lights"],
+        ],
     }
 
     laser: AsDevice[DimmerLight]
@@ -84,6 +88,22 @@ def test_pairing_the_lights_makes_every_link_of_the_stack(
         ("lights", "sig_failed", "lights_view", "set_failed"),
         ("lights", "sig_configuration", "lights_view", "update_configuration"),
     }
+
+
+@pytest.mark.parametrize("consumer", ["lights_view", "lights"])
+def test_pairing_the_acquisition_presenter_passes_on_locks_only(
+    qapp: QtWidgets.QApplication, build: BuildSession, consumer: str
+) -> None:
+    """Link only the locks from the acquisition presenter to the view or the presenter."""
+    session = build(PairedLightLab)
+
+    links = {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+        if {c.publisher, c.consumer} == {"acquisition", consumer}
+    }
+
+    assert links == {("acquisition", "sig_locks_changed", consumer, "set_locked")}
 
 
 @pytest.mark.parametrize("lab", [LightLab, PairedLightLab])

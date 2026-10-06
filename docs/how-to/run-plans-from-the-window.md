@@ -105,19 +105,21 @@ class MyController:
 A session holds one acquisition presenter: two would both share a
 `RunEngine`, and the session refuses to build.
 
-The presenter also passes on the engine's locks. The light view can take
-them through a pairing:
+The presenter also passes on the engine's locks. The light view and the
+light presenter can take them through a pairing each:
 
 ```yaml
 pairs:
   - [acquisition, lights_view]
+  - [acquisition, lights]
 ```
 
-The positioner view takes them the same way:
+The positioner view and presenter take them the same way:
 
 ```yaml
 pairs:
   - [acquisition, positioner_view]
+  - [acquisition, positioner]
 ```
 
 ## Offer actions

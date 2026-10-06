@@ -73,7 +73,7 @@ class PairedLab(QtSession):
 class LockedLab(QtSession):
     config: ClassVar[dict[str, Any]] = {
         "session": "positioner-locked",
-        "pairs": [["acquisition", "positioner_view"]],
+        "pairs": [["acquisition", "positioner_view"], ["acquisition", "positioner"]],
     }
 
     stage: AsDevice[Stage]
@@ -103,21 +103,20 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
     assert wait_until(lambda: label.text() == "1.000")
 
 
-def test_pairing_the_acquisition_presenter_with_the_view_passes_on_locks_only(
-    qapp: QtWidgets.QApplication, build: BuildSession
+@pytest.mark.parametrize("consumer", ["positioner_view", "positioner"])
+def test_pairing_the_acquisition_presenter_passes_on_locks_only(
+    qapp: QtWidgets.QApplication, build: BuildSession, consumer: str
 ) -> None:
-    """Link only the locks, so stopping one device never reaches the plan."""
+    """Link only the locks to the view or the presenter, so stopping one device never reaches the plan."""
     session = build(LockedLab)
 
     links = {
         (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
         for c in session.connections
-        if {c.publisher, c.consumer} == {"acquisition", "positioner_view"}
+        if {c.publisher, c.consumer} == {"acquisition", consumer}
     }
 
-    assert links == {
-        ("acquisition", "sig_locks_changed", "positioner_view", "set_locked")
-    }
+    assert links == {("acquisition", "sig_locks_changed", consumer, "set_locked")}
 
 
 def test_pairing_the_positioner_makes_every_link_of_the_stack(

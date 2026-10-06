@@ -54,9 +54,10 @@ ADR 22 left shortening this to a later decision.
 
 ## Consequences
 
-- Each built-in stack is connected with one pairing. The views' `set_locked`
-  names `sig_locks_changed`, so pairing the acquisition presenter with the
-  light view or the positioner view also passes on the engine's locks.
+- Each built-in stack is connected with one pairing. The light and positioner
+  views and presenters each have a `set_locked` naming `sig_locks_changed`, so
+  pairing the acquisition presenter with any of them passes on the engine's
+  locks.
 - A pairing connects every name two components share, so a name says what
   its signal does. Pairing the acquisition presenter with the positioner
   view passes on the locks and nothing else.

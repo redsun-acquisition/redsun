@@ -202,7 +202,7 @@ class LightPresenter(Loggable):
         """
         await self._configuration.configure(key, value)
 
-    @slot
+    @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
         """Hold the lights in *names* for a plan: no write reaches them."""
         self._held = names
