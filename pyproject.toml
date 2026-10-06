@@ -57,6 +57,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "jsonschema>=4.26.0",
     "fastcs[epicspva]>=0.14.2",
+    "zarr>=3.1.6",
 ]
 docs = [
     "mkdocstrings-python>=2.0.9",
