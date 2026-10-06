@@ -259,17 +259,21 @@ def test_a_pairing_over_links_already_made_makes_each_once(
     assert len(session.connections) == 2
 
 
-def test_the_pairs_of_layered_sources_all_apply(build: BuildSession) -> None:
-    """Apply the pairings of every configuration source, as `wiring` merges."""
-    session = build(
-        Trio,
-        [{"pairs": [["talker", "listener"]]}, {"pairs": [["talker", "other"]]}],
-    )
+@pytest.mark.parametrize(
+    "later",
+    [{"pairs": [["talker", "other"]]}, {"pairs": None}, {}],
+    ids=["a-pairing", "nothing-under-pairs", "no-pairs"],
+)
+def test_the_pairs_of_layered_sources_all_apply(
+    later: dict[str, Any], build: BuildSession
+) -> None:
+    """Keep the pairings of earlier sources and add those of a later one."""
+    session = build(Trio, [{"pairs": [["talker", "listener"]]}, later])
 
     session.talker.sig_said.emit("hi")
 
     assert session.listener.heard == ["hi"]
-    assert session.other.heard == ["hi"]
+    assert session.other.heard == (["hi"] if later.get("pairs") else [])
 
 
 def test_an_empty_pairs_section_pairs_nothing(build: BuildSession) -> None:
@@ -300,9 +304,10 @@ def test_a_pairing_naming_a_component_that_failed_is_skipped(
     ("container", "pair", "named"),
     [
         (Chat, ["talker", "nobody"], "nobody"),
+        (HalfBuilt, ["broken", "nobody"], "nobody"),
         (WithStage, ["stage", "listener"], "stage"),
     ],
-    ids=["never-declared", "a-device"],
+    ids=["never-declared", "declared-failed-and-never-declared", "a-device"],
 )
 def test_a_pairing_naming_no_built_presenter_or_view_is_refused(
     container: type[Session], pair: list[str], named: str

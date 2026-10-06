@@ -228,8 +228,8 @@ def load(
         refuse_identity_conflict(data, overlay, source)
         earlier, later = data.get("pairs"), overlay.get("pairs")
         data = merge_config(data, overlay)
-        if isinstance(earlier, list) and isinstance(later, list):
-            data["pairs"] = [*earlier, *later]
+        if isinstance(earlier, list) and (later is None or isinstance(later, list)):
+            data["pairs"] = [*earlier, *(later or [])]
     missing = set(required) - data.keys()
     if missing:
         named = ", ".join(label(source) for source in ordered) or "no sources"
