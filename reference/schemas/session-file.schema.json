@@ -343,6 +343,32 @@
         }
       ]
     },
+    "pairs": {
+      "anyOf": [
+        {
+          "default": [],
+          "description": "Components linked to each other, two names each.\n\nEach signal of one reaches each slot of the other that names it in its\n`signal`, both ways.",
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Pairs",
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "hooks": {
       "anyOf": [
         {

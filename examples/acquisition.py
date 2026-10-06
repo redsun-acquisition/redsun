@@ -16,7 +16,14 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsPresenter, AsView, Link, PlanEntry  # noqa: TC001
+from redsun import (
+    AsDevice,
+    AsPresenter,
+    AsView,
+    Link,
+    PlanEntry,
+    links_between,
+)
 from redsun.presenter import AcquisitionPresenter  # noqa: TC001
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import AcquisitionView  # noqa: TC001
@@ -61,21 +68,7 @@ class MyApp(QtSession):
 
     def wire(self) -> Iterator[Link]:
         # --8<-- [start:wire]
-        yield self.acquisition_view.sig_launch, self.acquisition.launch
-        yield self.acquisition_view.sig_pause, self.acquisition.pause
-        yield self.acquisition_view.sig_resume, self.acquisition.resume
-        yield self.acquisition_view.sig_stop, self.acquisition.stop
-        yield self.acquisition_view.sig_action, self.acquisition.request_action
-        yield self.acquisition_view.sig_base_dir, self.acquisition.set_base_dir
-        yield self.acquisition.sig_plan_started, self.acquisition_view.set_started
-        yield self.acquisition.sig_plan_done, self.acquisition_view.set_done
-        yield self.acquisition.sig_plan_failed, self.acquisition_view.set_failed
-        yield self.acquisition.sig_progress, self.acquisition_view.update_progress
-        yield self.acquisition.sig_action_changed, self.acquisition_view.update_action
-        yield (
-            self.acquisition.sig_base_dir_changed,
-            self.acquisition_view.update_base_dir,
-        )
+        yield from links_between(self.acquisition_view, self.acquisition)
         # --8<-- [end:wire]
 
 

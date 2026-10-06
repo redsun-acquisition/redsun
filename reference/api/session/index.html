@@ -1057,6 +1057,8 @@
       
         
       
+        
+      
     
     
     
@@ -1234,6 +1236,35 @@
     
   
   How to wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/offer-a-pairing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to offer a pairing
 
     
   </span>
@@ -3114,6 +3145,8 @@
       
         
       
+        
+      
     
     
     
@@ -3751,6 +3784,33 @@
     
   
   22. A built-in acquisition stack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0023-pairing-two-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  23. Pairing two components
 
     
   </span>
@@ -9023,6 +9083,8 @@ stopped halfway gives back only what it took.</p>
 with. A slot is a bound method marked with <code>slot</code>, which may be a
 coroutine function, and is delivered on the thread it declares, then
 the one its class declares, then the one the frontend gives it.</p>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;links_between&lt;/span&gt;" href="../ports/#redsun.links_between"><code>links_between</code></a> gives every link a pairing of
+two components makes, to <code>yield from</code>.</p>
 <p>Every component that built exists by the time this runs. One that
 failed reads as a stand-in, and a link naming it is skipped with a
 warning. Yields nothing by default.</p>
@@ -9502,7 +9564,8 @@ and what its <code>setup</code> was going to assign is missing where it is used.
 
     <div class="doc doc-contents first">
 
-        <p>Make the links the class yields, then those the file names.</p>
+        <p>Make the links the class yields, then those the file lists, then its pairs.</p>
+<p>A link made already is not made again.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -9520,7 +9583,8 @@ and what its <code>setup</code> was going to assign is missing where it is used.
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If <code>wire</code> yields nothing iterable, or a link that cannot be made.</p>
+                <p>If <code>wire</code> yields nothing iterable, a link that cannot be made, or
+a pairing that connects nothing.</p>
               </div>
             </td>
           </tr>

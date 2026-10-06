@@ -1199,6 +1199,8 @@
       
         
       
+        
+      
     
     
     
@@ -1376,6 +1378,35 @@
     
   
   How to wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/offer-a-pairing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to offer a pairing
 
     
   </span>
@@ -3256,6 +3287,8 @@
       
         
       
+        
+      
     
     
     
@@ -3893,6 +3926,33 @@
     
   
   22. A built-in acquisition stack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0023-pairing-two-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  23. Pairing two components
 
     
   </span>
@@ -5711,7 +5771,7 @@ up, so it needs no list of its own.</p>
 <p>Add these links at the start of <code>wire</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_move</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">move</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_move_to</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">move_to</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_stop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">stop</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_stop_device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">stop</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_configure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">configure</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">sig_readback</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">update_readback</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">sig_moving</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">set_moving</span>
@@ -6050,7 +6110,7 @@ the scripts of the earlier tutorials keep theirs. Yours reads
 </span><span id="__span-8-283"><a id="__codelineno-8-283" name="__codelineno-8-283" href="#__codelineno-8-283"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Link</span><span class="p">]:</span>
 </span><span id="__span-8-284"><a id="__codelineno-8-284" name="__codelineno-8-284" href="#__codelineno-8-284"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_move</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">move</span>
 </span><span id="__span-8-285"><a id="__codelineno-8-285" name="__codelineno-8-285" href="#__codelineno-8-285"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_move_to</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">move_to</span>
-</span><span id="__span-8-286"><a id="__codelineno-8-286" name="__codelineno-8-286" href="#__codelineno-8-286"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_stop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">stop</span>
+</span><span id="__span-8-286"><a id="__codelineno-8-286" name="__codelineno-8-286" href="#__codelineno-8-286"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_stop_device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">stop</span>
 </span><span id="__span-8-287"><a id="__codelineno-8-287" name="__codelineno-8-287" href="#__codelineno-8-287"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">sig_configure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">configure</span>
 </span><span id="__span-8-288"><a id="__codelineno-8-288" name="__codelineno-8-288" href="#__codelineno-8-288"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">sig_readback</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">update_readback</span>
 </span><span id="__span-8-289"><a id="__codelineno-8-289" name="__codelineno-8-289" href="#__codelineno-8-289"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">sig_moving</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner_view</span><span class="o">.</span><span class="n">set_moving</span>

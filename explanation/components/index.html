@@ -1057,6 +1057,8 @@
       
         
       
+        
+      
     
     
     
@@ -1234,6 +1236,35 @@
     
   
   How to wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/offer-a-pairing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to offer a pairing
 
     
   </span>
@@ -3362,6 +3393,8 @@
       
         
       
+        
+      
     
     
     
@@ -4002,6 +4035,33 @@
     
   
   22. A built-in acquisition stack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0023-pairing-two-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  23. Pairing two components
 
     
   </span>
@@ -6055,6 +6115,10 @@ its name public: other code connects to it. A slot may be <code>async def</code>
 <a href="../../how-to/wire-components/">Wire components together</a> shows both. A slot
 on a Qt widget runs on the main thread unless it says otherwise, since a
 widget may only be used from there.</p>
+<p>A presenter and a view written for each other can say, on each slot, which
+signal of the other reaches it. The session then connects the two with one
+<a href="../glossary/#pairing">pairing</a>, as
+<a href="../../how-to/offer-a-pairing/">Offer a pairing</a> shows.</p>
 <h2 id="cleaning-up">Cleaning up<a class="headerlink" href="#cleaning-up" title="Permanent link">&para;</a></h2>
 <p>A component that needs to clean up defines <code>shutdown</code>, plain or <code>async</code>. The
 session calls it when it shuts down, newest component first. Nothing else is

@@ -1057,6 +1057,8 @@
       
         
       
+        
+      
     
     
     
@@ -1234,6 +1236,35 @@
     
   
   How to wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/offer-a-pairing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to offer a pairing
 
     
   </span>
@@ -3114,6 +3145,8 @@
       
         
       
+        
+      
     
     
     
@@ -3763,6 +3796,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0023-pairing-two-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  23. Pairing two components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4074,6 +4134,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Wiring
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pairs
       </span>
     </span>
   </a>
@@ -5518,6 +5589,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pairs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hooks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5741,6 +5823,12 @@ write one, split it over several files and read a failure.</p>
 <td>mapping</td>
 <td>empty</td>
 <td><a href="#wiring">which signal reaches which slot</a></td>
+</tr>
+<tr>
+<td><code>pairs</code></td>
+<td>list</td>
+<td>empty</td>
+<td><a href="#pairs">components linked to each other</a>, two names each</td>
 </tr>
 <tr>
 <td><code>hooks</code></td>
@@ -5996,6 +6084,14 @@ its own, <code>transport</code>.</p>
 <code>component.port</code>.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">wiring</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">motor_ctrl.sig_moved</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">motor_widget.refresh</span>
+</span></code></pre></div>
+<h2 id="pairs">Pairs<a class="headerlink" href="#pairs" title="Permanent link">&para;</a></h2>
+<p><code>pairs</code> lists two components by name. Each signal of one reaches each slot of
+the other that names it in its <code>signal</code>, both ways. A pairing that connects
+nothing is refused, and one naming a component that failed to build is skipped
+with a warning.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">pairs</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">motor_ctrl</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">motor_widget</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
 <p><code>hooks</code> maps a <abbr title="A named moment of a build at which a session calls one of your objects.">hook point</abbr> to an entry.</p>

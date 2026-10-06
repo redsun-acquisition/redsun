@@ -18,7 +18,7 @@
         <link rel="prev" href="../write-a-session-file/">
       
       
-        <link rel="next" href="../share-a-value/">
+        <link rel="next" href="../offer-a-pairing/">
       
       
         
@@ -1067,6 +1067,8 @@
       
         
       
+        
+      
     
     
     
@@ -1398,10 +1400,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pair-two-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pair two components
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../offer-a-pairing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to offer a pairing
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3287,6 +3329,8 @@
       
         
       
+        
+      
     
     
     
@@ -3924,6 +3968,33 @@
     
   
   22. A built-in acquisition stack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0023-pairing-two-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  23. Pairing two components
 
     
   </span>
@@ -5603,6 +5674,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pair-two-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pair two components
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5719,6 +5801,8 @@
       
         
       
+        
+      
     
     
     
@@ -5790,7 +5874,7 @@ so marking one makes its name and arguments public.</p>
 </span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">reading</span> <span class="ow">in</span> <span class="n">readings</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">reading</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]</span>
 </span></code></pre></div>
-<p><code>slot</code> takes two options:</p>
+<p><code>slot</code> takes three options:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>    <span class="nd">@slot</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"frames"</span><span class="p">,</span> <span class="n">thread</span><span class="o">=</span><span class="s2">"current"</span><span class="p">)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">readings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Reading</span><span class="p">[</span><span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
@@ -5804,6 +5888,8 @@ so marking one makes its name and arguments public.</p>
   chooses, as
   <a href="#choose-the-thread-a-slot-runs-on">Choose the thread a slot runs on</a>
   describes.</li>
+<li><code>signal</code> names the signals a <a href="#pair-two-components">pairing</a> connects to
+  the slot.</li>
 </ul>
 <p>Signals need no marker: every public <a class="autorefs autorefs-external" href="https://psygnal.readthedocs.io/en/latest/reference/psygnal/#psygnal.Signal"><code>Signal</code></a> attribute is a
 <a href="../../explanation/glossary/#port">port</a>:</p>
@@ -6079,6 +6165,12 @@ and the other connections are still made.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="pair-two-components">Pair two components<a class="headerlink" href="#pair-two-components" title="Permanent link">&para;</a></h2>
+<p>Two components whose slots name the signals of the other are connected
+with one line, <code>pairs: - [a, b]</code> in the file or
+<code>yield from links_between(self.a, self.b)</code> in <code>wire</code>. The <code>pairs</code> section
+runs after <code>wiring</code>. <a href="../offer-a-pairing/">Offer a pairing</a> shows how a
+component offers one.</p>
 
 
 
@@ -6138,13 +6230,13 @@ and the other connections are still made.</p>
         
         
           
-          <a href="../share-a-value/" class="md-footer__link md-footer__link--next" aria-label="Next: How to share a value between components">
+          <a href="../offer-a-pairing/" class="md-footer__link md-footer__link--next" aria-label="Next: How to offer a pairing">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How to share a value between components
+                How to offer a pairing
               </div>
             </div>
             <div class="md-footer__button md-icon">

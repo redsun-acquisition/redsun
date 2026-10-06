@@ -1057,6 +1057,8 @@
       
         
       
+        
+      
     
     
     
@@ -1234,6 +1236,35 @@
     
   
   How to wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/offer-a-pairing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to offer a pairing
 
     
   </span>
@@ -3114,6 +3145,8 @@
       
         
       
+        
+      
     
     
     
@@ -3763,6 +3796,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0023-pairing-two-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  23. Pairing two components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4203,6 +4263,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         ophyd-async
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pairing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pairing
       </span>
     </span>
   </a>
@@ -6275,6 +6346,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pairing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pairing
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#path-provider" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6813,6 +6895,12 @@ present.</p>
 <a href="#device">device</a> its <a href="#device-signal">signals</a> and connects them to the
 hardware, directly or through a <a href="#service">service</a>. See the
 <a href="https://blueskyproject.io/ophyd-async/main/index.html">documentation of <code>ophyd-async</code></a>.</p>
+<h3 id="pairing">Pairing<a class="headerlink" href="#pairing" title="Permanent link">&para;</a></h3>
+<p>A pairing is a line of the <code>pairs</code> section of a session file, or a
+<code>yield from links_between(a, b)</code> in <code>wire</code>, that connects two
+<a href="#component">components</a> in both directions: each <a href="#signal">signal</a> of one
+reaches each <a href="#slot">slot</a> of the other that names it. See
+<a href="../../how-to/offer-a-pairing/">Offer a pairing</a>.</p>
 <h3 id="path-provider">Path provider<a class="headerlink" href="#path-provider" title="Permanent link">&para;</a></h3>
 <p>The path provider is the object that decides where the files of a session go
 and what they are called, and creates their folders. Each session has one,
