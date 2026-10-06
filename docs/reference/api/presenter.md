@@ -95,7 +95,7 @@ a `list` or a `dict`, not the class it names.
 | no input can show it, and it has no default | `UnresolvableAnnotationError` |
 
 The inputs each annotation gets are pictured in
-[Parameter widgets](view.md#parameter-widgets).
+[How to choose the inputs of a plan](../../how-to/choose-plan-inputs.md).
 
 ### From the values to a call
 

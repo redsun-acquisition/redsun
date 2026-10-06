@@ -48,7 +48,9 @@ class MyController:
 ```
 
 Annotate every parameter with a type a plan widget can show; the list is in
-[How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read).
+[How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read),
+and [How to choose the inputs of a plan](choose-plan-inputs.md) shows the
+inputs a few signatures get.
 A device parameter takes a device class or a runtime-checkable protocol, and
 the user chooses among the devices of the session that match it.
 

@@ -1,4 +1,4 @@
-"""Plans whose signatures the "Parameter widgets" reference section shows."""
+"""Plans whose signatures "How to choose the inputs of a plan" shows."""
 
 from __future__ import annotations
 

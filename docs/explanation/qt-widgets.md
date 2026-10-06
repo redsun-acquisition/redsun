@@ -35,8 +35,8 @@ reason shows under the parameters.
 and [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
 adds the toggle, the pause button and the action buttons. The attributes of
 `PlanWidget` are in the [reference](../reference/api/view.md#qt-widgets),
-with [pictures of the inputs](../reference/api/view.md#parameter-widgets) a
-few signatures get.
+and [How to choose the inputs of a plan](../how-to/choose-plan-inputs.md)
+pictures the inputs a few signatures get.
 
 ### Document callbacks
 

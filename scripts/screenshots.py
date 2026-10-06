@@ -108,9 +108,9 @@ SETTLE = 3.0
 """Seconds a plan started for a picture is given to finish."""
 
 WIDGETS = Path("docs/examples/parameter_widgets.py")
-"""The plans whose parameter widgets the view reference pictures, by tab."""
+"""The plans whose parameter widgets the plan inputs guide pictures, by tab."""
 
-WIDGET_PICTURES = Path("docs/reference/images")
+WIDGET_PICTURES = Path("docs/how-to/images")
 """Where each tab's picture is written, as `parameters-<tab>.png`."""
 
 WIDGET_WIDTH = 420
