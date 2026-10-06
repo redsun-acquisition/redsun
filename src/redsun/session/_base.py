@@ -9,7 +9,6 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
-from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -27,8 +26,6 @@ from typing import (
 import yaml
 from event_model import DocumentRouter
 from in_n_out import Store
-from ophyd_async.core import Device, SignalR
-from psygnal import SignalInstance
 from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
@@ -36,14 +33,8 @@ from redsun.catalog import CatalogAddress
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
 from redsun.injection import rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
-from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
-from redsun.ports import (
-    ComponentNotBuilt,
-    Connection,
-    Unconnected,
-    WiringError,
-    ports,
-)
+from redsun.path_provider import SessionPathProvider
+from redsun.ports import WiringError
 from redsun.registry import (
     CallbackType,
     DeviceMapping,
@@ -72,7 +63,6 @@ from .._hooks import (
 )
 from .._settings import Settings
 from ..injection._provides import constant, register_shared, shared_keys
-from ..ports._wiring import SLOT_THREAD_ATTR, marker_of, owner_of, port_name
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._declarations import (
     Declaration,
@@ -105,18 +95,19 @@ from ._protocols import (
     Serializable,
 )
 from ._questions import NoAnswer, answer, optional_arg, shape_of, without_none
+from ._wiring import NotBuilt, Wiring
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
 
+    from ophyd_async.core import Device
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
-    from redsun.ports import Link, SlotThread
+    from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
 
-    from ..ports._wiring import SlotCallable
     from ._declarations import Key
     from ._profile import ProfileKind
     from ._questions import Shape
@@ -185,29 +176,6 @@ def silent(step: str) -> None:
     """
 
 
-@dataclass(frozen=True)
-class NotBuilt:
-    """Stands in for a component that failed to build, while `Session.wire` runs.
-
-    Any attribute read on it is another stand-in for the same component, so
-    a link yielding `self.stage.readback` is recognised and skipped.
-    """
-
-    component: str
-    """The component that failed to build."""
-
-    port: str = ""
-    """The attribute read on it, empty for the component itself."""
-
-    def __getattr__(self, name: str) -> NotBuilt:
-        if name.startswith("__"):
-            raise AttributeError(name)
-        return NotBuilt(self.component, name)
-
-    def __str__(self) -> str:
-        return f"{self.component}.{self.port}" if self.port else self.component
-
-
 class Session(BuildableSession):
     """One running application, whose components are declared as annotations.
 
@@ -245,7 +213,6 @@ class Session(BuildableSession):
         "_catalog",
         "_class_counts",
         "_config",
-        "_connections",
         "_declarations",
         "_devices",
         "_failed",
@@ -253,7 +220,6 @@ class Session(BuildableSession):
         "_file",
         "_hooks",
         "_is_built",
-        "_links",
         "_merged",
         "_names",
         "_not_set_up",
@@ -268,8 +234,8 @@ class Session(BuildableSession):
         "_shared_values",
         "_storage",
         "_store",
-        "_subscriptions",
         "_transport",
+        "_wiring",
     )
 
     config: ClassVar[Source | Sequence[Source] | None] = None
@@ -367,13 +333,9 @@ class Session(BuildableSession):
         # a component whose setup could not run: kept, and named in the report
         self._not_set_up: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
-        self._links: list[tuple[SignalInstance, SlotCallable]] = []
-        self._connections: list[Connection] = []
-        # the forwarding function is held because ophyd-async releases a
-        # subscription by identity: clear_sub needs the object back
-        self._subscriptions: list[
-            tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
-        ] = []
+        self._wiring = Wiring(
+            self._built_components, self._names, self._failed, self.frontend
+        )
         self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
@@ -766,6 +728,7 @@ class Session(BuildableSession):
             session=self.name,
             max_digits=self._storage.max_digits,
         )
+        self._wiring.path_provider = self._path_provider
         self._open_logs(self._path_provider)
         # registered after the logs, so a provider's teardown is still logged
         for hook in distinct(self.hooks.values()):
@@ -877,11 +840,13 @@ class Session(BuildableSession):
                     "each link as a signal and a slot"
                 )
             for signal, slot in links:
-                self._link(signal, slot)
+                self._wiring.link(signal, slot)
         finally:
             for attribute in stand_ins:
                 delattr(self, attribute)
-        self._apply_wiring_config(self._configuration().wiring)
+        for source, targets in self._configuration().wiring.items():
+            for target in [targets] if isinstance(targets, str) else targets:
+                self._wiring.link_paths(source, target)
         self._warn_unused()
 
     def present(self) -> None:
@@ -1163,169 +1128,10 @@ class Session(BuildableSession):
         self._names.clear()
         self._names.update({id(c): name for name, c in components.items()})
 
-    def _label(self, owner: object | None) -> str:
-        """Return the name of the component *owner* is, or is held by.
-
-        An object a component keeps as an attribute, with ports of its own,
-        is named after that component.
-        """
-        if owner is None:
-            return "<unknown>"
-        if id(owner) in self._names:
-            return self._names[id(owner)]
-        for name, component in self._built_components.items():
-            held = getattr(component, "__dict__", {}).values()
-            if any(value is owner for value in held):
-                return name
-        return type(owner).__name__
-
-    def _affinity(self, slot: Callable[..., Any]) -> SlotThread:
-        declaration = marker_of(slot)
-        if declaration is None:
-            name = getattr(slot, "__qualname__", repr(slot))
-            raise WiringError(
-                f"{name} is not connectable; mark it with the 'slot' decorator"
-            )
-        consumer = getattr(slot, "__self__", None)
-        return (
-            declaration.thread
-            or cast("SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None))
-            or self.frontend.thread_of(consumer)
-        )
-
-    def _link(self, signal: object, slot: SlotCallable) -> None:
-        """Make one link, unless an end of it belongs to a component that failed.
-
-        Raises
-        ------
-        WiringError
-            If *signal* is not a signal, if *slot* is not marked as
-            connectable, or if psygnal rejects the two signatures.
-        """
-        if skipped(signal, slot):
-            return
-        if isinstance(signal, SignalInstance):
-            self._connect(signal, slot)
-        elif isinstance(signal, SignalR):
-            self._subscribe(signal, slot)
-        else:
-            raise WiringError(
-                f"{signal!r} is not a signal; a link is a psygnal signal or a "
-                "device signal, then the slot it reaches"
-            )
-
-    def _connect(self, signal: SignalInstance, slot: SlotCallable) -> None:
-        thread = self._affinity(slot)
-        link = Connection(
-            publisher=self._label(owner_of(signal)),
-            publisher_port=signal.name or "<anonymous>",
-            consumer=self._label(getattr(slot, "__self__", None)),
-            consumer_port=port_name(slot),
-            thread=thread,
-        )
-        try:
-            signal.connect(slot, thread=thread)
-        except (TypeError, ValueError) as e:
-            raise WiringError(f"cannot connect {link}: {e}") from e
-
-        self._links.append((signal, slot))
-        self._connections.append(link)
-        logger.debug(f"Connected {link}")
-
-    def _subscribe(self, signal: SignalR[Any], slot: SlotCallable) -> None:
-        # ophyd-async calls a subscriber on whatever thread produced the
-        # reading, so the reading goes through a psygnal signal to reach the
-        # thread the slot asks for
-        thread = self._affinity(slot)
-        relay = SignalInstance((object,), name=signal.name)
-        relay.connect(slot, thread=thread)
-
-        # kept as one object: unsubscribing goes by identity
-        forward = relay.emit
-
-        # a device names its signals after itself, as device-signal
-        device, _, port = signal.name.partition("-")
-        link = Connection(
-            publisher=device if port else self._label(None),
-            publisher_port=port or signal.name,
-            consumer=self._label(getattr(slot, "__self__", None)),
-            consumer_port=port_name(slot),
-            thread=thread,
-        )
-
-        async def attach() -> None:
-            signal.subscribe_reading(forward)
-
-        # ophyd-async requires a running loop to subscribe, and callers run on
-        # the main thread during the build
-        run_coro(attach())
-        self._subscriptions.append((signal, forward, relay))
-        self._connections.append(link)
-        logger.debug(f"Connected {link}")
-
-    def _connect_paths(self, source: str, target: str) -> None:
-        """Connect two ports addressed as `component.port`.
-
-        A path naming a component that failed to build is logged and skipped.
-
-        Raises
-        ------
-        WiringError
-            If either path is malformed, names a component that was never
-            declared, or names a port that component does not expose.
-        """
-        try:
-            signal = self._resolve_port(source, "signal")
-            slot = self._resolve_port(target, "slot")
-        except ComponentNotBuilt as e:
-            if e.component not in self._failed:
-                raise
-            logger.warning(
-                "Not connecting %s -> %s: component %r was not built",
-                source,
-                target,
-                e.component,
-            )
-            return
-        self._connect(signal, slot)
-
-    @overload
-    def _resolve_port(self, path: str, kind: Literal["signal"]) -> SignalInstance: ...
-    @overload
-    def _resolve_port(self, path: str, kind: Literal["slot"]) -> SlotCallable: ...
-    def _resolve_port(
-        self, path: str, kind: Literal["signal", "slot"]
-    ) -> SignalInstance | SlotCallable:
-        """Look up the signal or slot a `component.port` path names."""
-        component_name, _, port = path.partition(".")
-        if not component_name or not port or "." in port:
-            raise WiringError(f"{path!r} is not a port path; expected 'component.port'")
-        component = (
-            self._path_provider
-            if component_name == PATH_PROVIDER_PORT
-            else self._built_components.get(component_name)
-        )
-        if component is None:
-            known = ", ".join(sorted(self._built_components)) or "none"
-            raise ComponentNotBuilt(
-                component_name,
-                f"{path!r} names component {component_name!r}, which was not "
-                f"built. Built: {known}",
-            )
-        surface = ports(component)
-        available = surface.signals if kind == "signal" else surface.slots
-        if port not in available:
-            known = ", ".join(sorted(available)) or "none"
-            raise WiringError(
-                f"{component_name!r} exposes no {kind} named {port!r}. "
-                f"Its {kind} ports: {known}"
-            )
-        return available[port]
-
     @property
     def connections(self) -> list[Connection]:
         """The links established so far."""
-        return list(self._connections)
+        return list(self._wiring.connections)
 
     @property
     def unconnected(self) -> Unconnected:
@@ -1339,24 +1145,7 @@ class Session(BuildableSession):
         WiringError
             If a component exposes two signals under one port name.
         """
-        used_signals = {(c.publisher, c.publisher_port) for c in self._connections}
-        used_slots = {(c.consumer, c.consumer_port) for c in self._connections}
-
-        signals: list[str] = []
-        slots: list[str] = []
-        for name, component in self._built_components.items():
-            surface = ports(component)
-            signals += [
-                f"{name}.{port}"
-                for port in surface.signals
-                if (name, port) not in used_signals
-            ]
-            slots += [
-                f"{name}.{port}"
-                for port in surface.slots
-                if (name, port) not in used_slots
-            ]
-        return Unconnected(signals=signals, slots=slots)
+        return self._wiring.unconnected()
 
     def satisfying(self, protocol: TypeForm[P]) -> dict[str, P]:
         """Return the built components satisfying *protocol*, by name."""
@@ -1368,18 +1157,7 @@ class Session(BuildableSession):
 
     def disconnect_all(self) -> None:
         """Undo every connection and subscription made through this session."""
-        for signal, slot in self._links:
-            signal.disconnect(slot, missing_ok=True)
-        self._links.clear()
-        self._connections.clear()
-
-        async def release(signal: SignalR[Any], forward: Callable[[Any], None]) -> None:
-            signal.clear_sub(forward)
-
-        for device_signal, forward, relay in self._subscriptions:
-            run_coro(release(device_signal, forward))
-            relay.disconnect()
-        self._subscriptions.clear()
+        self._wiring.undo()
 
     def _components(self) -> list[Declaration]:
         return [
@@ -1944,24 +1722,6 @@ class Session(BuildableSession):
 
         self.on_release(close)
 
-    def _apply_wiring_config(self, wiring: Mapping[str, str | list[str]]) -> None:
-        """Connect each signal the `wiring` section names to its slots.
-
-        A path naming a component the build failed on is warned about and
-        skipped, so one component that could not be made does not keep the
-        session from coming up. Every other way of getting a path wrong stays
-        fatal, a name that was never declared included.
-
-        Raises
-        ------
-        WiringError
-            If a path names a port that cannot be resolved for any other
-            reason.
-        """
-        for source, targets in wiring.items():
-            for target in [targets] if isinstance(targets, str) else targets:
-                self._connect_paths(source, target)
-
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.
 
@@ -2034,7 +1794,7 @@ class Session(BuildableSession):
             Holding a value a component shares is not holding the component.
         """
         held = {by_type[hint].name for hint in asked if hint in by_type}
-        for connection in self._connections:
+        for connection in self._wiring.connections:
             if connection.publisher == declaration.name and connection.consumer in held:
                 logger.warning(
                     "%r holds %r and is also connected to it; a bundle reaches a "
@@ -2050,10 +1810,10 @@ class Session(BuildableSession):
         one is built from counts, by its key or by its class, and a router
         counts when something asks for the callback catalogue.
         """
-        names = {c.publisher for c in self._connections}
+        names = {c.publisher for c in self._wiring.connections}
         if CallbackCatalogue in wanted:
             names |= {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
-        names |= {c.consumer for c in self._connections}
+        names |= {c.consumer for c in self._wiring.connections}
         names |= self._answered
         names |= {
             declaration.name
@@ -2172,17 +1932,6 @@ def near_misses(components: Mapping[str, object], protocol: type) -> str:
         f"\n  {name!r}: " + "; ".join(reasons)
         for name, reasons in rejected(components, protocol).items()
     )
-
-
-def skipped(*ends: object) -> bool:
-    """Warn and return true when an end of a link stands in for a failed component."""
-    failed = next((end for end in ends if isinstance(end, NotBuilt)), None)
-    if failed is None:
-        return False
-    logger.warning(
-        "Not connecting %s: component %r was not built", failed, failed.component
-    )
-    return True
 
 
 def frontend_of(cls: type) -> str | None:
