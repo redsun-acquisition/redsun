@@ -87,6 +87,36 @@ class NoGreet:
         return raw
 
 
+@runtime_checkable
+class Named(Protocol):
+    @property
+    def name(self) -> str: ...
+
+
+class NameAsProperty:
+    @property
+    def name(self) -> str:
+        return "x"
+
+
+class NameAsAttribute:
+    def __init__(self) -> None:
+        self.name = "x"
+
+
+class Nameless:
+    pass
+
+
+@runtime_checkable
+class Callback(Protocol):
+    def __call__(self, name: str, doc: object) -> None: ...
+
+
+class Calls:
+    def __call__(self, name: str, doc: object) -> None: ...
+
+
 @pytest.mark.parametrize(
     ("candidate", "expected"),
     [
@@ -139,27 +169,6 @@ def test_members_and_methods_split_data_from_callables() -> None:
     assert methods(Greets) == {"greet", "parse"}
 
 
-@runtime_checkable
-class Named(Protocol):
-    @property
-    def name(self) -> str: ...
-
-
-class NameAsProperty:
-    @property
-    def name(self) -> str:
-        return "x"
-
-
-class NameAsAttribute:
-    def __init__(self) -> None:
-        self.name = "x"
-
-
-class Nameless:
-    pass
-
-
 @pytest.mark.parametrize(
     ("candidate", "expected"),
     [(NameAsProperty(), True), (NameAsAttribute(), True), (Nameless(), False)],
@@ -170,15 +179,6 @@ def test_a_property_member_is_data_not_a_call(
     """Accept any instance holding a name a protocol declares as a property."""
     assert methods(Named) == frozenset()
     assert satisfies(candidate, Named) is expected
-
-
-@runtime_checkable
-class Callback(Protocol):
-    def __call__(self, name: str, doc: object) -> None: ...
-
-
-class Calls:
-    def __call__(self, name: str, doc: object) -> None: ...
 
 
 @pytest.mark.parametrize(

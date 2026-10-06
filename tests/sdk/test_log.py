@@ -31,6 +31,10 @@ class LoggableNoName(Loggable):
     pass
 
 
+class EmptyName(Loggable):
+    name = ""
+
+
 class RecordingHandler(logging.Handler):
     """Keeps what it is given, so a test can see what reached it."""
 
@@ -48,6 +52,13 @@ def restore_level() -> Iterator[None]:
     level = logger.level
     yield
     logger.setLevel(level)
+
+
+def _formatted(obj: Loggable, caplog: LogCaptureFixture) -> str:
+    """Return what a handler would have written for one record from *obj*."""
+    with caplog.at_level(logging.INFO, logger="redsun"):
+        obj.logger.info("hello")
+    return GlobalFormatter(datefmt=DATE_FORMAT).format(caplog.records[-1])
 
 
 @pytest.mark.parametrize(
@@ -83,17 +94,6 @@ def test_loggable_records_carry_level_class_and_name(
     assert {getattr(r, "clsname", None) for r in records} == {clsname}
     if uid is not None:
         assert {getattr(r, "uid", None) for r in records} == {uid}
-
-
-class EmptyName(Loggable):
-    name = ""
-
-
-def _formatted(obj: Loggable, caplog: LogCaptureFixture) -> str:
-    """Return what a handler would have written for one record from *obj*."""
-    with caplog.at_level(logging.INFO, logger="redsun"):
-        obj.logger.info("hello")
-    return GlobalFormatter(datefmt=DATE_FORMAT).format(caplog.records[-1])
 
 
 @pytest.mark.parametrize(

@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from redsun.testing import BuildSession
-
 import logging
 from collections.abc import (
     Mapping,
 )
-from typing import Annotated, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Annotated, Protocol, runtime_checkable
 
 import pytest
 from mock_bundle.views import Somewhere
@@ -32,6 +27,11 @@ from redsun import (
     Session,
 )
 from redsun.injection._census import Devices
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from redsun.testing import BuildSession
 
 
 @runtime_checkable
@@ -407,13 +407,6 @@ class MisshapenDevicesApp(Session):
     broken: AsPresenter[MisshapenDevices]
 
 
-@pytest.fixture
-def app() -> Any:
-    container = App().build()
-    yield container
-    container.shutdown()
-
-
 @runtime_checkable
 class Displayable(Protocol):
     """Something the session can show."""
@@ -486,6 +479,14 @@ class BrokenMaybeApp(Session):
 
     broken: AsPresenter[BrokenCamera]
     widget: AsPresenter[MaybeWidget]
+
+
+@pytest.fixture
+def app() -> Iterator[App]:
+    """Build the base session and shut it down afterwards."""
+    container = App().build()
+    yield container
+    container.shutdown()
 
 
 def test_the_answer_holds_every_matching_component(app: App) -> None:
