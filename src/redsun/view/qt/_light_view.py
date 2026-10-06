@@ -112,28 +112,28 @@ class LightView(QtW.QWidget, Loggable):
         self._configuration.addWidget(self._configuration_tab)
         self._dragging.toggled.connect(self._set_dragging)
 
-    @slot
+    @slot(signal="sig_enabled")
     def update_enabled(self, device: str, on: bool) -> None:
         """Show whether *device* is on."""
         self._groups[device].set_enabled(on)
 
-    @slot
+    @slot(signal="sig_intensity")
     def update_intensity(self, device: str, value: float) -> None:
         """Show the intensity *device* reads back."""
         self._groups[device].set_intensity(value)
 
-    @slot
+    @slot(signal="sig_failed")
     def set_failed(self, device: str, message: str) -> None:
         """Show that the last write to *device* failed with *message*."""
         self._groups[device].set_failed(message)
 
-    @slot
+    @slot(signal="sig_configuration")
     def update_configuration(self, key: str, value: object) -> None:
         """Show *value*, read back from the configuration signal *key*."""
         if self._configuration_tab is not None:
             self._configuration_tab.update_value(key, value)
 
-    @slot
+    @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
         """Disable the controls of the lights in *names*, and enable the rest."""
         for device, group in self._groups.items():

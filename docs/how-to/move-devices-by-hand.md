@@ -60,7 +60,7 @@ views:
 wiring:
   positioner_view.sig_move: positioner.move
   positioner_view.sig_move_to: positioner.move_to
-  positioner_view.sig_stop: positioner.stop
+  positioner_view.sig_stop_device: positioner.stop
   positioner_view.sig_configure: positioner.configure
   positioner.sig_readback: positioner_view.update_readback
   positioner.sig_moving: positioner_view.set_moving

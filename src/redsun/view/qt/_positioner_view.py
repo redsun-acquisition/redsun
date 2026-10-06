@@ -153,7 +153,7 @@ class PositionerView(QtW.QWidget, Loggable):
     sig_move_to = Signal(str, dict)
     """Device and the positions to go to, by axis."""
 
-    sig_stop = Signal(str)
+    sig_stop_device = Signal(str)
     """Device, when its Stop button is clicked."""
 
     sig_configure = Signal(str, object)
@@ -260,7 +260,7 @@ class PositionerView(QtW.QWidget, Loggable):
             )
             group.sig_move.connect(self.sig_move.emit)
             group.sig_move_to.connect(self.sig_move_to.emit)
-            group.sig_stop.connect(self.sig_stop.emit)
+            group.sig_stop.connect(self.sig_stop_device.emit)
             self._groups[device] = group
             self._devices.addWidget(group)
         self._interval.valueChanged.connect(self._set_repeat_interval)
@@ -300,36 +300,36 @@ class PositionerView(QtW.QWidget, Loggable):
         # the window sizes the view from hints it kept from before the groups
         self._scroll.updateGeometry()
 
-    @slot
+    @slot(signal="sig_readback")
     def update_readback(self, device: str, axis: str, value: float) -> None:
         """Show *value* as the readback of *axis* of *device*."""
         self._groups[device].set_readback(axis, value)
 
-    @slot
+    @slot(signal="sig_limits")
     def update_limits(
         self, device: str, axis: str, low: float | None, high: float | None
     ) -> None:
         """Take targets for *axis* of *device* from *low* to *high* only."""
         self._groups[device].set_limits(axis, low, high)
 
-    @slot
+    @slot(signal="sig_moving")
     def set_moving(self, device: str, moving: bool) -> None:
         """Show whether *device* moves."""
         self._groups[device].set_moving(moving)
 
-    @slot
+    @slot(signal="sig_failed")
     def set_failed(self, device: str, message: str) -> None:
         """Show that the last move of *device* failed with *message*."""
         self._groups[device].set_failed(message)
 
-    @slot
+    @slot(signal="sig_configuration")
     def update_configuration(self, key: str, value: object) -> None:
         """Show *value*, read back from the configuration signal *key*."""
         self._values[key] = value
         if self._configuration_tab is not None:
             self._configuration_tab.update_value(key, value)
 
-    @slot
+    @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
         """Disable the controls of the devices in *names*, and enable the rest."""
         self._locked = names

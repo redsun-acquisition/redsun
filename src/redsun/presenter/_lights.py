@@ -126,7 +126,7 @@ class LightPresenter(Loggable):
         """
         return self._configuration.configuration
 
-    @slot
+    @slot(signal="sig_enabled")
     async def set_enabled(self, device: str, on: bool) -> None:
         """Switch *device* on or off.
 
@@ -145,7 +145,7 @@ class LightPresenter(Loggable):
             self.logger.exception(f"Switching {device} failed")
             self.sig_failed.emit(device, str(error) or type(error).__name__)
 
-    @slot
+    @slot(signal="sig_intensity")
     async def set_intensity(self, device: str, value: float) -> None:
         """Set the intensity of *device*, in its units.
 
@@ -191,7 +191,7 @@ class LightPresenter(Loggable):
         finally:
             self._writing.discard(device)
 
-    @slot
+    @slot(signal="sig_configure")
     async def configure(self, key: str, value: object) -> None:
         """Write *value* to the configuration signal *key*, then report it.
 

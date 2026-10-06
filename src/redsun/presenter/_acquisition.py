@@ -186,7 +186,7 @@ class AcquisitionPresenter(Loggable):
         """The directory runs write under; `None` before `setup`."""
         return None if self._paths is None else self._paths.base_dir
 
-    @slot
+    @slot(signal="sig_launch")
     def launch(
         self, plan: str, values: dict[str, Any], attached: Sequence[str] = ()
     ) -> None:
@@ -223,7 +223,7 @@ class AcquisitionPresenter(Loggable):
         self.logger.info(f"Launching {plan!r}")
         self._track(self._engine(entry["plan"](*args, **kwargs), subs))
 
-    @slot
+    @slot(signal="sig_pause")
     def pause(self) -> None:
         """Pause the running plan at its next checkpoint."""
         if self._when_started(self.pause):
@@ -237,7 +237,7 @@ class AcquisitionPresenter(Loggable):
         except RuntimeError as error:
             self.logger.warning(f"Not pausing: {error}")
 
-    @slot
+    @slot(signal="sig_resume")
     def resume(self) -> None:
         """Resume the paused plan, or withdraw a pause it has not reached yet."""
         if self._engine.state != "paused":
@@ -245,7 +245,7 @@ class AcquisitionPresenter(Loggable):
             return
         self._track(self._engine.resume())
 
-    @slot
+    @slot(signal="sig_stop")
     def stop(self) -> None:
         """Stop the running or paused plan, which ends as done."""
         if self._when_started(self.stop, replace=True):
@@ -256,7 +256,7 @@ class AcquisitionPresenter(Loggable):
         self.logger.info(f"Stopping {self._running!r}")
         self._track(self._engine.stop())
 
-    @slot
+    @slot(signal="sig_action")
     def request_action(self, action: str, on: bool) -> None:
         """Ask for *action* of the running plan, or ask it to end."""
         owner = self._action_owners.get(self._running or "")
@@ -265,7 +265,7 @@ class AcquisitionPresenter(Loggable):
             return
         owner.actions.request(action, on)
 
-    @slot
+    @slot(signal="sig_base_dir")
     def set_base_dir(self, path: Path) -> None:
         """Make runs write under *path*."""
         if self._paths is None:

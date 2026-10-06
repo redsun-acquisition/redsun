@@ -10,7 +10,7 @@ import pytest
 from qtpy import QtWidgets
 
 from redsun import AsDevice, AsPresenter, AsView, Declare, Link
-from redsun.presenter import PositionerPresenter
+from redsun.presenter import AcquisitionPresenter, PositionerPresenter
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import PositionerView
 from tests.sdk.mocks import Stage
@@ -51,7 +51,7 @@ class Lab(QtSession):
         yield self.positioner.sig_moving, self.positioner_view.set_moving
         yield self.positioner.sig_failed, self.positioner_view.set_failed
         yield self.positioner.sig_limits, self.positioner_view.update_limits
-        yield self.positioner_view.sig_stop, self.positioner.stop
+        yield self.positioner_view.sig_stop_device, self.positioner.stop
         yield self.positioner_view.sig_configure, self.positioner.configure
         yield (
             self.positioner.sig_configuration,
@@ -59,14 +59,40 @@ class Lab(QtSession):
         )
 
 
+class PairedLab(QtSession):
+    config: ClassVar[dict[str, Any]] = {
+        "session": "positioner-paired",
+        "pairs": [["positioner_view", "positioner"]],
+    }
+
+    stage: AsDevice[Stage]
+    positioner: AsPresenter[PositionerPresenter]
+    positioner_view: AsView[PositionerView]
+
+
+class LockedLab(QtSession):
+    config: ClassVar[dict[str, Any]] = {
+        "session": "positioner-locked",
+        "pairs": [["acquisition", "positioner_view"]],
+    }
+
+    stage: AsDevice[Stage]
+    acquisition: AsPresenter[AcquisitionPresenter]
+    positioner: AsPresenter[PositionerPresenter]
+    positioner_view: AsView[PositionerView]
+
+
+@pytest.mark.parametrize("lab", [Lab, PairedLab])
 def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
     qapp: QtWidgets.QApplication,
     build: BuildSession,
     wait_until: Callable[..., bool],
+    lab: type[QtSession],
 ) -> None:
-    """Step an axis from the view and show the stage's new readback."""
-    session = build(Lab)
-    view = session.positioner_view
+    """Step an axis from the view, wired by hand or paired, and show the new readback."""
+    session = build(lab)
+    view = session.views["positioner_view"]
+    assert isinstance(view, PositionerView)
     label = view.findChild(QtWidgets.QLabel, "readback:x")
     plus = view.findChild(QtWidgets.QAbstractButton, "plus:x")
     assert label is not None
@@ -75,6 +101,23 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
     plus.pressed.emit()
 
     assert wait_until(lambda: label.text() == "1.000")
+
+
+def test_pairing_the_acquisition_presenter_with_the_view_passes_on_locks_only(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Link only the locks, so stopping one device never reaches the plan."""
+    session = build(LockedLab)
+
+    links = {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+        if {c.publisher, c.consumer} == {"acquisition", "positioner_view"}
+    }
+
+    assert links == {
+        ("acquisition", "sig_locks_changed", "positioner_view", "set_locked")
+    }
 
 
 def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(

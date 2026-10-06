@@ -142,7 +142,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
         if isinstance(stored, str) and stored in self.plan_widgets:
             self._chooser.setCurrentText(stored)
 
-    @slot
+    @slot(signal="sig_plan_started")
     def set_started(self, plan: str) -> None:
         """Show *plan* running, and lock the chooser and the root until it ends."""
         widget = self.plan_widgets.get(plan)
@@ -155,19 +155,19 @@ class AcquisitionView(QtW.QWidget, Loggable):
         self._choose_root.setEnabled(False)
         widget.toggle(True)
 
-    @slot
+    @slot(signal="sig_plan_done")
     def set_done(self, plan: str) -> None:
         """Show *plan* ended, and free the chooser and the root."""
         self._end(plan)
 
-    @slot
+    @slot(signal="sig_plan_failed")
     def set_failed(self, plan: str, message: str) -> None:
         """Show *plan* ended because of *message*, until it runs again."""
         if self._end(plan):
             self._failures[plan].setText(f"failed: {message}")
             self._failures[plan].show()
 
-    @slot
+    @slot(signal="sig_progress")
     def update_progress(self, scopes: tuple[ProgressState, ...]) -> None:
         """Show the progress of the running plan."""
         if self._running is None:
@@ -175,7 +175,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
             return
         self.plan_widgets[self._running].show_progress(scopes)
 
-    @slot
+    @slot(signal="sig_action_changed")
     def update_action(self, action: str, state: object) -> None:
         """Set the running plan's button for *action* to *state*."""
         widget = self.plan_widgets.get(self._running or "")
@@ -185,7 +185,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
             return
         self._set_action_button(button, state)
 
-    @slot
+    @slot(signal="sig_base_dir_changed")
     def update_base_dir(self, path: Path) -> None:
         """Show the directory runs write under."""
         self._base_dir.setText(str(path))

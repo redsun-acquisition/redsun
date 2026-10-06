@@ -166,7 +166,7 @@ class PositionerPresenter(Loggable):
         if (low is not None and target < low) or (high is not None and target > high):
             raise ValueError(f"{axis} target {target:g} is outside {low} to {high}")
 
-    @slot
+    @slot(signal="sig_move")
     async def move(self, device: str, axis: str, delta: float) -> None:
         """Move *axis* of *device* by *delta*, in the axis' units.
 
@@ -193,7 +193,7 @@ class PositionerPresenter(Loggable):
 
         await self._run(device, targets)
 
-    @slot
+    @slot(signal="sig_move_to")
     async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
         """Move the axes of *device* in *positions* there, one after another.
 
@@ -211,7 +211,7 @@ class PositionerPresenter(Loggable):
 
         await self._run(device, targets)
 
-    @slot
+    @slot(signal="sig_stop_device")
     async def stop(self, device: str) -> None:
         """Stop *device* and each of its axes that can be stopped.
 
@@ -262,7 +262,7 @@ class PositionerPresenter(Loggable):
         self._held = names
         self._configuration.set_locked(names)
 
-    @slot
+    @slot(signal="sig_configure")
     async def configure(self, key: str, value: object) -> None:
         """Write *value* to the configuration signal *key*, then report it.
 
