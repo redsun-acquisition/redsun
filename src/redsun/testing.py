@@ -83,8 +83,8 @@ def build() -> Generator[BuildSession, None, None]:
     what the class declares, or a session already made. Sessions are shut
     down in reverse order; one the test shut down itself runs nothing again.
     A shutdown that raises does not stop the others: once every session has
-    been shut down, its error is raised, or an `ExceptionGroup` of all of them
-    when more than one raised.
+    been shut down, the fixture raises that error, or an `ExceptionGroup` of
+    all of them when more than one session raised.
     """
     built: list[Session] = []
 

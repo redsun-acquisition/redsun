@@ -75,7 +75,7 @@ def test_every_session_is_shut_down_when_one_refuses(
 
 
 def test_every_refusal_is_reported(pytester: pytest.Pytester) -> None:
-    """Report the error of each session that refuses to shut down, together."""
+    """Report in one group the error of every session refusing to shut down."""
     pytester.makepyfile(BOTH_REFUSE)
 
     result = pytester.runpytest("-p", "redsun.testing")
