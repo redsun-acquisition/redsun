@@ -24,7 +24,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:values"
     ```
 
-    ![Spin boxes for exposure and frames, and a text field for label](images/parameters-values.png)
+    <figure markdown="span">
+      ![Spin boxes for exposure and frames, and a text field for label](images/parameters-values.png)
+    </figure>
 
 === "Choices"
 
@@ -32,7 +34,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:choices"
     ```
 
-    ![A combo box offering fast and slow, and one offering the binnings](images/parameters-choices.png)
+    <figure markdown="span">
+      ![A combo box offering fast and slow, and one offering the binnings](images/parameters-choices.png)
+    </figure>
 
 === "Devices"
 
@@ -40,7 +44,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:devices"
     ```
 
-    ![A Devices group with a box per readable device and a combo box for the motor, then a Parameters group with exposure and frames](images/parameters-devices.png)
+    <figure markdown="span">
+      ![A Devices group with a box per readable device and a combo box for the motor, then a Parameters group with exposure and frames](images/parameters-devices.png)
+    </figure>
 
 === "Lists"
 
@@ -48,7 +54,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:lists"
     ```
 
-    ![Three rows of positions, each with a remove button, and a button adding one](images/parameters-lists.png)
+    <figure markdown="span">
+      ![Three rows of positions, each with a remove button, and a button adding one](images/parameters-lists.png)
+    </figure>
 
 === "Optional"
 
@@ -56,7 +64,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:optional"
     ```
 
-    ![An unticked set box beside a disabled spin box](images/parameters-optional.png)
+    <figure markdown="span">
+      ![An unticked set box beside a disabled spin box](images/parameters-optional.png)
+    </figure>
 
 === "Mapping"
 
@@ -64,7 +74,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:mapping"
     ```
 
-    ![Two rows, each a key field and a value spin box, and a button adding one](images/parameters-mapping.png)
+    <figure markdown="span">
+      ![Two rows, each a key field and a value spin box, and a button adding one](images/parameters-mapping.png)
+    </figure>
 
 === "Union"
 
@@ -72,7 +84,9 @@ Each tab shows a signature and the inputs it gets.
     --8<-- "docs/examples/parameter_widgets.py:union"
     ```
 
-    ![A combo box choosing float or list of float above a spin box](images/parameters-union.png)
+    <figure markdown="span">
+      ![A combo box choosing float or list of float above a spin box](images/parameters-union.png)
+    </figure>
 
 Lists, sets, mappings, fixed-length tuples, optional values and unions nest:
 a `dict[str, list[float]]` is a table whose values are lists. Every
