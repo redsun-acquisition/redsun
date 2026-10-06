@@ -34,10 +34,10 @@ addopts = "-p redsun.testing"
 asyncio_mode = "auto"
 ```
 
-From then on every test writes session log files under its own `tmp_path`,
-and so do acquisition files and catalogs a session puts in their default
-location, and every test drops the `psygnal` emissions it left queued for
-another thread. A session whose configuration names its own `storage`
+From then on every test keeps session settings and session log files under
+its own `tmp_path`, and so do acquisition files and catalogs a session puts in
+their default location, and every test drops the `psygnal` emissions it left
+queued for another thread. A session whose configuration names its own `storage`
 directory still writes there. The fixtures doing this run for each test, so
 a session built in a fixture scoped to a module or the whole run is not
 covered. Nothing loads the module unless a suite asks for it, so these

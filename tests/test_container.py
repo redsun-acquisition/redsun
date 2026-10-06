@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import gc
-import inspect
 import logging
 import weakref
 from collections.abc import Mapping
@@ -12,12 +11,10 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType, cast
 
 import pydantic
 import pytest
-from event_model import DocumentRouter
+from mock_bundle.devices import MockStage
+from mock_bundle.presenters import MockLatePresenter, MockRegistrar
 from ophyd_async.core import (
     Device,
-    StandardReadable,
-    StandardReadableFormat,
-    soft_signal_rw,
 )
 from psygnal import Signal
 
@@ -43,9 +40,6 @@ from redsun import (
 from redsun.aio import run_coro
 from redsun.ports import WiringError
 from redsun.session import Layer
-from redsun.session._declarations import accepts_name, check
-from redsun.session._factories import injectable, synthesize
-from redsun.session._questions import optional_arg
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -64,35 +58,22 @@ Descriptions = NewType("Descriptions", "dict[str, str]")
 Missing = NewType("Missing", "dict[str, int]")
 
 
-class Stage(StandardReadable):
-    """Device holding its configured axis in a configuration signal."""
-
-    def __init__(self, name: str, axis: str = "X") -> None:
-        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
-            self.axis = soft_signal_rw(str, initial_value=axis)
-        super().__init__(name=name)
-
-
 class FailsOnce:
     """Presenter that cannot be made the first time, and can afterwards."""
 
-    attempts = 0
-
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, attempts: list[str]) -> None:
         self.name = name
-        type(self).attempts += 1
-        if type(self).attempts == 1:
+        attempts.append(name)
+        if len(attempts) == 1:
             raise ValueError("not yet")
 
 
-class WorksOnce(Stage):
+class WorksOnce(MockStage):  # type: ignore[misc]
     """Device that can be made the first time, and not afterwards."""
 
-    attempts = 0
-
-    def __init__(self, name: str) -> None:
-        type(self).attempts += 1
-        if type(self).attempts > 1:
+    def __init__(self, name: str, attempts: list[str]) -> None:
+        attempts.append(name)
+        if len(attempts) > 1:
             raise ValueError("no longer")
         super().__init__(name)
 
@@ -198,23 +179,11 @@ class Widget:
         self.seen = where
 
 
-class Late:
-    """Presenter asking for the callback catalogue."""
+class Registrar(MockRegistrar):  # type: ignore[misc]
+    """Document router presenter that records being shut down."""
 
     def __init__(self, name: str) -> None:
-        self.name = name
-        self.callbacks: Mapping[str, CallbackType] = {}
-
-    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
-        self.callbacks = callbacks
-
-
-class Registrar(DocumentRouter):
-    """Presenter that is a document router, and so a callback."""
-
-    def __init__(self, name: str) -> None:
-        super().__init__()
-        self.name = name
+        super().__init__(name)
         self.closed = False
 
     def shutdown(self) -> None:
@@ -233,36 +202,60 @@ class Tunable:
         self.readings = readings
 
 
-teardown_order: list[str] = []
-
-
-class Recorder:
-    """Presenter nothing depends on."""
+class Dependency:
+    """Presenter that `Dependent` takes in its `setup`."""
 
     def __init__(self, name: str) -> None:
         self.name = name
-
-    def shutdown(self) -> None:
-        teardown_order.append(self.name)
 
 
 class Dependent:
-    """Presenter taking `Recorder` once every component exists."""
+    """Presenter taking `Dependency` once every component exists."""
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.other: Recorder | None = None
+        self.other: Dependency | None = None
 
-    def setup(self, other: Recorder) -> None:
+    def setup(self, other: Dependency) -> None:
+        self.other = other
+
+
+class ClosingRecorder:
+    """Presenter nothing depends on, noting its shutdown."""
+
+    def __init__(self, name: str, teardowns: list[str]) -> None:
+        self.name = name
+        self.teardowns = teardowns
+
+    def shutdown(self) -> None:
+        self.teardowns.append(self.name)
+
+
+class ClosingDependent:
+    """Presenter taking `ClosingRecorder` once every component exists, noting its shutdown."""
+
+    def __init__(self, name: str, teardowns: list[str]) -> None:
+        self.name = name
+        self.teardowns = teardowns
+        self.other: ClosingRecorder | None = None
+
+    def setup(self, other: ClosingRecorder) -> None:
         self.other = other
 
     def shutdown(self) -> None:
-        teardown_order.append(self.name)
+        self.teardowns.append(self.name)
+
+
+class Idle:
+    """Presenter that shares nothing, asks for nothing and is wired to nothing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
 
 
 class OrderedApp(Session):
-    second: Annotated[AsPresenter[Dependent], Alias("second")]
-    first: Annotated[AsPresenter[Recorder], Alias("first")]
+    second: Annotated[AsPresenter[ClosingDependent], Alias("second")]
+    first: Annotated[AsPresenter[ClosingRecorder], Alias("first")]
 
 
 class App(Session):
@@ -273,10 +266,10 @@ class App(Session):
         "views": {"widget": {"label": "from-config"}},
     }
 
-    motor: Annotated[AsDevice[Stage], FromConfig("stage")]
+    motor: Annotated[AsDevice[MockStage], FromConfig("stage")]
     ctrl: AsPresenter[Ctrl]
     registrar: AsPresenter[Registrar]
-    late: AsPresenter[Late]
+    late: AsPresenter[MockLatePresenter]
     tunable: AsPresenter[Tunable]
     widget: Annotated[AsView[Widget], Declare(label="inline")]
 
@@ -320,16 +313,9 @@ class DeferredApp(Session):
     stray: AsView[Deferred]
 
 
-class ToyApp(Session):
-    frontend = Toy
-
-
-class InheritsToy(ToyApp):
-    """A session inheriting its base's declarations and frontend."""
-
-
 @pytest.fixture
 def app() -> Any:
+    """Build the base session and shut it down afterwards."""
     container = App().build()
     yield container
     container.shutdown()
@@ -415,9 +401,9 @@ class HoldingAPresenter:
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.ctrl: Recorder | None = None
+        self.ctrl: Dependency | None = None
 
-    def setup(self, ctrl: Recorder) -> None:
+    def setup(self, ctrl: Dependency) -> None:
         self.ctrl = ctrl
 
 
@@ -437,14 +423,14 @@ class PresenterOnAViewValue(Session):
 
 
 class ViewOnAPresenter(Session):
-    recorder: AsPresenter[Recorder]
+    recorder: AsPresenter[Dependency]
     holder: AsView[HoldingAPresenter]
 
 
 class TakingAComponent:
     """A presenter naming another component's class in its constructor."""
 
-    def __init__(self, name: str, *, other: Recorder) -> None:
+    def __init__(self, name: str, *, other: Dependency) -> None:
         self.name = name
         self.other = other
 
@@ -466,7 +452,7 @@ class TakingTheCatalogue:
 
 
 class ComponentInAConstructor(Session):
-    recorder: AsPresenter[Recorder]
+    recorder: AsPresenter[Dependency]
     taker: AsPresenter[TakingAComponent]
 
 
@@ -524,7 +510,8 @@ class BadApp(Session):
 class VariadicDevice(Device):
     """A device whose constructor would also fail the name check."""
 
-    def __init__(self, *args: object) -> None: ...
+    def __init__(self, *args: object) -> None:
+        super().__init__()
 
 
 class Stray:
@@ -547,7 +534,7 @@ class PydanticCtrl(pydantic.BaseModel):
 
 
 class PydanticApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[PydanticCtrl], Declare(gain=7.5)]
 
 
@@ -556,7 +543,8 @@ class VariadicName:
 
 
 class KeywordName:
-    def __init__(self, *, name: str) -> None: ...
+    def __init__(self, *, name: str) -> None:
+        self.name = name
 
 
 class PositionalName:
@@ -610,17 +598,17 @@ class FrozenCtrl:
 
 
 class DataclassApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[DataclassCtrl], Declare(gain=7.5)]
 
 
 class KwOnlyApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[KwOnlyCtrl], Declare(gain=7.5)]
 
 
 class FrozenApp(Session):
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
 
 
@@ -704,7 +692,7 @@ class Shared(Session):
         "presenters": {"ctrl": {"gain": 1.0}},
     }
 
-    motor: AsDevice[Stage]
+    motor: AsDevice[MockStage]
     ctrl: AsPresenter[Ctrl]
 
 
@@ -918,7 +906,7 @@ class NeedsBroken:
 class ToleratedApp(Session):
     frontend = Toy
 
-    ok: AsPresenter[Recorder]
+    ok: AsPresenter[Dependency]
     bad: AsPresenter[BrokenPresenter]
     panel: AsView[Attached]
     broken_panel: AsView[BrokenView]
@@ -927,18 +915,15 @@ class ToleratedApp(Session):
 class DependsOnBrokenApp(Session):
     bad: AsPresenter[BrokenPresenter]
     dependent: AsPresenter[NeedsBroken]
-    ok: AsPresenter[Recorder]
-
-
-STEP_ORDER: list[str] = []
+    ok: AsPresenter[Dependency]
 
 
 class Marker:
     """A presenter that records when the build reached its layer."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, steps: list[str]) -> None:
         self.name = name
-        STEP_ORDER.append("built the presenter")
+        steps.append("built the presenter")
 
 
 class SteppedApp(Session):
@@ -946,11 +931,15 @@ class SteppedApp(Session):
 
     ctrl: AsPresenter[Marker]
 
+    def __init__(self, steps: list[str], config: Mapping[str, Any]) -> None:
+        super().__init__(config)
+        self.steps = steps
+
     def start_runtime(self) -> None:
-        STEP_ORDER.append("runtime")
+        self.steps.append("runtime")
 
     def present(self) -> None:
-        STEP_ORDER.append("presentation")
+        self.steps.append("presentation")
 
 
 class Unmakeable:
@@ -1010,12 +999,31 @@ class MisfiledApp(Session):
     stage_ctrl: Annotated[AsPresenter[Ctrl], Alias("ctrl")]
 
 
+def declaring(target: object, layer: Layer) -> type[Session]:
+    """Return a session on `Toy` declaring *target* in *layer* under the name `thing`."""
+    hint = Annotated[target, layer]  # type: ignore[valid-type]
+    return type(
+        "Declaring", (Session,), {"__annotations__": {"thing": hint}, "frontend": Toy}
+    )
+
+
+def asking(hint: object) -> type:
+    """Return a presenter class whose constructor asks for a `value` of type *hint*."""
+
+    def __init__(self: Any, name: str, *, value: Any) -> None:
+        self.name = name
+        self.value = value
+
+    __init__.__annotations__["value"] = hint
+    return type("Asking", (), {"__init__": __init__})
+
+
 def test_build_resolves_every_declaration(app: App) -> None:
     """Build every declared component and device and set each on its attribute."""
     assert app.is_built
     assert isinstance(app.ctrl, Ctrl)
     assert isinstance(app.widget, Widget)
-    assert isinstance(app.motor, Stage)
+    assert isinstance(app.motor, MockStage)
     assert app.devices == {"motor": app.motor}
     assert run_coro(app.motor.axis.get_value()) == "Z"
 
@@ -1050,24 +1058,27 @@ def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
 def test_framework_objects_are_injectable(app: App) -> None:
     """Inject the device map and the callback catalogue like any other dependency."""
     assert dict(app.ctrl.devices) == {"motor": app.motor}
-    assert app.late.callbacks == {"registrar": app.registrar}
+    assert app.late.seen == {"registrar": app.registrar}
     assert app.widget.callbacks == {"registrar": app.registrar}
 
 
 def test_the_container_itself_is_not_injectable() -> None:
     """Refuse a component that asks for the session itself."""
-    # The exception type belongs to whatever resolves the graph, so only the name of
-    # the key it could not find is pinned.
-    with pytest.raises(Exception, match="Session"):
+    with pytest.raises(TypeError, match=r"'greedy' asks for 'session' \(Session\)"):
         LocatorApp().build()
 
 
 def test_shutdown_finalizes_components_in_reverse_declaration_order() -> None:
     """Shut components down in the reverse of their declaration order."""
-    teardown_order.clear()
-    container = OrderedApp().build()
-    container.shutdown()
-    assert teardown_order == ["first", "second"]
+    teardowns: list[str] = []
+    config = {
+        "presenters": {
+            "first": {"teardowns": teardowns},
+            "second": {"teardowns": teardowns},
+        }
+    }
+    OrderedApp(config).build().shutdown()
+    assert teardowns == ["first", "second"]
 
 
 def test_component_shutdown_runs_without_being_asked(app: App) -> None:
@@ -1171,39 +1182,60 @@ def test_unannotated_parameter_is_refused() -> None:
 
 
 @pytest.mark.parametrize(
-    ("target", "declared"),
+    ("target", "layer"),
     [
-        (Stage, Layer.DEVICE),
+        (MockStage, Layer.DEVICE),
         (Ctrl, Layer.PRESENTER),
-        (Widget, Layer.VIEW),
+        (PydanticCtrl, Layer.PRESENTER),
+        (KeywordName, Layer.PRESENTER),
+        (Attached, Layer.VIEW),
     ],
 )
-def test_a_class_may_be_declared_in_the_layer_it_belongs_to(
-    target: type, declared: Layer
+def test_a_class_declared_in_the_layer_it_belongs_to_is_built(
+    target: type, layer: Layer, build: BuildSession
 ) -> None:
-    """Accept a device, presenter or view class declared in its own layer."""
-    assert check(target, declared, "somewhere") is target
+    """Build a class declared in its own layer, a keyword-only name and a view the frontend attaches included."""
+    app = build(declaring(target, layer))
+
+    assert "thing" in getattr(app, layer.section)
 
 
 @pytest.mark.parametrize(
-    ("target", "declared", "match"),
+    ("target", "layer", "match"),
     [
-        (Stage, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
-        (Stage, Layer.VIEW, "is an 'ophyd_async.core.Device'"),
+        (MockStage, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
+        (MockStage, Layer.VIEW, "is an 'ophyd_async.core.Device'"),
         (VariadicDevice, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
         (Ctrl, Layer.DEVICE, "does not subclass 'ophyd_async.core.Device'"),
         (int, Layer.PRESENTER, "does not take 'name'"),
-        ("not a type", Layer.VIEW, "is not a class"),
+        (VariadicName, Layer.PRESENTER, "does not take 'name'"),
         (Ctrl, Layer.VIEW, "declares no 'placement'"),
         (Widget, Layer.PRESENTER, "declares a 'placement'"),
+        (Stray, Layer.VIEW, "does not attach"),
+        (Unattachable, Layer.VIEW, "needs a Attachable"),
     ],
 )
-def test_a_class_declared_in_the_wrong_layer_is_refused(
-    target: object, declared: Layer, match: str
+def test_a_class_declared_in_the_wrong_layer_is_refused_at_declaration(
+    target: type,
+    layer: Layer,
+    match: str,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Refuse a class declared in a layer it does not belong to, naming the reason."""
-    with pytest.raises(TypeError, match=match):
-        check(target, declared, "somewhere")
+    """Refuse at declaration a class declared in a layer it does not belong to."""
+    app = build(declaring(target, layer))
+
+    assert "thing" not in getattr(app, layer.section)
+    # the declaration check names the attribute, the check of the built
+    # instance names the component
+    assert "Declaring.thing" in caplog.text
+    assert match in caplog.text
+
+
+def test_a_declaration_naming_no_class_is_refused() -> None:
+    """Refuse a declaration whose type is not a class."""
+    with pytest.raises(TypeError, match="is not a class"):
+        declaring(int | None, Layer.VIEW)().build()
 
 
 @pytest.mark.parametrize(
@@ -1242,21 +1274,6 @@ def test_a_frontend_refuses_what_it_cannot_attach(
 
 
 @pytest.mark.parametrize(
-    ("target", "match"),
-    [
-        (Stray, "does not attach"),
-        (Unattachable, "needs a Attachable"),
-    ],
-)
-def test_a_view_is_refused_at_declaration_for_its_placement(
-    target: type, match: str
-) -> None:
-    """Refuse a view class at declaration when the frontend cannot attach it."""
-    with pytest.raises(TypeError, match=match):
-        check(target, Layer.VIEW, "somewhere", Toy)
-
-
-@pytest.mark.parametrize(
     ("app", "protocol"),
     [(NamelessApp, "NamedComponent"), (NamelessViewApp, "AttachableComponent")],
 )
@@ -1277,32 +1294,14 @@ def test_a_component_that_drops_its_name_is_skipped(
     assert "Traceback" not in capsys.readouterr().err
 
 
-def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:
-    """Accept a view class at declaration when the frontend attaches its placement."""
-    assert check(Attached, Layer.VIEW, "somewhere", Toy) is Attached
-
-
 def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Skip a view whose placement, read from the built instance, is not attachable."""
-    assert check(Deferred, Layer.VIEW, "somewhere", Toy) is Deferred
-
     app = build(DeferredApp)
 
     assert "stray" not in app.views
     assert "view 'stray' asks to be attached" in caplog.text
-
-
-@pytest.mark.parametrize(
-    ("container", "expected"),
-    [(App, Frontend), (ToyApp, Toy), (InheritsToy, Toy)],
-)
-def test_the_frontend_comes_from_the_class_it_is_declared_on(
-    container: type[Session], expected: type[Frontend]
-) -> None:
-    """Take the frontend from the session class or the nearest base declaring one."""
-    assert container.frontend is expected
 
 
 def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
@@ -1336,7 +1335,7 @@ def test_a_component_nothing_reaches_is_reported(
     """Log a component that shares nothing, asks for nothing and is wired to nothing."""
 
     class Inert(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
     build(Inert)
     assert (
@@ -1349,7 +1348,14 @@ def test_a_component_another_is_built_from_is_not_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """Do not report a component that another component is built from."""
-    build(OrderedApp)
+
+    class WithAnIdlePeer(Session):
+        second: Annotated[AsPresenter[Dependent], Alias("second")]
+        first: Annotated[AsPresenter[Dependency], Alias("first")]
+        idle: AsPresenter[Idle]
+
+    build(WithAnIdlePeer)
+    assert "'idle' shares nothing" in caplog.text
     assert "'first' shares nothing" not in caplog.text
 
 
@@ -1390,42 +1396,27 @@ def test_a_forgotten_layer_is_reported(
 
 
 @pytest.mark.parametrize(
-    ("hint", "expected"),
+    ("hint", "optional"),
     [
-        (int | None, int),
-        (Readings | None, Readings),
-        (int, None),
-        (int | str, None),
-        (int | str | None, None),
+        (int | None, True),
+        (Readings | None, True),
+        (int, False),
+        (int | str, False),
+        (int | str | None, False),
     ],
 )
-def test_optional_arg(hint: Any, expected: Any) -> None:
-    """Return the inner type of `X | None`, and None for any other hint."""
-    assert optional_arg(hint) is expected
+def test_only_an_optional_parameter_may_go_unanswered(
+    hint: object, optional: bool, build: BuildSession
+) -> None:
+    """Pass `None` for an `X | None` nothing provides, and refuse any other such hint."""
+    session = declaring(asking(hint), Layer.PRESENTER)
 
-
-def test_injectable_excludes_name_and_config_kwargs() -> None:
-    """Leave the name and configured kwargs out of the injectable parameters."""
-    assert set(injectable(Ctrl, {})) == {"devices", "gain"}
-    assert set(injectable(Ctrl, {"gain": 1.0})) == {"devices"}
-
-
-def test_synthesize_agrees_with_both_introspection_routes() -> None:
-    """Give the synthesized function a signature and annotations that agree."""
-
-    def make(**deps: Any) -> Any:
-        return deps
-
-    synthesize(make, {"a": int, "b": str}, Readings, "build_thing")
-
-    signature = inspect.signature(make)
-    assert make.__name__ == "build_thing"
-    assert list(signature.parameters) == ["a", "b"]
-    assert all(
-        p.kind is inspect.Parameter.KEYWORD_ONLY for p in signature.parameters.values()
-    )
-    assert make.__annotations__ == {"a": int, "b": str, "return": Readings}
-    assert signature.return_annotation is Readings
+    if optional:
+        presenter = cast("Any", build(session).presenters["thing"])
+        assert presenter.value is None
+    else:
+        with pytest.raises(TypeError, match="which nothing in the session provides"):
+            session().build()
 
 
 def test_a_keyword_only_component_is_built() -> None:
@@ -1434,21 +1425,6 @@ def test_a_keyword_only_component_is_built() -> None:
     assert app.ctrl.name == "ctrl"
     assert app.ctrl.gain == 7.5
     assert dict(app.ctrl.devices) == {"motor": app.motor}
-
-
-def test_the_two_constructor_shapes_are_read_alike() -> None:
-    """Read the same injectable parameters from a pydantic model and a plain class."""
-    assert injectable(PydanticCtrl, {}) == injectable(Ctrl, {})
-    assert injectable(PydanticCtrl, {"gain": 1.0}) == injectable(Ctrl, {"gain": 1.0})
-
-
-@pytest.mark.parametrize(
-    ("cls", "accepted"),
-    [(Ctrl, True), (PydanticCtrl, True), (KeywordName, True), (VariadicName, False)],
-)
-def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> None:
-    """Accept a class whose name a keyword can fill, and refuse one taking `*args`."""
-    assert accepts_name(cls) is accepted
 
 
 def test_a_name_only_a_position_can_fill_is_skipped(
@@ -1548,7 +1524,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
     class Mixed(Session):
         config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
 
-        motor: AsDevice[Stage]
+        motor: AsDevice[MockStage]
         ctrl: AsPresenter[Ctrl]
 
     app = Mixed().build()
@@ -1566,7 +1542,7 @@ def test_the_sources_read_are_logged_one_per_line(
     class Mixed(Session):
         config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
 
-        motor: AsDevice[Stage]
+        motor: AsDevice[MockStage]
 
     caplog.set_level(logging.DEBUG, logger="redsun")
     Mixed().build().shutdown()
@@ -1726,13 +1702,12 @@ def test_the_closing_line_names_what_is_missing(
 
 def test_a_session_fills_the_toolkit_steps_rather_than_wrapping_the_build() -> None:
     """Run the runtime step before the components and the presentation step after."""
-    STEP_ORDER.clear()
-    app = SteppedApp().build()
+    steps: list[str] = []
+    app = SteppedApp(steps, {"presenters": {"ctrl": {"steps": steps}}}).build()
     try:
-        assert STEP_ORDER == ["runtime", "built the presenter", "presentation"]
+        assert steps == ["runtime", "built the presenter", "presentation"]
     finally:
         app.shutdown()
-        STEP_ORDER.clear()
 
 
 def test_a_session_missing_a_step_cannot_be_constructed() -> None:
@@ -1797,13 +1772,13 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
 
     class Half(Session):
         broken: AsPresenter[Unmakeable]
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
     class Refused(Session):
         broken: AsPresenter[PositionalName]
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
@@ -1839,7 +1814,7 @@ def test_a_strict_session_stops_on_a_component_it_could_not_build() -> None:
 
     class Half(Session):
         broken: AsPresenter[Unmakeable]
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         def start_runtime(self) -> None:
             self.on_release(lambda: released.append("runtime"))
@@ -1903,7 +1878,7 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
     """Raise for a wiring rule naming an undeclared component or of the wrong shape."""
 
     class Wrong(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
@@ -1936,7 +1911,7 @@ def test_a_wire_that_yields_nothing_is_fatal() -> None:
     """Raise WiringError when `wire` returns None."""
 
     class Empty(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         def wire(self) -> None:  # type: ignore[override]
             return None
@@ -1949,7 +1924,7 @@ def test_a_link_whose_first_item_is_not_a_signal_is_fatal() -> None:
     """Raise WiringError for a link whose first item is not a signal."""
 
     class Miswired(Session):
-        recorder: AsPresenter[Recorder]
+        recorder: AsPresenter[Dependency]
 
         def wire(self) -> Iterator[Link]:
             yield cast("Link", ("not-a-signal", lambda: None))
@@ -1982,7 +1957,7 @@ def test_a_session_can_be_referred_to_weakly() -> None:
     """Allow a weak reference to a session."""
     # `__slots__` without `__weakref__` refuses a weak reference outright with a
     # `TypeError` from the class, so how long the instance is kept does not matter.
-    assert weakref.ref(Session())() is not None
+    weakref.ref(Session())
 
 
 def test_a_renamed_component_is_reached_by_its_attribute() -> None:
@@ -2034,8 +2009,11 @@ def test_a_session_built_again_starts_from_nothing(
         stage: AsDevice[WorksOnce]
         flaky: AsPresenter[FailsOnce]
 
-    FailsOnce.attempts = WorksOnce.attempts = 0
-    app = Twice()
+    config: dict[str, Any] = {
+        "devices": {"stage": {"attempts": []}},
+        "presenters": {"flaky": {"attempts": []}},
+    }
+    app = Twice(config)
     app.build()
     app.shutdown()
     caplog.clear()

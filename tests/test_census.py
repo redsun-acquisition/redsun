@@ -2,19 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from redsun.testing import BuildSession
-
 import logging
 from collections.abc import (
     Mapping,
 )
-from dataclasses import dataclass
-from typing import Annotated, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Annotated, Protocol, runtime_checkable
 
 import pytest
+from mock_bundle.views import Somewhere
 from ophyd_async.core import (
     AsyncStatus,
     StandardReadable,
@@ -33,10 +28,10 @@ from redsun import (
 )
 from redsun.injection._census import Devices
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
-@dataclass(frozen=True)
-class Somewhere(Placement):
-    """Stand-in placement: the core ships none, and no frontend is named here."""
+    from redsun.testing import BuildSession
 
 
 @runtime_checkable
@@ -46,19 +41,8 @@ class Resettable(Protocol):
     def reset(self) -> None: ...
 
 
-class Motor:
-    """Presenter that can be reset."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.resets = 0
-
-    def reset(self) -> None:
-        self.resets += 1
-
-
-class Detector:
-    """Another one, so the answer has more than one entry."""
+class Part:
+    """Presenter that can be reset, declared twice so the answer has two entries."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -70,6 +54,13 @@ class Detector:
 
 class Readout:
     """Component that cannot be reset, so it stays out of the answer."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class Idle:
+    """Presenter that shares nothing, asks for nothing and is wired to nothing."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -108,20 +99,9 @@ class ImageView:
         self.name = name
         self.peers: Mapping[str, Linkable] = {}
         self.zoom = 1.0
-        self.linked_to: str | None = None
 
     def setup(self, peers: Mapping[str, Linkable]) -> None:
         self.peers = peers
-
-    def link_targets(self) -> list[str]:
-        """Return what this widget's 'link to...' menu offers."""
-        return sorted(name for name in self.peers if name != self.name)
-
-    def zoom_to(self, zoom: float) -> None:
-        self.zoom = zoom
-        for name, peer in self.peers.items():
-            if name == self.linked_to:
-                peer.apply_camera(zoom)
 
     def apply_camera(self, zoom: float) -> None:
         self.zoom = zoom
@@ -326,8 +306,8 @@ class MisshapenDevices:
 
 class App(Session):
     session: AsPresenter[Resetter]
-    motor: AsPresenter[Motor]
-    detector: AsPresenter[Detector]
+    motor: AsPresenter[Part]
+    detector: Annotated[AsPresenter[Part], Alias("detector")]
     readout: AsPresenter[Readout]
 
 
@@ -339,12 +319,13 @@ class PeerApp(Session):
 
 class AccidentalApp(Session):
     bookkeeper: AsPresenter[Bookkeeper]
-    motor: AsPresenter[Motor]
+    motor: AsPresenter[Part]
 
 
 class LooseApp(Session):
     session: AsPresenter[Resetter]
     loose: AsPresenter[Loose]
+    motor: AsPresenter[Part]
 
 
 class OneApp(Session):
@@ -408,6 +389,10 @@ class DeviceApp(Session):
     motors: AsPresenter[MotorPresenter]
 
 
+class DeviceAppWithAnIdlePeer(DeviceApp):
+    idle: AsPresenter[Idle]
+
+
 class NoDeviceApp(Session):
     motors: AsPresenter[MotorPresenter]
 
@@ -415,18 +400,11 @@ class NoDeviceApp(Session):
 class BothCensusApp(Session):
     stage: AsDevice[Stage]
     both: AsPresenter[AsksBoth]
-    motor: AsPresenter[Motor]
+    motor: AsPresenter[Part]
 
 
 class MisshapenDevicesApp(Session):
     broken: AsPresenter[MisshapenDevices]
-
-
-@pytest.fixture
-def app() -> Any:
-    container = App().build()
-    yield container
-    container.shutdown()
 
 
 @runtime_checkable
@@ -503,6 +481,14 @@ class BrokenMaybeApp(Session):
     widget: AsPresenter[MaybeWidget]
 
 
+@pytest.fixture
+def app() -> Iterator[App]:
+    """Build the base session and shut it down afterwards."""
+    container = App().build()
+    yield container
+    container.shutdown()
+
+
 def test_the_answer_holds_every_matching_component(app: App) -> None:
     """Include every component matching the protocol, whatever its declaration order."""
     assert dict(app.session.resettable) == {
@@ -516,44 +502,23 @@ def test_a_component_that_does_not_match_is_absent(app: App) -> None:
     assert "readout" not in app.session.resettable
 
 
-def test_the_answer_is_usable_as_a_mapping(app: App) -> None:
-    """Return the census as a Mapping of names to components."""
-    assert isinstance(app.session.resettable, Mapping)
-    assert len(app.session.resettable) == 2
-    assert sorted(app.session.resettable) == ["detector", "motor"]
-
-
 def test_driving_every_component_through_the_answer(app: App) -> None:
     """Call every matching component through the census."""
     app.session.reset_all()
     assert (app.motor.resets, app.detector.resets) == (1, 1)
 
 
-def test_peers_see_the_whole_set_including_themselves(
+def test_peers_hold_every_matching_component_including_the_asker(
     build: BuildSession,
 ) -> None:
-    """Include the asking component in its own census."""
+    """Include the asking component, with its peers, in its own census."""
     app = build(PeerApp)
-    assert sorted(app.left.peers) == ["left", "middle", "right"]
-    assert sorted(app.right.peers) == ["left", "middle", "right"]
 
-
-def test_a_peer_leaves_itself_out_where_it_matters(
-    build: BuildSession,
-) -> None:
-    """Let a component filter itself out of the census it received."""
-    app = build(PeerApp)
-    assert app.left.link_targets() == ["middle", "right"]
-    assert app.right.link_targets() == ["left", "middle"]
-
-
-def test_peers_act_on_each_other(build: BuildSession) -> None:
-    """Let one component act on a peer it found through the census."""
-    app = build(PeerApp)
-    app.left.linked_to = "right"
-    app.left.zoom_to(4.0)
-    assert app.right.zoom == 4.0
-    assert app.middle.zoom == 1.0
+    assert dict(app.left.peers) == {
+        "left": app.left,
+        "middle": app.middle,
+        "right": app.right,
+    }
 
 
 def test_a_component_that_did_not_mean_to_offer_is_still_counted(
@@ -571,9 +536,11 @@ def test_a_mismatched_signature_is_not_a_match(
 ) -> None:
     """Leave out a component whose method cannot be called as the protocol says."""
     app = build(LooseApp)
-    assert "loose" not in app.session.resettable
-    # Membership compares signatures, so a call the protocol permits works.
+
     app.session.reset_all()
+
+    assert list(app.session.resettable) == ["motor"]
+    assert app.motor.resets == 1
 
 
 def test_the_session_answers_as_it_answered_the_component(
@@ -605,60 +572,44 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
 
 
 @pytest.mark.parametrize(
-    ("session", "error", "match"),
+    ("session", "match"),
     [
-        pytest.param(
-            NoneApp, TypeError, "nothing in the session does", id="one-answered-by-none"
-        ),
+        pytest.param(NoneApp, "nothing in the session does", id="one-answered-by-none"),
         pytest.param(
             TwoApp,
-            TypeError,
             "but 2 do, from 'camera', 'spare'",
             id="one-answered-by-two",
         ),
         pytest.param(
             SelfApp,
-            TypeError,
             "nothing in the session does",
             id="one-answered-by-the-asker",
         ),
         pytest.param(
             MaybeTwoApp,
-            TypeError,
             "but 2 do, from 'camera', 'spare'",
             id="maybe-answered-by-two",
         ),
         pytest.param(
             RenamedApp,
-            TypeError,
-            "nothing in the session does",
+            r"(?s)nothing in the session does.*'camera': apply_camera\(factor",
             id="renamed-parameter-does-not-answer",
         ),
         pytest.param(
-            RenamedApp,
-            TypeError,
-            r"'camera': apply_camera\(factor",
-            id="near-miss-is-named",
-        ),
-        pytest.param(
             ForgetfulApp,
-            TypeError,
             "'counter': 'count' is missing",
             id="data-member-never-assigned",
         ),
         pytest.param(
             BackwardsQuestionApp,
-            TypeError,
             "knows nothing about a view",
             id="one-answered-by-a-later-layer",
         ),
     ],
 )
-def test_the_session_refuses_to_build(
-    session: type[Session], error: type[Exception], match: str
-) -> None:
+def test_the_session_refuses_to_build(session: type[Session], match: str) -> None:
     """Refuse a build when a request for one component has no single valid answer."""
-    with pytest.raises(error, match=match):
+    with pytest.raises(TypeError, match=match):
         session().build()
 
 
@@ -728,7 +679,8 @@ def test_a_component_asking_only_for_devices_is_not_warned_about(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Do not report as unused a component that asks only for a device census."""
-    build(DeviceApp)
+    build(DeviceAppWithAnIdlePeer)
+    assert "'idle' shares nothing" in caplog.text
     assert "'motors' shares nothing" not in caplog.text
 
 

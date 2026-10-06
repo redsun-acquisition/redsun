@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
 import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
-from qtpy import QtCore, QtWidgets
+from qtpy import QtWidgets
 
 from redsun import Settings
 from redsun.presenter.plan_spec import create_plan_spec
 from redsun.view.qt.builtins import AcquisitionView
 from tests.sdk.mocks import MockDetector
+from tests.sdk.view.helpers import child
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
     from redsun.presenter.plan_spec import PlanSpec
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 
 def rest() -> MsgGenerator[None]:
@@ -57,16 +56,6 @@ class Acquisition:
         }
 
 
-@pytest.fixture
-def settings(tmp_path: Path) -> Settings:
-    return Settings(tmp_path / "session.json")
-
-
-@pytest.fixture
-def parent(qapp: QtWidgets.QApplication) -> QtWidgets.QWidget:
-    return QtWidgets.QWidget()
-
-
 def make_view(
     settings: Settings, parent: QtWidgets.QWidget, acquisition: Any = None
 ) -> AcquisitionView:
@@ -74,13 +63,6 @@ def make_view(
     view = AcquisitionView("acquisition_view", parent)
     view.setup(acquisition or Acquisition(), settings)
     return view
-
-
-def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
-    """Return the child of *parent* of type *kind* named *name*."""
-    found = parent.findChild(kind, name)
-    assert found is not None
-    return found
 
 
 def choose(view: AcquisitionView, plan: str) -> None:
@@ -117,23 +99,36 @@ def test_a_failure_stays_shown_until_the_next_run(
     """Show why a plan failed, free the chooser, and clear the message on its next run."""
     view = make_view(settings, parent)
     failure = child(view, QtWidgets.QLabel, "failure:rest")
+    chooser = child(view, QtWidgets.QComboBox, "plans")
 
     view.set_started("rest")
+    locked = not chooser.isEnabled()
     view.set_failed("rest", "bad target")
-    shown = (failure.isHidden(), failure.text())
+    shown = (failure.isHidden(), failure.text(), chooser.isEnabled())
     view.set_started("rest")
 
-    assert shown == (False, "failed: bad target")
+    assert locked
+    assert shown == (False, "failed: bad target", True)
     assert failure.isHidden()
 
 
 def test_run_waits_for_a_device_to_be_chosen(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
-    """Keep Run disabled while a plan's device list is empty."""
+    """Enable Run only while a plan needing devices has one chosen."""
     view = make_view(settings, parent)
+    button = run_button(view, "count")
+    [detector] = [
+        box for box in view.findChildren(QtWidgets.QCheckBox) if box.text() == "det1"
+    ]
 
-    assert not run_button(view, "count").isEnabled()
+    enabled = [button.isEnabled()]
+    detector.click()
+    enabled.append(button.isEnabled())
+    detector.click()
+    enabled.append(button.isEnabled())
+
+    assert enabled == [False, True, False]
     assert run_button(view, "rest").isEnabled()
 
 
@@ -161,11 +156,14 @@ def test_the_last_plan_chosen_is_offered_again(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
     """Select again, in a later session, the plan chosen last."""
-    choose(make_view(settings, parent), "count")
+    first = make_view(settings, parent)
+    offered = child(first, QtWidgets.QComboBox, "plans").currentText()
+    choose(first, "rest")
 
     later = make_view(settings, parent)
 
-    assert child(later, QtWidgets.QComboBox, "plans").currentText() == "count"
+    assert offered == "count"
+    assert child(later, QtWidgets.QComboBox, "plans").currentText() == "rest"
 
 
 def test_the_base_directory_is_shown_and_asked_for(

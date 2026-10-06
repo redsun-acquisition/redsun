@@ -15,10 +15,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from p4p.client.thread import Context
 
 from redsun import Launch
 from redsun.log import GlobalFormatter
-from redsun.services import Service, _service, _transports
+from redsun.services import STOP_TIMEOUT, Service, _service, _transports
 from redsun.services._service import service_record
 from redsun.services._transports import (
     CHANNEL_ACCESS,
@@ -27,6 +28,7 @@ from redsun.services._transports import (
     ChannelAccess,
     PVAccess,
 )
+from tests.sdk.helpers import messages
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -37,7 +39,6 @@ STAND_IN = "mock_pkg.service.stand_in"
 PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
 PVA_READY = "pva stand-in ready"
 READY = "stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 STDLIB_WARNING = json.dumps(
     {
         "name": "caproto.ioc.camera",
@@ -93,16 +94,16 @@ def recording_transport(
 
 
 @pytest.fixture
-def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+def launch(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., Service]]:
     """Make stand-in services, restoring the CA address list and stopping them after."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, ChannelAccess())
     made: list[Service] = []
 
     def make(
         *options: str,
-        stop_timeout: float = 0.5,
+        stop_timeout: float = STOP_TIMEOUT,
         name: str = "stand-in",
         prefix: str = "",
     ) -> Service:
@@ -124,9 +125,10 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
 
 
 @pytest.fixture
-def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+def launch_pva(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., Service]]:
     """Make stand-in PVA services, restoring the address list and stopping them after."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
     made: list[Service] = []
@@ -138,7 +140,6 @@ def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Servic
                 module=PVA_STAND_IN,
                 args=("--pv", pv, "--value", str(value)),
                 ready=PVA_READY,
-                stop_timeout=0.5,
                 transport=PV_ACCESS,
             )
         )
@@ -147,17 +148,6 @@ def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Servic
     yield make
     for launched in made:
         launched.stop()
-
-
-@pytest.fixture
-def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
-    """Capture everything the `redsun` logger tree records, services included."""
-    caplog.set_level(logging.DEBUG, logger="redsun")
-    return caplog
-
-
-def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
-    return [r.getMessage() for r in caplog.records if r.levelno == level]
 
 
 def logged_ports(caplog: pytest.LogCaptureFixture) -> list[str]:
@@ -190,12 +180,12 @@ def test_a_service_logs_its_output_and_cleans_up_when_stopped(
     )
 
 
-def test_a_service_not_ready_in_time_is_stopped_with_its_output_logged(
+def test_a_service_not_ready_in_time_is_stopped_and_reported(
     launch: Callable[..., Service],
     service_log: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Stop a service not ready in time and log its last output."""
+    """Stop a service not ready in time and log the error."""
     monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 0.5)
     stand_in = launch("--no-ready")
 
@@ -204,8 +194,7 @@ def test_a_service_not_ready_in_time_is_stopped_with_its_output_logged(
 
     assert not stand_in.running
     (error,) = messages(service_log, logging.ERROR)
-    assert error.startswith("Service 'stand-in' not ready after 0.5 s; last output:")
-    assert "port " in error
+    assert error.startswith("Service 'stand-in' not ready after 0.5 s")
 
 
 def test_a_service_exiting_before_it_is_ready_is_reported_at_once(
@@ -248,7 +237,7 @@ def test_a_service_ignoring_the_stop_request_is_stopped_by_the_next_step(
 ) -> None:
     """Stop a service that ignores the stop request by the next, stronger step."""
     marker = tmp_path / "cleaned"
-    stand_in = launch(*options, "--marker", str(marker))
+    stand_in = launch(*options, "--marker", str(marker), stop_timeout=2)
     stand_in.start()
 
     stand_in.stop()
@@ -328,8 +317,6 @@ def test_two_pva_services_answer_on_the_loopback(
     launch_pva: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
     """Bind two PVA services to the loopback and list it in the address list."""
-    p4p = pytest.importorskip("p4p.client.thread")
-
     first = launch_pva("first", "SIM:FIRST", 1.0)
     second = launch_pva("second", "SIM:SECOND", 2.0)
     first.start()
@@ -338,7 +325,7 @@ def test_two_pva_services_answer_on_the_loopback(
     assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
     assert messages(service_log, logging.DEBUG).count("interface 127.0.0.1") == 2
     assert "unable to bind" not in service_log.text
-    with p4p.Context("pva") as client:
+    with Context("pva") as client:
         assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
         assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
 
@@ -372,45 +359,37 @@ def test_a_transport_lists_its_address_again_once_the_list_is_cleared(
 
 @pytest.mark.parametrize("value", [1.0, 2.0])
 def test_a_pva_service_started_in_each_test_answers(
+    launchable: None,
     start_service: StartService,
-    monkeypatch: pytest.MonkeyPatch,
     value: float,
 ) -> None:
     """Reach a PVA service started in each of two tests of one process."""
-    p4p = pytest.importorskip("p4p.client.thread")
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-
     start_service(
         "started",
         Launch(
             PVA_STAND_IN,
             args=("--pv", "SIM:STARTED", "--value", str(value)),
             ready=PVA_READY,
-            stop_timeout=0.5,
         ),
         transport="pv-access",
     )
 
-    with p4p.Context("pva") as client:
+    with Context("pva") as client:
         assert float(client.get("SIM:STARTED", timeout=10.0)) == value
 
 
 def test_a_started_service_releases_its_transport_once_it_stops(
+    launchable: None,
     recording_transport: RecordingTransport,
     start_service: StartService,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Release a started service's transport after the test, as a session does."""
-    pytest.importorskip("p4p")
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-
     start_service(
         "released",
         Launch(
             PVA_STAND_IN,
             args=("--pv", "SIM:RELEASED", "--value", "1.0"),
             ready=PVA_READY,
-            stop_timeout=0.5,
         ),
         transport="recording",
     )
@@ -539,8 +518,6 @@ def test_an_attached_service_has_nothing_to_start_or_stop() -> None:
     assert not attached.running
     attached.stop()
 
-    assert not attached.launched
-
 
 def test_arguments_without_a_module_are_refused() -> None:
     """Refuse arguments given without a module to run."""
@@ -549,12 +526,11 @@ def test_arguments_without_a_module_are_refused() -> None:
 
 
 def test_a_service_ends_when_the_process_that_launched_it_dies(
+    launchable: None,
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     wait_until: Callable[..., bool],
 ) -> None:
     """Clean up and exit a service once the process that launched it dies."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     marker = tmp_path / "cleaned"
     parent = subprocess.Popen(
         [

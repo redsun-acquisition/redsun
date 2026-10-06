@@ -68,7 +68,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from redsun.errors import ConfigurationInUse
+from redsun.errors import ConfigurationInUse, HookError
 from redsun.view import Placement
 
 from .._hooks import (
@@ -374,12 +374,24 @@ class QtSession(DesktopSession[QMainWindow], Session):
         application does so over a scheme already in force. Each of them
         registers how it is given back as it is taken, so `shutdown` frees
         the name without this class defining one.
+
+        Raises
+        ------
+        HookError
+            If a `create_application` hook returns anything but a
+            `QApplication`.
         """
         super().start_runtime()
         hooks = self.hooks
         creator = hooks.get(QtHook.CREATE_APPLICATION)
         if QApplication.instance() is None and isinstance(creator, CreatesApplication):
-            qt_app = cast("QApplication", creator.create_application(sys.argv))
+            qt_app = creator.create_application(sys.argv)
+            if not isinstance(qt_app, QApplication):
+                raise HookError(
+                    f"hook provider {type(creator).__name__!r} at "
+                    f"{QtHook.CREATE_APPLICATION.value!r} returned "
+                    f"{type(qt_app).__name__}, not a QApplication"
+                )
         else:
             qt_app = application()
         # the session holds it: nothing else does, and a collected

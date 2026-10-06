@@ -10,25 +10,10 @@ import numpy as np
 import pytest
 
 from redsun.writers import Writer, WriterError
-from redsun.writers._acquire_zarr import Stream
 from redsun.writers._base import root_attributes as attributes
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-@pytest.fixture
-def closes(monkeypatch: pytest.MonkeyPatch) -> list[Stream]:
-    """Record every `acquire-zarr` stream as it closes."""
-    closed: list[Stream] = []
-    close = Stream.close
-
-    def record(stream: Stream) -> None:
-        closed.append(stream)
-        close(stream)
-
-    monkeypatch.setattr(Stream, "close", record)
-    return closed
 
 
 def shape_of(path: Path) -> list[int]:
@@ -40,18 +25,25 @@ def shape_of(path: Path) -> list[int]:
     return shape
 
 
-def run(writer: Writer, store: Path, mimetype: str, *, start: bool = True) -> str:
+def run(
+    writer: Writer,
+    store: Path,
+    mimetype: str,
+    *,
+    start: bool = True,
+    uid: str = "run-1",
+) -> str:
     """Send *writer* a descriptor and a resource naming `det` and its store.
 
     A run is started first unless *start* is false. Returns the run's uid.
     """
     if start:
-        writer("start", {"uid": "run-1", "time": 0.0})
+        writer("start", {"uid": uid, "time": 0.0})
     writer(
         "descriptor",
         {
             "uid": "desc-1",
-            "run_start": "run-1",
+            "run_start": uid,
             "name": "primary",
             "data_keys": {
                 "det": {
@@ -68,14 +60,14 @@ def run(writer: Writer, store: Path, mimetype: str, *, start: bool = True) -> st
         "stream_resource",
         {
             "uid": "res-1",
-            "run_start": "run-1",
+            "run_start": uid,
             "data_key": "det",
             "mimetype": mimetype,
             "uri": store.as_uri(),
             "parameters": {},
         },
     )
-    return "run-1"
+    return uid
 
 
 def test_a_derived_product_lands_in_its_source_store_with_both_mappings(
@@ -236,15 +228,17 @@ def test_a_second_run_reuses_the_writer(tmp_path: Path) -> None:
         "stop",
         {"uid": "stop-1", "run_start": "run-1", "time": 2.0, "exit_status": "success"},
     )
-    run(writer, second, "application/x-zarr")
+    run(writer, second, "application/x-zarr", uid="run-2")
     writer.write("det_median", np.ones((4, 4), np.uint16))
     writer(
         "stop",
-        {"uid": "stop-2", "run_start": "run-1", "time": 2.0, "exit_status": "success"},
+        {"uid": "stop-2", "run_start": "run-2", "time": 2.0, "exit_status": "success"},
     )
 
     assert shape_of(first / "det_median") == [1, 4, 4]
     assert shape_of(second / "det_median") == [1, 4, 4]
+    assert attributes(first / "det_median")["redsun"]["run_start"] == "run-1"
+    assert attributes(second / "det_median")["redsun"]["run_start"] == "run-2"
 
 
 def test_shutdown_mid_run_leaves_the_store_readable(plain_store: Path) -> None:
@@ -305,7 +299,7 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
 
 
 def test_a_second_store_for_a_source_leaves_the_first_stream_open(
-    tmp_path: Path, closes: list[Stream]
+    tmp_path: Path,
 ) -> None:
     """Keep a run's streams to two stores open until the run stops."""
     writer = Writer()
@@ -317,11 +311,11 @@ def test_a_second_store_for_a_source_leaves_the_first_stream_open(
     run(writer, second, "application/x-zarr", start=False)
     writer.append("det_filtered", np.ones((4, 4), np.uint16))
 
-    assert closes == []
+    # acquire-zarr writes an array's metadata only when its stream closes
+    assert not (first / "det_filtered" / "zarr.json").exists()
     writer(
         "stop",
         {"uid": "stop-1", "run_start": "run-1", "time": 1.0, "exit_status": "success"},
     )
-    assert len(closes) == 2
     assert shape_of(first / "det_filtered") == [1, 4, 4]
     assert shape_of(second / "det_filtered") == [1, 4, 4]

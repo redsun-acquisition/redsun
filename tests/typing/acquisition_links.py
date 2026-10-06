@@ -1,4 +1,4 @@
-"""The acquisition stack's signals and slots link to each other.
+"""Every signal and slot the acquisition stack links exists, and each slot returns nothing.
 
 Never imported or executed; checked by the project's normal mypy invocation.
 """

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, NewType, TypeAlias
 import pytest
 from event_model import DocumentRouter
 from event_model.documents import Document
+from mock_bundle.presenters import MockLatePresenter
 
 from redsun import (
     AsPresenter,
@@ -34,17 +35,6 @@ class Panel(Placement):
     side: str
 
 
-class Listener:
-    """Presenter asking for every router the session built."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.callbacks: Mapping[str, CallbackType] = {}
-
-    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
-        self.callbacks = callbacks
-
-
 class SpelledOutListener:
     """Presenter asking for the catalogue without importing `CallbackType`."""
 
@@ -54,6 +44,13 @@ class SpelledOutListener:
 
     def setup(self, callbacks: Mapping[str, SpelledOutCallback]) -> None:
         self.callbacks = callbacks
+
+
+class Idle:
+    """Presenter that shares nothing, asks for nothing and is wired to nothing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
 
 
 class Plain(DocumentRouter):
@@ -118,9 +115,9 @@ class RoutingView(DocumentRouter):
 
 
 class DeclaredAboveTheRouters(Session):
-    listener: AsPresenter[Listener]
-    first: AsPresenter[Needing]
-    second: AsPresenter[Sharing]
+    listener: AsPresenter[MockLatePresenter]
+    sharing: AsPresenter[Sharing]
+    needing: AsPresenter[Needing]
 
 
 class SpelledOutAboveTheRouters(Session):
@@ -130,12 +127,13 @@ class SpelledOutAboveTheRouters(Session):
 
 
 class WithAPlainRouter(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     plain: AsPresenter[Plain]
+    idle: AsPresenter[Idle]
 
 
 class WithABrokenRouter(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     broken: AsPresenter[Broken]
     plain: AsPresenter[Plain]
 
@@ -146,18 +144,18 @@ class WithACuriousRouter(Session):
 
 
 class ListeningToAView(Session):
-    listener: AsPresenter[Listener]
+    listener: AsPresenter[MockLatePresenter]
     display: AsView[RoutingView]
 
 
 def test_the_catalogue_holds_every_router_in_declaration_order(
     build: BuildSession,
 ) -> None:
-    """List routers in declaration order, though `second` is built before `first`."""
+    """List routers in the order they are declared, not by name."""
     app = build(DeclaredAboveTheRouters)
-    assert list(app.listener.callbacks.items()) == [
-        ("first", app.first),
-        ("second", app.second),
+    assert list(app.listener.seen.items()) == [
+        ("sharing", app.sharing),
+        ("needing", app.needing),
     ]
 
 
@@ -175,7 +173,7 @@ def test_a_listener_writing_the_type_out_receives_the_same_catalogue(
 def test_a_router_that_fails_to_build_is_absent(build: BuildSession) -> None:
     """Leave out a router that fails to build, and still build the listener."""
     app = build(WithABrokenRouter)
-    assert list(app.listener.callbacks) == ["plain"]
+    assert list(app.listener.seen) == ["plain"]
 
 
 def test_a_router_asking_for_the_catalogue_is_in_it(build: BuildSession) -> None:
@@ -190,6 +188,7 @@ def test_a_router_in_the_catalogue_is_not_reported_unused(
     """Do not report a router in the catalogue as sharing nothing."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         build(WithAPlainRouter)
+    assert "'idle' shares nothing" in caplog.text
     assert "'plain' shares nothing" not in caplog.text
 
 

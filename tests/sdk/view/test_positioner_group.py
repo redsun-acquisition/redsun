@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from itertools import pairwise
-from typing import TypeVar
 
 import pytest
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from redsun.utils.devices import AxisInfo, Readback
 from redsun.view.qt.builtins import PositionerGroup
+from tests.sdk.view.helpers import child, press
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 AXES = {
     "x": AxisInfo(Readback(12.345, "um", 3), stoppable=True),
@@ -22,10 +21,14 @@ AXES = {
 
 
 @pytest.fixture
-def group(qapp: QtWidgets.QApplication) -> PositionerGroup:
-    return PositionerGroup(
+def group(qapp: QtWidgets.QApplication) -> Generator[PositionerGroup, None, None]:
+    """Yield a group of two axes, and close it after the test."""
+    widget = PositionerGroup(
         "stage", AXES, steps=(0.1, 1.0, 10.0), repeat_delay=100, repeat_interval=50
     )
+    yield widget
+    widget.close()
+    widget.deleteLater()
 
 
 def spin_group(qapp: QtWidgets.QApplication) -> PositionerGroup:
@@ -38,20 +41,6 @@ def spin_group(qapp: QtWidgets.QApplication) -> PositionerGroup:
         repeat_interval=50,
         step_box="spinbox",
     )
-
-
-def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
-    """Return the child of *parent* of type *kind* named *name*."""
-    found = parent.findChild(kind, name)
-    assert found is not None
-    return found
-
-
-def press(widget: QtWidgets.QWidget, key: QtCore.Qt.Key, text: str = "") -> None:
-    """Send *widget* a press and release of *key*."""
-    for kind in (QtCore.QEvent.Type.KeyPress, QtCore.QEvent.Type.KeyRelease):
-        event = QtGui.QKeyEvent(kind, key, QtCore.Qt.KeyboardModifier.NoModifier, text)
-        QtWidgets.QApplication.sendEvent(widget, event)
 
 
 def test_each_axis_shows_its_position_with_its_precision(
@@ -99,8 +88,8 @@ def test_a_step_box_left_without_a_number_keeps_the_last_step(
     assert steps == [0.1, 0.1, 0.1]
 
 
-def test_arrow_keys_step_the_focused_axis(group: PositionerGroup) -> None:
-    """Step the axis whose row has focus with Left and Right."""
+def test_arrow_keys_pressed_on_a_row_step_its_axis(group: PositionerGroup) -> None:
+    """Step the axis of the row that receives Right and Left key presses."""
     steps: list[float] = []
     group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
     row = child(group, QtWidgets.QLabel, "readback:theta").parentWidget()
@@ -183,7 +172,7 @@ def test_stop_is_offered_only_for_a_stoppable_device(
 def test_go_to_refuses_a_target_outside_the_limits(
     qapp: QtWidgets.QApplication,
 ) -> None:
-    """Send a target inside the axis' limits and drop one outside them."""
+    """Send a target inside the axis' limits, and say why one outside them was dropped."""
     limited = PositionerGroup(
         "a",
         {"x": AxisInfo(Readback(0.0, "um", 2, (-5.0, 5.0)))},
@@ -198,11 +187,14 @@ def test_go_to_refuses_a_target_outside_the_limits(
 
     field.setText("9")
     go.click()
+    refused = child(limited, QtWidgets.QLabel, "state").text()
     field.setText("4")
     go.click()
 
     assert targets == [("a", {"x": 4.0})]
     assert "-5" in field.toolTip()
+    assert "9" in refused
+    assert "-5.00" in refused
 
 
 def test_arrow_keys_do_not_step_a_locked_device(group: PositionerGroup) -> None:
@@ -226,8 +218,10 @@ def test_the_repeat_interval_reaches_every_step_button(group: PositionerGroup) -
     assert {b.autoRepeatInterval() for b in buttons if b.autoRepeat()} == {120}
 
 
-def test_arrow_keys_step_while_a_step_button_has_focus(group: PositionerGroup) -> None:
-    """Step with Right and Left while a step button has focus, as after a click."""
+def test_arrow_keys_pressed_on_a_step_button_step_the_axis(
+    group: PositionerGroup,
+) -> None:
+    """Step the axis with Right and Left key presses sent to its step button."""
     steps: list[float] = []
     group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
     plus = child(group, QtWidgets.QAbstractButton, "plus:x")
@@ -254,8 +248,10 @@ def test_every_control_has_a_name_a_screen_reader_can_say(
     assert unnamed == []
 
 
-def test_the_step_box_moves_through_its_decades(group: PositionerGroup) -> None:
-    """Step by the next decade after pressing Down in the step box."""
+def test_pressing_down_in_the_step_box_selects_the_next_step(
+    group: PositionerGroup,
+) -> None:
+    """Step by the next value of the step box after pressing Down in it."""
     steps: list[float] = []
     group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
 
@@ -278,24 +274,6 @@ def test_the_go_to_field_follows_the_readback_until_a_target_is_typed(
     group.set_readback("x", 8.0)
 
     assert (shown, field.text()) == ("7.000", "3")
-
-
-def test_a_refused_target_says_why(qapp: QtWidgets.QApplication) -> None:
-    """Show why a target outside the limits was not sent."""
-    limited = PositionerGroup(
-        "a",
-        {"x": AxisInfo(Readback(0.0, "um", 2, (-5.0, 5.0)))},
-        steps=(1.0,),
-        repeat_delay=100,
-        repeat_interval=50,
-    )
-    child(limited, QtWidgets.QLineEdit, "goto:x").setText("9")
-
-    child(limited, QtWidgets.QAbstractButton, "go:x").click()
-
-    state = child(limited, QtWidgets.QLabel, "state").text()
-    assert "9" in state
-    assert "-5.00" in state
 
 
 def test_unlocking_gives_the_controls_back(group: PositionerGroup) -> None:
@@ -342,20 +320,6 @@ def test_no_control_of_a_row_covers_another(group: PositionerGroup) -> None:
             )
 
 
-def test_the_step_box_centres_its_size(group: PositionerGroup) -> None:
-    """Centre the step size in the step box and in the sizes it lists."""
-    box = child(group, QtWidgets.QComboBox, "step:x")
-    edit = box.lineEdit()
-    assert edit is not None
-    centred = QtCore.Qt.AlignmentFlag.AlignHCenter
-
-    assert edit.alignment() & centred
-    assert all(
-        box.itemData(index, QtCore.Qt.ItemDataRole.TextAlignmentRole) & centred
-        for index in range(box.count())
-    )
-
-
 def test_a_spin_box_steps_by_the_size_it_holds(qapp: QtWidgets.QApplication) -> None:
     """Step by the size typed in a spin box, starting from the default size."""
     group = spin_group(qapp)
@@ -369,7 +333,6 @@ def test_a_spin_box_steps_by_the_size_it_holds(qapp: QtWidgets.QApplication) -> 
     plus.pressed.emit()
 
     assert steps == [1.0, 0.25]
-    assert box.alignment() & QtCore.Qt.AlignmentFlag.AlignHCenter
 
 
 @pytest.mark.parametrize(

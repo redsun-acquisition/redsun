@@ -13,16 +13,19 @@ from redsun.engine import register_bound_command
 from redsun.engine.actions import SRLatch
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
     from bluesky.protocols import Descriptor
-    from bluesky.utils import MsgGenerator
+    from bluesky.utils import Msg, MsgGenerator
 
     from redsun.engine import RunEngine
 
 
-def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
-    """Poll at `poll_interval` until a latch is set, then return it."""
+def test_wait_for_actions_set_after_several_polls(
+    RE: RunEngine, polls: list[Msg], wait_until: Callable[..., bool]
+) -> None:
+    """Keep polling while no latch is set, then return the latch once it is."""
     events = {"go": SRLatch()}
     results: list[tuple[str, bool]] = []
 
@@ -33,14 +36,15 @@ def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
         results.append((name, latch.is_set()))
 
     future = RE(plan())
-    # let the stub go through at least one poll that finds nothing first
-    sleep(0.1)
-    RE.loop.call_soon_threadsafe(events["go"].set)
+    assert wait_until(lambda: len(polls) >= 2)
+    events["go"].set()
     future.result(timeout=10)
     assert results == [("go", True)]
 
 
-def test_wait_for_actions_reset(RE: RunEngine) -> None:
+def test_wait_for_actions_reset(
+    RE: RunEngine, polls: list[Msg], wait_until: Callable[..., bool]
+) -> None:
     """Return once a set latch is reset when waiting for `reset`."""
     events = {"go": SRLatch()}
     results: list[str] = []
@@ -56,10 +60,10 @@ def test_wait_for_actions_reset(RE: RunEngine) -> None:
         results.append(f"reset:{name}")
 
     future = RE(plan())
-    sleep(0.05)
-    RE.loop.call_soon_threadsafe(events["go"].set)
-    sleep(0.05)
-    RE.loop.call_soon_threadsafe(events["go"].reset)
+    assert wait_until(lambda: len(polls) >= 2)
+    events["go"].set()
+    assert wait_until(lambda: results == ["set:go"])
+    events["go"].reset()
     future.result(timeout=10)
     assert results == ["set:go", "reset:go"]
 

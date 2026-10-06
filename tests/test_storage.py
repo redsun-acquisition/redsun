@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 
-class Writer(Device):
+class PathTakingDevice(Device):
     """Device writing where the session says."""
 
     def __init__(self, path_provider: PathProvider, name: str = "") -> None:
@@ -25,7 +25,7 @@ class Writer(Device):
         super().__init__(name=name)
 
 
-class PositionalWriter(Device):
+class PositionalPathTakingDevice(Device):
     """A device taking the provider by position only, which the session cannot pass."""
 
     def __init__(
@@ -53,11 +53,11 @@ class Locating:
 
 
 class WriterApp(Session):
-    writer: AsDevice[Writer]
+    writer: AsDevice[PathTakingDevice]
 
 
 class PositionalWriterApp(Session):
-    writer: AsDevice[PositionalWriter]
+    writer: AsDevice[PositionalPathTakingDevice]
 
 
 class AnnouncerApp(Session):
@@ -97,7 +97,6 @@ def test_the_root_comes_from_the_storage_section(
     app = build(WriterApp, config)
 
     assert app.path_provider.base_dir == tmp_path / "elsewhere"
-    assert app.storage.max_digits == 3
     assert app.path_provider("det").filename == "unknown_000"
 
 

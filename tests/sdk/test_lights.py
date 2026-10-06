@@ -4,25 +4,24 @@ from __future__ import annotations
 
 import asyncio
 import math
+from concurrent.futures import CancelledError
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import pytest
-from ophyd_async.core import SignalRW, StandardReadable, set_mock_attr, soft_signal_rw
+from ophyd_async.core import SignalRW, set_mock_attr
 
 from redsun.presenter import DescribesLights, LightPresenter
-from tests.sdk.mocks import BoundedBackend, DimmerLight, SoftLight, WholeLight
+from tests.sdk.mocks import (
+    BoundedBackend,
+    DimmerLight,
+    NumberSwitchDevice,
+    SoftLight,
+    WholeLight,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-
-class Detector(StandardReadable):
-    """A device whose `enabled` is a number, not a light switch."""
-
-    def __init__(self, name: str = "") -> None:
-        self.enabled = soft_signal_rw(int, 1)
-        super().__init__(name=name)
 
 
 class GatedBackend(BoundedBackend):
@@ -53,6 +52,7 @@ class SlowIntensity(SoftLight):
 
 @pytest.fixture
 async def laser() -> DimmerLight:
+    """Return a connected dimmable light."""
     device = DimmerLight("laser")
     await device.connect(mock=False)
     return device
@@ -60,6 +60,7 @@ async def laser() -> DimmerLight:
 
 @pytest.fixture
 async def led() -> SoftLight:
+    """Return a connected on-off light."""
     device = SoftLight("led")
     await device.connect(mock=False)
     return device
@@ -69,6 +70,7 @@ async def led() -> SoftLight:
 def presenter(
     laser: DimmerLight, led: SoftLight
 ) -> Generator[LightPresenter, None, None]:
+    """Return a light presenter over the laser and the led, shut down afterwards."""
     lights = LightPresenter("lights", devices={"laser": laser, "led": led})
     yield lights
     lights.shutdown()
@@ -165,7 +167,7 @@ async def test_a_device_whose_enabled_is_not_a_switch_is_left_out(
     led: SoftLight,
 ) -> None:
     """Keep only devices whose `enabled` is a boolean signal."""
-    detector = Detector("camera")
+    detector = NumberSwitchDevice("camera")
     await detector.connect(mock=False)
 
     presenter = LightPresenter(
@@ -234,18 +236,6 @@ async def test_a_write_that_fails_is_reported(presenter: LightPresenter) -> None
     assert failures == [("laser", "interlock open")]
 
 
-@dataclass(eq=False, kw_only=True)
-class Remembered(LightPresenter):
-    """A light presenter that keeps every instance it starts to build."""
-
-    built: ClassVar[list[LightPresenter]] = []
-
-    def __post_init__(self) -> None:
-        """Remember this instance, then build it."""
-        Remembered.built.append(self)
-        super().__post_init__()
-
-
 async def test_a_cancelled_start_leaves_no_light_followed() -> None:
     """Follow no light once the start is cancelled while one is being read."""
     light = DimmerLight("laser")
@@ -255,11 +245,21 @@ async def test_a_cancelled_start_leaves_no_light_followed() -> None:
         raise asyncio.CancelledError
 
     set_mock_attr(light, "read_configuration", cancelled)
-    Remembered.built.clear()
-    with pytest.raises(BaseException):  # noqa: B017
+    built: list[LightPresenter] = []
+
+    @dataclass(eq=False, kw_only=True)
+    class Remembered(LightPresenter):
+        """A light presenter that keeps every instance it starts to build."""
+
+        def __post_init__(self) -> None:
+            """Remember this instance, then build it."""
+            built.append(self)
+            super().__post_init__()
+
+    with pytest.raises(CancelledError):
         Remembered("lights", devices={"laser": light})
     seen: list[tuple[str, bool]] = []
-    Remembered.built[0].sig_enabled.connect(lambda *args: seen.append(args))
+    built[0].sig_enabled.connect(lambda *args: seen.append(args))
 
     await light.enabled.set(True)
 
@@ -270,7 +270,7 @@ async def test_an_included_name_that_is_no_light_is_reported(
     led: SoftLight, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Warn about included names with no `enabled` signal or a non-boolean one."""
-    detector = Detector("camera")
+    detector = NumberSwitchDevice("camera")
     await detector.connect(mock=False)
 
     presenter = LightPresenter(

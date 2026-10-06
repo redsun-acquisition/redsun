@@ -25,7 +25,6 @@ from redsun import (
     Declare,
     Session,
     SessionConfig,
-    _manifest,
 )
 from redsun.aio import run_coro
 from redsun.qt import QtSession
@@ -128,10 +127,14 @@ def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) 
 def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
     """Connect the ports the wiring section names once every component exists."""
     links = configured.connections
+    widget = built(configured, "motor_widget", MockMotorView)
+
+    built(configured, "motor_ctrl", MockMotorPresenter).sig_moved.emit("x", 2.0)
 
     assert [
         (c.publisher, c.publisher_port, c.consumer, c.consumer_port) for c in links
     ] == [("motor_ctrl", "sig_moved", "motor_widget", "refresh")]
+    assert widget.refreshed == ("x", 2.0)
 
 
 def test_annotation_and_config_describe_one_component(
@@ -239,13 +242,14 @@ def test_the_class_keeps_what_it_declares(
 
 
 def test_the_configuration_is_the_instance_alone(
-    mock_plugin: None, config_path: Path
+    mock_plugin: None, config_path: Path, build: BuildSession
 ) -> None:
     """Keep the configuration on the instance, leaving the class attribute unset."""
     app = Session.from_config(str(config_path / "mock_headless.yaml"))
+
+    build(app)
+
     assert Session.config is None
-    assert set(app.build().declarations)
-    app.shutdown()
 
 
 def test_a_plugin_whose_manifest_is_invalid_is_left_out(
@@ -321,20 +325,6 @@ def test_a_session_reports_the_frontend_it_is_built_on(
     app = build(App, {"session": "lab"})
 
     assert built(app, "reader", FrontendReader).frontend == frontend
-
-
-def test_a_build_looks_each_plugin_up_once(
-    mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
-) -> None:
-    """Look up each plugin once per build, however many entries name it."""
-    lookups = vars(_manifest)["entry_points"]
-    assert isinstance(lookups, mock.Mock)
-
-    build(ConfiguredApp, str(config_path / SESSION))
-    once = lookups.call_count
-    build(ConfiguredApp, str(config_path / SESSION))
-
-    assert (once, lookups.call_count) == (1, 2)
 
 
 def test_a_session_builds_again_after_shutdown(

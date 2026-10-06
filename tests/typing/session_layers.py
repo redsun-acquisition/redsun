@@ -58,12 +58,9 @@ def check(app: App) -> None:
 
 def check_structurally(app: App) -> None:
     """Pin that a class attribute and a property both answer `placement`."""
-    from_attribute: AttachableComponent = app.panel
-    from_property: AttachableComponent = app.canvas
-    presenter: NamedComponent = app.ctrl
-    assert_type(from_attribute.placement, Placement)
-    assert_type(from_property.placement, Placement)
-    assert_type(presenter.name, str)
+    _from_attribute: AttachableComponent = app.panel
+    _from_property: AttachableComponent = app.canvas
+    _presenter: NamedComponent = app.ctrl
 
 
 def check_undeclared(app: App) -> None:

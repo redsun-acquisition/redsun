@@ -29,7 +29,7 @@ def no_retries() -> Iterator[None]:
         yield
 
 
-class Recorder:
+class AddressHolder:
     """Presenter needing the catalog."""
 
     def __init__(self, name: str, *, address: CatalogAddress) -> None:
@@ -37,7 +37,7 @@ class Recorder:
         self.address = address
 
 
-class Optional:
+class MaybeCatalogReader:
     """Presenter using the catalog when the session has one."""
 
     def __init__(self, name: str, *, address: CatalogAddress | None = None) -> None:
@@ -45,22 +45,22 @@ class Optional:
         self.address = address
 
 
-class RecorderApp(Session):
-    recorder: AsPresenter[Recorder]
+class AddressApp(Session):
+    holder: AsPresenter[AddressHolder]
 
 
 class OptionalApp(Session):
-    optional: AsPresenter[Optional]
+    optional: AsPresenter[MaybeCatalogReader]
 
 
 def test_a_component_reaches_the_catalog_by_its_address(
     build: BuildSession, data_directory: Path
 ) -> None:
     """Start a catalog in the session directory and give a component its address."""
-    app = build(RecorderApp, CATALOG)
+    app = build(AddressApp, CATALOG)
 
     assert (data_directory / "catalog-session" / "catalog" / "catalog.db").is_file()
-    assert list(from_uri(app.recorder.address.uri)) == []
+    assert list(from_uri(app.holder.address.uri)) == []
 
 
 @pytest.mark.parametrize(
@@ -89,8 +89,8 @@ def test_the_root_cannot_move_while_the_catalog_runs(
 
 def test_shutdown_stops_the_server(build: BuildSession) -> None:
     """Stop the catalog server when the session shuts down."""
-    app = build(RecorderApp, CATALOG)
-    client = from_uri(app.recorder.address.uri)
+    app = build(AddressApp, CATALOG)
+    client = from_uri(app.holder.address.uri)
 
     app.shutdown()
 

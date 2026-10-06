@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from ophyd_async.core import (
+    AsyncStatus,
     MovableLogic,
     StandardMovable,
     StandardReadable,
@@ -24,14 +25,21 @@ from redsun.utils.devices import (
     limits,
     readback,
 )
-from tests.sdk.mocks import DimmerLight, SoftAxis, SoftLight, Stage, TwinStage
+from tests.sdk.mocks import (
+    DimmerLight,
+    NumberSwitchDevice,
+    SoftAxis,
+    SoftLight,
+    Stage,
+    TwinStage,
+)
 
 if TYPE_CHECKING:
-    from bluesky.protocols import Location
+    from bluesky.protocols import Callback, Location
 
 
-class ThermalAxis(StandardReadable, StandardMovable[float]):
-    """An axis reading a temperature beside its hinted position."""
+class ThermalAxis(StandardReadable):
+    """An axis reading a temperature beside its hinted position, naming no readback."""
 
     def __init__(self, name: str = "") -> None:
         with self.add_children_as_readables():
@@ -40,10 +48,23 @@ class ThermalAxis(StandardReadable, StandardMovable[float]):
             self.position = soft_signal_rw(float, 0.0, units="um", precision=-1)
         super().__init__(name=name)
 
-    @property
-    def movable_logic(self) -> MovableLogic[float]:
-        """Setpoint and readback of the axis, which are one signal."""
-        return MovableLogic(setpoint=self.position, readback=self.position)
+    @AsyncStatus.wrap
+    async def set(self, value: float) -> None:
+        """Move to *value*."""
+        await self.position.set(value)
+
+    async def locate(self) -> Location[float]:
+        """Return the position, which is also the setpoint."""
+        position = await self.position.get_value()
+        return {"setpoint": position, "readback": position}
+
+    def subscribe(self, function: Callback[float]) -> None:
+        """Follow the position."""
+        self.position.subscribe(function)
+
+    def clear_sub(self, function: Callback[float]) -> None:
+        """Stop following the position."""
+        self.position.clear_sub(function)
 
 
 class TwoHintAxis(StandardReadable, StandardMovable[float]):
@@ -229,13 +250,7 @@ async def test_a_light_without_intensity_is_on_or_off_only() -> None:
 
 async def test_an_enabled_attribute_that_is_not_a_bool_signal_is_no_light() -> None:
     """Refuse a device whose `enabled` is not a boolean signal."""
-
-    class Shutter(StandardReadable):
-        def __init__(self, name: str = "") -> None:
-            self.enabled = soft_signal_rw(int, 0)
-            super().__init__(name=name)
-
-    shutter = Shutter("shutter")
+    shutter = NumberSwitchDevice("shutter")
     await shutter.connect(mock=False)
     led = SoftLight("led")
     await led.connect(mock=False)

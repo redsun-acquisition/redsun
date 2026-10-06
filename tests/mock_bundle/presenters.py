@@ -10,7 +10,6 @@ from redsun import (
     CallbackType,
     DeviceMapping,
     provides,
-    slot,
 )
 
 from .keys import Calibration, Readings
@@ -41,10 +40,6 @@ class MockMotorPresenter:
     @provides
     def readings(self) -> Readings:
         return Readings({name: self.step * self.calibration for name in self.devices})
-
-    @slot
-    def move(self, axis: str, amount: float) -> None:
-        self.moved = (axis, amount)
 
 
 class MockLatePresenter:

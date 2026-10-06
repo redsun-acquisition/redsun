@@ -76,7 +76,7 @@ class LogView(QtW.QWidget):
     `Clear log window` and `Save logs...` act on the tab and service shown.
 
     Records are coloured by level, with one palette for light and one for dark
-    backgrounds, chosen from the console's background and redrawn when the
+    backgrounds, chosen from the view's background and redrawn when the
     palette changes.
 
     New records are drawn in batches, so a burst does not stall the window, and
@@ -100,8 +100,11 @@ class LogView(QtW.QWidget):
         buffer = log_buffer()
 
         self._console = self._make_console(buffer.capacity)
+        self._console.setObjectName("console")
         self._service_console = self._make_console(buffer.service_capacity)
+        self._service_console.setObjectName("service-console")
         self._service_combo = QtW.QComboBox(self)
+        self._service_combo.setObjectName("services")
         self._service_combo.addItem(ALL_SERVICES, None)
         services_page = QtW.QWidget(self)
         services_layout = QtW.QVBoxLayout(services_page)
@@ -109,6 +112,7 @@ class LogView(QtW.QWidget):
         services_layout.addWidget(self._service_combo)
         services_layout.addWidget(self._service_console)
         self._tabs = QtW.QTabWidget(self)
+        self._tabs.setObjectName("tabs")
         self._tabs.addTab(self._console, "Application")
         self._tabs.addTab(services_page, "Services")
         self._tabs.setTabVisible(SERVICES_TAB, False)
@@ -125,16 +129,20 @@ class LogView(QtW.QWidget):
         self._service_combo.currentIndexChanged.connect(self._on_service_selected)
 
         self._level_combo = QtW.QComboBox(self)
+        self._level_combo.setObjectName("level")
         for label, level in LEVELS:
             self._level_combo.addItem(label, level)
         self._level_combo.setCurrentIndex(self._level_combo.findData(self._level))
         self._level_combo.currentIndexChanged.connect(self._on_level_selected)
 
         self._save_button = QtW.QPushButton("Save logs...", self)
+        self._save_button.setObjectName("save")
         self._save_button.clicked.connect(self._on_save_clicked)
         self._clear_button = QtW.QPushButton("Clear log window", self)
+        self._clear_button.setObjectName("clear")
         self._clear_button.clicked.connect(self.clear)
         self._folder_button = QtW.QPushButton("Open log folder", self)
+        self._folder_button.setObjectName("folder")
         self._folder_button.clicked.connect(self._on_folder_clicked)
         handler = session_log()
         self._folder_button.setEnabled(handler is not None)
@@ -173,11 +181,12 @@ class LogView(QtW.QWidget):
         return console
 
     def changeEvent(self, event: QtCore.QEvent | None) -> None:
-        """Redraw in the colours of the palette the console now carries."""
+        """Redraw in the colours of the palette just applied."""
         if event is not None:
             super().changeEvent(event)
             if event.type() == QtCore.QEvent.Type.PaletteChange:
-                self._render()
+                # the consoles receive the new palette only after the view
+                QtCore.QTimer.singleShot(0, self._render)
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""

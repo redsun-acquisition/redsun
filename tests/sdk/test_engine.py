@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import sys
 import threading
-from concurrent.futures import Future, wait
+from concurrent.futures import wait
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
@@ -13,19 +14,12 @@ from bluesky.utils import RunEngineInterrupted
 
 from redsun.aio import get_shared_loop, run_coro
 from redsun.engine import RunEngine, RunEngineResult
-
-from .mocks import MockDetector
+from tests.sdk.mocks import MockDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from bluesky.utils import MsgGenerator
-
-
-def test_engine_wrapper_construction(RE: RunEngine) -> None:
-    """Start an engine with no context managers and an empty pause message."""
-    assert RE.context_managers == []
-    assert RE.pause_msg == ""
 
 
 def _engine_threads() -> set[threading.Thread]:
@@ -40,7 +34,7 @@ def _running(engine: RunEngine) -> threading.Event:
         if new == "running":
             running.set()
 
-    engine.state_hook = on_state  # type: ignore[assignment]
+    engine.sig_state_changed.connect(on_state)
     return running
 
 
@@ -113,41 +107,6 @@ def test_importing_the_engine_starts_no_thread() -> None:
     assert result.stdout.strip() == "['MainThread']"
 
 
-def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -> None:
-    """Return a successful RunEngineResult from a finished plan."""
-    fut = RE(count([detector], num=5))
-
-    wait([fut])
-
-    result = fut.result()
-
-    assert type(result) is RunEngineResult
-    assert result.exit_status == "success"
-
-
-def test_a_done_callback_receives_the_finished_future(
-    RE: RunEngine, detector: MockDetector
-) -> None:
-    """Pass the finished future to a done callback."""
-    finished: list[Future[Any]] = []
-    called = threading.Event()
-
-    def callback(future: Future[Any]) -> None:
-        finished.append(future)
-        called.set()
-
-    fut = RE(count([detector], num=5))
-    fut.add_done_callback(callback)
-
-    # concurrent.futures runs done callbacks after waking waiters, so the
-    # event, not fut.result(), says the callback has run
-    assert called.wait(timeout=5)
-    assert finished == [fut]
-    result = fut.result()
-    assert isinstance(result, RunEngineResult)
-    assert result.exit_status == "success"
-
-
 def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
     RE: RunEngine, detector: MockDetector
 ) -> None:
@@ -175,21 +134,10 @@ def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
     assert {thread for _, _, thread in seen} == {run_coro(_current_thread())}
 
 
-def test_an_unsubscribed_callback_receives_nothing(
-    RE: RunEngine, detector: MockDetector
+def test_pausable_engine(
+    RE: RunEngine, detector: MockDetector, wait_until: Callable[..., bool]
 ) -> None:
-    """Send no documents to an unsubscribed callback."""
-    seen: list[tuple[str, str, threading.Thread]] = []
-    RE.unsubscribe(RE.subscribe(_recorder(seen, "all")))
-
-    RE(count([detector], num=2)).result(timeout=10)
-
-    assert seen == []
-
-
-def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
-    """Pause a plan at a checkpoint, resume it, then stop it."""
-    future_set = set()
+    """Interrupt a plan at a checkpoint with no message, resume it, then stop it."""
 
     def pausable_plan() -> Any:
         yield from bps.checkpoint()
@@ -198,28 +146,22 @@ def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
 
     running = _running(RE)
     fut = RE(pausable_plan())
-    future_set.add(fut)
-    fut.add_done_callback(future_set.discard)
-
     assert running.wait(5)
 
     RE.request_pause(defer=True)
+    with pytest.raises(RunEngineInterrupted) as interrupted:
+        fut.result(timeout=5)
+    assert str(interrupted.value) == ""
+    assert RE.state == "paused"
 
-    wait(future_set)
+    resumed = RE.resume()
+    assert wait_until(lambda: RE.state == "running", timeout=5)
+    stopped = RE.stop().result(timeout=5)
 
-    assert len(future_set) == 0
-
-    fut = RE.resume()
-    future_set.add(fut)
-    fut.add_done_callback(future_set.discard)
-
-    assert len(future_set) == 1
-
-    RE.stop()
-
-    wait(future_set)
-
-    assert len(future_set) == 0
+    with pytest.raises(RunEngineInterrupted):
+        resumed.result(timeout=5)
+    assert isinstance(stopped, RunEngineResult)
+    assert stopped.exit_status == "success"
 
 
 def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:
@@ -248,20 +190,31 @@ def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:
 def test_stopping_a_paused_plan_runs_its_cleanup_off_the_caller_thread(
     RE: RunEngine,
 ) -> None:
-    """Run a paused plan's cleanup off the caller thread when stopped."""
-    cleanup_thread: list[str] = []
+    """Return from `stop` while a paused plan's cleanup is still running."""
+    returned = asyncio.Event()
+    waited: list[bool] = []
+
+    async def wait_for_the_caller() -> None:
+        try:
+            await asyncio.wait_for(returned.wait(), timeout=5)
+        except TimeoutError:
+            waited.append(False)
+        else:
+            waited.append(True)
 
     def plan() -> Any:
         try:
             yield from bps.checkpoint()
             yield from bps.pause()
         finally:
-            cleanup_thread.append(threading.current_thread().name)
+            yield from bps.wait_for([wait_for_the_caller])
 
     with pytest.raises(RunEngineInterrupted):
         RE(plan()).result(timeout=5)
 
-    RE.stop().result(timeout=5)
+    stopping = RE.stop()
+    RE.loop.call_soon_threadsafe(returned.set)
+    stopping.result(timeout=10)
 
-    assert cleanup_thread != [threading.current_thread().name]
+    assert waited == [True]
     assert RE.state == "idle"

@@ -4,21 +4,11 @@ from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from inspect import Parameter
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
 import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
-from magicgui import widgets as mgw
-from ophyd_async.core import (
-    Device,
-    SignalR,
-    SignalRW,
-    StandardReadable,
-    soft_signal_r_and_setter,
-    soft_signal_rw,
-)
 
 from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
@@ -31,8 +21,7 @@ from redsun.presenter.plan_spec import (
     resolve_arguments,
 )
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
-from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
-from redsun.view.qt._widget_factory import create_param_widget
+from tests.sdk.mocks import DetectorProtocol, MotorProtocol, RoiDetector, XYStage, param
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,90 +30,23 @@ if TYPE_CHECKING:
     # reproduces a plugin author hiding an import behind TYPE_CHECKING
     from decimal import Decimal
 
-    from qtpy.QtWidgets import QApplication
-
-
-@runtime_checkable
-class _MotorProtocol(Protocol):
-    """Motor protocol: requires child axis sub-devices."""
-
-    x: Device
-    y: Device
-
-
-@runtime_checkable
-class _DetectorProtocol(Protocol):
-    """Detector protocol: ROI is settable; sensor shape is fixed."""
-
-    roi: SignalRW[np.ndarray]
-    sensor_shape: SignalR[np.ndarray]
-
-
-class _MockAxis(Device):
-    """Minimal single-axis device for motor protocol tests."""
-
-    position: SignalRW[float]
-
-    def __init__(self, name: str = "") -> None:
-        self.position = soft_signal_rw(float, initial_value=0.0, units="mm")
-        super().__init__(name=name)
-
-
-class _MockDetector(StandardReadable):
-    """Mock detector satisfying [`_DetectorProtocol`][tests.sdk.test_plan_spec._DetectorProtocol]."""
-
-    roi: SignalRW[np.ndarray]
-    sensor_shape: SignalR[np.ndarray]
-
-    def __init__(self, name: str) -> None:
-        with self.add_children_as_readables():
-            self.roi = soft_signal_rw(
-                np.ndarray, initial_value=np.array([0, 0, 512, 512], dtype=np.int32)
-            )
-            self.sensor_shape, _ = soft_signal_r_and_setter(
-                np.ndarray, initial_value=np.array([512, 512], dtype=np.int32)
-            )
-        super().__init__(name=name)
-
-
-class MockMotorDevice(StandardReadable):
-    """Mock motor satisfying [`_MotorProtocol`][tests.sdk.test_plan_spec._MotorProtocol]."""
-
-    x: _MockAxis
-    y: _MockAxis
-
-    def __init__(self, name: str, /) -> None:
-        self.x = _MockAxis()
-        self.y = _MockAxis()
-        super().__init__(name=name)
-
 
 @pytest.fixture
-def mock_motor(name: str = "stage") -> MockMotorDevice:
+def mock_motor() -> XYStage:
     """Single mock motor device."""
-    return MockMotorDevice(name)
+    return XYStage("stage")
 
 
 @pytest.fixture
-def one_detector() -> dict[str, _MockDetector]:
-    return {"cam": _MockDetector("cam")}
+def one_detector() -> dict[str, RoiDetector]:
+    """Return a session's devices holding one detector, `cam`."""
+    return {"cam": RoiDetector("cam")}
 
 
 @pytest.fixture
-def one_motor(mock_motor: MockMotorDevice) -> dict[str, MockMotorDevice]:
+def one_motor(mock_motor: XYStage) -> dict[str, XYStage]:
+    """Return a session's devices holding one motor, `stage`."""
     return {"stage": mock_motor}
-
-
-def _param(
-    name: str,
-    annotation: object = int,
-    kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
-    default: object = Parameter.empty,
-    **fields: Any,
-) -> ParamDescription:
-    return ParamDescription(
-        name=name, kind=kind, annotation=annotation, default=default, **fields
-    )
 
 
 def _make_spec(*params: ParamDescription) -> PlanSpec:
@@ -134,21 +56,21 @@ def _make_spec(*params: ParamDescription) -> PlanSpec:
 @pytest.mark.parametrize(
     ("predicate", "annotation", "expected"),
     [
-        (isdevice, _DetectorProtocol, True),
-        (isdevice, _MotorProtocol, True),
+        (isdevice, DetectorProtocol, True),
+        (isdevice, MotorProtocol, True),
         (isdevice, int, False),
         (isdevice, str, False),
         (isdevice, 42, False),
-        (isdevicesequence, Sequence[_DetectorProtocol], True),
-        (isdevicesequence, Sequence[_MotorProtocol], True),
+        (isdevicesequence, Sequence[DetectorProtocol], True),
+        (isdevicesequence, Sequence[MotorProtocol], True),
         (isdevicesequence, Sequence[int], False),
-        (isdevicesequence, _DetectorProtocol, False),
-        (isdeviceset, set[_DetectorProtocol], True),
-        (isdeviceset, AbstractSet[_DetectorProtocol], True),
-        (isdeviceset, frozenset[_DetectorProtocol], True),
+        (isdevicesequence, DetectorProtocol, False),
+        (isdeviceset, set[DetectorProtocol], True),
+        (isdeviceset, AbstractSet[DetectorProtocol], True),
+        (isdeviceset, frozenset[DetectorProtocol], True),
         (isdeviceset, set[int], False),
-        (isdeviceset, _DetectorProtocol, False),
-        (isdeviceset, Sequence[_DetectorProtocol], False),
+        (isdeviceset, DetectorProtocol, False),
+        (isdeviceset, Sequence[DetectorProtocol], False),
         (issequence, Sequence[int], True),
         (issequence, list[float], True),
         (issequence, str, False),
@@ -237,23 +159,23 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].choices == [1, 2, 3]
 
     def test_single_device_param_populates_choices(
-        self, one_motor: dict[str, MockMotorDevice]
+        self, one_motor: dict[str, XYStage]
     ) -> None:
         """Offer the names of matching devices as the choices of a device parameter."""
 
-        def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
+        def plan(motor: MotorProtocol) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_motor)
         p = spec.parameters[0]
         assert p.choices == ["stage"]
         assert not p.multiselect
-        assert p.device_proto is _MotorProtocol
+        assert p.device_proto is MotorProtocol
 
     def test_single_device_no_registry_match_raises(self) -> None:
         """Refuse a required device parameter that no registered device matches."""
 
-        def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
+        def plan(motor: MotorProtocol) -> MsgGenerator[None]:
             yield from ()
 
         with pytest.raises(UnresolvableAnnotationError) as exc_info:
@@ -263,46 +185,46 @@ class TestCreatePlanSpec:
     def test_single_device_no_registry_match_ok_with_default(self) -> None:
         """Accept a device parameter with a default when no device matches."""
 
-        def plan(motor: _MotorProtocol = None) -> MsgGenerator[None]:  # type: ignore[assignment]
+        def plan(motor: MotorProtocol = None) -> MsgGenerator[None]:  # type: ignore[assignment]
             yield from ()
 
         spec = create_plan_spec(plan, {})
         assert spec.parameters[0].choices is None  # no match, but has default
 
     def test_sequence_device_param_is_multiselect(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a sequence of devices a multiple choice of the matching devices."""
 
-        def plan(dets: Sequence[_DetectorProtocol]) -> MsgGenerator[None]:
+        def plan(dets: Sequence[DetectorProtocol]) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
         assert p.choices == ["cam"]
         assert p.multiselect
-        assert p.device_proto is _DetectorProtocol
+        assert p.device_proto is DetectorProtocol
 
     def test_set_device_param_is_multiselect(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a set of devices a multiple choice of the matching devices."""
 
-        def plan(dets: set[_DetectorProtocol]) -> MsgGenerator[None]:
+        def plan(dets: set[DetectorProtocol]) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
         assert p.choices == ["cam"]
         assert p.multiselect
-        assert p.device_proto is _DetectorProtocol
+        assert p.device_proto is DetectorProtocol
 
     def test_var_positional_device_is_multiselect(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a variadic positional device parameter a multiple choice."""
 
-        def plan(*dets: _DetectorProtocol) -> MsgGenerator[None]:
+        def plan(*dets: DetectorProtocol) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_detector)
@@ -321,8 +243,7 @@ class TestCreatePlanSpec:
 
         spec = create_plan_spec(plan, {})
         action_p = next(p for p in spec.parameters if p.name == "snap")
-        assert action_p.actions is not None
-        assert isinstance(action_p.actions, PlanAction)
+        assert action_p.actions == PlanAction(name="snap")
         assert action_p.choices is None
 
     def test_action_sequence_param(self) -> None:
@@ -337,8 +258,7 @@ class TestCreatePlanSpec:
 
         spec = create_plan_spec(plan, {})
         p = next(q for q in spec.parameters if q.name == "actions")
-        assert isinstance(p.actions, list)
-        assert len(p.actions) == 2
+        assert p.actions == [PlanAction(name="a"), PlanAction(name="b")]
 
     def test_two_actions_of_one_name_are_refused(self) -> None:
         """Refuse a plan declaring two actions with the same name."""
@@ -536,54 +456,54 @@ class TestCollectArguments:
 
     def test_positional_only(self) -> None:
         """Pass a positional-only parameter positionally."""
-        spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_ONLY))
+        spec = _make_spec(param("x", kind=ParamKind.POSITIONAL_ONLY))
         args, kwargs = collect_arguments(spec, {"x": 42})
         assert args == (42,)
         assert kwargs == {}
 
     def test_positional_or_keyword(self) -> None:
         """Pass a positional-or-keyword parameter positionally."""
-        spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD))
+        spec = _make_spec(param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD))
         args, kwargs = collect_arguments(spec, {"x": 7})
         assert args == (7,)
         assert kwargs == {}
 
     def test_keyword_only(self) -> None:
         """Pass a keyword-only parameter by keyword."""
-        spec = _make_spec(_param("n", kind=ParamKind.KEYWORD_ONLY))
+        spec = _make_spec(param("n", kind=ParamKind.KEYWORD_ONLY))
         args, kwargs = collect_arguments(spec, {"n": 3})
         assert args == ()
         assert kwargs == {"n": 3}
 
     def test_var_positional_sequence_expanded(self) -> None:
         """Expand a sequence given for *args into separate positional arguments."""
-        spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
+        spec = _make_spec(param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": [1, 2, 3]})
         assert args == (1, 2, 3)
 
     def test_var_positional_single_value_wrapped(self) -> None:
         """Pass a single value given for *args as one positional argument."""
-        spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
+        spec = _make_spec(param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": 99})
         assert args == (99,)
 
     def test_var_keyword_mapping_merged(self) -> None:
         """Merge a mapping given for **kwargs into the keyword arguments."""
-        spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
+        spec = _make_spec(param("kw", kind=ParamKind.VAR_KEYWORD))
         _args, kwargs = collect_arguments(spec, {"kw": {"a": 1, "b": 2}})
         assert kwargs == {"a": 1, "b": 2}
 
     def test_var_keyword_non_mapping_raises(self) -> None:
         """Raise TypeError when **kwargs is given something other than a mapping."""
-        spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
+        spec = _make_spec(param("kw", kind=ParamKind.VAR_KEYWORD))
         with pytest.raises(TypeError, match="Mapping"):
             collect_arguments(spec, {"kw": "not_a_mapping"})
 
     def test_missing_param_skipped(self) -> None:
         """Skip a parameter that has no value."""
         spec = _make_spec(
-            _param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD),
-            _param("y", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("y", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
         args, _kwargs = collect_arguments(spec, {"x": 1})
         assert args == (1,)
@@ -591,11 +511,11 @@ class TestCollectArguments:
     def test_ordering_preserved(self) -> None:
         """Keep positional arguments in the order the plan declares them."""
         spec = _make_spec(
-            _param("a", kind=ParamKind.POSITIONAL_OR_KEYWORD),
-            _param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
-            _param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("a", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
-        args, _ = collect_arguments(spec, {"a": 1, "b": 2, "c": 3})
+        args, _ = collect_arguments(spec, {"c": 3, "a": 1, "b": 2})
         assert args == (1, 2, 3)
 
 
@@ -646,161 +566,84 @@ class TestResolveArguments:
         resolved = resolve_arguments(spec, {"go": a2}, {})
         assert resolved["go"] is a2
 
-    def test_single_device_label_resolved(
-        self, one_motor: dict[str, MockMotorDevice]
-    ) -> None:
+    def test_single_device_label_resolved(self, one_motor: dict[str, XYStage]) -> None:
         """Replace a device name with the device it names."""
         spec = _make_spec(
             ParamDescription(
                 name="motor",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=_MotorProtocol,
+                annotation=MotorProtocol,
                 default=Parameter.empty,
                 choices=["stage"],
-                device_proto=_MotorProtocol,
+                device_proto=MotorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"motor": "stage"}, one_motor)
         assert resolved["motor"] is one_motor["stage"]
 
     def test_device_sequence_labels_resolved(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Replace a list of device names with a list of the devices."""
         spec = _make_spec(
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=Sequence[_DetectorProtocol],
+                annotation=Sequence[DetectorProtocol],
                 default=Parameter.empty,
                 choices=["cam"],
                 multiselect=True,
-                device_proto=_DetectorProtocol,
+                device_proto=DetectorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
         assert resolved["dets"] == [one_detector["cam"]]
 
     def test_device_set_labels_resolved(
-        self, one_detector: dict[str, _MockDetector]
+        self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Replace device names with a set of the devices for a set parameter."""
         spec = _make_spec(
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=set[_DetectorProtocol],
+                annotation=set[DetectorProtocol],
                 default=Parameter.empty,
                 choices=["cam"],
                 multiselect=True,
-                device_proto=_DetectorProtocol,
+                device_proto=DetectorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
         assert resolved["dets"] == {one_detector["cam"]}
 
     def test_unknown_label_resolves_to_none_for_single(
-        self, one_motor: dict[str, MockMotorDevice]
+        self, one_motor: dict[str, XYStage]
     ) -> None:
         """Resolve an unknown device name to None."""
         spec = _make_spec(
             ParamDescription(
                 name="motor",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=_MotorProtocol,
+                annotation=MotorProtocol,
                 default=Parameter.empty,
                 choices=["stage"],
-                device_proto=_MotorProtocol,
+                device_proto=MotorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"motor": "nonexistent"}, one_motor)
         assert resolved["motor"] is None
 
 
-@pytest.mark.qt
-class TestCreateParamWidget:
-    """Tests for `create_param_widget`, which builds Qt widgets."""
-
-    @pytest.fixture(autouse=True)
-    def _application(self, qapp: QApplication) -> None:
-        """Hold the session's application, so magicgui makes none of its own."""
-
-    def test_int_creates_spinbox(self) -> None:
-        """Build a SpinBox for an int parameter."""
-        w = create_param_widget(_param("n", int))
-        assert isinstance(w, mgw.SpinBox)
-
-    def test_float_creates_float_spinbox(self) -> None:
-        """Build a FloatSpinBox for a float parameter."""
-        w = create_param_widget(_param("x", float))
-        assert isinstance(w, mgw.FloatSpinBox)
-
-    def test_bool_creates_checkbox(self) -> None:
-        """Build a CheckBox for a bool parameter."""
-        w = create_param_widget(_param("flag", bool, default=False))
-        assert isinstance(w, mgw.CheckBox)
-
-    def test_literal_creates_combobox(self) -> None:
-        """Build a ComboBox for a Literal parameter."""
-        p = _param("egu", Literal["um", "mm"], choices=["um", "mm"])
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.ComboBox)
-
-    def test_single_device_creates_combobox(self) -> None:
-        """Build a ComboBox for a single device parameter."""
-        p = _param(
-            "motor",
-            _MotorProtocol,
-            choices=["stage"],
-            device_proto=_MotorProtocol,
-        )
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.ComboBox)
-
-    def test_multiselect_device_creates_device_sequence_edit(self) -> None:
-        """Build a DeviceSequenceEdit for a multiple-choice device parameter."""
-        p = _param(
-            "dets",
-            Sequence[_DetectorProtocol],
-            choices=["cam"],
-            multiselect=True,
-            device_proto=_DetectorProtocol,
-        )
-        w = create_param_widget(p)
-        assert isinstance(w, DeviceSequenceEdit)
-
-    def test_path_creates_file_edit(self) -> None:
-        """Build a FileEdit for a Path parameter."""
-        w = create_param_widget(_param("output", Path))
-        assert isinstance(w, mgw.FileEdit)
-
-    def test_sequence_int_creates_list_edit(self) -> None:
-        """Build a ListEdit for a sequence of ints."""
-        w = create_param_widget(_param("vals", Sequence[int]))
-        assert isinstance(w, mgw.ListEdit)
-
-    def test_hidden_param_creates_line_edit_placeholder(self) -> None:
-        """Build a LineEdit placeholder for a hidden parameter."""
-        p = _param("secret", int, hidden=True)
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.LineEdit)
-
-    def test_action_param_creates_line_edit_placeholder(self) -> None:
-        """Build a LineEdit placeholder for an action parameter."""
-        p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.LineEdit)
-
-
 @pytest.mark.parametrize(
-    "annotation",
+    ("annotation", "listed"),
     [
-        pytest.param(Readable[Any], id="single"),
-        pytest.param(Sequence[Readable[Any]], id="sequence"),
+        pytest.param(Readable[Any], False, id="single"),
+        pytest.param(Sequence[Readable[Any]], True, id="sequence"),
     ],
 )
 def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
-    annotation: Any, one_detector: dict[str, _MockDetector]
+    annotation: Any, listed: bool, one_detector: dict[str, RoiDetector]
 ) -> None:
     """Offer and resolve the devices of a protocol written with type arguments."""
 
@@ -814,6 +657,5 @@ def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
 
     assert spec.parameters[0].choices == ["cam"]
     assert spec.parameters[0].device_proto is Readable
-    assert one_detector["cam"] in (
-        resolved["dets"] if isinstance(resolved["dets"], list) else [resolved["dets"]]
-    )
+    camera = one_detector["cam"]
+    assert resolved["dets"] == ([camera] if listed else camera)

@@ -41,6 +41,12 @@ def shown(view: DescriptorTreeView) -> int:
     return spinbox.value()
 
 
+def labels(item: QtWidgets.QTreeWidgetItem) -> list[str]:
+    """Return the first-column text of *item*'s children, in order."""
+    children = (item.child(i) for i in range(item.childCount()))
+    return [child.text(0) for child in children if child is not None]
+
+
 @pytest.mark.parametrize(
     ("dtype", "editor", "expected"),
     [
@@ -71,12 +77,6 @@ def test_a_typed_number_is_sent_once_it_is_entered(
     spinbox.interpretText()
 
     assert sent == [("cam", "gain", expected)]
-
-
-def labels(item: QtWidgets.QTreeWidgetItem) -> list[str]:
-    """Return the first-column text of *item*'s children, in order."""
-    children = (item.child(i) for i in range(item.childCount()))
-    return [child.text(0) for child in children if child is not None]
 
 
 def test_rows_are_grouped_by_device_and_by_a_property_group(

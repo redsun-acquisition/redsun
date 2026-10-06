@@ -98,7 +98,7 @@ def test_the_subscription_is_recorded_by_both_ends(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
-    """Record a subscription with the signal as publisher and the slot as consumer."""
+    """Record a subscription to a signal no device owns under the signal's name."""
     signal, _ = counter
 
     class Wired(App):
@@ -109,11 +109,12 @@ def test_the_subscription_is_recorded_by_both_ends(
 
     [link] = session.connections
 
-    assert (link.publisher_port, link.consumer, link.consumer_port) == (
-        "counter",
-        "watcher",
-        "on_reading",
-    )
+    assert (
+        link.publisher,
+        link.publisher_port,
+        link.consumer,
+        link.consumer_port,
+    ) == ("<unknown>", "counter", "watcher", "on_reading")
 
 
 def test_a_signal_of_a_device_is_recorded_under_the_device(

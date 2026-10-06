@@ -10,6 +10,7 @@ from tests.sdk.mocks import SoftAxis
 
 @pytest.fixture
 async def axis() -> SoftAxis:
+    """Return a connected soft axis named `focus`."""
     device = SoftAxis("focus")
     await device.connect(mock=False)
     return device
@@ -47,13 +48,16 @@ async def test_a_held_owner_is_not_written_but_read_back(axis: SoftAxis) -> None
     assert seen == [(axis.velocity.name, 1.0)]
 
 
-async def test_an_unknown_or_read_only_key_is_refused(axis: SoftAxis) -> None:
+@pytest.mark.parametrize(
+    "key", ["focus-resolution", "no-such-key"], ids=["read-only", "unknown"]
+)
+async def test_an_unknown_or_read_only_key_is_refused(axis: SoftAxis, key: str) -> None:
     """Raise `KeyError` for a key that names no writable configuration signal."""
     configuration = DeviceConfiguration("lights")
     await configuration.add("focus", axis)
 
     with pytest.raises(KeyError):
-        await configuration.configure(axis.resolution.name, 1.0)
+        await configuration.configure(key, 1.0)
 
 
 async def test_nothing_is_followed_after_remove_all(axis: SoftAxis) -> None:

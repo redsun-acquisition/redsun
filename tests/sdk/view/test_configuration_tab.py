@@ -27,13 +27,25 @@ CONFIGURATION = Configuration(
 )
 
 
+def editor(tab: ConfigurationTab, owner: str) -> QtWidgets.QWidget:
+    """Return the editor of the one setting of *owner* in *tab*."""
+    [row] = tab.findItems(owner, QtCore.Qt.MatchFlag.MatchExactly)
+    setting = row.child(0)
+    assert setting is not None
+    widget = tab.itemWidget(setting, 1)
+    assert widget is not None
+    return widget
+
+
 def test_an_edit_is_sent_under_its_key(qapp: QtWidgets.QApplication) -> None:
     """Send an edit of the tree as the full key and the new value."""
     tab = ConfigurationTab(CONFIGURATION)
     sent: list[tuple[str, object]] = []
     tab.sig_configure.connect(lambda *args: sent.append(args))
+    power = editor(tab, "led")
+    assert isinstance(power, QtWidgets.QDoubleSpinBox)
 
-    tab.sig_property_changed.emit("led", "power", 2.0)
+    power.setValue(2.0)
 
     assert sent == [("led-power", 2.0)]
 
@@ -41,16 +53,16 @@ def test_an_edit_is_sent_under_its_key(qapp: QtWidgets.QApplication) -> None:
 def test_a_held_owner_cannot_be_edited_until_released(
     qapp: QtWidgets.QApplication,
 ) -> None:
-    """Disable the rows of a held owner, and enable them again after."""
+    """Disable the rows of a held owner only, and enable them again after."""
     tab = ConfigurationTab(CONFIGURATION)
-    editors = [w for w in tab.findChildren(QtWidgets.QWidget) if w.isEnabled()]
+    power, wavelength = editor(tab, "led"), editor(tab, "laser")
 
     tab.set_locked(frozenset({"led"}))
-    locked = [w for w in editors if not w.isEnabled()]
+    locked = (power.isEnabled(), wavelength.isEnabled())
     tab.set_locked(frozenset())
 
-    assert locked
-    assert all(w.isEnabled() for w in editors)
+    assert locked == (False, True)
+    assert power.isEnabled()
 
 
 def test_an_empty_configuration_says_so(qapp: QtWidgets.QApplication) -> None:

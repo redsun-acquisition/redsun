@@ -64,10 +64,13 @@ def test_a_failing_plan_unlocks(RE: RunEngine) -> None:
 
 def test_a_lock_replayed_after_a_rewind_is_released_once(RE: RunEngine) -> None:
     """Release once a lock that resuming a paused plan replays."""
+    after: list[frozenset[str]] = []
 
     def plan() -> MsgGenerator[None]:
         yield from bps.checkpoint()
         yield from rps.lock_wrapper(bps.pause(), Device(name="stage"))
+        yield from bps.null()
+        after.append(RE.locked)
 
     with pytest.raises(RunEngineInterrupted):
         RE(plan()).result(timeout=10)
@@ -75,7 +78,7 @@ def test_a_lock_replayed_after_a_rewind_is_released_once(RE: RunEngine) -> None:
 
     RE.resume().result(timeout=10)
 
-    assert RE.locked == frozenset()
+    assert after == [frozenset()]
 
 
 def test_a_halted_plan_unlocks(RE: RunEngine) -> None:

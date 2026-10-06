@@ -1,8 +1,9 @@
 """Pytest fixtures for testing components, sessions and services.
 
 A suite loads them with `-p redsun.testing`, in `addopts` or on the command
-line. Loading them makes every test write session logs, acquisition data and
-catalogs under its `tmp_path`, and drop the psygnal emissions it left queued.
+line. Loading them makes every test keep session settings, session logs,
+acquisition data and catalogs under its `tmp_path`, and drop the `psygnal`
+emissions it left queued.
 The module defines no `qapp`, so it combines with `pytest-qt`.
 """
 
@@ -81,6 +82,9 @@ def build() -> Generator[BuildSession, None, None]:
     It takes a session class, made with the configuration given and laid over
     what the class declares, or a session already made. Sessions are shut
     down in reverse order; one the test shut down itself runs nothing again.
+    A shutdown that raises does not stop the others: once every session has
+    been shut down, the fixture raises that error, or an `ExceptionGroup` of
+    all of them when more than one session raised.
     """
     built: list[Session] = []
 
@@ -95,8 +99,16 @@ def build() -> Generator[BuildSession, None, None]:
         return session
 
     yield build_one
+    errors: list[Exception] = []
     for session in reversed(built):
-        session.shutdown()
+        try:
+            session.shutdown()
+        except Exception as e:  # noqa: BLE001 - raised once every session is shut down
+            errors.append(e)
+    if len(errors) == 1:
+        raise errors[0]
+    if errors:
+        raise ExceptionGroup("sessions could not shut down", errors)
 
 
 @pytest.fixture(autouse=True)
@@ -125,13 +137,12 @@ def data_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return root
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """Keep saved session settings under `tmp_path`."""
-    monkeypatch.setattr(
-        "redsun._settings.user_config_dir", lambda *a, **k: str(tmp_path)
-    )
-    return tmp_path
+    """Keep saved session settings in a `config` folder under `tmp_path`."""
+    root = tmp_path / "config"
+    monkeypatch.setattr("redsun._settings.user_config_dir", lambda *a, **k: str(root))
+    return root
 
 
 @pytest.fixture(autouse=True)

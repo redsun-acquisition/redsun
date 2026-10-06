@@ -15,11 +15,12 @@ from bluesky.utils import FailedStatus, IllegalMessageSequence, RunEngineInterru
 from ophyd_async.core import AsyncStatus, Device, WatchableAsyncStatus, WatcherUpdate
 
 import redsun.engine.plan_stubs as rps
+from redsun.aio import run_coro
+from tests.sdk.mocks import PlainStatus
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
-    from bluesky.protocols import Status
     from bluesky.utils import MsgGenerator
 
     from redsun.engine import ProgressState, RunEngine
@@ -62,35 +63,6 @@ class SlowMover(Device):
         yield WatcherUpdate(current=0.0, initial=0.0, target=value, name=self.name)
         await asyncio.sleep(0.3)
         yield WatcherUpdate(current=value, initial=0.0, target=value, name=self.name)
-
-
-class ThreadedStatus:
-    """A status finished by a worker thread, as an `ophyd` status is."""
-
-    def __init__(self) -> None:
-        self._done = False
-        self._callbacks: list[Callable[[Status], None]] = []
-
-    @property
-    def done(self) -> bool:
-        """Whether the worker has finished the status."""
-        return self._done
-
-    @property
-    def success(self) -> bool:
-        """Whether the status finished well, which it always does here."""
-        return self._done
-
-    def add_callback(self, callback: Callable[[Status], None]) -> None:
-        self._callbacks.append(callback)
-
-    def exception(self, timeout: float | None = 0.0) -> BaseException | None:
-        return None
-
-    def finish(self) -> None:
-        self._done = True
-        for callback in self._callbacks:
-            callback(self)
 
 
 def monitored_after_declared() -> MsgGenerator[None]:
@@ -183,7 +155,7 @@ def test_a_nested_scope_follows_its_parent_and_names_it(RE: RunEngine) -> None:
 def test_a_scope_used_out_of_order_is_refused(
     RE: RunEngine, plan: Callable[[], MsgGenerator[None]]
 ) -> None:
-    """Refuse a scope declared twice, one under a missing parent, or an update of none."""
+    """Refuse each use of a scope that breaks the order of declare, follow and update."""
     with pytest.raises(IllegalMessageSequence):
         RE(plan()).result(timeout=10)
 
@@ -253,7 +225,7 @@ def test_a_scope_reports_how_far_it_has_got(
     update: dict[str, Any],
     expected: tuple[float | None, float | None, float | None, float | None],
 ) -> None:
-    """Take a reported fraction as given, compute one from numbers, else report none."""
+    """Report the current, initial, target and fraction an update gives, dropping what is not a finite number."""
     seen = record(RE)
 
     def plan() -> MsgGenerator[None]:
@@ -347,35 +319,45 @@ def test_a_watchable_status_fills_its_scope(RE: RunEngine) -> None:
 def test_a_plain_status_keeps_a_busy_scope_until_done(RE: RunEngine) -> None:
     """Keep a scope with no end while a silent move runs, and drop it after."""
     seen = record(RE)
+    shown: list[tuple[ProgressState, ...]] = []
 
     def plan() -> MsgGenerator[None]:
         status = yield from bps.abs_set(
             PlainMover(name="stage"), 1.0, wait=False, group="move"
         )
         yield from rps.monitor_progress("move", status)
+        shown.append(seen[-1])
         yield from bps.wait(group="move")
+        shown.append(seen[-1])
 
     RE(plan()).result(timeout=10)
 
-    assert seen[0][0].fraction is None
-    assert seen[-1] == ()
+    moving, moved = shown
+    assert [state.name for state in moving] == ["move"]
+    assert moving[0].fraction is None
+    assert moved == ()
 
 
 def test_a_failed_status_closes_its_scope(RE: RunEngine) -> None:
     """Drop the scope of a move that fails, and let the plan's wait raise."""
     seen = record(RE)
 
+    shown: list[tuple[ProgressState, ...]] = []
+
     def plan() -> MsgGenerator[None]:
         status = yield from bps.abs_set(
             PlainMover(name="stage"), 99, wait=False, group="move"
         )
         yield from rps.monitor_progress("move", status)
-        yield from bps.wait(group="move")
+        try:
+            yield from bps.wait(group="move")
+        finally:
+            shown.append(seen[-1])
 
     with pytest.raises(FailedStatus):
         RE(plan()).result(timeout=10)
 
-    assert seen[-1] == ()
+    assert shown == [()]
 
 
 def test_a_status_done_before_it_is_passed_closes_its_scope_at_once(
@@ -404,6 +386,7 @@ def test_a_status_outliving_its_plan_brings_no_bar_back(RE: RunEngine) -> None:
     RE(plan()).result(timeout=10)
     reported = len(seen)
     assert finished.wait(timeout=5)
+    run_coro(asyncio.sleep(0))  # whatever the callback queued on the loop has run
 
     assert seen[-1] == ()
     assert len(seen) == reported
@@ -413,7 +396,7 @@ def test_a_status_finished_on_another_thread_reports_on_the_engine_thread(
     RE: RunEngine,
 ) -> None:
     """Announce every change, a scope finished by a worker included, from the engine's thread."""
-    status = ThreadedStatus()
+    status = PlainStatus(done=False)
     threads: list[int] = []
     RE.sig_progress.connect(lambda _: threads.append(threading.get_ident()))
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-import time
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
@@ -12,10 +11,10 @@ import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 
-from redsun import HasActions
+from redsun.aio import get_shared_loop
 from redsun.engine.actions import ActionManager
 from redsun.path_provider import SessionPathProvider
-from redsun.presenter import AcquisitionPresenter, DescribesPlans
+from redsun.presenter import AcquisitionPresenter
 from tests.sdk.mocks import MockDetector, QuietAxis
 
 if TYPE_CHECKING:
@@ -52,6 +51,7 @@ class Plans:
             "rest": {"plan": self.rest},
             "broken": {"plan": self.broken},
             "hold": {"plan": self.hold},
+            "pausable": {"plan": self.pausable},
             "read": {"plan": self.read},
             "guarded": {"plan": self.guarded},
         }
@@ -69,6 +69,13 @@ class Plans:
         """Keep the engine busy until stopped, saying when it has begun."""
         self.running.set()
         yield from bps.sleep(30)
+
+    def pausable(self) -> MsgGenerator[None]:
+        """Keep the engine busy, with a checkpoint to pause at, until stopped."""
+        self.running.set()
+        while True:
+            yield from bps.checkpoint()
+            yield from bps.sleep(0.01)
 
     def read(self, device: Readable[Any]) -> MsgGenerator[None]:
         """Read one device."""
@@ -127,11 +134,13 @@ class RecordedPaths(SessionPathProvider):
 
 @pytest.fixture
 def plans() -> Plans:
+    """Return the plans the presenter is given."""
     return Plans()
 
 
 @pytest.fixture
 def paths(tmp_path: Path) -> RecordedPaths:
+    """Return the path provider recording what the presenter asks for."""
     return RecordedPaths(tmp_path)
 
 
@@ -139,22 +148,13 @@ def paths(tmp_path: Path) -> RecordedPaths:
 def presenter(
     plans: Plans, paths: RecordedPaths, detector: MockDetector
 ) -> Generator[AcquisitionPresenter, None, None]:
+    """Return an acquisition presenter set up with the plans and paths, shut down afterwards."""
     acquisition = AcquisitionPresenter(
         "acquisition", devices={"det1": detector, "plain": QuietAxis("plain")}
     )
     acquisition.setup({"plans": plans, "unreadable": Unreadable()}, {}, paths)
     yield acquisition
     acquisition.shutdown()
-
-
-def wait_until(condition: Callable[[], bool], timeout: float = 5) -> bool:
-    """Return whether *condition* holds within *timeout* seconds."""
-    deadline = time.monotonic() + timeout
-    while not condition():
-        if time.monotonic() > deadline:
-            return False
-        time.sleep(0.01)
-    return True
 
 
 def record(
@@ -239,9 +239,15 @@ def test_a_stop_right_after_launch_stops_the_plan(
 ) -> None:
     """Stop a plan asked to stop before the engine has started it."""
     seen, ended = record(presenter)
-
-    presenter.launch("hold", {})
-    presenter.stop()
+    loop_free = threading.Event()
+    # the engine enters its running state on the shared loop, so a held
+    # loop keeps the plan launched but not started
+    get_shared_loop().call_soon_threadsafe(loop_free.wait, 10)
+    try:
+        presenter.launch("hold", {})
+        presenter.stop()
+    finally:
+        loop_free.set()
 
     assert ended.wait(10)
     assert seen == [("started", "hold"), ("done", "hold")]
@@ -263,20 +269,23 @@ def test_pause_resume_and_stop_with_no_plan_running_are_ignored(
 
 
 def test_a_paused_plan_reports_nothing_until_it_is_stopped(
-    presenter: AcquisitionPresenter, plans: Plans
+    presenter: AcquisitionPresenter,
+    plans: Plans,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Report no end on a pause, and a single done once the paused plan is stopped."""
     seen, ended = record(presenter)
-    presenter.launch("hold", {})
+    presenter.launch("pausable", {})
     assert plans.running.wait(10)
 
     presenter.pause()
-    paused = ended.wait(1)
+    assert wait_until(lambda: presenter.engine().state == "paused", timeout=10)
+    reported_while_paused = ended.is_set()
     presenter.stop()
 
     assert ended.wait(10)
-    assert paused is False
-    assert seen == [("started", "hold"), ("done", "hold")]
+    assert not reported_while_paused
+    assert seen == [("started", "pausable"), ("done", "pausable")]
 
 
 def test_a_plan_no_widget_can_show_is_left_out(
@@ -285,8 +294,14 @@ def test_a_plan_no_widget_can_show_is_left_out(
     """Offer every readable plan and leave out, with a warning, each one that cannot be read."""
     warnings = " ".join(r.getMessage() for r in caplog.get_records("setup"))
 
-    assert isinstance(presenter, DescribesPlans)
-    assert set(presenter.plans) == {"rest", "broken", "hold", "read", "guarded"}
+    assert set(presenter.plans) == {
+        "rest",
+        "broken",
+        "hold",
+        "pausable",
+        "read",
+        "guarded",
+    }
     assert ("'odd'" in warnings, "'flat'" in warnings) == (True, True)
 
 
@@ -305,7 +320,6 @@ def test_actions_are_relayed_and_requests_reach_the_running_plan(
     presenter.stop()
 
     assert ended.wait(10)
-    assert isinstance(plans, HasActions)
     assert changes == [("go", "offered")]
     assert plans.actions.requested == [("go", True)]
 
@@ -329,12 +343,14 @@ def test_a_refused_base_directory_is_logged(
     """Log a base directory the path provider refuses, and report a new one."""
     changes: list[object] = []
     presenter.sig_base_dir_changed.connect(changes.append)
+    accepted = tmp_path / "data"
 
-    presenter.set_base_dir(tmp_path / "data")
+    presenter.set_base_dir(accepted)
     paths.lock_base_dir("a plan is writing")
     presenter.set_base_dir(tmp_path / "elsewhere")
 
-    assert changes == [tmp_path / "data"]
+    assert changes == [accepted]
+    assert presenter.base_dir == accepted
     assert "base directory" in caplog.text
 
 
@@ -350,14 +366,18 @@ def test_shutdown_aborts_a_running_plan_after_its_cleanup_without_a_report(
 
     presenter.shutdown()
     cleaned = plans.cleaned.is_set()
+    # the future's callbacks may run just after the wait in shutdown returns
+    reported = ended.wait(0.1)
 
     assert cleaned
-    assert not ended.wait(1)
+    assert not reported
     assert [kind for kind, *_ in seen] == ["started"]
 
 
 def test_resuming_before_the_pause_is_reached_withdraws_it(
-    presenter: AcquisitionPresenter, plans: Plans
+    presenter: AcquisitionPresenter,
+    plans: Plans,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Withdraw a pause no checkpoint has reached, and report the plan done when stopped."""
     seen, ended = record(presenter)
@@ -366,16 +386,11 @@ def test_resuming_before_the_pause_is_reached_withdraws_it(
 
     presenter.pause()
     presenter.resume()
-    withdrawn = wait_until(lambda: not presenter.engine().deferred_pause_requested)
+    withdrawn = wait_until(
+        lambda: not presenter.engine().deferred_pause_requested, timeout=5
+    )
     presenter.stop()
 
     assert ended.wait(10)
     assert withdrawn
     assert seen == [("started", "hold"), ("done", "hold")]
-
-
-def test_the_base_directory_is_described(
-    presenter: AcquisitionPresenter, paths: RecordedPaths
-) -> None:
-    """Describe the directory runs write under before any change is reported."""
-    assert presenter.base_dir == paths.base_dir

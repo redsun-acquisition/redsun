@@ -21,12 +21,14 @@ if TYPE_CHECKING:
     from bluesky.utils import MsgGenerator
 
 
-class Recorder:
+class OrderLog:
     """Records what happened in which order, from the plan and from a change."""
 
     def __init__(self) -> None:
         self.order: list[str] = []
         self.applied = threading.Event()
+        self.inside = threading.Event()
+        self.gate = asyncio.Event()
         self.future: Future[Any] | None = None
 
     async def apply(self) -> None:
@@ -41,47 +43,65 @@ class Recorder:
         self.order.append("failed")
         raise RuntimeError("no such setting")
 
-    def plan(self, pause: float = 0.3) -> MsgGenerator[None]:
+    async def hold(self) -> None:
+        self.inside.set()
+        await self.gate.wait()
+        self.order.append("message end")
+
+    def plan(self) -> MsgGenerator[None]:
         self.order.append("first")
-        yield from bps.sleep(pause)
+        yield from bps.wait_for([self.hold])
         yield from bps.null()
         self.order.append("second")
 
 
 @pytest.fixture
-def running(
-    RE: RunEngine, wait_until: Callable[..., bool]
-) -> Callable[[Recorder], None]:
-    """Return a function starting a recorder's plan and waiting until it runs."""
+def running(RE: RunEngine) -> Callable[[OrderLog], None]:
+    """Return a function starting a recorder's plan and waiting inside its first message."""
 
-    def start(recorder: Recorder) -> None:
+    def start(recorder: OrderLog) -> None:
         recorder.future = RE(recorder.plan())
-        assert wait_until(lambda: RE.state == "running")
-        time.sleep(0.05)
+        assert recorder.inside.wait(timeout=5)
 
     return start
 
 
+@pytest.fixture
+def finish(RE: RunEngine) -> Callable[[OrderLog], None]:
+    """Return a function ending a recorder's first message and waiting for its plan.
+
+    The gate opens through the engine's loop, after every change requested
+    before it has reached that loop.
+    """
+
+    def end(recorder: OrderLog) -> None:
+        RE.loop.call_soon_threadsafe(recorder.gate.set)
+        assert recorder.future is not None
+        recorder.future.result(timeout=5)
+
+    return end
+
+
 def test_a_change_during_a_plan_lands_between_two_messages(
-    RE: RunEngine, running: Callable[[Recorder], None]
+    RE: RunEngine,
+    running: Callable[[OrderLog], None],
+    finish: Callable[[OrderLog], None],
 ) -> None:
     """Apply a change requested during a plan between two of its messages."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
     running(recorder)
 
     deferrals.request(recorder.apply)
+    finish(recorder)
 
-    assert not recorder.applied.is_set()
-    assert recorder.future is not None
-    recorder.future.result(timeout=5)
-    assert recorder.order == ["first", "applied", "second"]
+    assert recorder.order == ["first", "message end", "applied", "second"]
 
 
 def test_a_change_while_no_plan_runs_is_applied_at_once(RE: RunEngine) -> None:
     """Apply a change at once when no plan runs, and complete its future."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
 
     deferrals.request(recorder.apply).result(timeout=5)
 
@@ -93,52 +113,52 @@ def test_a_change_asked_for_from_a_loop_does_not_block_it(
 ) -> None:
     """Accept a change requested from the shared loop without blocking it."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
 
     async def ask() -> None:
         deferrals.request(recorder.apply)
 
-    run_coro(ask())
+    run_coro(ask(), timeout=5)
 
     assert wait_until(recorder.applied.is_set, timeout=2.0)
 
 
 def test_a_change_that_fails_is_logged_and_the_next_still_applied(
     RE: RunEngine,
-    running: Callable[[Recorder], None],
+    running: Callable[[OrderLog], None],
+    finish: Callable[[OrderLog], None],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Log a failing change and still apply the changes after it."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
     running(recorder)
 
     with caplog.at_level(logging.ERROR, logger="redsun"):
         deferrals.request(recorder.fail)
         deferrals.request(recorder.apply)
-        assert recorder.future is not None
-        recorder.future.result(timeout=5)
+        finish(recorder)
 
-    assert recorder.order == ["first", "failed", "applied", "second"]
+    assert recorder.order == ["first", "message end", "failed", "applied", "second"]
     assert "A deferred change failed" in caplog.text
 
 
 def test_a_change_runs_before_the_next_message_without_replaying_any(
-    RE: RunEngine, running: Callable[[Recorder], None]
+    RE: RunEngine,
+    running: Callable[[OrderLog], None],
+    finish: Callable[[OrderLog], None],
 ) -> None:
-    """Apply a change without suspending the plan or running any message twice."""
+    """Apply a change after the message under way and run no message twice."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
     seen: list[str] = []
     RE.msg_hook = lambda msg: seen.append(msg.command)  # type: ignore[assignment]
     running(recorder)
 
     deferrals.request(recorder.apply)
-    assert recorder.future is not None
-    recorder.future.result(timeout=5)
+    finish(recorder)
 
-    assert recorder.order == ["first", "applied", "second"]
-    assert seen.count("sleep") == 1
+    assert recorder.order == ["first", "message end", "applied", "second"]
     assert seen.count("null") == 1
 
 
@@ -147,7 +167,7 @@ def test_a_change_during_the_last_message_is_applied_before_the_plan_returns(
 ) -> None:
     """Apply a change made during the last message before the plan returns."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
     future = RE(bps.sleep(0.3))
     assert wait_until(lambda: RE.state == "running")
     time.sleep(0.05)
@@ -163,7 +183,7 @@ def test_a_change_left_by_a_halted_plan_is_applied_once_idle(
 ) -> None:
     """Apply a change left pending by a halted plan once the engine is idle."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
     RE(bps.sleep(5))
     assert wait_until(lambda: RE.state == "running")
     time.sleep(0.05)
@@ -177,12 +197,13 @@ def test_a_change_left_by_a_halted_plan_is_applied_once_idle(
 
 def test_a_cancelled_change_is_dropped_and_the_next_still_applied(
     RE: RunEngine,
-    running: Callable[[Recorder], None],
+    running: Callable[[OrderLog], None],
+    finish: Callable[[OrderLog], None],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Drop a change whose request was cancelled, and apply the one queued after it."""
     deferrals = Deferrals(RE)
-    recorder = Recorder()
+    recorder = OrderLog()
     running(recorder)
 
     async def dropped() -> None:
@@ -190,8 +211,7 @@ def test_a_cancelled_change_is_dropped_and_the_next_still_applied(
 
     deferrals.request(dropped).cancel()
     deferrals.request(recorder.apply)
+    finish(recorder)
 
-    assert recorder.future is not None
-    recorder.future.result(timeout=5)
-    assert recorder.order == ["first", "applied", "second"]
+    assert recorder.order == ["first", "message end", "applied", "second"]
     assert not [r for r in caplog.records if r.levelno >= logging.ERROR]

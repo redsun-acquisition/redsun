@@ -8,77 +8,93 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
+from mock_bundle.hooks import MockBoth, MockBranding, MockStyle
+from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
 
 from redsun import (
+    AsDevice,
     AsHook,
     AsPresenter,
     AsView,
     ConfiguresApplication,
     Declare,
     HookError,
+    Placement,
     Serves,
     Session,
 )
 from redsun.qt import Dock, QtHook, QtSession
-from redsun.session import BUILD_STEPS
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator
+    from collections.abc import Callable, Generator
+
+    from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
-
-
-class Styler:
-    """Serves `configure_application`, recording what it was handed."""
-
-    def __init__(self, style: str = "plain") -> None:
-        self.style = style
-        self.seen: list[Any] = []
-
-    def configure_application(self, app: QApplication) -> None:
-        """Record *app* rather than styling it."""
-        self.seen.append(app)
-
-
-class Brander:
-    """Serves `configure_main_view` by retitling the window."""
-
-    def configure_main_view(self, view: QMainWindow) -> None:
-        """Retitle *view*, so the call is visible from outside."""
-        view.setWindowTitle("branded")
-
-
-class Both(Styler, Brander):
-    """One provider for two points, to show that one object serves both."""
 
 
 class Splash:
     """Serves `during_build`, recording the span and every step inside it."""
 
-    entered = 0
-    exited = 0
-    steps: ClassVar[list[str]] = []
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
 
     @contextmanager
     def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
         """Open for the whole build, collecting the name of each step."""
-        type(self).entered += 1
+        self.log.append("enter")
         try:
-            yield type(self).steps.append
+            yield self.log.append
         finally:
-            type(self).exited += 1
+            self.log.append("exit")
+
+
+class Gauge(Device):
+    """Device recording its construction."""
+
+    def __init__(self, name: str, log: list[str]) -> None:
+        log.append("device built")
+        super().__init__(name=name)
+
+
+class Tracker:
+    """Presenter recording its construction."""
+
+    def __init__(self, name: str, log: list[str]) -> None:
+        self.name = name
+        log.append("presenter built")
+
+
+class Board(QWidget):
+    """View recording its construction."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget, log: list[str]) -> None:
+        super().__init__(parent)
+        self.name = name
+        log.append("view built")
 
 
 class Founder:
-    """Serves `create_application` by handing back the running one."""
+    """Serves `create_application` by handing back the application it was given."""
 
-    seen: ClassVar[list[list[str]]] = []
+    def __init__(self, app: QApplication) -> None:
+        self.app = app
+        self.seen: list[list[str]] = []
 
     def create_application(self, argv: list[str]) -> QApplication:
-        """Record *argv* and return the application the test session owns."""
-        type(self).seen.append(argv)
-        return cast("QApplication", QApplication.instance())
+        """Record *argv* and return the application given at construction."""
+        self.seen.append(argv)
+        return self.app
+
+
+class Forgetful:
+    """Serves `create_application` but returns nothing, as a missing `return` would."""
+
+    def create_application(self, argv: list[str]) -> None:
+        """Return nothing."""
 
 
 class Heir(ConfiguresApplication[QApplication]):
@@ -96,39 +112,30 @@ class NotAHook:
     """Declares none of the methods any point calls."""
 
 
-CLOSED: list[str] = []
-"""The hook providers shut down, in order."""
-
-
-class ClosingPair(Both):
+class ClosingPair(MockBoth):  # type: ignore[misc]
     """Serves two points, and records its shutdown."""
 
+    def __init__(self, closed: list[str]) -> None:
+        super().__init__()
+        self.closed = closed
+
     def shutdown(self) -> None:
-        CLOSED.append("pair")
+        self.closed.append("pair")
 
 
-class ClosingSplash(Splash):
+class ClosingSplash:
     """Serves `during_build`, and records its shutdown."""
 
+    def __init__(self, closed: list[str]) -> None:
+        self.closed = closed
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        """Open for the whole build."""
+        yield lambda step: None
+
     def shutdown(self) -> None:
-        CLOSED.append("splash")
-
-
-class Counter:
-    """The presenter a build needs for the presenters step to happen."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-
-class Panel(QWidget):
-    """The view a build needs for the views step to happen."""
-
-    placement = Dock("left")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
+        self.closed.append("splash")
 
 
 class Unanswerable:
@@ -142,22 +149,17 @@ class Unanswerable:
         self.name = name
 
 
-@pytest.fixture(autouse=True)
-def _reset() -> Iterator[None]:
-    """Clear the class-level records the providers keep between tests."""
-    Splash.entered = 0
-    Splash.exited = 0
-    Splash.steps = []
-    Founder.seen = []
-    CLOSED.clear()
-    yield
+@pytest.fixture
+def log() -> list[str]:
+    """Return what the hook providers record, in order."""
+    return []
 
 
 def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
     """Refuse a hook on a plain session, which calls no hook points."""
 
     class Headless(Session):
-        configure_application: AsHook[Styler]
+        configure_application: AsHook[MockStyle]
 
     with pytest.raises(HookError, match="it calls none"):
         Headless().build()
@@ -165,28 +167,28 @@ def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
 
 def test_a_hook_runs_at_the_point_its_attribute_names(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Run a hook at the hook point named by its attribute."""
 
     class App(QtSession):
-        configure_application: AsHook[Styler]
+        configure_application: AsHook[MockStyle]
 
     app = build(App)
-    installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.seen == [qapp]
 
 
 def test_the_installed_hook_points_are_logged_one_per_line(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Log each hook point with a provider on a line of its own."""
 
     class App(QtSession):
-        configure_application: AsHook[Styler]
-        configure_main_view: AsHook[Brander]
+        configure_application: AsHook[MockStyle]
+        configure_main_view: AsHook[MockBranding]
 
     caplog.set_level(logging.DEBUG, logger="redsun")
     build(App)
@@ -201,7 +203,7 @@ def test_the_installed_hook_points_are_logged_one_per_line(
 
 def test_a_provider_may_inherit_the_protocol_of_its_point(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Accept a provider that subclasses its hook point's protocol."""
 
@@ -215,27 +217,27 @@ def test_a_provider_may_inherit_the_protocol_of_its_point(
 
 def test_declare_carries_the_providers_arguments(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Pass Declare arguments to the hook provider's constructor."""
 
     class App(QtSession):
-        configure_application: Annotated[AsHook[Styler], Declare(style="dark")]
+        configure_application: Annotated[AsHook[MockStyle], Declare(style="dark")]
 
     app = build(App)
-    installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.style == "dark"
 
 
 def test_one_annotation_serves_several_points(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Use one provider instance for every point listed in Serves."""
 
     class App(QtSession):
         pair: Annotated[
-            AsHook[Both],
+            AsHook[MockBoth],
             Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_MAIN_VIEW),
         ]
 
@@ -247,29 +249,35 @@ def test_one_annotation_serves_several_points(
 
 def test_shutdown_reaches_each_provider_once_the_last_built_first(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
+    log: list[str],
 ) -> None:
     """Shut down each hook provider once, in reverse build order."""
+    pair = {"provider": f"{__name__}:ClosingPair", "kwargs": {"closed": log}}
+    splash = {"provider": f"{__name__}:ClosingSplash", "kwargs": {"closed": log}}
 
     class App(QtSession):
-        pair: Annotated[
-            AsHook[ClosingPair],
-            Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_MAIN_VIEW),
-        ]
-        during_build: AsHook[ClosingSplash]
+        pass
 
-    app = build(App)
+    config = {
+        "hooks": {
+            "configure_application": pair,
+            "configure_main_view": pair,
+            "during_build": splash,
+        }
+    }
+    app = build(App, config)
     app.shutdown()
 
-    assert CLOSED == ["splash", "pair"]
+    assert log == ["splash", "pair"]
 
 
 def test_two_declarations_may_not_claim_one_point() -> None:
     """Refuse two declarations claiming the same hook point."""
 
     class App(QtSession):
-        first: Annotated[AsHook[Styler], Serves(QtHook.CONFIGURE_APPLICATION)]
-        second: Annotated[AsHook[Both], Serves(QtHook.CONFIGURE_APPLICATION)]
+        first: Annotated[AsHook[MockStyle], Serves(QtHook.CONFIGURE_APPLICATION)]
+        second: Annotated[AsHook[MockBoth], Serves(QtHook.CONFIGURE_APPLICATION)]
 
     with pytest.raises(HookError, match="both claim the hook point"):
         App().build()
@@ -279,7 +287,7 @@ def test_a_point_the_container_does_not_call_is_refused() -> None:
     """Refuse a hook point the session does not call, listing the valid ones."""
 
     class App(QtSession):
-        configure_applications: AsHook[Styler]
+        configure_applications: AsHook[MockStyle]
 
     with pytest.raises(HookError, match="expected one of: create_application"):
         App().build()
@@ -297,7 +305,7 @@ def test_a_provider_missing_the_method_is_refused() -> None:
 
 def test_the_configuration_names_a_provider(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Install a hook provider named in the configuration, with its kwargs."""
 
@@ -319,7 +327,7 @@ def test_one_point_may_not_be_named_twice_over() -> None:
     """Refuse a hook point named both on the class and in the configuration."""
 
     class App(QtSession):
-        configure_main_view: AsHook[Brander]
+        configure_main_view: AsHook[MockBranding]
         config: ClassVar[dict[str, Any]] = {
             "hooks": {
                 "configure_main_view": {"provider": "mock_bundle.hooks:MockBranding"}
@@ -332,7 +340,7 @@ def test_one_point_may_not_be_named_twice_over() -> None:
 
 def test_an_entry_two_points_share_is_one_provider(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Build one provider for one configuration entry shared by two points."""
     shared = {"provider": "mock_bundle.hooks:MockBoth"}
@@ -379,62 +387,104 @@ def test_the_configuration_may_not_name_a_point_the_session_does_not_call(
         session({"hooks": hooks}).build()
 
 
-def test_during_build_brackets_the_build_and_names_every_step(
+def test_the_build_runs_its_steps_in_order(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
+    log: list[str],
 ) -> None:
-    """Enter the `during_build` hook once around the build and report every step."""
+    """Report each step to `during_build` as it starts, and build each layer in it."""
 
     class App(QtSession):
-        during_build: AsHook[Splash]
-        ctrl: AsPresenter[Counter]
-        panel: AsView[Panel]
+        gauge: AsDevice[Gauge]
+        tracker: AsPresenter[Tracker]
+        board: AsView[Board]
 
-    build(App)
-    assert Splash.entered == 1
-    assert Splash.exited == 1
-    assert Splash.steps == list(BUILD_STEPS)
-    assert Splash.steps == [
+    config = {
+        "devices": {"gauge": {"log": log}},
+        "presenters": {"tracker": {"log": log}},
+        "views": {"board": {"log": log}},
+        "hooks": {
+            "during_build": {
+                "provider": f"{__name__}:Splash",
+                "kwargs": {"log": log},
+            }
+        },
+    }
+    build(App, config)
+    assert log == [
+        "enter",
         "services",
         "devices",
+        "device built",
         "connect",
         "registry",
         "presenters",
+        "presenter built",
         "views",
+        "view built",
         "setup",
         "seal",
         "wiring",
         "presentation",
         "report",
+        "exit",
     ]
 
 
-def test_the_span_closes_on_a_failed_build() -> None:
+def test_the_span_closes_on_a_failed_build(log: list[str]) -> None:
     """Exit the `during_build` hook when the build raises."""
 
     class App(QtSession):
-        during_build: AsHook[Splash]
         broken: AsPresenter[Unanswerable]
 
+    config = {
+        "hooks": {
+            "during_build": {
+                "provider": f"{__name__}:Splash",
+                "kwargs": {"log": log},
+            }
+        }
+    }
     with pytest.raises(TypeError, match="which nothing in the session provides"):
-        App().build()
-    assert Splash.entered == 1
-    assert Splash.exited == 1
+        App(config).build()
+    assert log.count("enter") == 1
+    assert log[-1] == "exit"
 
 
 def test_create_application_is_consulted_only_with_none_running(
     qapp: QApplication,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Call the `create_application` hook only when no QApplication is running."""
 
     class App(QtSession):
-        create_application: AsHook[Founder]
+        configure_application: AsHook[MockStyle]
 
-    App().build().shutdown()
-    assert Founder.seen == []
+    founding = {"provider": f"{__name__}:Founder", "kwargs": {"app": qapp}}
+    config = {"hooks": {"create_application": founding}}
+    first = build(App, config)
+    unused = cast("Founder", first.hooks[QtHook.CREATE_APPLICATION])
+    first.shutdown()
 
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
-    build(App)
-    assert Founder.seen == [sys.argv]
+    second = build(App, config)
+    founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION])
+    styler = cast("MockStyle", second.hooks[QtHook.CONFIGURE_APPLICATION])
+
+    assert unused.seen == []
+    assert founder.seen == [sys.argv]
+    assert styler.seen == [qapp]
+
+
+def test_a_create_application_hook_returning_nothing_is_refused(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Refuse to build when the `create_application` hook returns no QApplication."""
+
+    class App(QtSession):
+        create_application: AsHook[Forgetful]
+
+    monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
+    with pytest.raises(HookError, match="'Forgetful' at 'create_application'"):
+        App().build()

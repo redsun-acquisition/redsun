@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 import time
 from pathlib import Path
@@ -132,7 +133,7 @@ def test_a_profile_without_a_log_file_is_named_from_its_start(tmp_path: Path) ->
         session.build()
 
     (written,) = profiles(tmp_path)
-    assert written.name[:4].isdigit()
+    assert re.fullmatch(r"\d{4}(-\d{2}){2}T\d{2}(-\d{2}){2}_\d+\.html", written.name)
 
 
 def test_the_default_folder_keeps_the_most_recent_profiles(

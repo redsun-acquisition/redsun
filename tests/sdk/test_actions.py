@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -25,6 +24,7 @@ STREAM = PlanAction(name="stream", toggle_states=("Start", "Stop"))
 
 @pytest.fixture
 def actions() -> ActionManager:
+    """Return an empty action manager."""
     return ActionManager()
 
 
@@ -34,21 +34,6 @@ def seen(actions: ActionManager) -> list[tuple[str, str]]:
     reported: list[tuple[str, str]] = []
     actions.sig_changed.connect(lambda name, state: reported.append((name, state)))
     return reported
-
-
-def _polls(engine: RunEngine) -> list[Msg]:
-    """Return a list gaining every poll for an action that *engine* runs.
-
-    A second poll says the first found nothing asked for.
-    """
-    polls: list[Msg] = []
-
-    def on_message(msg: Msg) -> None:
-        if msg.command == "wait_for_actions":
-            polls.append(msg)
-
-    engine.msg_hook = on_message  # type: ignore[assignment]
-    return polls
 
 
 async def test_srlatch_lifecycle() -> None:
@@ -73,21 +58,19 @@ async def test_srlatch_lifecycle() -> None:
     assert not latch.is_set()
 
 
-def test_a_latch_set_from_another_thread_wakes_the_plan(RE: RunEngine) -> None:
-    """Wake a waiting plan at once when its latch is set from another thread."""
+def test_a_latch_set_from_another_thread_wakes_the_plan(
+    RE: RunEngine, polls: list[Msg], wait_until: Callable[..., bool]
+) -> None:
+    """Wake a waiting plan before its poll ends when another thread sets its latch."""
     latch = SRLatch()
-    started = threading.Event()
-    RE.msg_hook = lambda msg: started.set()  # type: ignore[assignment]
 
-    # The set is forwarded to the latch's loop, so this 5 s poll is not waited out.
-    future = RE(rps.wait_for_actions({"go": latch}, poll_interval=5.0))
-    assert started.wait(5)
-    time.sleep(0.1)
+    future = RE(rps.wait_for_actions({"go": latch}, poll_interval=1.0))
+    assert wait_until(lambda: len(polls) >= 2)
     began = time.monotonic()
     latch.set()
 
     future.result(timeout=5)
-    assert time.monotonic() - began < 1.0
+    assert time.monotonic() - began < 0.5
 
 
 def test_a_clicked_and_a_pressed_action_run_from_offer_to_done(
@@ -152,12 +135,12 @@ def test_a_request_nothing_answers_is_logged_and_changes_no_state(
 
 def test_a_request_made_before_a_plan_waits_does_not_fire_later(
     RE: RunEngine,
+    polls: list[Msg],
     actions: ActionManager,
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
     """Ignore a request made before a plan starts waiting for the action."""
-    polls = _polls(RE)
     actions.request("snap")
 
     future = RE(actions.wait(SNAP, poll_interval=0.01))
@@ -169,12 +152,12 @@ def test_a_request_made_before_a_plan_waits_does_not_fire_later(
 
 def test_a_request_one_launch_left_unanswered_does_not_fire_in_the_next(
     RE: RunEngine,
+    polls: list[Msg],
     actions: ActionManager,
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
     """Discard a request a stopped plan left unanswered, so the next ignores it."""
-    polls = _polls(RE)
     first = RE(actions.wait(SNAP, poll_interval=0.01))
     assert wait_until(lambda: len(polls) >= 1)
     RE.stop().result(timeout=10)
@@ -192,12 +175,12 @@ def test_a_request_one_launch_left_unanswered_does_not_fire_in_the_next(
 
 def test_stopping_a_plan_that_waits_puts_what_it_offered_back_to_idle(
     RE: RunEngine,
+    polls: list[Msg],
     actions: ActionManager,
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
     """Return offered actions to idle when a waiting plan is stopped."""
-    polls = _polls(RE)
     future = RE(actions.wait(SNAP, STREAM))
     assert wait_until(lambda: len(polls) >= 1)
 

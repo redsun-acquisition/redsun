@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
-from pathlib import Path
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from p4p.client.thread import Context
 
 from redsun.services import Service, identity, ready, wait_for_stop
 from redsun.services._process import (
@@ -18,11 +20,13 @@ from redsun.services._process import (
 )
 from redsun.services._transports import (
     CHANNEL_ACCESS,
+    LOOPBACK,
     PV_ACCESS,
     TRANSPORTS,
     ChannelAccess,
     PVAccess,
 )
+from tests.sdk.helpers import messages
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -31,14 +35,13 @@ PROCESS_STAND_IN = "mock_pkg.service.process_stand_in"
 PROCESS_READY = "process stand-in ready"
 REACHABLE_STAND_IN = "mock_pkg.service.reachable_stand_in"
 REACHABLE_READY = "reachable stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 
 
 @pytest.fixture
-def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+def launch(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., Service]]:
     """Make process stand-ins, restoring the CA address list and stopping them after."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, ChannelAccess())
     made: list[Service] = []
 
@@ -58,17 +61,6 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     yield make
     for launched in made:
         launched.stop()
-
-
-@pytest.fixture
-def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
-    """Capture everything the `redsun` logger tree records, services included."""
-    caplog.set_level(logging.DEBUG, logger="redsun")
-    return caplog
-
-
-def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
-    return [r.getMessage() for r in caplog.records if r.levelno == level]
 
 
 @pytest.mark.parametrize("options", [(), ("--blocking",)])
@@ -103,7 +95,9 @@ def test_a_stale_ready_text_in_the_session_does_not_reach_a_service(
     service.start()
     service.stop()
 
-    assert "stale ready text" not in messages(service_log, logging.DEBUG)
+    output = messages(service_log, logging.DEBUG)
+    assert "asked to stop" in output
+    assert "stale ready text" not in output
 
 
 def test_ready_prints_nothing_without_a_declared_text(
@@ -122,6 +116,7 @@ async def test_a_service_run_alone_has_no_identity_and_keeps_waiting(
 ) -> None:
     """Report no identity and keep waiting for a stop request when no session launched the process."""
     monkeypatch.delenv(NAME_VARIABLE, raising=False)
+    monkeypatch.setattr(sys, "stdin", io.StringIO(""))
 
     assert identity() is None
     with pytest.raises(TimeoutError):
@@ -173,12 +168,12 @@ def test_a_service_logs_at_the_level_its_session_records_at(
 
 @pytest.mark.parametrize("options", [(), ("--late",)])
 def test_a_pva_service_is_ready_once_its_pv_answers(
+    launchable: None,
     options: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
     service_log: pytest.LogCaptureFixture,
 ) -> None:
     """Count a PVAccess service ready once its own PV answers, at once or after it starts late."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
     service = Service(
@@ -192,9 +187,12 @@ def test_a_pva_service_is_ready_once_its_pv_answers(
 
     try:
         service.start()
+        with Context("pva", conf={"EPICS_PVA_ADDR_LIST": LOOPBACK}) as client:
+            answered = client.get("REACH:VALUE", timeout=1.0)
     finally:
         service.stop()
 
+    assert answered == 0.0
     info = messages(service_log, logging.INFO)
     assert "Service 'reachable' started" in info
     assert "Service 'reachable' stopped with exit code 0" in info

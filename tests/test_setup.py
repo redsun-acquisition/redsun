@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, NewType, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 import pydantic
 import pytest
+from mock_bundle.keys import Absent, Readings
+from mock_bundle.views import Somewhere
 from psygnal import Signal
 
 from redsun import (
@@ -25,14 +27,6 @@ if TYPE_CHECKING:
 
     from redsun import Link
     from redsun.testing import BuildSession
-
-Readings = NewType("Readings", "dict[str, float]")
-Absent = NewType("Absent", str)
-
-
-@dataclass(frozen=True)
-class Somewhere(Placement):
-    """Stand-in placement: the core ships none, and no frontend is named here."""
 
 
 class Sharing:
@@ -101,19 +95,18 @@ class FrozenTaking:
 
 
 class Failing:
-    """Its `setup` raises, so what it would have assigned is missing."""
+    """Presenter whose `setup` raises."""
 
     sig_done = Signal(str)
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.ready = False
 
     def setup(self, readings: Readings) -> None:
         raise RuntimeError("no readings")
 
     def report(self) -> str:
-        return f"{self.name}: ready={self.ready}"
+        return self.name
 
 
 class Reporting(Protocol):
@@ -312,7 +305,6 @@ def test_a_setup_that_raises_leaves_the_component_in_place(
         app = build(FailingApp)
 
     assert set(app.presenters) == {"failing", "sharing"}
-    assert app.failing.ready is False
     assert "Failed to set up presenter 'failing': no readings" in caplog.text
     assert "Not set up: failing (presenter)" in caplog.text
 

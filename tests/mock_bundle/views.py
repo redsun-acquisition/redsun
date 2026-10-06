@@ -48,6 +48,7 @@ class MockMotorView:
         self.readings: Readings = Readings({})
         self.missing = missing
         self.title = title
+        self.refreshed: tuple[str, float] | None = None
 
     def setup(self, callbacks: Mapping[str, CallbackType], readings: Readings) -> None:
         self.callbacks = callbacks

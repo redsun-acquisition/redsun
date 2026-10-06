@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import pytest
 from bluesky.utils import MsgGenerator
+from magicgui import widgets as mgw
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
@@ -17,15 +18,34 @@ from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
     PlanSpec,
-    _is_renderable,
+    UnresolvableAnnotationError,
     create_plan_spec,
 )
+from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
+from tests.sdk.mocks import DetectorProtocol, MotorProtocol, param
 
 pytestmark = pytest.mark.qt
 
 STREAM = PlanAction(name="stream", toggle_states=("Start", "Stop"))
+
+_ANNOTATIONS = [
+    pytest.param(int, id="int"),
+    pytest.param(float, id="float"),
+    pytest.param(str, id="str"),
+    pytest.param(bool, id="bool"),
+    pytest.param(Path, id="path"),
+    pytest.param(Sequence[int], id="sequence-int"),
+    pytest.param(list[str], id="list-str"),
+    pytest.param(Decimal, id="decimal"),
+    pytest.param(Any, id="any"),
+]
+"""Annotations a required plan parameter might carry, accepted or refused.
+
+Each is checked twice: whether `create_plan_spec` accepts it, and whether the
+Qt view can build a control for it.
+"""
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +57,7 @@ def _application(qapp: QtW.QApplication) -> None:
     """
 
 
-class Recorder:
+class Callback:
     """A document callback of the ordinary shape."""
 
     def __init__(self, name: str) -> None:
@@ -46,7 +66,7 @@ class Recorder:
     def __call__(self, name: str, doc: Any) -> None: ...
 
 
-CALLBACKS = {name: Recorder(name) for name in ("a", "b", "c", "own")}
+CALLBACKS = {name: Callback(name) for name in ("a", "b", "c", "own")}
 """Every callback the tests hand a plan widget, by name."""
 
 CATALOGUE = {name: CALLBACKS[name] for name in ("a", "b", "c")}
@@ -153,6 +173,13 @@ def _texts(widget: PlanWidget) -> list[str]:
     return [label.text() for label in labels]
 
 
+def _listed(pw: PlanWidget) -> list[str]:
+    """Return every entry of the callbacks list, checked or not, in order."""
+    assert pw.callbacks_list is not None
+    items = map(pw.callbacks_list.item, range(pw.callbacks_list.count()))
+    return [item.text() for item in items if item is not None]
+
+
 class TestActionButton:
     """Tests for ActionButton."""
 
@@ -228,24 +255,14 @@ class TestCreatePlanWidget:
         pw = create_plan_widget(_continuous_spec())
         assert pw.pause_button is None
 
-    def test_pausable_plan_has_pause_button(self) -> None:
-        """Give a pausable plan a pause button."""
-        pw = create_plan_widget(_pausable_spec())
-        assert pw.pause_button is not None
-
     def test_pausable_plan_pause_button_initially_disabled(self) -> None:
-        """Disable the pause button until the plan runs."""
+        """Give a pausable plan a pause button, disabled until the plan runs."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         assert not pw.pause_button.isEnabled()
 
-    def test_action_plan_has_actions_group(self) -> None:
-        """Give a plan with an action parameter an actions group."""
-        pw = create_plan_widget(_action_spec())
-        assert pw.actions_group is not None
-
     def test_action_plan_actions_group_initially_disabled(self) -> None:
-        """Disable the actions group until the plan runs."""
+        """Give a plan with an action an actions group, disabled until the plan runs."""
         pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
         assert not pw.actions_group.isEnabled()
@@ -277,7 +294,7 @@ class TestCreatePlanWidget:
             _continuous_spec(), toggle_callback=lambda checked: states.append(checked)
         )
         pw.run_button.setChecked(True)
-        assert True in states
+        assert states == [True]
 
     def test_parameters_returns_current_values(self) -> None:
         """Return the current parameter values by name."""
@@ -321,11 +338,74 @@ class TestCreatePlanWidget:
         assert pw.get_action_button("nonexistent") is None
 
 
-def _listed(pw: PlanWidget) -> list[str]:
-    """Return every entry of the callbacks list, checked or not, in order."""
-    assert pw.callbacks_list is not None
-    items = map(pw.callbacks_list.item, range(pw.callbacks_list.count()))
-    return [item.text() for item in items if item is not None]
+class TestCreateParamWidget:
+    """Tests for `create_param_widget`, which builds Qt widgets."""
+
+    def test_int_creates_spinbox(self) -> None:
+        """Build a SpinBox for an int parameter."""
+        w = create_param_widget(param("n", int))
+        assert isinstance(w, mgw.SpinBox)
+
+    def test_float_creates_float_spinbox(self) -> None:
+        """Build a FloatSpinBox for a float parameter."""
+        w = create_param_widget(param("x", float))
+        assert isinstance(w, mgw.FloatSpinBox)
+
+    def test_bool_creates_checkbox(self) -> None:
+        """Build a CheckBox for a bool parameter."""
+        w = create_param_widget(param("flag", bool, default=False))
+        assert isinstance(w, mgw.CheckBox)
+
+    def test_literal_creates_combobox(self) -> None:
+        """Build a ComboBox for a Literal parameter."""
+        p = param("egu", Literal["um", "mm"], choices=["um", "mm"])
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.ComboBox)
+
+    def test_single_device_creates_combobox(self) -> None:
+        """Build a ComboBox for a single device parameter."""
+        p = param(
+            "motor",
+            MotorProtocol,
+            choices=["stage"],
+            device_proto=MotorProtocol,
+        )
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.ComboBox)
+
+    def test_multiselect_device_creates_device_sequence_edit(self) -> None:
+        """Build a DeviceSequenceEdit for a multiple-choice device parameter."""
+        p = param(
+            "dets",
+            Sequence[DetectorProtocol],
+            choices=["cam"],
+            multiselect=True,
+            device_proto=DetectorProtocol,
+        )
+        w = create_param_widget(p)
+        assert isinstance(w, DeviceSequenceEdit)
+
+    def test_path_creates_file_edit(self) -> None:
+        """Build a FileEdit for a Path parameter."""
+        w = create_param_widget(param("output", Path))
+        assert isinstance(w, mgw.FileEdit)
+
+    def test_sequence_int_creates_list_edit(self) -> None:
+        """Build a ListEdit for a sequence of ints."""
+        w = create_param_widget(param("vals", Sequence[int]))
+        assert isinstance(w, mgw.ListEdit)
+
+    def test_hidden_param_creates_line_edit_placeholder(self) -> None:
+        """Build a LineEdit placeholder for a hidden parameter."""
+        p = param("secret", int, hidden=True)
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.LineEdit)
+
+    def test_action_param_creates_line_edit_placeholder(self) -> None:
+        """Build a LineEdit placeholder for an action parameter."""
+        p = param("snap", PlanAction, actions=PlanAction(name="snap"))
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.LineEdit)
 
 
 class TestCallbacksList:
@@ -437,13 +517,20 @@ class TestPlanWidgetControlAPI:
     def test_toggle_off_releases_a_plan_that_ended_while_paused(self) -> None:
         """Reset the run and pause buttons, calling nothing, when a paused plan ends."""
         toggled: list[bool] = []
-        pw = create_plan_widget(_pausable_spec(), toggle_callback=toggled.append)
+        paused: list[bool] = []
+        pw = create_plan_widget(
+            _pausable_spec(),
+            toggle_callback=toggled.append,
+            pause_callback=paused.append,
+        )
         assert pw.pause_button is not None
         pw.run_button.click()
+        pw.toggle(True)
         pw.pause_button.click()
         pw.pause(True)
         pw.toggle(False)
         assert toggled == [True]
+        assert paused == [True]
         assert not pw.run_button.isChecked()
         assert pw.run_button.isEnabled()
         assert not pw.pause_button.isChecked()
@@ -518,22 +605,6 @@ class TestPlanWidgetControlAPI:
         pw.enable_actions(False)
 
 
-#: Annotations a required plan parameter might carry, spanning both sides of
-#: the gate. Each is checked twice: whether `create_plan_spec` accepts it, and
-#: whether the Qt view can build a control for it.
-_ANNOTATIONS = [
-    pytest.param(int, id="int"),
-    pytest.param(float, id="float"),
-    pytest.param(str, id="str"),
-    pytest.param(bool, id="bool"),
-    pytest.param(Path, id="path"),
-    pytest.param(Sequence[int], id="sequence-int"),
-    pytest.param(list[str], id="list-str"),
-    pytest.param(Decimal, id="decimal"),
-    pytest.param(Any, id="any"),
-]
-
-
 @pytest.mark.parametrize("annotation", _ANNOTATIONS)
 def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
     """Accept a parameter type in a plan only when the Qt view can build its widget."""
@@ -552,7 +623,18 @@ def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
     else:
         renderable = True
 
-    assert _is_renderable(annotation) is renderable
+    def plan(x: object) -> MsgGenerator[None]:
+        yield from ()
+
+    plan.__annotations__["x"] = annotation
+    try:
+        create_plan_spec(plan, {})
+    except UnresolvableAnnotationError:
+        accepted = False
+    else:
+        accepted = True
+
+    assert accepted is renderable
 
 
 @pytest.mark.parametrize(

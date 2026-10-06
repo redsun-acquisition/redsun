@@ -24,7 +24,7 @@ class Moves(SignalGroup):
     finished = Signal(str)
 
 
-class Stage:
+class Mover:
     """Presenter exposing one signal and one slot, neither wired by default."""
 
     sig_moved = Signal(float)
@@ -76,8 +76,8 @@ class Holding:
 class App(Session):
     config: ClassVar[dict[str, Any]] = {"session": "reporting"}
 
-    stage: AsPresenter[Stage]
-    other: AsPresenter[Stage]
+    stage: AsPresenter[Mover]
+    other: AsPresenter[Mover]
 
 
 def test_a_session_wired_to_nothing_reports_every_port(
@@ -129,7 +129,7 @@ def test_a_port_of_an_object_a_presenter_holds_is_recorded_under_the_presenter(
     class Held(Session):
         config: ClassVar[dict[str, Any]] = {"session": "reporting"}
 
-        stage: AsPresenter[Stage]
+        stage: AsPresenter[Mover]
         holder: AsPresenter[Holding]
 
         def wire(self) -> Iterator[Link]:
