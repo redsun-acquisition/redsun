@@ -48,7 +48,14 @@ class ConfigurationInUse(OSError):
 
 
 class HookError(RuntimeError):
-    """Raised when a hook provider cannot be built or does not serve its hook point."""
+    """Raised when a hook is declared wrongly or its provider cannot serve.
+
+    A hook is declared wrongly when it names no class, a point the session
+    does not call, a point another provider already takes, or the same
+    provider and keys as another hook. A provider
+    cannot serve when it cannot be imported or built, does not implement its
+    hook point, or returns what the point cannot use.
+    """
 
 
 class PluginError(RuntimeError):
