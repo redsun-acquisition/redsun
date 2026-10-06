@@ -67,6 +67,23 @@ class SaidTwice(Chat):
         yield self.talker.sig_said, self.listener.hear
 
 
+class SaidAlsoConfigured(Chat):
+    config: ClassVar[dict[str, Any]] = {
+        "session": "pairs-chat",
+        "wiring": {"talker.sig_said": "listener.hear"},
+    }
+
+    def wire(self) -> Iterator[Link]:
+        yield self.talker.sig_said, self.listener.hear
+
+
+class Paired(Chat):
+    config: ClassVar[dict[str, Any]] = {
+        "session": "pairs-chat",
+        "pairs": [["talker", "listener"]],
+    }
+
+
 class Mute:
     """A presenter with no ports a pairing could match."""
 
@@ -165,16 +182,6 @@ def test_a_link_yielded_twice_is_made_once(build: BuildSession) -> None:
     assert len(session.connections) == 1
 
 
-class SaidAlsoConfigured(Chat):
-    config: ClassVar[dict[str, Any]] = {
-        "session": "pairs-chat",
-        "wiring": {"talker.sig_said": "listener.hear"},
-    }
-
-    def wire(self) -> Iterator[Link]:
-        yield self.talker.sig_said, self.listener.hear
-
-
 def test_a_link_in_wire_and_in_wiring_is_made_once(build: BuildSession) -> None:
     """Connect a link both `wire` and the `wiring` section name only once."""
     session = build(SaidAlsoConfigured)
@@ -261,14 +268,19 @@ def test_a_pairing_over_links_already_made_makes_each_once(
 
 @pytest.mark.parametrize(
     "later",
-    [{"pairs": [["talker", "other"]]}, {"pairs": None}, {}],
-    ids=["a-pairing", "nothing-under-pairs", "no-pairs"],
+    [
+        {"pairs": [["talker", "other"]]},
+        {"pairs": (("talker", "other"),)},
+        {"pairs": None},
+        {},
+    ],
+    ids=["a-pairing", "a-tuple-of-pairs", "nothing-under-pairs", "no-pairs"],
 )
 def test_the_pairs_of_layered_sources_all_apply(
     later: dict[str, Any], build: BuildSession
 ) -> None:
     """Keep the pairings of earlier sources and add those of a later one."""
-    session = build(Trio, [{"pairs": [["talker", "listener"]]}, later])
+    session = build(Trio, [{"pairs": (("talker", "listener"),)}, later])
 
     session.talker.sig_said.emit("hi")
 
@@ -278,9 +290,23 @@ def test_the_pairs_of_layered_sources_all_apply(
 
 def test_an_empty_pairs_section_pairs_nothing(build: BuildSession) -> None:
     """Read `pairs:` with nothing under it as no pairing."""
-    session = build(Chat, {"pairs": None})
+    build(Chat, {"pairs": None})
 
-    assert session.connections == []
+
+def test_a_pair_from_the_class_is_written_once_however_often_saved(
+    build: BuildSession,
+) -> None:
+    """Serialize a class-level pair once, and again after each rebuild."""
+    session = build(Paired)
+    written = session.serialize()
+    session.shutdown()
+    again = build(Paired, written)
+    rewritten = again.serialize()
+    again.shutdown()
+
+    assert written["pairs"] == [["talker", "listener"]]
+    assert rewritten["pairs"] == written["pairs"]
+    assert build(Paired, rewritten).serialize()["pairs"] == written["pairs"]
 
 
 def test_a_pairing_that_connects_nothing_is_refused() -> None:
