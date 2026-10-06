@@ -53,6 +53,11 @@ In a session class, yield what [`links_between`][redsun.links_between]
 returns:
 
 ```python
+from collections.abc import Iterator
+
+from redsun import Link, links_between
+
+
 def wire(self) -> Iterator[Link]:
     yield from links_between(self.my_view, self.my_ctrl)
 ```

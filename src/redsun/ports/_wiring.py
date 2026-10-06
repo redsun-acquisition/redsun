@@ -15,7 +15,7 @@ from typing import (
 from psygnal import Signal, SignalGroup
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Sequence
     from threading import Thread
     from typing import TypeAlias
 
@@ -84,7 +84,7 @@ class Slot:
     """The thread the slot is delivered on, or `None` for the component's default."""
 
     signals: tuple[str, ...]
-    """The signals of the component's own that the slot is paired with."""
+    """Names of the other component's signals that reach this slot in a pairing."""
 
 
 @overload
@@ -94,7 +94,7 @@ def slot(
     *,
     name: str | None = ...,
     thread: SlotThread = ...,
-    signal: str | tuple[str, ...] = ...,
+    signal: str | Sequence[str] = ...,
 ) -> Callable[[F], F]: ...
 def slot(
     fn: F | None = None,
@@ -102,7 +102,7 @@ def slot(
     *,
     name: str | None = None,
     thread: SlotThread = None,
-    signal: str | tuple[str, ...] = (),
+    signal: str | Sequence[str] = (),
 ) -> F | Callable[[F], F]:
     """Mark a method as connectable to a signal.
 
@@ -126,7 +126,7 @@ def slot(
         signal of the other component. Without it, only the links a session
         lists reach the slot.
     """
-    signals = (signal,) if isinstance(signal, str) else signal
+    signals = (signal,) if isinstance(signal, str) else tuple(signal)
 
     def deco(target: F) -> F:
         setattr(target, SLOT_ATTR, Slot(name, thread, signals))
