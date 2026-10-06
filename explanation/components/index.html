@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.0.66">
+      <meta name="generator" content="zensical-0.0.67">
     
     
       
@@ -36,12 +36,12 @@
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.1502b751.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ae390e2.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.96d1a7e4.min.css">
       
       
 
@@ -1055,6 +1055,8 @@
       
         
       
+        
+      
     
     
     
@@ -1377,6 +1379,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/run-plans-from-the-window/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-play" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to run plans from the window
 
     
   </span>
@@ -2645,6 +2676,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#using-a-protocol-without-importing-redsun" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Using a protocol without importing redsun
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3318,6 +3360,8 @@
       
         
       
+        
+      
     
     
     
@@ -3931,6 +3975,33 @@
     
   
   21. A built-in light stack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0022-a-built-in-acquisition-stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  22. A built-in acquisition stack
 
     
   </span>
@@ -5545,6 +5616,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#using-a-protocol-without-importing-redsun" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Using a protocol without importing redsun
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5796,6 +5878,7 @@
               <article class="md-content__inner md-typeset">
                 
                   
+
   
   
 
@@ -5876,6 +5959,18 @@ declares is a mistake in the session itself, and stops the build with
 returns what the constructor built. Two components cannot share the same type:
 a type names one value. <a href="../../how-to/share-a-value/">Share a value</a> shows the
 details, including optional values.</p>
+<h3 id="using-a-protocol-without-importing-redsun">Using a protocol without importing redsun<a class="headerlink" href="#using-a-protocol-without-importing-redsun" title="Permanent link">&para;</a></h3>
+<p>The session checks a component against a protocol by its members: their
+names, and for methods their signatures. It never asks which module the
+protocol came from. A plugin can therefore satisfy a protocol without naming
+it, or copy the protocol's definition into its own code so that its type
+checker sees it, with no dependency on <code>redsun</code> for that.</p>
+<p>Whether a copy is enough depends on the types its members name. <code>Axis</code>, <code>Light</code>,
+<code>DescribesAxes</code> and <code>DescribesLights</code> name only <code>ophyd-async</code>, <code>bluesky</code> or
+built-in types, and copy whole. <code>HasPlans</code> names <code>PlanEntry</code>, <code>HasActions</code>
+names <code>ActionManager</code> and <code>DescribesPlans</code> names <code>PlanSpec</code>, so a component
+using them works with those <code>redsun</code> types. A shared value is found by its exact type, so asking for a
+<code>RunEngine</code> or <code>Deferrals</code> needs <code>redsun</code>'s classes.</p>
 <h2 id="devices">Devices<a class="headerlink" href="#devices" title="Permanent link">&para;</a></h2>
 <p>A <a href="../glossary/#device">device</a> is an <a href="../glossary/#ophyd-async"><code>ophyd-async</code></a>
 device: a subclass of <code>ophyd_async.core.Device</code>. <code>redsun</code> adds nothing to the
@@ -6131,7 +6226,7 @@ stage", however many there are, asks the session by what they can do: see
 </footer>
       
     </div>
-    <div class="md-dialog" data-md-component="dialog">
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
@@ -6143,10 +6238,10 @@ stage", however many there are, asks the session by what they can do: see
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.b7d3f789.min.js"></script>
+      <script src="../../assets/javascripts/bundle.67a597eb.min.js"></script>
       
         <script src="../../javascripts/install-table.js"></script>
       

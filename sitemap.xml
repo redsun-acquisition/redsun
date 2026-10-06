@@ -79,6 +79,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0021-a-built-in-light-stack/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0022-a-built-in-acquisition-stack/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
       </url>
       <url>
@@ -182,6 +185,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-commit-checks/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-plans-from-the-window/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
