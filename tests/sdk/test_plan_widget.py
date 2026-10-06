@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections import OrderedDict, deque
+from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
@@ -22,6 +23,7 @@ from redsun.presenter.plan_spec import (
     create_plan_spec,
 )
 from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
+from redsun.view.qt._value_widgets import SequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
 from tests.sdk.mocks import DetectorProtocol, MotorProtocol, param
@@ -40,6 +42,16 @@ _ANNOTATIONS = [
     pytest.param(list[str], id="list-str"),
     pytest.param(Decimal, id="decimal"),
     pytest.param(Any, id="any"),
+    pytest.param(dict[str, float], id="dict-str-float"),
+    pytest.param(dict[str, list[float]], id="dict-str-list"),
+    pytest.param(set[int], id="set-int"),
+    pytest.param(Iterable[int], id="iterable-int"),
+    pytest.param(tuple[int, int], id="tuple-int-int"),
+    pytest.param(int | None, id="optional-int"),
+    pytest.param(float | list[float], id="union-float-list"),
+    pytest.param(deque[int], id="deque"),
+    pytest.param(OrderedDict[str, int], id="ordered-dict"),
+    pytest.param(Callable[[int], int], id="callable"),
 ]
 """Annotations a required plan parameter might carry, accepted or refused.
 
@@ -390,10 +402,10 @@ class TestCreateParamWidget:
         w = create_param_widget(param("output", Path))
         assert isinstance(w, mgw.FileEdit)
 
-    def test_sequence_int_creates_list_edit(self) -> None:
-        """Build a ListEdit for a sequence of ints."""
+    def test_sequence_int_creates_sequence_edit(self) -> None:
+        """Build a SequenceEdit for a sequence of ints."""
         w = create_param_widget(param("vals", Sequence[int]))
-        assert isinstance(w, mgw.ListEdit)
+        assert isinstance(w, SequenceEdit)
 
     def test_hidden_param_creates_line_edit_placeholder(self) -> None:
         """Build a LineEdit placeholder for a hidden parameter."""

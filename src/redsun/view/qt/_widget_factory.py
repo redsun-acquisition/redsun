@@ -4,6 +4,10 @@
 walks `WIDGET_FACTORY_MAP`, an ordered list of `(predicate, factory)` pairs,
 and calls the first factory whose predicate matches.
 
+Every other parameter gets the widget `create_value_widget` builds, which
+nests the widgets of lists, sets, mappings, tuples, optional values and
+unions.
+
 Extending the system
 --------------------
 For a new annotation shape, write a predicate and a factory and insert the pair
@@ -18,15 +22,16 @@ falling back silently.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, get_args
+from typing import TypeAlias, cast
 
 from magicgui import widgets as mgw
 from magicgui.types import Undefined
 
 from redsun.presenter.plan_spec import ParamDescription, ParamKind
-from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
+from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset
 
 from ._device_sequence_edit import DeviceSequenceEdit
+from ._value_widgets import create_value_widget
 
 WidgetPredicate: TypeAlias = Callable[[ParamDescription], bool]
 WidgetFactory: TypeAlias = Callable[[ParamDescription], mgw.Widget]
@@ -56,14 +61,6 @@ def is_literal_choices(p: ParamDescription) -> bool:
     Device parameters carry choices too, and match an earlier entry.
     """
     return p.choices is not None
-
-
-def is_non_device_sequence(p: ParamDescription) -> bool:
-    """Return true for Sequence[T] parameters.
-
-    Device sequences match an earlier entry.
-    """
-    return issequence(p.annotation)
 
 
 def always(p: ParamDescription) -> bool:
@@ -111,30 +108,16 @@ def make_literal_combobox(p: ParamDescription) -> mgw.Widget:
     )
 
 
-def make_list_edit(p: ParamDescription) -> mgw.Widget:
-    """Return a ListEdit for non-device Sequence[T] parameters."""
-    args = get_args(p.annotation)
-    actual_annotation = list[args[0]] if args else list  # type: ignore[valid-type]
-    return mgw.ListEdit(
-        label=p.name,
-        annotation=actual_annotation,
-        layout="vertical",
-    )
+def make_value_widget(p: ParamDescription) -> mgw.Widget:
+    """Return the widget `create_value_widget` builds for the annotation.
 
-
-def make_generic(p: ParamDescription) -> mgw.Widget:
-    """Return `magicgui.create_widget`'s widget for any other annotation.
-
-    Raises TypeError or ValueError if `magicgui` does not support it.
+    Raises TypeError or ValueError if no widget exists for it.
     """
-    # a parameter with no default gets magicgui's sentinel rather than None:
-    # a widget that cannot hold None, such as the CheckBox built for a bool,
-    # raises on being handed one
-    return mgw.create_widget(
-        annotation=p.annotation,
-        name=p.name,
-        param_kind=p.kind.name,
-        value=p.default if p.has_default else Undefined,
+    return cast(
+        "mgw.Widget",
+        create_value_widget(
+            p.annotation, p.default if p.has_default else Undefined, name=p.name
+        ),
     )
 
 
@@ -143,8 +126,7 @@ WIDGET_FACTORY_MAP: list[tuple[WidgetPredicate, WidgetFactory]] = [
     (is_multiselect_device, make_device_sequence_edit),
     (is_singleselect_device, make_singleselect_device),
     (is_literal_choices, make_literal_combobox),
-    (is_non_device_sequence, make_list_edit),
-    (always, make_generic),
+    (always, make_value_widget),
 ]
 
 
