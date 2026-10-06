@@ -237,6 +237,9 @@ ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public
 
 [tool.ruff.lint.per-file-ignores]
 "docs/**/*.py" = ["D"]
+# its plan signatures show list and dict defaults, the inputs the reference
+# pictures start from; the plans never mutate them
+"docs/examples/parameter_widgets.py" = ["B006"]
 "tests/*.py" = [
     # ignore missing docstrings in tests
     "D101",

@@ -1,4 +1,4 @@
-"""Run the documentation's example sessions and save a picture of each window.
+"""Save the pictures the documentation shows: each example session's window, and the parameter widgets of a few plans.
 
 `QApplication.exec` is replaced by a function that photographs the main
 window, so a script calling `run()` stops there instead of starting the event
@@ -8,6 +8,9 @@ machine does not change the picture. Run from the repository root.
 Each script runs in a process of its own, as a session does when a user starts
 it: a second Qt application in one process finds the timer `psygnal` made for
 the first, which was deleted with it.
+
+With `--widgets`, builds the plan widget of each plan in
+`docs/examples/parameter_widgets.py` and saves its parameters alone.
 
 The window opens on the platform's own display, which has the fonts the text
 needs; CI provides one with a virtual display.
@@ -32,6 +35,9 @@ from qtpy.QtWidgets import (
     QMainWindow,
     QPushButton,
 )
+
+from redsun.presenter.plan_spec import create_plan_spec
+from redsun.view.qt.utils import create_plan_widget
 
 SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
     Path("docs/tutorials/first_session.py"): (
@@ -100,6 +106,15 @@ window, and the plan run before the picture, if any, as `view:plan`."""
 
 SETTLE = 3.0
 """Seconds a plan started for a picture is given to finish."""
+
+WIDGETS = Path("docs/examples/parameter_widgets.py")
+"""The plans whose parameter widgets the view reference pictures, by tab."""
+
+WIDGET_PICTURES = Path("docs/reference/images")
+"""Where each tab's picture is written, as `parameters-<tab>.png`."""
+
+WIDGET_WIDTH = 420
+"""Width in pixels of a picture of parameter widgets."""
 
 
 def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
@@ -172,8 +187,39 @@ def capture(
     print(f"wrote {target}")
 
 
+def photograph_widgets() -> None:
+    """Save a picture of the parameter widgets each plan of `WIDGETS` gets.
+
+    The picture is the plan widget's parameters alone, its *Devices* and
+    *Parameters* groups, without the run buttons and outside any window.
+    """
+    QLocale.setDefault(QLocale(QLocale.Language.English))
+    app = QApplication([])
+    example = runpy.run_path(str(WIDGETS))
+    devices = example["devices"]()
+    for tab, plan in example["PLANS"].items():
+        widget = create_plan_widget(create_plan_spec(plan, devices))
+        widget.group_box.resize(WIDGET_WIDTH, widget.group_box.sizeHint().height())
+        widget.group_box.show()
+        for _ in range(10):
+            app.processEvents()
+            time.sleep(0.05)
+        # the first input takes the focus, and its cursor would be in the picture
+        focused = app.focusWidget()
+        if focused is not None:
+            focused.clearFocus()
+        target = WIDGET_PICTURES / f"parameters-{tab}.png"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        widget.params_widget.grab().save(str(target))
+        widget.group_box.close()
+        print(f"wrote {target}")
+
+
 def main(arguments: list[str]) -> None:
-    """Photograph the script named in *arguments*, or each script in a process."""
+    """Photograph the script named in *arguments*, the parameter widgets with `--widgets`, or everything, each in a process."""
+    if arguments == ["--widgets"]:
+        photograph_widgets()
+        return
     if arguments:
         script = Path(arguments[0])
         target, size, press = SCREENSHOTS[script]
@@ -181,6 +227,7 @@ def main(arguments: list[str]) -> None:
         return
     for script in SCREENSHOTS:
         subprocess.run([sys.executable, __file__, script.as_posix()], check=True)
+    subprocess.run([sys.executable, __file__, "--widgets"], check=True)
 
 
 if __name__ == "__main__":

@@ -71,16 +71,30 @@ Annotations map to `ParamDescription` fields, first match wins:
 4. `MyDevice` (bare protocol) -> single-select
 5. Everything else -> a plain value, left to the view layer to render
 
-Step 5 accepts:
+Step 5 accepts an annotation an input can show:
 
-- `int`, `float`, `str`, `bool`, `bytes` and `range`
-- `Path`
-- `datetime`, `date`, `time` and `timedelta`
-- any `Enum` subclass
-- a sequence of anything that is not a device
+| Annotation | Shown when |
+| --- | --- |
+| `int`, `float`, `str`, `bool`, `bytes`, `range`, `Path`, `datetime`, `date`, `time`, `timedelta`, an `Enum`, a `Literal` | always |
+| `list[T]`, `Sequence[T]`, `Iterable[T]`, `tuple[T, ...]`, `set[T]`, `frozenset[T]`, or any one-element container a `list`, `tuple`, `set` or `frozenset` satisfies | `T` can be shown |
+| `tuple[A, B]` of fixed length | every member can be shown |
+| `dict[K, V]`, `Mapping[K, V]`, or any mapping a `dict` satisfies | `K` is a plain type, an `Enum` or a `Literal`, and `V` can be shown |
+| `X \| None` | `X` can be shown |
+| `A \| B` | every member can be shown |
 
-A required parameter with any other annotation raises
-`UnresolvableAnnotationError`.
+A device inside any of these shapes cannot be shown, and neither can `Any`, a
+`Callable`, a container without type arguments, or a container no built-in
+satisfies, such as `deque[T]` or `OrderedDict[K, V]`: the plan would receive
+a `list` or a `dict`, not the class it names.
+
+| Parameter | Outcome |
+| --- | --- |
+| an input can show it | an input, starting from the default |
+| no input can show it, and it has a default | `hidden=True`: a view leaves it out and the plan keeps its default |
+| no input can show it, and it has no default | `UnresolvableAnnotationError` |
+
+The inputs each annotation gets are pictured in
+[Parameter widgets](view.md#parameter-widgets).
 
 ### From the values to a call
 
@@ -91,7 +105,7 @@ call:
 ```python
 from redsun.presenter.plan_spec import collect_arguments, resolve_arguments
 
-# 1. Resolve: string device names -> live device instances
+# 1. Resolve: string device names -> live device instances, hidden parameters -> their defaults
 resolved = resolve_arguments(spec, widget_values, devices)
 
 # 2. Collect: build (args, kwargs) matching the plan signature

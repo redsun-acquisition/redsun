@@ -25,6 +25,9 @@ from ...presenter._shapes import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
+REMOVE_WIDTH = 32
+"""Width in pixels of the button removing a row."""
+
 
 def problems_of(widget: Any) -> list[str]:
     """Return what makes *widget*'s value invalid; a `magicgui` widget reports nothing."""
@@ -180,6 +183,9 @@ class Row(mgw.Container[Widget]):
     def __init__(self, edits: list[Any]) -> None:
         self.edits = edits
         self.remove_button = mgw.PushButton(text="-")
+        # a row lays its widgets out with equal stretch, which would make the
+        # button as wide as the value it removes
+        self.remove_button.max_width = REMOVE_WIDTH
         super().__init__(
             layout="horizontal", labels=False, widgets=[*edits, self.remove_button]
         )

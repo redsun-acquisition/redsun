@@ -32,3 +32,4 @@ never edited; a later one replaces it.
 - [21. A built-in light stack](0021-a-built-in-light-stack.md)
 - [22. A built-in acquisition stack](0022-a-built-in-acquisition-stack.md)
 - [23. Pairing two components](0023-pairing-two-components.md)
+- [24. A plan widget for every parameter type it can return](0024-a-plan-widget-for-every-parameter-type-it-can-return.md)
