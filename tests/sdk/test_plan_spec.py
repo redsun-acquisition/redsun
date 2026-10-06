@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
-from magicgui import widgets as mgw
 from ophyd_async.core import (
     Device,
     SignalR,
@@ -28,8 +27,6 @@ from redsun.presenter.plan_spec import (
     resolve_arguments,
 )
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
-from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
-from redsun.view.qt._widget_factory import create_param_widget
 from tests.sdk.mocks import RoiDetector, XYStage
 
 if TYPE_CHECKING:
@@ -38,8 +35,6 @@ if TYPE_CHECKING:
     # deliberately never imported at runtime: a plan annotated with it
     # reproduces a plugin author hiding an import behind TYPE_CHECKING
     from decimal import Decimal
-
-    from qtpy.QtWidgets import QApplication
 
 
 @runtime_checkable
@@ -59,18 +54,20 @@ class _DetectorProtocol(Protocol):
 
 
 @pytest.fixture
-def mock_motor(name: str = "stage") -> XYStage:
+def mock_motor() -> XYStage:
     """Single mock motor device."""
-    return XYStage(name)
+    return XYStage("stage")
 
 
 @pytest.fixture
 def one_detector() -> dict[str, RoiDetector]:
+    """Return a session's devices holding one detector, `cam`."""
     return {"cam": RoiDetector("cam")}
 
 
 @pytest.fixture
 def one_motor(mock_motor: XYStage) -> dict[str, XYStage]:
+    """Return a session's devices holding one motor, `stage`."""
     return {"stage": mock_motor}
 
 
@@ -670,81 +667,6 @@ class TestResolveArguments:
         )
         resolved = resolve_arguments(spec, {"motor": "nonexistent"}, one_motor)
         assert resolved["motor"] is None
-
-
-@pytest.mark.qt
-class TestCreateParamWidget:
-    """Tests for `create_param_widget`, which builds Qt widgets."""
-
-    @pytest.fixture(autouse=True)
-    def _application(self, qapp: QApplication) -> None:
-        """Hold the session's application, so magicgui makes none of its own."""
-
-    def test_int_creates_spinbox(self) -> None:
-        """Build a SpinBox for an int parameter."""
-        w = create_param_widget(_param("n", int))
-        assert isinstance(w, mgw.SpinBox)
-
-    def test_float_creates_float_spinbox(self) -> None:
-        """Build a FloatSpinBox for a float parameter."""
-        w = create_param_widget(_param("x", float))
-        assert isinstance(w, mgw.FloatSpinBox)
-
-    def test_bool_creates_checkbox(self) -> None:
-        """Build a CheckBox for a bool parameter."""
-        w = create_param_widget(_param("flag", bool, default=False))
-        assert isinstance(w, mgw.CheckBox)
-
-    def test_literal_creates_combobox(self) -> None:
-        """Build a ComboBox for a Literal parameter."""
-        p = _param("egu", Literal["um", "mm"], choices=["um", "mm"])
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.ComboBox)
-
-    def test_single_device_creates_combobox(self) -> None:
-        """Build a ComboBox for a single device parameter."""
-        p = _param(
-            "motor",
-            _MotorProtocol,
-            choices=["stage"],
-            device_proto=_MotorProtocol,
-        )
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.ComboBox)
-
-    def test_multiselect_device_creates_device_sequence_edit(self) -> None:
-        """Build a DeviceSequenceEdit for a multiple-choice device parameter."""
-        p = _param(
-            "dets",
-            Sequence[_DetectorProtocol],
-            choices=["cam"],
-            multiselect=True,
-            device_proto=_DetectorProtocol,
-        )
-        w = create_param_widget(p)
-        assert isinstance(w, DeviceSequenceEdit)
-
-    def test_path_creates_file_edit(self) -> None:
-        """Build a FileEdit for a Path parameter."""
-        w = create_param_widget(_param("output", Path))
-        assert isinstance(w, mgw.FileEdit)
-
-    def test_sequence_int_creates_list_edit(self) -> None:
-        """Build a ListEdit for a sequence of ints."""
-        w = create_param_widget(_param("vals", Sequence[int]))
-        assert isinstance(w, mgw.ListEdit)
-
-    def test_hidden_param_creates_line_edit_placeholder(self) -> None:
-        """Build a LineEdit placeholder for a hidden parameter."""
-        p = _param("secret", int, hidden=True)
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.LineEdit)
-
-    def test_action_param_creates_line_edit_placeholder(self) -> None:
-        """Build a LineEdit placeholder for an action parameter."""
-        p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
-        w = create_param_widget(p)
-        assert isinstance(w, mgw.LineEdit)
 
 
 @pytest.mark.parametrize(

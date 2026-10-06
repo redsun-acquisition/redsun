@@ -4,10 +4,13 @@ from collections.abc import Sequence
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Protocol, runtime_checkable
 
+import numpy as np
 import pytest
 from bluesky.utils import MsgGenerator
+from magicgui import widgets as mgw
+from ophyd_async.core import Device, SignalR, SignalRW
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
@@ -20,6 +23,7 @@ from redsun.presenter.plan_spec import (
     UnresolvableAnnotationError,
     create_plan_spec,
 )
+from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
 
@@ -51,6 +55,34 @@ CALLBACKS = {name: Callback(name) for name in ("a", "b", "c", "own")}
 
 CATALOGUE = {name: CALLBACKS[name] for name in ("a", "b", "c")}
 """The callbacks a user may attach; `own` is only ever carried by a plan."""
+
+
+@runtime_checkable
+class MotorProtocol(Protocol):
+    """Motor protocol: requires child axis sub-devices."""
+
+    x: Device
+    y: Device
+
+
+@runtime_checkable
+class DetectorProtocol(Protocol):
+    """Detector protocol: ROI is settable; sensor shape is fixed."""
+
+    roi: SignalRW[np.ndarray]
+    sensor_shape: SignalR[np.ndarray]
+
+
+def _param(
+    name: str,
+    annotation: object = int,
+    kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
+    default: object = Parameter.empty,
+    **fields: Any,
+) -> ParamDescription:
+    return ParamDescription(
+        name=name, kind=kind, annotation=annotation, default=default, **fields
+    )
 
 
 def _simple_spec() -> PlanSpec:
@@ -309,6 +341,76 @@ class TestCreatePlanWidget:
         """Return None for an unknown action name."""
         pw = create_plan_widget(_action_spec())
         assert pw.get_action_button("nonexistent") is None
+
+
+class TestCreateParamWidget:
+    """Tests for `create_param_widget`, which builds Qt widgets."""
+
+    def test_int_creates_spinbox(self) -> None:
+        """Build a SpinBox for an int parameter."""
+        w = create_param_widget(_param("n", int))
+        assert isinstance(w, mgw.SpinBox)
+
+    def test_float_creates_float_spinbox(self) -> None:
+        """Build a FloatSpinBox for a float parameter."""
+        w = create_param_widget(_param("x", float))
+        assert isinstance(w, mgw.FloatSpinBox)
+
+    def test_bool_creates_checkbox(self) -> None:
+        """Build a CheckBox for a bool parameter."""
+        w = create_param_widget(_param("flag", bool, default=False))
+        assert isinstance(w, mgw.CheckBox)
+
+    def test_literal_creates_combobox(self) -> None:
+        """Build a ComboBox for a Literal parameter."""
+        p = _param("egu", Literal["um", "mm"], choices=["um", "mm"])
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.ComboBox)
+
+    def test_single_device_creates_combobox(self) -> None:
+        """Build a ComboBox for a single device parameter."""
+        p = _param(
+            "motor",
+            MotorProtocol,
+            choices=["stage"],
+            device_proto=MotorProtocol,
+        )
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.ComboBox)
+
+    def test_multiselect_device_creates_device_sequence_edit(self) -> None:
+        """Build a DeviceSequenceEdit for a multiple-choice device parameter."""
+        p = _param(
+            "dets",
+            Sequence[DetectorProtocol],
+            choices=["cam"],
+            multiselect=True,
+            device_proto=DetectorProtocol,
+        )
+        w = create_param_widget(p)
+        assert isinstance(w, DeviceSequenceEdit)
+
+    def test_path_creates_file_edit(self) -> None:
+        """Build a FileEdit for a Path parameter."""
+        w = create_param_widget(_param("output", Path))
+        assert isinstance(w, mgw.FileEdit)
+
+    def test_sequence_int_creates_list_edit(self) -> None:
+        """Build a ListEdit for a sequence of ints."""
+        w = create_param_widget(_param("vals", Sequence[int]))
+        assert isinstance(w, mgw.ListEdit)
+
+    def test_hidden_param_creates_line_edit_placeholder(self) -> None:
+        """Build a LineEdit placeholder for a hidden parameter."""
+        p = _param("secret", int, hidden=True)
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.LineEdit)
+
+    def test_action_param_creates_line_edit_placeholder(self) -> None:
+        """Build a LineEdit placeholder for an action parameter."""
+        p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
+        w = create_param_widget(p)
+        assert isinstance(w, mgw.LineEdit)
 
 
 def _listed(pw: PlanWidget) -> list[str]:
