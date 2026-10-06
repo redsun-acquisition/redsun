@@ -82,14 +82,42 @@ def test_a_session_with_two_acquisition_presenters_is_refused() -> None:
 
 
 @pytest.mark.qt
-@pytest.mark.parametrize("app", [MyApp, PairedApp])
+def test_pairing_the_acquisition_makes_every_link_of_the_stack(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Link every signal and slot the acquisition presenter and its view offer each other."""
+    session = build(PairedApp, {"mock": True, "strict": True})
+
+    assert {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+    } == {
+        ("acquisition_view", "sig_launch", "acquisition", "launch"),
+        ("acquisition_view", "sig_pause", "acquisition", "pause"),
+        ("acquisition_view", "sig_resume", "acquisition", "resume"),
+        ("acquisition_view", "sig_stop", "acquisition", "stop"),
+        ("acquisition_view", "sig_action", "acquisition", "request_action"),
+        ("acquisition_view", "sig_base_dir", "acquisition", "set_base_dir"),
+        ("acquisition", "sig_plan_started", "acquisition_view", "set_started"),
+        ("acquisition", "sig_plan_done", "acquisition_view", "set_done"),
+        ("acquisition", "sig_plan_failed", "acquisition_view", "set_failed"),
+        ("acquisition", "sig_progress", "acquisition_view", "update_progress"),
+        ("acquisition", "sig_action_changed", "acquisition_view", "update_action"),
+        ("acquisition", "sig_base_dir_changed", "acquisition_view", "update_base_dir"),
+    }
+
+
+@pytest.mark.qt
+@pytest.mark.parametrize(
+    "app", [MyApp, PairedApp], ids=["wired-by-links_between", "paired-in-config"]
+)
 def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
     qapp: QtWidgets.QApplication,
     build: BuildSession,
     wait_until: Callable[..., bool],
     app: type[QtSession],
 ) -> None:
-    """Run a plan from the view, wired by hand or paired, and see it start and end."""
+    """Run a plan from the view, paired from `wire` or from the config, and see it start and end."""
     session = build(app, {"mock": True, "strict": True})
     acquisition = session.presenters["acquisition"]
     view = session.views["acquisition_view"]

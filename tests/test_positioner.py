@@ -120,6 +120,28 @@ def test_pairing_the_acquisition_presenter_with_the_view_passes_on_locks_only(
     }
 
 
+def test_pairing_the_positioner_makes_every_link_of_the_stack(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Link every signal and slot the positioner and its view offer each other."""
+    session = build(PairedLab)
+
+    assert {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+    } == {
+        ("positioner_view", "sig_move", "positioner", "move"),
+        ("positioner_view", "sig_move_to", "positioner", "move_to"),
+        ("positioner_view", "sig_stop_device", "positioner", "stop"),
+        ("positioner_view", "sig_configure", "positioner", "configure"),
+        ("positioner", "sig_readback", "positioner_view", "update_readback"),
+        ("positioner", "sig_limits", "positioner_view", "update_limits"),
+        ("positioner", "sig_moving", "positioner_view", "set_moving"),
+        ("positioner", "sig_failed", "positioner_view", "set_failed"),
+        ("positioner", "sig_configuration", "positioner_view", "update_configuration"),
+    }
+
+
 def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
     qapp: QtWidgets.QApplication, build: BuildSession
 ) -> None:

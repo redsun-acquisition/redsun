@@ -65,6 +65,27 @@ def laser_toggle(session: QtSession) -> QtWidgets.QPushButton:
     return toggle
 
 
+def test_pairing_the_lights_makes_every_link_of_the_stack(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Link every signal and slot the lights presenter and its view offer each other."""
+    session = build(PairedLightLab)
+
+    assert {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+        if "acquisition" not in (c.publisher, c.consumer)
+    } == {
+        ("lights_view", "sig_enabled", "lights", "set_enabled"),
+        ("lights_view", "sig_intensity", "lights", "set_intensity"),
+        ("lights_view", "sig_configure", "lights", "configure"),
+        ("lights", "sig_enabled", "lights_view", "update_enabled"),
+        ("lights", "sig_intensity", "lights_view", "update_intensity"),
+        ("lights", "sig_failed", "lights_view", "set_failed"),
+        ("lights", "sig_configuration", "lights_view", "update_configuration"),
+    }
+
+
 @pytest.mark.parametrize("lab", [LightLab, PairedLightLab])
 def test_a_light_switched_from_the_view_comes_back_switched_on(
     qapp: QtWidgets.QApplication,
