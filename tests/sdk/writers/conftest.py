@@ -9,12 +9,10 @@ import ome_writers as ow
 import pytest
 
 from redsun.writers import _acquire_zarr
-from redsun.writers._base import ArrayShape
+from tests.sdk.writers.helpers import FRAME
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-FRAME = ArrayShape.of((4, 4), np.uint16)
 
 
 def open_key(store: Path, data_key: str, *, is_ngff: bool) -> None:

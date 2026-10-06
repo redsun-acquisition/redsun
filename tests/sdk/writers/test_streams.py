@@ -12,7 +12,7 @@ import zarr
 from redsun.writers import WriterError, _acquire_zarr, _ome_writers
 from redsun.writers._base import ArrayShape
 from redsun.writers._base import root_attributes as attributes
-from tests.sdk.writers.conftest import FRAME
+from tests.sdk.writers.helpers import FRAME
 
 if TYPE_CHECKING:
     from pathlib import Path
