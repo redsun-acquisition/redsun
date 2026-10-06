@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from inspect import Parameter, _empty, signature
 from pathlib import Path
+from types import NoneType
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -38,7 +39,14 @@ from redsun.presenter.utils import (
     isdevice,
     isdevicesequence,
     isdeviceset,
-    issequence,
+)
+
+from ._shapes import (
+    container_type,
+    is_fixed_tuple,
+    is_mapping,
+    safe_issubclass,
+    union_members,
 )
 
 if TYPE_CHECKING:
@@ -67,10 +75,10 @@ class UnresolvableAnnotationError(TypeError):
         super().__init__(
             f"Plan {plan_name!r}: cannot resolve annotation for parameter "
             f"{param_name!r} ({annotation!r}). "
-            f"A required parameter must be a Literal, a device protocol, a "
-            f"sequence of them, a sequence of any other renderable type, or one "
-            f"of int, float, str, bool, bytes, range, Path, an Enum or a "
-            f"datetime type."
+            f"A required parameter must be a device protocol, a sequence or set "
+            f"of devices, one of int, float, str, bool, bytes, range, Path, a "
+            f"Literal, an Enum or a datetime type, or a list, set, tuple, "
+            f"mapping, union or optional of those."
         )
 
 
@@ -120,7 +128,7 @@ class ParamDescription:
     """Whether several values can be selected, as for `Sequence[OADevice]`."""
 
     hidden: bool = False
-    """Whether the parameter is hidden from the interface, as for metadata only."""
+    """Whether no input can show the parameter, so a view leaves it out and the plan keeps its default."""
 
     actions: Sequence[PlanAction] | PlanAction | None = None
     """Actions taken from the parameter's default value, if any."""
@@ -229,7 +237,7 @@ def _extract_action_meta(
     is_sequence_action = (
         origin is not None
         # try/except because issubclass on Protocols can raise
-        and _safe_issubclass(origin, cabc.Sequence)
+        and safe_issubclass(origin, cabc.Sequence)
         and bool(args)
         and _is_action_type(args[0])
     )
@@ -249,14 +257,6 @@ def _extract_action_meta(
 def _is_action_type(ann: Any) -> bool:
     """Whether *ann* is `PlanAction` itself or a subclass of it."""
     return isinstance(ann, type) and issubclass(ann, PlanAction)
-
-
-def _safe_issubclass(cls: Any, parent: type) -> bool:
-    """`issubclass` returning `False` instead of raising `TypeError`."""
-    try:
-        return issubclass(cls, parent)
-    except TypeError:
-        return False
 
 
 def _iterate_signature(sig: inspect.Signature) -> cabc.Iterator[tuple[str, Parameter]]:
@@ -289,25 +289,39 @@ _PRIMITIVE_TYPES: frozenset[type] = frozenset(
 )
 
 
-def _is_renderable(ann: Any) -> bool:
-    """Return `True` if a view layer can be expected to build a control for *ann*.
+def _is_plain(ann: Any) -> bool:
+    """Return True for a type one input shows: a primitive, an `Enum` or a `Literal`."""
+    return (
+        ann in _PRIMITIVE_TYPES
+        or safe_issubclass(ann, enum.Enum)
+        or get_origin(ann) is Literal
+    )
+
+
+def _can_show(ann: Any) -> bool:
+    """Return True if a view can be expected to build an input for *ann*.
 
     Imports no toolkit, so it can run before any application object exists.
-    `Any` is excluded.
+    A container, mapping, tuple or union can be shown when every type inside
+    it can, a mapping key being a plain type; a device, `Any`, and a container
+    no built-in satisfies cannot.
     """
-    # Any says nothing about the value, so no view can choose a control;
-    # refusing it here names the plan and parameter, where building the
-    # controls would not
-    if ann is Any:
+    if isdevice(ann):
         return False
-    if ann in _PRIMITIVE_TYPES:
+    if _is_plain(ann):
         return True
-    if _safe_issubclass(ann, enum.Enum):
-        return True
-    # a sequence of anything but devices is an editable list of its element
-    # type; a device sequence is handled by _fields_from_annotation, which
-    # offers the matching device names as choices instead
-    return issequence(ann) and not isdevicesequence(ann) and not isdeviceset(ann)
+    members = union_members(ann)
+    if members:
+        rest = [member for member in members if member is not NoneType]
+        return bool(rest) and all(_can_show(member) for member in rest)
+    if is_mapping(ann):
+        key, value = get_args(ann)
+        return _is_plain(key) and _can_show(value)
+    if is_fixed_tuple(ann):
+        return all(_can_show(member) for member in get_args(ann))
+    if container_type(ann) is not None:
+        return _can_show(get_args(ann)[0])
+    return False
 
 
 def _resolve_annotations(
@@ -388,7 +402,7 @@ def create_plan_spec(
         )
 
     ret_origin = get_origin(return_type)
-    is_generator = ret_origin is not None and _safe_issubclass(
+    is_generator = ret_origin is not None and safe_issubclass(
         ret_origin, cabc.Generator
     )
     if not is_generator:
@@ -423,16 +437,15 @@ def create_plan_spec(
         else:
             fields = _fields_from_annotation(ann, pkind, devices)
 
+        shown = (
+            actions_meta is not None
+            or pkind is ParamKind.VAR_KEYWORD
+            or fields.choices is not None
+            or _can_show(ann)
+        )
         # refuse now: failing here is clearer than a broken control or a
         # crash once the plan runs
-        is_required = param.default is _empty
-        needs_control = (
-            actions_meta is None
-            and is_required
-            and pkind is not ParamKind.VAR_KEYWORD
-            and fields.choices is None
-        )
-        if needs_control and not _is_renderable(ann):
+        if not shown and param.default is _empty:
             raise UnresolvableAnnotationError(func_obj.__name__, name, ann)
 
         params.append(
@@ -443,6 +456,7 @@ def create_plan_spec(
                 default=param.default,
                 choices=fields.choices,
                 multiselect=fields.multiselect,
+                hidden=not shown,
                 actions=actions_meta,
                 device_proto=fields.device_proto,
             )
@@ -536,6 +550,8 @@ def resolve_arguments(
 
     * **Action parameters** are filled from the spec when the interface lacks
       them.
+    * **Hidden parameters** get their default, so the parameters after them
+      keep their places.
     * **Device parameters**: names become `OADevice` instances from
       `devices`.
     * **Everything else** passes unchanged.
@@ -549,10 +565,16 @@ def resolve_arguments(
     """
     values: dict[str, Any] = dict(param_values)
 
-    # action parameters have no widget, so their values never come from the UI
+    # a parameter with no widget never gets a value from the UI: an action
+    # parameter gets its actions, and a hidden one its default, which keeps
+    # the parameters after it in their places
     for p in spec.parameters:
-        if p.actions is not None and p.name not in values:
+        if p.name in values:
+            continue
+        if p.actions is not None:
             values[p.name] = p.actions
+        elif p.hidden:
+            values[p.name] = p.default
 
     resolved: dict[str, Any] = {}
 
