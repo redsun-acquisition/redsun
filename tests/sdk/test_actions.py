@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -59,26 +58,19 @@ async def test_srlatch_lifecycle() -> None:
     assert not latch.is_set()
 
 
-def test_a_latch_set_from_another_thread_wakes_the_plan(RE: RunEngine) -> None:
-    """Wake a waiting plan at once when its latch is set from another thread."""
+def test_a_latch_set_from_another_thread_wakes_the_plan(
+    RE: RunEngine, polls: list[Msg], wait_until: Callable[..., bool]
+) -> None:
+    """Wake a waiting plan before its poll ends when another thread sets its latch."""
     latch = SRLatch()
-    started = threading.Event()
 
-    def on_message(msg: Msg) -> None:
-        if msg.command == "wait_for_actions":
-            started.set()
-
-    RE.msg_hook = on_message  # type: ignore[assignment]
-
-    # The set is forwarded to the latch's loop, so this 5 s poll is not waited out.
-    future = RE(rps.wait_for_actions({"go": latch}, poll_interval=5.0))
-    assert started.wait(5)
-    time.sleep(0.1)  # the hook runs before the message does, let the wait begin
+    future = RE(rps.wait_for_actions({"go": latch}, poll_interval=1.0))
+    assert wait_until(lambda: len(polls) >= 2)
     began = time.monotonic()
     latch.set()
 
     future.result(timeout=5)
-    assert time.monotonic() - began < 1.0
+    assert time.monotonic() - began < 0.5
 
 
 def test_a_clicked_and_a_pressed_action_run_from_offer_to_done(
