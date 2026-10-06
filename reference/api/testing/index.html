@@ -5822,8 +5822,9 @@
 
         <p>Pytest fixtures for testing components, sessions and services.</p>
 <p>A suite loads them with <code>-p redsun.testing</code>, in <code>addopts</code> or on the command
-line. Loading them makes every test write session logs, acquisition data and
-catalogs under its <code>tmp_path</code>, and drop the psygnal emissions it left queued.
+line. Loading them makes every test keep session settings, session logs,
+acquisition data and catalogs under its <code>tmp_path</code>, and drop the <code>psygnal</code>
+emissions it left queued.
 The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</code>.</p>
 
 
@@ -6005,7 +6006,10 @@ The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</co
         <p>Return a function building a session, shut down when the test ends.</p>
 <p>It takes a session class, made with the configuration given and laid over
 what the class declares, or a session already made. Sessions are shut
-down in reverse order; one the test shut down itself runs nothing again.</p>
+down in reverse order; one the test shut down itself runs nothing again.
+A shutdown that raises does not stop the others: once every session has
+been shut down, the fixture raises that error, or an <code>ExceptionGroup</code> of
+all of them when more than one session raised.</p>
 
 
     </div>
@@ -6071,7 +6075,7 @@ down in reverse order; one the test shut down itself runs nothing again.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Keep saved session settings under <code>tmp_path</code>.</p>
+        <p>Keep saved session settings in a <code>config</code> folder under <code>tmp_path</code>.</p>
 
 
     </div>

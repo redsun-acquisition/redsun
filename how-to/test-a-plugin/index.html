@@ -5702,10 +5702,10 @@ dependencies:</p>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing"</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">asyncio_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"auto"</span>
 </span></code></pre></div>
-<p>From then on every test writes session log files under its own <code>tmp_path</code>,
-and so do acquisition files and catalogs a session puts in their default
-location, and every test drops the <code>psygnal</code> emissions it left queued for
-another thread. A session whose configuration names its own <code>storage</code>
+<p>From then on every test keeps session settings and session log files under
+its own <code>tmp_path</code>, and so do acquisition files and catalogs a session puts in
+their default location, and every test drops the <code>psygnal</code> emissions it left
+queued for another thread. A session whose configuration names its own <code>storage</code>
 directory still writes there. The fixtures doing this run for each test, so
 a session built in a fixture scoped to a module or the whole run is not
 covered. Nothing loads the module unless a suite asks for it, so these

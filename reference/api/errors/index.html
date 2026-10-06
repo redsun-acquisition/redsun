@@ -5962,7 +5962,12 @@ them: a file path, or <code>an inline mapping</code>.</p>
 
 
 
-        <p>Raised when a <code>hooks</code> configuration entry cannot be turned into a provider.</p>
+        <p>Raised when a hook is declared wrongly or its provider cannot serve.</p>
+<p>A hook is declared wrongly when it names no class, a point the session
+does not call, a point another provider already takes, or the same
+provider and keys as another hook. A provider
+cannot serve when it cannot be imported or built, does not implement its
+<abbr title="A named moment of a build at which a session calls one of your objects.">hook point</abbr>, or returns what the point cannot use.</p>
 
 
 
