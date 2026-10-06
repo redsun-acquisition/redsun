@@ -82,7 +82,8 @@ Step 5 accepts an annotation an input can show:
 | `X \| None` | `X` can be shown |
 | `A \| B` | every member can be shown |
 
-A device inside any of these shapes cannot be shown, and neither can `Any`, a
+`Annotated` metadata is set aside when deciding, at every level, so
+`list[Annotated[float, ...]]` is read as `list[float]`. A device inside any of these shapes cannot be shown, and neither can `Any`, a
 `Callable`, a container without type arguments, or a container no built-in
 satisfies, such as `deque[T]` or `OrderedDict[K, V]`: the plan would receive
 a `list` or a `dict`, not the class it names.
