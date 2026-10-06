@@ -20,6 +20,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.links_between
+    options:
+      show_root_heading: true
+
 ::: redsun.Connection
     options:
       show_root_heading: true

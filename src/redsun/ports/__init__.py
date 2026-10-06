@@ -15,6 +15,7 @@ from ._wiring import (
     SlotThread,
     Unconnected,
     WiringError,
+    links_between,
     ports,
     slot,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "SlotThread",
     "Unconnected",
     "WiringError",
+    "links_between",
     "ports",
     "slot",
 ]

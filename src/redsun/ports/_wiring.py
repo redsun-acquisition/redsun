@@ -33,6 +33,7 @@ __all__ = [
     "SlotThread",
     "Unconnected",
     "WiringError",
+    "links_between",
     "marker_of",
     "owner_of",
     "port_name",
@@ -75,23 +76,32 @@ class ComponentNotBuilt(WiringError):
 class Slot:
     """What `slot` records on a method."""
 
-    __slots__ = ("name", "thread")
+    __slots__ = ("name", "signals", "thread")
 
-    def __init__(self, name: str | None, thread: SlotThread) -> None:
+    def __init__(
+        self, name: str | None, thread: SlotThread, signals: tuple[str, ...]
+    ) -> None:
         self.name = name
         self.thread = thread
+        self.signals = signals
 
 
 @overload
 def slot(fn: F, /) -> F: ...
 @overload
-def slot(*, name: str | None = ..., thread: SlotThread = ...) -> Callable[[F], F]: ...
+def slot(
+    *,
+    name: str | None = ...,
+    thread: SlotThread = ...,
+    signal: str | tuple[str, ...] = ...,
+) -> Callable[[F], F]: ...
 def slot(
     fn: F | None = None,
     /,
     *,
     name: str | None = None,
     thread: SlotThread = None,
+    signal: str | tuple[str, ...] = (),
 ) -> F | Callable[[F], F]:
     """Mark a method as connectable to a signal.
 
@@ -109,10 +119,16 @@ def slot(
         the method name without leading underscores.
     thread
         Delivery thread, overriding the affinity the class declares.
+    signal
+        The signal, or the signals, that reach this slot when a session
+        pairs its component with another: each is the attribute name of a
+        signal of the other component. Without it, only the links a session
+        lists reach the slot.
     """
+    signals = (signal,) if isinstance(signal, str) else signal
 
     def deco(target: F) -> F:
-        setattr(target, SLOT_ATTR, Slot(name, thread))
+        setattr(target, SLOT_ATTR, Slot(name, thread, signals))
         return target
 
     return deco if fn is None else deco(fn)
@@ -185,6 +201,46 @@ def ports(component: object) -> Ports:
                 signals[member] = value[member]
 
     return Ports(signals=signals, slots=slots)
+
+
+def links_between(a: object, b: object) -> list[Link]:
+    """Return the links pairing two built components makes, both ways.
+
+    Each signal of *a* reaches each slot of *b* naming it in its `signal`, then
+    each signal of *b* each slot of *a* naming it, in the order
+    [`ports`][redsun.ports.ports] lists them. Only those signals are matched,
+    so a device signal never is. An empty list means nothing matched.
+
+    ```python
+    def wire(self) -> Iterator[Link]:
+        yield from links_between(self.motor_widget, self.motor_ctrl)
+    ```
+
+    Raises
+    ------
+    ValueError
+        If *a* and *b* are one object.
+    WiringError
+        If either exposes two signals under one port name.
+    """
+    if a is b:
+        raise ValueError(f"cannot pair {a!r} with itself")
+    return [*one_way(a, b), *one_way(b, a)]
+
+
+def one_way(sender: object, receiver: object) -> list[Link]:
+    """Return the links from the signals of *sender* to the slots of *receiver* naming them."""
+    slots = [
+        (marker.signals, method)
+        for method in ports(receiver).slots.values()
+        if (marker := marker_of(method)) is not None
+    ]
+    return [
+        (signal, method)
+        for name, signal in ports(sender).signals.items()
+        for names, method in slots
+        if name in names
+    ]
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
