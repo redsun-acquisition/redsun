@@ -4,17 +4,11 @@ from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from inspect import Parameter
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
 import pytest
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
-from ophyd_async.core import (
-    Device,
-    SignalR,
-    SignalRW,
-)
 
 from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
@@ -27,7 +21,7 @@ from redsun.presenter.plan_spec import (
     resolve_arguments,
 )
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
-from tests.sdk.mocks import RoiDetector, XYStage
+from tests.sdk.mocks import DetectorProtocol, MotorProtocol, RoiDetector, XYStage, param
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -35,22 +29,6 @@ if TYPE_CHECKING:
     # deliberately never imported at runtime: a plan annotated with it
     # reproduces a plugin author hiding an import behind TYPE_CHECKING
     from decimal import Decimal
-
-
-@runtime_checkable
-class _MotorProtocol(Protocol):
-    """Motor protocol: requires child axis sub-devices."""
-
-    x: Device
-    y: Device
-
-
-@runtime_checkable
-class _DetectorProtocol(Protocol):
-    """Detector protocol: ROI is settable; sensor shape is fixed."""
-
-    roi: SignalRW[np.ndarray]
-    sensor_shape: SignalR[np.ndarray]
 
 
 @pytest.fixture
@@ -71,18 +49,6 @@ def one_motor(mock_motor: XYStage) -> dict[str, XYStage]:
     return {"stage": mock_motor}
 
 
-def _param(
-    name: str,
-    annotation: object = int,
-    kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
-    default: object = Parameter.empty,
-    **fields: Any,
-) -> ParamDescription:
-    return ParamDescription(
-        name=name, kind=kind, annotation=annotation, default=default, **fields
-    )
-
-
 def _make_spec(*params: ParamDescription) -> PlanSpec:
     return PlanSpec(name="plan", docs="", parameters=list(params))
 
@@ -90,21 +56,21 @@ def _make_spec(*params: ParamDescription) -> PlanSpec:
 @pytest.mark.parametrize(
     ("predicate", "annotation", "expected"),
     [
-        (isdevice, _DetectorProtocol, True),
-        (isdevice, _MotorProtocol, True),
+        (isdevice, DetectorProtocol, True),
+        (isdevice, MotorProtocol, True),
         (isdevice, int, False),
         (isdevice, str, False),
         (isdevice, 42, False),
-        (isdevicesequence, Sequence[_DetectorProtocol], True),
-        (isdevicesequence, Sequence[_MotorProtocol], True),
+        (isdevicesequence, Sequence[DetectorProtocol], True),
+        (isdevicesequence, Sequence[MotorProtocol], True),
         (isdevicesequence, Sequence[int], False),
-        (isdevicesequence, _DetectorProtocol, False),
-        (isdeviceset, set[_DetectorProtocol], True),
-        (isdeviceset, AbstractSet[_DetectorProtocol], True),
-        (isdeviceset, frozenset[_DetectorProtocol], True),
+        (isdevicesequence, DetectorProtocol, False),
+        (isdeviceset, set[DetectorProtocol], True),
+        (isdeviceset, AbstractSet[DetectorProtocol], True),
+        (isdeviceset, frozenset[DetectorProtocol], True),
         (isdeviceset, set[int], False),
-        (isdeviceset, _DetectorProtocol, False),
-        (isdeviceset, Sequence[_DetectorProtocol], False),
+        (isdeviceset, DetectorProtocol, False),
+        (isdeviceset, Sequence[DetectorProtocol], False),
         (issequence, Sequence[int], True),
         (issequence, list[float], True),
         (issequence, str, False),
@@ -197,19 +163,19 @@ class TestCreatePlanSpec:
     ) -> None:
         """Offer the names of matching devices as the choices of a device parameter."""
 
-        def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
+        def plan(motor: MotorProtocol) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_motor)
         p = spec.parameters[0]
         assert p.choices == ["stage"]
         assert not p.multiselect
-        assert p.device_proto is _MotorProtocol
+        assert p.device_proto is MotorProtocol
 
     def test_single_device_no_registry_match_raises(self) -> None:
         """Refuse a required device parameter that no registered device matches."""
 
-        def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
+        def plan(motor: MotorProtocol) -> MsgGenerator[None]:
             yield from ()
 
         with pytest.raises(UnresolvableAnnotationError) as exc_info:
@@ -219,7 +185,7 @@ class TestCreatePlanSpec:
     def test_single_device_no_registry_match_ok_with_default(self) -> None:
         """Accept a device parameter with a default when no device matches."""
 
-        def plan(motor: _MotorProtocol = None) -> MsgGenerator[None]:  # type: ignore[assignment]
+        def plan(motor: MotorProtocol = None) -> MsgGenerator[None]:  # type: ignore[assignment]
             yield from ()
 
         spec = create_plan_spec(plan, {})
@@ -230,35 +196,35 @@ class TestCreatePlanSpec:
     ) -> None:
         """Make a sequence of devices a multiple choice of the matching devices."""
 
-        def plan(dets: Sequence[_DetectorProtocol]) -> MsgGenerator[None]:
+        def plan(dets: Sequence[DetectorProtocol]) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
         assert p.choices == ["cam"]
         assert p.multiselect
-        assert p.device_proto is _DetectorProtocol
+        assert p.device_proto is DetectorProtocol
 
     def test_set_device_param_is_multiselect(
         self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a set of devices a multiple choice of the matching devices."""
 
-        def plan(dets: set[_DetectorProtocol]) -> MsgGenerator[None]:
+        def plan(dets: set[DetectorProtocol]) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
         assert p.choices == ["cam"]
         assert p.multiselect
-        assert p.device_proto is _DetectorProtocol
+        assert p.device_proto is DetectorProtocol
 
     def test_var_positional_device_is_multiselect(
         self, one_detector: dict[str, RoiDetector]
     ) -> None:
         """Make a variadic positional device parameter a multiple choice."""
 
-        def plan(*dets: _DetectorProtocol) -> MsgGenerator[None]:
+        def plan(*dets: DetectorProtocol) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, one_detector)
@@ -490,54 +456,54 @@ class TestCollectArguments:
 
     def test_positional_only(self) -> None:
         """Pass a positional-only parameter positionally."""
-        spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_ONLY))
+        spec = _make_spec(param("x", kind=ParamKind.POSITIONAL_ONLY))
         args, kwargs = collect_arguments(spec, {"x": 42})
         assert args == (42,)
         assert kwargs == {}
 
     def test_positional_or_keyword(self) -> None:
         """Pass a positional-or-keyword parameter positionally."""
-        spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD))
+        spec = _make_spec(param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD))
         args, kwargs = collect_arguments(spec, {"x": 7})
         assert args == (7,)
         assert kwargs == {}
 
     def test_keyword_only(self) -> None:
         """Pass a keyword-only parameter by keyword."""
-        spec = _make_spec(_param("n", kind=ParamKind.KEYWORD_ONLY))
+        spec = _make_spec(param("n", kind=ParamKind.KEYWORD_ONLY))
         args, kwargs = collect_arguments(spec, {"n": 3})
         assert args == ()
         assert kwargs == {"n": 3}
 
     def test_var_positional_sequence_expanded(self) -> None:
         """Expand a sequence given for *args into separate positional arguments."""
-        spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
+        spec = _make_spec(param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": [1, 2, 3]})
         assert args == (1, 2, 3)
 
     def test_var_positional_single_value_wrapped(self) -> None:
         """Pass a single value given for *args as one positional argument."""
-        spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
+        spec = _make_spec(param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": 99})
         assert args == (99,)
 
     def test_var_keyword_mapping_merged(self) -> None:
         """Merge a mapping given for **kwargs into the keyword arguments."""
-        spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
+        spec = _make_spec(param("kw", kind=ParamKind.VAR_KEYWORD))
         _args, kwargs = collect_arguments(spec, {"kw": {"a": 1, "b": 2}})
         assert kwargs == {"a": 1, "b": 2}
 
     def test_var_keyword_non_mapping_raises(self) -> None:
         """Raise TypeError when **kwargs is given something other than a mapping."""
-        spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
+        spec = _make_spec(param("kw", kind=ParamKind.VAR_KEYWORD))
         with pytest.raises(TypeError, match="Mapping"):
             collect_arguments(spec, {"kw": "not_a_mapping"})
 
     def test_missing_param_skipped(self) -> None:
         """Skip a parameter that has no value."""
         spec = _make_spec(
-            _param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD),
-            _param("y", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("y", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
         args, _kwargs = collect_arguments(spec, {"x": 1})
         assert args == (1,)
@@ -545,9 +511,9 @@ class TestCollectArguments:
     def test_ordering_preserved(self) -> None:
         """Keep positional arguments in the order the plan declares them."""
         spec = _make_spec(
-            _param("a", kind=ParamKind.POSITIONAL_OR_KEYWORD),
-            _param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
-            _param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("a", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
         args, _ = collect_arguments(spec, {"c": 3, "a": 1, "b": 2})
         assert args == (1, 2, 3)
@@ -606,10 +572,10 @@ class TestResolveArguments:
             ParamDescription(
                 name="motor",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=_MotorProtocol,
+                annotation=MotorProtocol,
                 default=Parameter.empty,
                 choices=["stage"],
-                device_proto=_MotorProtocol,
+                device_proto=MotorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"motor": "stage"}, one_motor)
@@ -623,11 +589,11 @@ class TestResolveArguments:
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=Sequence[_DetectorProtocol],
+                annotation=Sequence[DetectorProtocol],
                 default=Parameter.empty,
                 choices=["cam"],
                 multiselect=True,
-                device_proto=_DetectorProtocol,
+                device_proto=DetectorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
@@ -641,11 +607,11 @@ class TestResolveArguments:
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=set[_DetectorProtocol],
+                annotation=set[DetectorProtocol],
                 default=Parameter.empty,
                 choices=["cam"],
                 multiselect=True,
-                device_proto=_DetectorProtocol,
+                device_proto=DetectorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
@@ -659,10 +625,10 @@ class TestResolveArguments:
             ParamDescription(
                 name="motor",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=_MotorProtocol,
+                annotation=MotorProtocol,
                 default=Parameter.empty,
                 choices=["stage"],
-                device_proto=_MotorProtocol,
+                device_proto=MotorProtocol,
             )
         )
         resolved = resolve_arguments(spec, {"motor": "nonexistent"}, one_motor)

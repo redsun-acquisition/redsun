@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from inspect import Parameter
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
 from ophyd_async.core import (
@@ -21,6 +22,8 @@ from ophyd_async.core import (
     soft_signal_r_and_setter,
     soft_signal_rw,
 )
+
+from redsun.presenter.plan_spec import ParamDescription, ParamKind
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -382,3 +385,32 @@ class WholeLight(SoftLight):
         with self.add_children_as_readables():
             self.intensity = soft_signal_rw(int, 5, units="%")
         super().__init__(name)
+
+
+@runtime_checkable
+class MotorProtocol(Protocol):
+    """Motor protocol: requires child axis sub-devices."""
+
+    x: Device
+    y: Device
+
+
+@runtime_checkable
+class DetectorProtocol(Protocol):
+    """Detector protocol: ROI is settable; sensor shape is fixed."""
+
+    roi: SignalRW[np.ndarray]
+    sensor_shape: SignalR[np.ndarray]
+
+
+def param(
+    name: str,
+    annotation: object = int,
+    kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
+    default: object = Parameter.empty,
+    **fields: Any,
+) -> ParamDescription:
+    """Describe a plan parameter, an `int` with no default unless told otherwise."""
+    return ParamDescription(
+        name=name, kind=kind, annotation=annotation, default=default, **fields
+    )

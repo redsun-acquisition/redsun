@@ -4,13 +4,11 @@ from collections.abc import Sequence
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import Any, Literal
 
-import numpy as np
 import pytest
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
-from ophyd_async.core import Device, SignalR, SignalRW
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
@@ -26,10 +24,28 @@ from redsun.presenter.plan_spec import (
 from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
+from tests.sdk.mocks import DetectorProtocol, MotorProtocol, param
 
 pytestmark = pytest.mark.qt
 
 STREAM = PlanAction(name="stream", toggle_states=("Start", "Stop"))
+
+_ANNOTATIONS = [
+    pytest.param(int, id="int"),
+    pytest.param(float, id="float"),
+    pytest.param(str, id="str"),
+    pytest.param(bool, id="bool"),
+    pytest.param(Path, id="path"),
+    pytest.param(Sequence[int], id="sequence-int"),
+    pytest.param(list[str], id="list-str"),
+    pytest.param(Decimal, id="decimal"),
+    pytest.param(Any, id="any"),
+]
+"""Annotations a required plan parameter might carry, on both sides of the gate.
+
+Each is checked twice: whether `create_plan_spec` accepts it, and whether the
+Qt view can build a control for it.
+"""
 
 
 @pytest.fixture(autouse=True)
@@ -55,34 +71,6 @@ CALLBACKS = {name: Callback(name) for name in ("a", "b", "c", "own")}
 
 CATALOGUE = {name: CALLBACKS[name] for name in ("a", "b", "c")}
 """The callbacks a user may attach; `own` is only ever carried by a plan."""
-
-
-@runtime_checkable
-class MotorProtocol(Protocol):
-    """Motor protocol: requires child axis sub-devices."""
-
-    x: Device
-    y: Device
-
-
-@runtime_checkable
-class DetectorProtocol(Protocol):
-    """Detector protocol: ROI is settable; sensor shape is fixed."""
-
-    roi: SignalRW[np.ndarray]
-    sensor_shape: SignalR[np.ndarray]
-
-
-def _param(
-    name: str,
-    annotation: object = int,
-    kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
-    default: object = Parameter.empty,
-    **fields: Any,
-) -> ParamDescription:
-    return ParamDescription(
-        name=name, kind=kind, annotation=annotation, default=default, **fields
-    )
 
 
 def _simple_spec() -> PlanSpec:
@@ -183,6 +171,13 @@ def _texts(widget: PlanWidget) -> list[str]:
     assert widget.progress_group is not None
     labels = widget.progress_group.findChildren(QtW.QLabel, "progress-text")
     return [label.text() for label in labels]
+
+
+def _listed(pw: PlanWidget) -> list[str]:
+    """Return every entry of the callbacks list, checked or not, in order."""
+    assert pw.callbacks_list is not None
+    items = map(pw.callbacks_list.item, range(pw.callbacks_list.count()))
+    return [item.text() for item in items if item is not None]
 
 
 class TestActionButton:
@@ -348,28 +343,28 @@ class TestCreateParamWidget:
 
     def test_int_creates_spinbox(self) -> None:
         """Build a SpinBox for an int parameter."""
-        w = create_param_widget(_param("n", int))
+        w = create_param_widget(param("n", int))
         assert isinstance(w, mgw.SpinBox)
 
     def test_float_creates_float_spinbox(self) -> None:
         """Build a FloatSpinBox for a float parameter."""
-        w = create_param_widget(_param("x", float))
+        w = create_param_widget(param("x", float))
         assert isinstance(w, mgw.FloatSpinBox)
 
     def test_bool_creates_checkbox(self) -> None:
         """Build a CheckBox for a bool parameter."""
-        w = create_param_widget(_param("flag", bool, default=False))
+        w = create_param_widget(param("flag", bool, default=False))
         assert isinstance(w, mgw.CheckBox)
 
     def test_literal_creates_combobox(self) -> None:
         """Build a ComboBox for a Literal parameter."""
-        p = _param("egu", Literal["um", "mm"], choices=["um", "mm"])
+        p = param("egu", Literal["um", "mm"], choices=["um", "mm"])
         w = create_param_widget(p)
         assert isinstance(w, mgw.ComboBox)
 
     def test_single_device_creates_combobox(self) -> None:
         """Build a ComboBox for a single device parameter."""
-        p = _param(
+        p = param(
             "motor",
             MotorProtocol,
             choices=["stage"],
@@ -380,7 +375,7 @@ class TestCreateParamWidget:
 
     def test_multiselect_device_creates_device_sequence_edit(self) -> None:
         """Build a DeviceSequenceEdit for a multiple-choice device parameter."""
-        p = _param(
+        p = param(
             "dets",
             Sequence[DetectorProtocol],
             choices=["cam"],
@@ -392,32 +387,25 @@ class TestCreateParamWidget:
 
     def test_path_creates_file_edit(self) -> None:
         """Build a FileEdit for a Path parameter."""
-        w = create_param_widget(_param("output", Path))
+        w = create_param_widget(param("output", Path))
         assert isinstance(w, mgw.FileEdit)
 
     def test_sequence_int_creates_list_edit(self) -> None:
         """Build a ListEdit for a sequence of ints."""
-        w = create_param_widget(_param("vals", Sequence[int]))
+        w = create_param_widget(param("vals", Sequence[int]))
         assert isinstance(w, mgw.ListEdit)
 
     def test_hidden_param_creates_line_edit_placeholder(self) -> None:
         """Build a LineEdit placeholder for a hidden parameter."""
-        p = _param("secret", int, hidden=True)
+        p = param("secret", int, hidden=True)
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
 
     def test_action_param_creates_line_edit_placeholder(self) -> None:
         """Build a LineEdit placeholder for an action parameter."""
-        p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
+        p = param("snap", PlanAction, actions=PlanAction(name="snap"))
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
-
-
-def _listed(pw: PlanWidget) -> list[str]:
-    """Return every entry of the callbacks list, checked or not, in order."""
-    assert pw.callbacks_list is not None
-    items = map(pw.callbacks_list.item, range(pw.callbacks_list.count()))
-    return [item.text() for item in items if item is not None]
 
 
 class TestCallbacksList:
@@ -615,22 +603,6 @@ class TestPlanWidgetControlAPI:
         pw = create_plan_widget(_simple_spec())
         pw.enable_actions(True)
         pw.enable_actions(False)
-
-
-#: Annotations a required plan parameter might carry, spanning both sides of
-#: the gate. Each is checked twice: whether `create_plan_spec` accepts it, and
-#: whether the Qt view can build a control for it.
-_ANNOTATIONS = [
-    pytest.param(int, id="int"),
-    pytest.param(float, id="float"),
-    pytest.param(str, id="str"),
-    pytest.param(bool, id="bool"),
-    pytest.param(Path, id="path"),
-    pytest.param(Sequence[int], id="sequence-int"),
-    pytest.param(list[str], id="list-str"),
-    pytest.param(Decimal, id="decimal"),
-    pytest.param(Any, id="any"),
-]
 
 
 @pytest.mark.parametrize("annotation", _ANNOTATIONS)
