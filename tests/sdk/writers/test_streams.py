@@ -7,22 +7,20 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
+import zarr
 
 from redsun.writers import WriterError, _acquire_zarr, _ome_writers
 from redsun.writers._base import ArrayShape
 from redsun.writers._base import root_attributes as attributes
+from tests.sdk.writers.conftest import FRAME
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-zarr_python = pytest.importorskip("zarr")
-
-FRAME = ArrayShape.of((4, 4), np.uint16)
-
 
 def read(store: Path, key: str) -> np.ndarray[Any, Any]:
     """Return the whole array stored under *key* in *store*."""
-    return np.asarray(zarr_python.open_array(store, path=key, mode="r")[:])
+    return np.asarray(zarr.open_array(store, path=key, mode="r")[:])
 
 
 def test_a_stream_appends_to_each_of_its_keys_in_turn(tmp_path: Path) -> None:

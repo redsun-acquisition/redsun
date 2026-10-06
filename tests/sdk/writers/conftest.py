@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import ome_writers as ow
@@ -16,15 +15,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 FRAME = ArrayShape.of((4, 4), np.uint16)
-
-
-def attributes(path: Path) -> dict[str, Any]:
-    """Return the attributes of the Zarr group at *path*."""
-    document: dict[str, Any] = json.loads(
-        (path / "zarr.json").read_text(encoding="utf-8")
-    )
-    node_attributes: dict[str, Any] = document["attributes"]
-    return node_attributes
 
 
 def open_key(store: Path, data_key: str, *, is_ngff: bool) -> None:

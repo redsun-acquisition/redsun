@@ -20,6 +20,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 from ophyd_async.epics.core import EpicsDevice, PvSuffix
+from p4p.client.thread import Context
 
 from redsun import (
     Alias,
@@ -635,7 +636,6 @@ def test_two_pva_services_answer_on_the_loopback(
     build: BuildSession, launchable: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Keep two PV Access services on the loopback, where this process finds them."""
-    p4p = pytest.importorskip("p4p.client.thread")
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
 
@@ -653,7 +653,7 @@ def test_two_pva_services_answer_on_the_loopback(
     build(App)
 
     assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
-    with p4p.Context("pva") as client:
+    with Context("pva") as client:
         assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
         assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
 

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from p4p.client.thread import Context
 
 from redsun import Launch
 from redsun.log import GlobalFormatter
@@ -316,8 +317,6 @@ def test_two_pva_services_answer_on_the_loopback(
     launch_pva: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
     """Bind two PVA services to the loopback and list it in the address list."""
-    p4p = pytest.importorskip("p4p.client.thread")
-
     first = launch_pva("first", "SIM:FIRST", 1.0)
     second = launch_pva("second", "SIM:SECOND", 2.0)
     first.start()
@@ -326,7 +325,7 @@ def test_two_pva_services_answer_on_the_loopback(
     assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
     assert messages(service_log, logging.DEBUG).count("interface 127.0.0.1") == 2
     assert "unable to bind" not in service_log.text
-    with p4p.Context("pva") as client:
+    with Context("pva") as client:
         assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
         assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
 
@@ -365,8 +364,6 @@ def test_a_pva_service_started_in_each_test_answers(
     value: float,
 ) -> None:
     """Reach a PVA service started in each of two tests of one process."""
-    p4p = pytest.importorskip("p4p.client.thread")
-
     start_service(
         "started",
         Launch(
@@ -377,7 +374,7 @@ def test_a_pva_service_started_in_each_test_answers(
         transport="pv-access",
     )
 
-    with p4p.Context("pva") as client:
+    with Context("pva") as client:
         assert float(client.get("SIM:STARTED", timeout=10.0)) == value
 
 
@@ -387,8 +384,6 @@ def test_a_started_service_releases_its_transport_once_it_stops(
     start_service: StartService,
 ) -> None:
     """Release a started service's transport after the test, as a session does."""
-    pytest.importorskip("p4p")
-
     start_service(
         "released",
         Launch(
