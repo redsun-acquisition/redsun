@@ -62,3 +62,23 @@ def test_a_link_yielded_twice_is_made_once(build: BuildSession) -> None:
 
     assert session.listener.heard == ["hi"]
     assert len(session.connections) == 1
+
+
+class SaidAlsoConfigured(Chat):
+    config: ClassVar[dict[str, Any]] = {
+        "session": "pairs-chat",
+        "wiring": {"talker.sig_said": "listener.hear"},
+    }
+
+    def wire(self) -> Iterator[Link]:
+        yield self.talker.sig_said, self.listener.hear
+
+
+def test_a_link_in_wire_and_in_wiring_is_made_once(build: BuildSession) -> None:
+    """Connect a link both `wire` and the `wiring` section name only once."""
+    session = build(SaidAlsoConfigured)
+
+    session.talker.sig_said.emit("hi")
+
+    assert session.listener.heard == ["hi"]
+    assert len(session.connections) == 1

@@ -83,7 +83,6 @@ class Wiring:
         "failed",
         "frontend",
         "links",
-        "made_links",
         "names",
         "path_provider",
         "subscriptions",
@@ -103,12 +102,11 @@ class Wiring:
         # made by the session while it reads its configuration, after this
         self.path_provider: SessionPathProvider | None = None
         self.links: list[tuple[SignalInstance, SlotCallable]] = []
-        self.made_links: list[tuple[object, SlotCallable]] = []
         self.connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
         # subscription by identity: clear_sub needs the object back
         self.subscriptions: list[
-            tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
+            tuple[SignalR[Any], SlotCallable, Callable[[Any], None], SignalInstance]
         ] = []
 
     def label(self, owner: object | None) -> str:
@@ -159,7 +157,11 @@ class Wiring:
         """
         if skipped(signal, slot):
             return
-        if any(sent is signal and reached == slot for sent, reached in self.made_links):
+        made = [
+            *self.links,
+            *((sent, reached) for sent, reached, _, _ in self.subscriptions),
+        ]
+        if any(sent is signal and reached == slot for sent, reached in made):
             logger.debug(
                 "Not connecting %s to %s.%s again",
                 getattr(signal, "name", signal),
@@ -193,7 +195,6 @@ class Wiring:
             raise WiringError(f"cannot connect {link}: {e}") from e
 
         self.links.append((signal, slot))
-        self.made_links.append((signal, slot))
         self.connections.append(link)
         logger.debug(f"Connected {link}")
 
@@ -225,8 +226,7 @@ class Wiring:
         # ophyd-async requires a running loop to subscribe, and callers run on
         # the main thread during the build
         run_coro(attach())
-        self.subscriptions.append((signal, forward, relay))
-        self.made_links.append((signal, slot))
+        self.subscriptions.append((signal, slot, forward, relay))
         self.connections.append(link)
         logger.debug(f"Connected {link}")
 
@@ -323,13 +323,12 @@ class Wiring:
         for signal, slot in self.links:
             signal.disconnect(slot, missing_ok=True)
         self.links.clear()
-        self.made_links.clear()
         self.connections.clear()
 
         async def release(signal: SignalR[Any], forward: Callable[[Any], None]) -> None:
             signal.clear_sub(forward)
 
-        for device_signal, forward, relay in self.subscriptions:
+        for device_signal, _, forward, relay in self.subscriptions:
             run_coro(release(device_signal, forward))
             relay.disconnect()
         self.subscriptions.clear()
