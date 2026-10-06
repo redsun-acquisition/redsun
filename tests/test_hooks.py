@@ -26,6 +26,8 @@ from redsun.session import BUILD_STEPS
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
+    from redsun.testing import BuildSession
+
 pytestmark = pytest.mark.qt
 
 
@@ -135,7 +137,7 @@ def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
 
 def test_a_hook_runs_at_the_point_its_attribute_names(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Run a hook at the hook point named by its attribute."""
 
@@ -149,7 +151,7 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
 
 def test_the_installed_hook_points_are_logged_one_per_line(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Log each hook point with a provider on a line of its own."""
@@ -171,7 +173,7 @@ def test_the_installed_hook_points_are_logged_one_per_line(
 
 def test_a_provider_may_inherit_the_protocol_of_its_point(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Accept a provider that subclasses its hook point's protocol."""
 
@@ -185,7 +187,7 @@ def test_a_provider_may_inherit_the_protocol_of_its_point(
 
 def test_declare_carries_the_providers_arguments(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Pass Declare arguments to the hook provider's constructor."""
 
@@ -199,7 +201,7 @@ def test_declare_carries_the_providers_arguments(
 
 def test_one_annotation_serves_several_points(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Use one provider instance for every point listed in Serves."""
 
@@ -217,7 +219,7 @@ def test_one_annotation_serves_several_points(
 
 def test_shutdown_reaches_each_provider_once_the_last_built_first(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
     log: list[str],
 ) -> None:
     """Shut down each hook provider once, in reverse build order."""
@@ -273,7 +275,7 @@ def test_a_provider_missing_the_method_is_refused() -> None:
 
 def test_the_configuration_names_a_provider(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Install a hook provider named in the configuration, with its kwargs."""
 
@@ -308,7 +310,7 @@ def test_one_point_may_not_be_named_twice_over() -> None:
 
 def test_an_entry_two_points_share_is_one_provider(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Build one provider for one configuration entry shared by two points."""
     shared = {"provider": "mock_bundle.hooks:MockBoth"}
@@ -357,7 +359,7 @@ def test_the_configuration_may_not_name_a_point_the_session_does_not_call(
 
 def test_during_build_brackets_the_build_and_names_every_step(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
     log: list[str],
 ) -> None:
     """Enter the `during_build` hook once around the build and report every step."""
@@ -402,7 +404,7 @@ def test_the_span_closes_on_a_failed_build(log: list[str]) -> None:
 def test_create_application_is_consulted_only_with_none_running(
     qapp: QApplication,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Call the `create_application` hook only when no QApplication is running."""
 

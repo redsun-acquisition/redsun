@@ -16,7 +16,9 @@ from redsun.qt import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Iterator
+
+    from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
 
@@ -30,7 +32,7 @@ class DarkApp(QtSession):
 
 
 @pytest.fixture(autouse=True)
-def restore_scheme() -> Any:
+def restore_scheme() -> Iterator[None]:
     """Stop asking for a scheme, the style hints being process-wide."""
     yield
     hints = QGuiApplication.styleHints()
@@ -47,7 +49,7 @@ def _control(app: QtSession) -> ColorSchemeButton:
 
 def test_every_session_pins_the_control_to_a_toolbar(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Put the control on a toolbar of every session, even one declaring nothing."""
     app = build(PlainApp)
@@ -59,7 +61,7 @@ def test_every_session_pins_the_control_to_a_toolbar(
 
 def test_the_configuration_says_which_mode_to_start_in(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Start the control in the configured mode, not checking the scheme Qt reports."""
     # Only the mode asked for can be pinned: the offscreen platform the suite runs on
@@ -69,7 +71,7 @@ def test_the_configuration_says_which_mode_to_start_in(
 
 def test_clicking_cycles_system_light_dark_and_round(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Cycle the mode system -> light -> dark -> system, with a new button text each time."""
     control = _control(build(PlainApp))
@@ -90,7 +92,7 @@ def test_clicking_cycles_system_light_dark_and_round(
 
 def test_the_control_is_pushed_to_the_right_edge(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Push the control to the right edge of its toolbar with an expanding spacer."""
     control = _control(build(PlainApp))
@@ -108,7 +110,7 @@ def test_the_control_is_pushed_to_the_right_edge(
 
 def test_a_session_from_a_file_carries_it_too(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Read the starting mode from a session file too."""
     unbuilt = Session.from_config(

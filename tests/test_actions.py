@@ -13,7 +13,7 @@ from redsun import AsPresenter, Session, provides
 from redsun.qt import ActionError, QtSession
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
 
@@ -55,7 +55,7 @@ def session(executed: list[str], *declared: dict[str, object]) -> QtSession:
 
 def test_the_section_registers_commands_on_the_session(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
     executed: list[str],
 ) -> None:
     """Register each declared command on the session and in the menus it names."""
@@ -87,7 +87,7 @@ def test_the_section_registers_commands_on_the_session(
 
 def test_releasing_the_session_takes_its_commands_with_it(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
     executed: list[str],
 ) -> None:
     """Unregister the session's commands when it shuts down."""
