@@ -8,7 +8,7 @@ from contextlib import suppress
 from difflib import get_close_matches
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Final, TypeAlias, cast
+from typing import TYPE_CHECKING, Annotated, Any, Final, TypeAlias, TypeGuard, cast
 
 import yaml
 from pydantic import (
@@ -204,6 +204,21 @@ def refuse_identity_conflict(
         )
 
 
+def is_list_like(value: object) -> TypeGuard[Sequence[Any]]:
+    """Tell a list or tuple from a string, a mapping or a scalar."""
+    return isinstance(value, Sequence) and not isinstance(value, str)
+
+
+def pairs_joined(earlier: Sequence[Any], later: Sequence[Any]) -> list[Any]:
+    """Join two sequences of pairs as lists, dropping a pair already present."""
+    joined: list[Any] = []
+    for pair in (*earlier, *later):
+        pair = list(pair) if is_list_like(pair) else pair
+        if pair not in joined:
+            joined.append(pair)
+    return joined
+
+
 def load(
     declared: Source | Sequence[Source] | None,
     required: Collection[str] = frozenset(),
@@ -228,8 +243,8 @@ def load(
         refuse_identity_conflict(data, overlay, source)
         earlier, later = data.get("pairs"), overlay.get("pairs")
         data = merge_config(data, overlay)
-        if isinstance(earlier, list) and (later is None or isinstance(later, list)):
-            data["pairs"] = [*earlier, *(later or [])]
+        if is_list_like(earlier) and (later is None or is_list_like(later)):
+            data["pairs"] = pairs_joined(earlier, later or ())
     missing = set(required) - data.keys()
     if missing:
         named = ", ".join(label(source) for source in ordered) or "no sources"
