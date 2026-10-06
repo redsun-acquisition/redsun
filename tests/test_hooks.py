@@ -9,19 +9,22 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
 from mock_bundle.hooks import MockBoth, MockBranding, MockStyle
-from qtpy.QtWidgets import QApplication, QMainWindow
+from ophyd_async.core import Device
+from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
 
 from redsun import (
+    AsDevice,
     AsHook,
     AsPresenter,
+    AsView,
     ConfiguresApplication,
     Declare,
     HookError,
+    Placement,
     Serves,
     Session,
 )
-from redsun.qt import QtHook, QtSession
-from redsun.session import BUILD_STEPS
+from redsun.qt import Dock, QtHook, QtSession
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -45,6 +48,33 @@ class Splash:
             yield self.log.append
         finally:
             self.log.append("exit")
+
+
+class Gauge(Device):
+    """Device recording its construction."""
+
+    def __init__(self, name: str, log: list[str]) -> None:
+        log.append("device built")
+        super().__init__(name=name)
+
+
+class Tracker:
+    """Presenter recording its construction."""
+
+    def __init__(self, name: str, log: list[str]) -> None:
+        self.name = name
+        log.append("presenter built")
+
+
+class Board(QWidget):
+    """View recording its construction."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget, log: list[str]) -> None:
+        super().__init__(parent)
+        self.name = name
+        log.append("view built")
 
 
 class Founder:
@@ -357,28 +387,48 @@ def test_the_configuration_may_not_name_a_point_the_session_does_not_call(
         session({"hooks": hooks}).build()
 
 
-def test_during_build_brackets_the_build_and_names_every_step(
+def test_the_build_runs_its_steps_in_order(
     qapp: QApplication,
     build: BuildSession,
     log: list[str],
 ) -> None:
-    """Enter the `during_build` hook once around the build and report every step."""
+    """Report each step to `during_build` as it starts, and build each layer in it."""
 
     class App(QtSession):
-        pass
+        gauge: AsDevice[Gauge]
+        tracker: AsPresenter[Tracker]
+        board: AsView[Board]
 
     config = {
+        "devices": {"gauge": {"log": log}},
+        "presenters": {"tracker": {"log": log}},
+        "views": {"board": {"log": log}},
         "hooks": {
             "during_build": {
                 "provider": f"{__name__}:Splash",
                 "kwargs": {"log": log},
             }
-        }
+        },
     }
     build(App, config)
-    assert log[0] == "enter"
-    assert log[-1] == "exit"
-    assert log[1:-1] == list(BUILD_STEPS)
+    assert log == [
+        "enter",
+        "services",
+        "devices",
+        "device built",
+        "connect",
+        "registry",
+        "presenters",
+        "presenter built",
+        "views",
+        "view built",
+        "setup",
+        "seal",
+        "wiring",
+        "presentation",
+        "report",
+        "exit",
+    ]
 
 
 def test_the_span_closes_on_a_failed_build(log: list[str]) -> None:
