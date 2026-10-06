@@ -115,6 +115,11 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
         """Check the devices named in a list, set or frozenset."""
         self._widget._mgui_set_value(value)
 
+    @property
+    def problems(self) -> list[str]:
+        """The problem `choose at least one device` while no device is checked."""
+        return [] if self.get_value() else ["choose at least one device"]
+
 
 class CheckboxListWidget(QtW.QWidget):
     """Vertical stack of `QCheckBox` widgets plus a count label.

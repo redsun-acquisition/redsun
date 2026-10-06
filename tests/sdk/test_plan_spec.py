@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections import OrderedDict, deque
+from collections.abc import Callable, Collection, Iterable, MutableMapping, Sequence
 from collections.abc import Set as AbstractSet
 from inspect import Parameter
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import pytest
 from bluesky.protocols import Readable
@@ -24,8 +25,6 @@ from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, isse
 from tests.sdk.mocks import DetectorProtocol, MotorProtocol, RoiDetector, XYStage, param
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     # deliberately never imported at runtime: a plan annotated with it
     # reproduces a plugin author hiding an import behind TYPE_CHECKING
     from decimal import Decimal
@@ -82,6 +81,78 @@ def test_the_annotation_predicates(
 ) -> None:
     """Classify annotations as device, device sequence, device set or sequence."""
     assert predicate(annotation) is expected
+
+
+@pytest.mark.parametrize(
+    ("annotation", "hidden"),
+    [
+        (int, False),
+        (list[int], False),
+        (Iterable[int], False),
+        (Collection[int], False),
+        (tuple[int, str], False),
+        (tuple[float, ...], False),
+        (set[int], False),
+        (frozenset[str], False),
+        (MutableMapping[str, int], False),
+        (dict[str, list[float]], False),
+        (int | None, False),
+        (float | list[float], False),
+        (list[Annotated[float, {"min": -5.0}]], False),
+        (dict[str, Annotated[int, "units"]], False),
+        (deque[int], True),
+        (OrderedDict[str, int], True),
+        (Callable[[int], int], True),
+        (Any, True),
+        (dict[str, Any] | None, True),
+        (dict[str, Readable[Any]], True),
+        (Readable[Any] | None, True),
+        (dict[list[int], int], True),
+    ],
+)
+def test_a_parameter_with_a_default_is_hidden_when_no_widget_can_show_it(
+    annotation: object, hidden: bool
+) -> None:
+    """Hide a parameter with a default that no widget can show, and show the rest."""
+
+    def plan(x: object = None) -> MsgGenerator[None]:
+        yield from ()
+
+    plan.__annotations__["x"] = annotation
+
+    [description] = create_plan_spec(plan, {}).parameters
+
+    assert description.hidden is hidden
+
+
+def test_an_unannotated_parameter_with_a_default_is_hidden() -> None:
+    """Hide a parameter with a default and no annotation."""
+
+    def plan(x: int = 5) -> MsgGenerator[None]:
+        yield from ()
+
+    del plan.__annotations__["x"]
+
+    [description] = create_plan_spec(plan, {}).parameters
+
+    assert description.hidden
+
+
+def test_a_hidden_parameter_keeps_the_parameters_after_it_in_place() -> None:
+    """Give a hidden parameter its default, so the values after it keep their places."""
+
+    def plan(
+        frames: int, md: dict[str, Any] | None = None, step: float = 1.0
+    ) -> MsgGenerator[None]:
+        yield from ()
+
+    spec = create_plan_spec(plan, {})
+
+    args, kwargs = collect_arguments(
+        spec, resolve_arguments(spec, {"frames": 3, "step": 0.5}, {})
+    )
+
+    assert (args, kwargs) == ((3, None, 0.5), {})
 
 
 class TestCreatePlanSpec:

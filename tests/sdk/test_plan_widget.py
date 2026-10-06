@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+import inspect
+from collections import OrderedDict, deque
+from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
 from typing import Any, Literal
 
+import bluesky.plans as bp
 import pytest
+from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
 from qtpy import QtCore
@@ -19,12 +23,16 @@ from redsun.presenter.plan_spec import (
     ParamKind,
     PlanSpec,
     UnresolvableAnnotationError,
+    collect_arguments,
     create_plan_spec,
+    resolve_arguments,
 )
 from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
+from redsun.view.qt._value_widgets import SequenceEdit, UnionEdit
 from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
-from tests.sdk.mocks import DetectorProtocol, MotorProtocol, param
+from tests.sdk.mocks import DetectorProtocol, MockDetector, MotorProtocol, param
+from tests.sdk.view.helpers import type_into
 
 pytestmark = pytest.mark.qt
 
@@ -40,6 +48,16 @@ _ANNOTATIONS = [
     pytest.param(list[str], id="list-str"),
     pytest.param(Decimal, id="decimal"),
     pytest.param(Any, id="any"),
+    pytest.param(dict[str, float], id="dict-str-float"),
+    pytest.param(dict[str, list[float]], id="dict-str-list"),
+    pytest.param(set[int], id="set-int"),
+    pytest.param(Iterable[int], id="iterable-int"),
+    pytest.param(tuple[int, int], id="tuple-int-int"),
+    pytest.param(int | None, id="optional-int"),
+    pytest.param(float | list[float], id="union-float-list"),
+    pytest.param(deque[int], id="deque"),
+    pytest.param(OrderedDict[str, int], id="ordered-dict"),
+    pytest.param(Callable[[int], int], id="callable"),
 ]
 """Annotations a required plan parameter might carry, accepted or refused.
 
@@ -138,6 +156,37 @@ def _action_spec() -> PlanSpec:
         yield from ()
 
     return create_plan_spec(plan, {})
+
+
+def walk(
+    detectors: Sequence[Readable[Any]],
+    exposure: float = 0.1,
+    positions: list[float] = [0.0, 1.0],
+    corner: tuple[int, int] = (3, 4),
+    gains: dict[str, float] = {"x": 1.0},
+    frames: int | None = None,
+    delay: float | list[float] = 0.0,
+    tags: set[str] = {"a"},
+    md: dict[str, Any] | None = None,
+) -> MsgGenerator[None]:
+    """Take a parameter of every shape a plan widget shows."""
+    yield from ()
+
+
+def clicked(widget: Any, kind: type[QtW.QAbstractButton], text: str) -> None:
+    """Click the button of *kind* labelled *text* inside *widget*."""
+    [button] = [b for b in widget.native.findChildren(kind) if b.text() == text]
+    button.click()
+
+
+def _gains_plan(gains: dict[str, float] = {"x": 1.0}) -> MsgGenerator[None]:
+    """Take a mapping."""
+    yield from ()
+
+
+def _tables_plan(tables: list[dict[str, int]] = [{"a": 1}]) -> MsgGenerator[None]:
+    """Take a list of mappings."""
+    yield from ()
 
 
 def _scope(
@@ -390,10 +439,10 @@ class TestCreateParamWidget:
         w = create_param_widget(param("output", Path))
         assert isinstance(w, mgw.FileEdit)
 
-    def test_sequence_int_creates_list_edit(self) -> None:
-        """Build a ListEdit for a sequence of ints."""
+    def test_sequence_int_creates_sequence_edit(self) -> None:
+        """Build a SequenceEdit for a sequence of ints."""
         w = create_param_widget(param("vals", Sequence[int]))
-        assert isinstance(w, mgw.ListEdit)
+        assert isinstance(w, SequenceEdit)
 
     def test_hidden_param_creates_line_edit_placeholder(self) -> None:
         """Build a LineEdit placeholder for a hidden parameter."""
@@ -635,6 +684,103 @@ def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
         accepted = True
 
     assert accepted is renderable
+
+
+def test_a_plan_widget_sends_every_shape_to_the_plan() -> None:
+    """Send each value the user set, of its annotated type, in the plan's call."""
+    devices = {"det1": MockDetector("det1")}
+    spec = create_plan_spec(walk, devices)
+    pw = create_plan_widget(spec)
+    disabled = not pw.run_button.isEnabled()
+
+    clicked(pw.container["detectors"], QtW.QCheckBox, "det1")
+    clicked(pw.container["frames"], QtW.QCheckBox, "set")
+    pw.container["frames"].native.findChildren(QtW.QAbstractSpinBox)[0].setValue(7)
+    pw.container["delay"].native.findChildren(QtW.QComboBox)[0].setCurrentText(
+        "list of float"
+    )
+    clicked(pw.container["delay"], QtW.QPushButton, "+")
+    clicked(pw.container["gains"], QtW.QPushButton, "+")
+    type_into(pw.container["gains"].native.findChildren(QtW.QLineEdit)[-2], "y")
+    args, kwargs = collect_arguments(
+        spec, resolve_arguments(spec, pw.parameters, devices)
+    )
+
+    assert disabled
+    assert (pw.problems, pw.run_button.isEnabled()) == ([], True)
+    assert inspect.signature(walk).bind(*args, **kwargs).arguments == {
+        "detectors": [devices["det1"]],
+        "exposure": 0.1,
+        "positions": [0.0, 1.0],
+        "corner": (3, 4),
+        "gains": {"x": 1.0, "y": 0.0},
+        "frames": 7,
+        "delay": [0.0],
+        "tags": {"a"},
+        "md": None,
+    }
+
+
+def test_a_repeated_key_keeps_run_disabled_and_says_why() -> None:
+    """Disable Run and show the first problem while a key repeats."""
+    pw = create_plan_widget(
+        create_plan_spec(_gains_plan, {}),
+    )
+    clicked(pw.container["gains"], QtW.QPushButton, "+")
+    type_into(pw.container["gains"].native.findChildren(QtW.QLineEdit)[-2], "x")
+
+    assert (pw.run_button.isEnabled(), pw.problem_label.text()) == (
+        False,
+        "gains: duplicate key: 'x'",
+    )
+    assert not pw.problem_label.isHidden()
+
+
+def test_a_problem_inside_a_list_of_mappings_keeps_run_disabled() -> None:
+    """Disable Run for an empty key two levels deep."""
+    pw = create_plan_widget(create_plan_spec(_tables_plan, {}))
+
+    [_, inner] = [
+        b
+        for b in pw.container["tables"].native.findChildren(QtW.QPushButton)
+        if b.text() == "+"
+    ]
+    inner.click()
+
+    assert (pw.problems, pw.run_button.isEnabled()) == (
+        ["tables: [0]: empty key"],
+        False,
+    )
+
+
+def test_run_stays_disabled_after_a_plan_ends_with_no_device_chosen() -> None:
+    """Keep Run disabled when a plan ends and no device is chosen."""
+    pw = create_plan_widget(create_plan_spec(walk, {"det1": MockDetector("det1")}))
+
+    pw.toggle(True)
+    running = pw.run_button.isEnabled()
+    pw.toggle(False)
+    pw.setEnabled(True)
+
+    assert running
+    assert not pw.run_button.isEnabled()
+    assert pw.problems == ["detectors: choose at least one device"]
+
+
+def test_bluesky_count_gets_its_widgets() -> None:
+    """Build count's plan widget with a union for delay, and per_shot and md hidden."""
+    spec = create_plan_spec(bp.count, {"det1": MockDetector("det1")})
+
+    pw = create_plan_widget(spec)
+
+    assert sorted(p.name for p in spec.parameters if p.hidden) == [
+        "md",
+        "per_shot",
+    ]
+    # the container types its widgets as magicgui's ValueWidget, which a
+    # UnionEdit is not
+    delay: object = pw.container["delay"]
+    assert isinstance(delay, UnionEdit)
 
 
 @pytest.mark.parametrize(

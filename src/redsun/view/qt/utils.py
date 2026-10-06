@@ -23,6 +23,7 @@ from qtpy import QtWidgets as QtW
 from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
 
+from ._value_widgets import problems_of
 from ._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
@@ -112,16 +113,15 @@ class PlanWidget:
     """The `magicgui` Container of parameter widgets."""
 
     device_widgets: list[mgw_bases.ValueWidget[Any]]
-    """Device parameter widgets (`DeviceSequenceEdit` or `ComboBox`).
-
-    Exposed so callers can connect validation to each widget's `changed`
-    signal.
-    """
+    """Device parameter widgets (`DeviceSequenceEdit` or `ComboBox`), in the *Devices* group."""
 
     params_widget: QtW.QWidget
     """Widget holding devices_group and params_group; disabling it locks every
     parameter input but not the run, stop and pause buttons.
     """
+
+    problem_label: QtW.QLabel
+    """The first of `problems`, under the parameters; hidden while there is none."""
 
     action_buttons: dict[str, ActionButton]
     """Action buttons by action name."""
@@ -160,7 +160,6 @@ class PlanWidget:
         """
         with QtCore.QSignalBlocker(self.run_button):
             self.run_button.setChecked(status)
-        self.run_button.setEnabled(True)
         self.run_button.setText("Stop" if status else "Run")
         if self.pause_button:
             if not status:
@@ -171,6 +170,10 @@ class PlanWidget:
         if self.actions_group:
             self.actions_group.setEnabled(status)
         self.params_widget.setEnabled(not status)
+        if status:
+            self.run_button.setEnabled(True)
+        else:
+            self._check()
 
     def pause(self, status: bool) -> None:
         """Update the widgets when a plan pauses or resumes.
@@ -188,14 +191,19 @@ class PlanWidget:
     def setEnabled(self, enabled: bool) -> None:
         """Enable or disable the whole plan widget.
 
+        Enabling it enables Run only while `problems` is empty.
+
         Parameters
         ----------
         enabled
             `True` to enable; `False` to disable.
         """
         self.group_box.setEnabled(enabled)
-        self.run_button.setEnabled(enabled)
         self.params_widget.setEnabled(enabled)
+        if enabled:
+            self._check()
+        else:
+            self.run_button.setEnabled(False)
 
     def enable_actions(self, enabled: bool = True) -> None:
         """Enable or disable the actions group box.
@@ -221,6 +229,24 @@ class PlanWidget:
     def has_actions(self) -> bool:
         """Return `True` if the plan has an action button."""
         return bool(self.action_buttons)
+
+    @property
+    def problems(self) -> list[str]:
+        """Why the plan cannot run, one line per invalid input, prefixed with its parameter.
+
+        Run stays disabled while the list is not empty.
+        """
+        return [
+            f"{w.name}: {problem}" for w in self.container for problem in problems_of(w)
+        ]
+
+    def _check(self) -> None:
+        problems = self.problems
+        self.problem_label.setText(problems[0] if problems else "")
+        self.problem_label.setVisible(bool(problems))
+        # parameters are disabled while a plan runs, and Run is its Stop then
+        if self.params_widget.isEnabled():
+            self.run_button.setEnabled(not problems)
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -604,6 +630,9 @@ def create_plan_widget(
 ) -> PlanWidget:
     """Build a complete `PlanWidget` for *spec*.
 
+    Run stays disabled while an input holds an invalid value; see
+    `PlanWidget.problems`.
+
     Parameters
     ----------
     spec
@@ -668,6 +697,11 @@ def create_plan_widget(
     )
     page_layout.addWidget(params_widget)
 
+    problem_label = QtW.QLabel()
+    problem_label.setWordWrap(True)
+    problem_label.hide()
+    page_layout.addWidget(problem_label)
+
     run_button, pause_button = _build_run_buttons(
         spec,
         page,
@@ -690,7 +724,7 @@ def create_plan_widget(
     progress_group.hide()
     page_layout.addWidget(progress_group)
 
-    return PlanWidget(
+    widget = PlanWidget(
         spec=spec,
         group_box=page,
         run_button=run_button,
@@ -698,11 +732,16 @@ def create_plan_widget(
         container=container,
         device_widgets=device_widgets,
         params_widget=params_widget,
+        problem_label=problem_label,
         actions_group=actions_group,
         action_buttons=action_buttons,
         callbacks_list=callbacks_list,
         progress_group=progress_group,
     )
+    for w in container:
+        w.changed.connect(lambda _value: widget._check())
+    widget._check()
+    return widget
 
 
 class PlanInfoDialog(QtW.QDialog):

@@ -92,12 +92,14 @@ devices that can fill it, and needs the devices to find them.
 
 A required parameter whose annotation no input can show makes
 `create_plan_spec` raise `UnresolvableAnnotationError`, so a plan is never
-shown with a control nobody can fill in. Two actions of one name make it
-raise `ValueError`. The component describing the plans
-decides what follows: one that catches the error for each plan leaves that
-plan out and keeps the others, and one that does not fails its whole `setup`.
-`Any` is refused on purpose: it would accept everything and show as a bare
-text field.
+shown with a control nobody can fill in. Such a parameter with a default is
+hidden instead: the view leaves it out and the plan keeps its default, which
+is how the `md` of most `bluesky` plans is treated. Two actions of one name
+make it raise `ValueError`. The component describing the plans decides what
+follows: one that catches the error for each plan leaves that plan out and
+keeps the others, and one that does not fails its whole `setup`. `Any` cannot
+be shown on purpose: it would accept everything and show as a bare text
+field.
 
 The check is plain Python and imports no toolkit, so a plan can be inspected
 before any application object exists.

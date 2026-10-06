@@ -23,10 +23,20 @@ presenter that runs it. The view then sets the widget as the plan starts,
 pauses and ends, with `toggle` and `pause`. The widget depends on no
 presenter, and the `PlanSpec` it is built from depends on no toolkit.
 
+Each input starts from its parameter's default and returns a value of the
+annotated type. A list, set, mapping, fixed-length tuple, optional value or
+union gets an input built from the inputs of its parts, so they nest: a
+`dict[str, list[float]]` is a table whose values are lists. While an input
+holds a value the plan cannot take, a repeated mapping key or no device
+chosen, Run stays disabled, `PlanWidget.problems` lists why, and the first
+reason shows under the parameters.
+
 [How to run a plan from a presenter](../how-to/run-a-plan.md) builds the view,
 and [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
 adds the toggle, the pause button and the action buttons. The attributes of
-`PlanWidget` are in the [reference](../reference/api/view.md#qt-widgets).
+`PlanWidget` are in the [reference](../reference/api/view.md#qt-widgets),
+and [How to choose the inputs of a plan](../how-to/choose-plan-inputs.md)
+pictures the inputs a few signatures get.
 
 ### Document callbacks
 
