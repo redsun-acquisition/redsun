@@ -73,17 +73,18 @@ class ComponentNotBuilt(WiringError):
         self.component = component
 
 
+@dataclass(frozen=True, slots=True)
 class Slot:
     """What `slot` records on a method."""
 
-    __slots__ = ("name", "signals", "thread")
+    name: str | None
+    """The port name, or `None` for the method's own name."""
 
-    def __init__(
-        self, name: str | None, thread: SlotThread, signals: tuple[str, ...]
-    ) -> None:
-        self.name = name
-        self.thread = thread
-        self.signals = signals
+    thread: SlotThread
+    """The thread the slot is delivered on, or `None` for the component's default."""
+
+    signals: tuple[str, ...]
+    """The signals of the component's own that the slot is paired with."""
 
 
 @overload
