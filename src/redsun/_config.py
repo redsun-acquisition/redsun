@@ -8,7 +8,7 @@ from contextlib import suppress
 from difflib import get_close_matches
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Final, TypeAlias, cast
+from typing import TYPE_CHECKING, Annotated, Any, Final, TypeAlias, TypeGuard, cast
 
 import yaml
 from pydantic import (
@@ -204,6 +204,21 @@ def refuse_identity_conflict(
         )
 
 
+def is_list_like(value: object) -> TypeGuard[Sequence[Any]]:
+    """Tell a list or tuple from a string, a mapping or a scalar."""
+    return isinstance(value, Sequence) and not isinstance(value, str)
+
+
+def pairs_joined(earlier: Sequence[Any], later: Sequence[Any]) -> list[Any]:
+    """Join two sequences of pairs as lists, dropping a pair already present."""
+    joined: list[Any] = []
+    for pair in (*earlier, *later):
+        pair = list(pair) if is_list_like(pair) else pair
+        if pair not in joined:
+            joined.append(pair)
+    return joined
+
+
 def load(
     declared: Source | Sequence[Source] | None,
     required: Collection[str] = frozenset(),
@@ -226,7 +241,10 @@ def load(
     for source in ordered:
         overlay = read(source)
         refuse_identity_conflict(data, overlay, source)
+        earlier, later = data.get("pairs"), overlay.get("pairs")
         data = merge_config(data, overlay)
+        if is_list_like(earlier) and (later is None or is_list_like(later)):
+            data["pairs"] = pairs_joined(earlier, later or ())
     missing = set(required) - data.keys()
     if missing:
         named = ", ".join(label(source) for source in ordered) or "no sources"
@@ -410,6 +428,13 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     wiring: dict[str, str | list[str]] = {}
     """The slots each signal reaches, both written as `component.port`."""
 
+    pairs: list[tuple[str, str]] = []
+    """Components linked to each other, two names each.
+
+    Each signal of one reaches each slot of the other that names it in its
+    `signal`, both ways.
+    """
+
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
 
@@ -467,6 +492,16 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
             raise ValueError(f"asks for frontend {value!r}; registered: {listed}")
         return value
 
+    @field_validator("pairs")
+    @classmethod
+    def two_components(cls, value: list[tuple[str, str]]) -> list[tuple[str, str]]:
+        """Refuse a pairing that names one component twice."""
+        for first, second in value:
+            if first == second:
+                # a ValueError, since pydantic reports no other at the key's location
+                raise ValueError(f"pairs {first!r} with itself; a pairing names two")
+        return value
+
     @field_validator("schema_version")
     @classmethod
     def supported_schema_version(cls, value: float) -> float:
@@ -506,7 +541,7 @@ def session_file_schema() -> dict[str, Any]:
         "type": "object",
         "additionalProperties": {"$ref": "#/$defs/HookEntry"},
     }
-    for section in (*EMPTY_AS_MAPPING, "hooks"):
+    for section in (*EMPTY_AS_MAPPING, "hooks", "pairs"):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
     return schema
 
@@ -532,6 +567,8 @@ def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDet
         key: {} if value is None and key in EMPTY_AS_MAPPING else value
         for key, value in data.items()
     }
+    if "pairs" in data and data["pairs"] is None:
+        data["pairs"] = []
     problems: list[InitErrorDetails] = []
     if TRANSPORT_KEY in data:
         del data[TRANSPORT_KEY]

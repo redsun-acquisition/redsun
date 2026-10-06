@@ -48,15 +48,24 @@ views:
   lights_view:
     plugin_name: redsun
     plugin_id: lights
-wiring:
-  lights_view.sig_enabled: lights.set_enabled
-  lights_view.sig_intensity: lights.set_intensity
-  lights_view.sig_configure: lights.configure
-  lights.sig_enabled: lights_view.update_enabled
-  lights.sig_intensity: lights_view.update_intensity
-  lights.sig_failed: lights_view.set_failed
-  lights.sig_configuration: lights_view.update_configuration
+pairs:
+  - [lights_view, lights]
 ```
+
+The pairing makes the seven links between the two. Written out, they are:
+
+??? example "The same links under `wiring`"
+
+    ```yaml
+    wiring:
+      lights_view.sig_enabled: lights.set_enabled
+      lights_view.sig_intensity: lights.set_intensity
+      lights_view.sig_configure: lights.configure
+      lights.sig_enabled: lights_view.update_enabled
+      lights.sig_intensity: lights_view.update_intensity
+      lights.sig_failed: lights_view.set_failed
+      lights.sig_configuration: lights_view.update_configuration
+    ```
 
 The presenter takes every light of the session, or only those named under
 `include`. A light that cannot be read within `timeout` seconds (10 by
@@ -103,6 +112,12 @@ in `wire()`, from the presenter that holds the engine:
 yield self.ctrl.engine.sig_locks_changed, self.lights_view.set_locked
 yield self.ctrl.engine.sig_locks_changed, self.lights.set_locked
 ```
+
+With the built-in acquisition stack, pairing its presenter with the view,
+`- [acquisition, lights_view]`, makes the view's link, and pairing it with
+the presenter, `- [acquisition, lights]`, makes the presenter's;
+[Run plans from the window](run-plans-from-the-window.md#share-the-engine)
+shows it.
 
 ## Customize it
 

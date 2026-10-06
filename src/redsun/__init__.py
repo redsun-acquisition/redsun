@@ -40,6 +40,7 @@ from redsun.ports import (
     Connection,
     Link,
     WiringError,
+    links_between,
     slot,
 )
 from redsun.registry import (
@@ -138,6 +139,7 @@ __all__ = [
     "WiringError",
     "WrapsBuild",
     "__version__",
+    "links_between",
     "provides",
     "rejected",
     "satisfies",

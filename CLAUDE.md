@@ -311,6 +311,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 See the `docs-conventions` skill: Diataxis layout, ADR recording, and the
 mkdocstrings mistakes a green `zensical build` will not catch.
 
+- **An ADR shows its decision in code.** Snippets show the options weighed
+  and the case that decided between them, written as the code a user or
+  contributor would write. When the decision changes how existing code
+  works, breaking or not, the ADR has a "Before" and an "After" snippet
+  showing the same task both ways.
+
 - **Examples are agnostic.** Every snippet, class name and configuration
   fragment is written for a reader who has only this repository. Name nothing
   from another project, not a downstream bundle, not a plugin, not a class

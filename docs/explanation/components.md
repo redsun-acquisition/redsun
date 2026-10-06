@@ -221,6 +221,11 @@ The session connects them, in [`wire`][redsun.Session.wire] or in the file's
 on a Qt widget runs on the main thread unless it says otherwise, since a
 widget may only be used from there.
 
+A presenter and a view written for each other can say, on each slot, which
+signal of the other reaches it. The session then connects the two with one
+[pairing](glossary.md#pairing), as
+[Offer a pairing](../how-to/offer-a-pairing.md) shows.
+
 ## Cleaning up
 
 A component that needs to clean up defines `shutdown`, plain or `async`. The

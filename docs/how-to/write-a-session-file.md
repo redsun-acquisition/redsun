@@ -63,7 +63,8 @@ app = Simulation({"session": "morning-run"})
 ```
 
 Layered files merge `wiring` by signal: a later file naming a new signal adds
-it, and naming one already wired replaces its slots.
+it, and naming one already wired replaces its slots. `pairs` adds the
+pairings of every file.
 
 Two rules stop a later source from changing what kind of session this is:
 `schema_version`, `frontend` and `services.transport` must be the same in every

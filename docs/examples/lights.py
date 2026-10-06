@@ -13,7 +13,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsPresenter, AsView, Link  # noqa: TC001
+from redsun import AsDevice, AsPresenter, AsView, Link, links_between
 from redsun.presenter import LightPresenter  # noqa: TC001
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import LightView  # noqa: TC001
@@ -63,13 +63,7 @@ class MyApp(QtSession):
 
     def wire(self) -> Iterator[Link]:
         # --8<-- [start:wire]
-        yield self.lights_view.sig_enabled, self.lights.set_enabled
-        yield self.lights_view.sig_intensity, self.lights.set_intensity
-        yield self.lights_view.sig_configure, self.lights.configure
-        yield self.lights.sig_enabled, self.lights_view.update_enabled
-        yield self.lights.sig_intensity, self.lights_view.update_intensity
-        yield self.lights.sig_failed, self.lights_view.set_failed
-        yield self.lights.sig_configuration, self.lights_view.update_configuration
+        yield from links_between(self.lights_view, self.lights)
         # --8<-- [end:wire]
 
 

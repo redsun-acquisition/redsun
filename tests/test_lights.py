@@ -9,7 +9,7 @@ import pytest
 from qtpy import QtWidgets
 
 from redsun import AsDevice, AsPresenter, AsView, Link
-from redsun.presenter import LightPresenter
+from redsun.presenter import AcquisitionPresenter, LightPresenter
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import LightGroup, LightView
 from tests.sdk.mocks import DimmerLight, SoftLight
@@ -40,21 +40,96 @@ class LightLab(QtSession):
         yield self.lights.sig_configuration, self.lights_view.update_configuration
 
 
+class PairedLightLab(QtSession):
+    config: ClassVar[dict[str, Any]] = {
+        "session": "light-lab-paired",
+        "pairs": [
+            ["lights_view", "lights"],
+            ["acquisition", "lights_view"],
+            ["acquisition", "lights"],
+        ],
+    }
+
+    laser: AsDevice[DimmerLight]
+    led: AsDevice[SoftLight]
+    acquisition: AsPresenter[AcquisitionPresenter]
+    lights: AsPresenter[LightPresenter]
+    lights_view: AsView[LightView]
+
+
+def laser_toggle(session: QtSession) -> QtWidgets.QPushButton:
+    """Return the laser's on/off button."""
+    view = session.views["lights_view"]
+    assert isinstance(view, LightView)
+    laser = next(
+        group for group in view.findChildren(LightGroup) if group.title() == "laser"
+    )
+    toggle = laser.findChild(QtWidgets.QPushButton, "toggle")
+    assert toggle is not None
+    return toggle
+
+
+def test_pairing_the_lights_makes_every_link_of_the_stack(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Link every signal and slot the lights presenter and its view offer each other."""
+    session = build(PairedLightLab)
+
+    assert {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+        if "acquisition" not in (c.publisher, c.consumer)
+    } == {
+        ("lights_view", "sig_enabled", "lights", "set_enabled"),
+        ("lights_view", "sig_intensity", "lights", "set_intensity"),
+        ("lights_view", "sig_configure", "lights", "configure"),
+        ("lights", "sig_enabled", "lights_view", "update_enabled"),
+        ("lights", "sig_intensity", "lights_view", "update_intensity"),
+        ("lights", "sig_failed", "lights_view", "set_failed"),
+        ("lights", "sig_configuration", "lights_view", "update_configuration"),
+    }
+
+
+@pytest.mark.parametrize("consumer", ["lights_view", "lights"])
+def test_pairing_the_acquisition_presenter_passes_on_locks_only(
+    qapp: QtWidgets.QApplication, build: BuildSession, consumer: str
+) -> None:
+    """Link only the locks from the acquisition presenter to the view or the presenter."""
+    session = build(PairedLightLab)
+
+    links = {
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+        if {c.publisher, c.consumer} == {"acquisition", consumer}
+    }
+
+    assert links == {("acquisition", "sig_locks_changed", consumer, "set_locked")}
+
+
+@pytest.mark.parametrize("lab", [LightLab, PairedLightLab])
 def test_a_light_switched_from_the_view_comes_back_switched_on(
     qapp: QtWidgets.QApplication,
     build: BuildSession,
     wait_until: Callable[..., bool],
+    lab: type[QtSession],
 ) -> None:
-    """Switch a light on from the view and show the state it reads back."""
-    session = build(LightLab)
-    laser = next(
-        group
-        for group in session.lights_view.findChildren(LightGroup)
-        if group.title() == "laser"
-    )
-    toggle = laser.findChild(QtWidgets.QPushButton, "toggle")
-    assert toggle is not None
+    """Switch a light on from the view, wired by hand or paired, and show its state."""
+    toggle = laser_toggle(build(lab))
 
     toggle.click()
 
     assert wait_until(toggle.isChecked)
+
+
+def test_pairing_the_acquisition_presenter_with_the_view_passes_on_locks(
+    qapp: QtWidgets.QApplication,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
+) -> None:
+    """Disable a light the engine locks, through the pairing with the acquisition presenter."""
+    session = build(PairedLightLab)
+    toggle = laser_toggle(session)
+
+    session.acquisition.sig_locks_changed.emit(frozenset({"laser"}))
+
+    assert wait_until(lambda: not toggle.isEnabled())

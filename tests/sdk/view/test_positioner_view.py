@@ -221,7 +221,7 @@ def test_a_stop_asked_for_by_a_group_is_sent_on(
     """Send on the stop a device's group asks for."""
     view = make_view(settings, parent)
     stops: list[str] = []
-    view.sig_stop.connect(stops.append)
+    view.sig_stop_device.connect(stops.append)
 
     group(view, "stage").sig_stop.emit("stage")
 

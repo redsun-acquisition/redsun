@@ -291,7 +291,7 @@ class FirstSession(QtSession):
         # --8<-- [start:wire]
         yield self.positioner_view.sig_move, self.positioner.move
         yield self.positioner_view.sig_move_to, self.positioner.move_to
-        yield self.positioner_view.sig_stop, self.positioner.stop
+        yield self.positioner_view.sig_stop_device, self.positioner.stop
         yield self.positioner_view.sig_configure, self.positioner.configure
         yield self.positioner.sig_readback, self.positioner_view.update_readback
         yield self.positioner.sig_moving, self.positioner_view.set_moving

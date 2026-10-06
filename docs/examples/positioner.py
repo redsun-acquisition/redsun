@@ -15,7 +15,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsPresenter, AsView, Link  # noqa: TC001
+from redsun import AsDevice, AsPresenter, AsView, Link, links_between
 from redsun.engine import RunEngine
 from redsun.presenter import PositionerPresenter  # noqa: TC001
 from redsun.qt import QtSession
@@ -61,18 +61,7 @@ class MyApp(QtSession):
 
     def wire(self) -> Iterator[Link]:
         # --8<-- [start:wire]
-        yield self.positioner_view.sig_move, self.positioner.move
-        yield self.positioner_view.sig_move_to, self.positioner.move_to
-        yield self.positioner_view.sig_stop, self.positioner.stop
-        yield self.positioner_view.sig_configure, self.positioner.configure
-        yield self.positioner.sig_readback, self.positioner_view.update_readback
-        yield self.positioner.sig_moving, self.positioner_view.set_moving
-        yield self.positioner.sig_failed, self.positioner_view.set_failed
-        yield self.positioner.sig_limits, self.positioner_view.update_limits
-        yield (
-            self.positioner.sig_configuration,
-            self.positioner_view.update_configuration,
-        )
+        yield from links_between(self.positioner_view, self.positioner)
         # --8<-- [end:wire]
         # --8<-- [start:wire-locks]
         yield self.ctrl.engine.sig_locks_changed, self.positioner_view.set_locked

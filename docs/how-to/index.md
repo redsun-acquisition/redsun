@@ -20,6 +20,7 @@ Learn how to write the parts of a
 - [How to write a service with FastCS](write-a-service-with-fastcs.md)
 - [How to write a session file](write-a-session-file.md)
 - [How to wire components together](wire-components.md)
+- [How to offer a pairing](offer-a-pairing.md)
 - [How to share a value between components](share-a-value.md)
 - [How to package components as a plugin](package-a-plugin.md)
 - [How to test a plugin](test-a-plugin.md)

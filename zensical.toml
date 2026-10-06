@@ -35,6 +35,7 @@ nav = [
             "how-to/write-a-service-with-fastcs.md",
             "how-to/write-a-session-file.md",
             "how-to/wire-components.md",
+            "how-to/offer-a-pairing.md",
             "how-to/share-a-value.md",
             "how-to/package-a-plugin.md",
             "how-to/test-a-plugin.md",
@@ -119,6 +120,7 @@ nav = [
                 "explanation/decisions/0020-a-built-in-positioner.md",
                 "explanation/decisions/0021-a-built-in-light-stack.md",
                 "explanation/decisions/0022-a-built-in-acquisition-stack.md",
+                "explanation/decisions/0023-pairing-two-components.md",
         ]},
     ]},
     { "Reference" = [

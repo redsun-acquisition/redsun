@@ -48,7 +48,7 @@ class ImageView(QWidget):
             self.images[key] = reading["value"]
 ```
 
-`slot` takes two options:
+`slot` takes three options:
 
 ```python
     @slot(name="frames", thread="current")
@@ -64,6 +64,8 @@ class ImageView(QWidget):
   chooses, as
   [Choose the thread a slot runs on](#choose-the-thread-a-slot-runs-on)
   describes.
+- `signal` names the signals a [pairing](#pair-two-components) connects to
+  the slot.
 
 Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
 [port](../explanation/glossary.md#port):
@@ -352,3 +354,11 @@ Not connecting mover.sig_moved -> panel.on_moved: component 'panel' was not buil
 | `wire returned nothing; it yields each link as a signal and a slot` | `wire` has no `yield` and returns `None` |
 | `... is not a signal; a link is a psygnal signal or a device signal, then the slot it reaches` | the first item of a yielded link is not a signal |
 | `wiring.det_ctrl.sig_new_data.str: Input should be a valid string` | a signal maps to something other than a slot path or a list of them; raised as [`ConfigurationError`][redsun.ConfigurationError] when the file is read |
+
+## Pair two components
+
+Two components whose slots name the signals of the other are connected
+with one line, `pairs: - [a, b]` in the file or
+`yield from links_between(self.a, self.b)` in `wire`. The `pairs` section
+runs after `wiring`. [Offer a pairing](offer-a-pairing.md) shows how a
+component offers one.
