@@ -31,3 +31,4 @@ never edited; a later one replaces it.
 - [20. A built-in positioner](0020-a-built-in-positioner.md)
 - [21. A built-in light stack](0021-a-built-in-light-stack.md)
 - [22. A built-in acquisition stack](0022-a-built-in-acquisition-stack.md)
+- [23. Pairing two components](0023-pairing-two-components.md)

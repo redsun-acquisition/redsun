@@ -174,6 +174,14 @@ present.
 hardware, directly or through a [service](#service). See the
 [documentation of `ophyd-async`](https://blueskyproject.io/ophyd-async/main/index.html).
 
+### Pairing
+
+A pairing is a line of the `pairs` section of a session file, or a
+`yield from links_between(a, b)` in `wire`, that connects two
+[components](#component) in both directions: each [signal](#signal) of one
+reaches each [slot](#slot) of the other that names it. See
+[Offer a pairing](../how-to/offer-a-pairing.md).
+
 ### Path provider
 
 The path provider is the object that decides where the files of a session go

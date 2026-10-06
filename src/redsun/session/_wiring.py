@@ -260,7 +260,7 @@ class Wiring:
         self.link(signal, slot)
 
     def link_pair(self, first: str, second: str) -> None:
-        """Make every link [`links_between`][redsun.links_between] finds for two.
+        """Make every link [`links_between`][redsun.links_between] finds between two components.
 
         A pairing naming a component that failed to build is warned about and
         skipped.

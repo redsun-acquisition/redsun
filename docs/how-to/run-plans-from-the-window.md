@@ -37,20 +37,29 @@ views:
   acquisition_view:
     plugin_name: redsun
     plugin_id: acquisition
-wiring:
-  acquisition_view.sig_launch: acquisition.launch
-  acquisition_view.sig_pause: acquisition.pause
-  acquisition_view.sig_resume: acquisition.resume
-  acquisition_view.sig_stop: acquisition.stop
-  acquisition_view.sig_action: acquisition.request_action
-  acquisition_view.sig_base_dir: acquisition.set_base_dir
-  acquisition.sig_plan_started: acquisition_view.set_started
-  acquisition.sig_plan_done: acquisition_view.set_done
-  acquisition.sig_plan_failed: acquisition_view.set_failed
-  acquisition.sig_progress: acquisition_view.update_progress
-  acquisition.sig_action_changed: acquisition_view.update_action
-  acquisition.sig_base_dir_changed: acquisition_view.update_base_dir
+pairs:
+  - [acquisition_view, acquisition]
 ```
+
+The pairing makes the twelve links between the two. Written out, they are:
+
+??? example "The same links under `wiring`"
+
+    ```yaml
+    wiring:
+      acquisition_view.sig_launch: acquisition.launch
+      acquisition_view.sig_pause: acquisition.pause
+      acquisition_view.sig_resume: acquisition.resume
+      acquisition_view.sig_stop: acquisition.stop
+      acquisition_view.sig_action: acquisition.request_action
+      acquisition_view.sig_base_dir: acquisition.set_base_dir
+      acquisition.sig_plan_started: acquisition_view.set_started
+      acquisition.sig_plan_done: acquisition_view.set_done
+      acquisition.sig_plan_failed: acquisition_view.set_failed
+      acquisition.sig_progress: acquisition_view.update_progress
+      acquisition.sig_action_changed: acquisition_view.update_action
+      acquisition.sig_base_dir_changed: acquisition_view.update_base_dir
+    ```
 
 ## Declare it in Python
 
@@ -96,12 +105,19 @@ class MyController:
 A session holds one acquisition presenter: two would both share a
 `RunEngine`, and the session refuses to build.
 
-The presenter also passes on the engine's locks, so the positioner and the
-light stack can follow them from the session file:
+The presenter also passes on the engine's locks. The light view can take
+them through a pairing:
 
 ```yaml
-wiring:
-  acquisition.sig_locks_changed: positioner_view.set_locked
+pairs:
+  - [acquisition, lights_view]
+```
+
+The positioner view takes them the same way:
+
+```yaml
+pairs:
+  - [acquisition, positioner_view]
 ```
 
 ## Offer actions

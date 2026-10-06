@@ -208,7 +208,7 @@ def links_between(a: object, b: object) -> list[Link]:
     """Return the links pairing two built components makes, both ways.
 
     Each signal of *a* reaches each slot of *b* naming it in its `signal`, then
-    each signal of *b* each slot of *a* naming it, in the order
+    each signal of *b* reaches each slot of *a* naming it, in the order
     [`ports`][redsun.ports.ports] lists them. Only those signals are matched,
     so a device signal never is. An empty list means nothing matched.
 

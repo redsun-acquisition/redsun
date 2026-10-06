@@ -45,7 +45,7 @@ warning, and the other axes are kept.
 ## Declare the positioner in a session file
 
 Both components are built into `redsun`, under the plugin id `positioner`.
-Declare them and their links:
+Declare them and pair them:
 
 ```yaml
 presenters:
@@ -57,17 +57,26 @@ views:
     plugin_name: redsun
     plugin_id: positioner
     repeat_interval: 50
-wiring:
-  positioner_view.sig_move: positioner.move
-  positioner_view.sig_move_to: positioner.move_to
-  positioner_view.sig_stop_device: positioner.stop
-  positioner_view.sig_configure: positioner.configure
-  positioner.sig_readback: positioner_view.update_readback
-  positioner.sig_moving: positioner_view.set_moving
-  positioner.sig_failed: positioner_view.set_failed
-  positioner.sig_limits: positioner_view.update_limits
-  positioner.sig_configuration: positioner_view.update_configuration
+pairs:
+  - [positioner_view, positioner]
 ```
+
+The pairing makes the nine links between the two. Written out, they are:
+
+??? example "The same links under `wiring`"
+
+    ```yaml
+    wiring:
+      positioner_view.sig_move: positioner.move
+      positioner_view.sig_move_to: positioner.move_to
+      positioner_view.sig_stop_device: positioner.stop
+      positioner_view.sig_configure: positioner.configure
+      positioner.sig_readback: positioner_view.update_readback
+      positioner.sig_moving: positioner_view.set_moving
+      positioner.sig_failed: positioner_view.set_failed
+      positioner.sig_limits: positioner_view.update_limits
+      positioner.sig_configuration: positioner_view.update_configuration
+    ```
 
 The presenter takes every device with at least one axis. To show only some of
 them, list them under `include`; a name that is not a device of the session
@@ -97,7 +106,7 @@ and two would leave the view with two answers, so it would not be built. Use
 
 ## Declare it in Python
 
-The same links, from `wire()`:
+The same pairing, from `wire()`:
 
 ```{.python}
 --8<-- "docs/examples/positioner.py:wire"
@@ -113,6 +122,11 @@ the presenter that holds the engine:
 ```{.python}
 --8<-- "docs/examples/positioner.py:wire-locks"
 ```
+
+With the built-in acquisition stack, pairing its presenter with the view,
+`- [acquisition, positioner_view]`, makes the view's link;
+[Run plans from the window](run-plans-from-the-window.md#share-the-engine)
+shows it.
 
 ## Use the view
 
