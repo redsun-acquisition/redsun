@@ -185,7 +185,8 @@ class LogView(QtW.QWidget):
         if event is not None:
             super().changeEvent(event)
             if event.type() == QtCore.QEvent.Type.PaletteChange:
-                self._render()
+                # the consoles receive the new palette only after the view
+                QtCore.QTimer.singleShot(0, self._render)
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""
@@ -322,9 +323,8 @@ class LogView(QtW.QWidget):
 
     @property
     def colors(self) -> dict[int, str]:
-        """The level colours in use, chosen from the view's background."""
-        # the consoles receive a new palette only after the view is told of it
-        base = self.palette().color(QtGui.QPalette.ColorRole.Base)
+        """The level colours in use, chosen from the console's background."""
+        base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
         return ON_LIGHT if base.lightness() >= MID_LIGHTNESS else ON_DARK
 
     def _write(

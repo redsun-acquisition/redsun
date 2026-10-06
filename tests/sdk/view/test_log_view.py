@@ -27,6 +27,7 @@ from redsun.log import (
     set_level,
 )
 from redsun.qt import QtSession
+from redsun.view.qt._log_view import BATCH_SIZE
 from redsun.view.qt.builtins import LogView
 from tests.sdk.view.helpers import child
 
@@ -73,6 +74,18 @@ def make_view(qapp: QApplication) -> Iterator[Callable[[], LogView]]:
     for view, parent in built:
         view.close()
         parent.close()
+
+
+@pytest.fixture
+def wait_shown(
+    wait_until: Callable[..., bool],
+) -> Callable[[QPlainTextEdit, str], None]:
+    """Return a wait that holds until a line is on a console."""
+
+    def wait(text: QPlainTextEdit, line: str) -> None:
+        assert wait_until(lambda: line in text.toPlainText())
+
+    return wait
 
 
 @pytest.fixture
@@ -131,14 +144,6 @@ def service_logger(name: str) -> logging.Logger:
     return logging.getLogger(f"redsun.service.{name}")
 
 
-def wait_shown(text: QPlainTextEdit, line: str) -> None:
-    """Run the event loop until *line* is on *text*, for at most two seconds."""
-    deadline = QtCore.QDeadlineTimer(2000)
-    while line not in text.toPlainText() and not deadline.hasExpired():
-        QApplication.processEvents()
-    assert line in text.toPlainText()
-
-
 def with_base(palette: QtGui.QPalette, background: str) -> QtGui.QPalette:
     """Return a copy of *palette* whose `Base` colour is *background*."""
     changed = QtGui.QPalette(palette)
@@ -165,7 +170,9 @@ def test_records_logged_before_the_view_existed_are_shown(
 
 
 def test_a_later_record_is_drawn_after_the_logging_call(
-    make_view: Callable[[], LogView], logs: logging.Logger
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Draw a new record on the next batch, not during the logging call."""
     view = make_view()
@@ -177,21 +184,22 @@ def test_a_later_record_is_drawn_after_the_logging_call(
 
 
 def test_a_burst_filling_the_buffer_is_drawn_over_several_batches(
-    make_view: Callable[[], LogView], logs: logging.Logger
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    wait_until: Callable[..., bool],
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
-    """Draw part of a burst filling the buffer first, and the rest later."""
+    """Draw one batch of a burst filling the buffer first, and the rest later."""
     view = make_view()
     count = log_buffer().capacity
 
     for i in range(count):
         logs.info("record %05d", i)
-    deadline = QtCore.QDeadlineTimer(2000)
-    while not console(view).toPlainText() and not deadline.hasExpired():
-        QApplication.processEvents()
+    assert wait_until(lambda: bool(console(view).toPlainText()))
     first = console(view).blockCount()
     wait_shown(console(view), f"record {count - 1:05d}")
 
-    assert 0 < first < count
+    assert 0 < first <= BATCH_SIZE
     assert console(view).blockCount() == count
 
 
@@ -199,6 +207,7 @@ def test_the_console_keeps_no_more_lines_than_the_buffer(
     make_view: Callable[[], LogView],
     small_buffer: BufferHandler,
     logs: logging.Logger,
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Drop the oldest console lines past the buffer's capacity."""
     view = make_view()
@@ -291,7 +300,9 @@ def test_save_writes_every_record_whatever_is_displayed(
 
 
 def test_the_services_tab_appears_once_a_service_logs(
-    make_view: Callable[[], LogView], logs: logging.Logger
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Show the services tab only once a service logs."""
     view = make_view()
@@ -306,7 +317,9 @@ def test_the_services_tab_appears_once_a_service_logs(
 
 
 def test_the_service_selector_narrows_the_services_console(
-    make_view: Callable[[], LogView], logs: logging.Logger
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Show only the selected service's records in the services console."""
     service_logger("cam").warning("from the camera")
@@ -376,7 +389,11 @@ def test_save_writes_the_records_of_the_tab_shown(
     ("shown", "kept"), [("Application", "Services"), ("Services", "Application")]
 )
 def test_clear_empties_only_the_tab_shown(
-    make_view: Callable[[], LogView], logs: logging.Logger, shown: str, kept: str
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    shown: str,
+    kept: str,
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Clear the shown tab, including its undrawn records, and keep the other."""
     logs.warning("from the application")
@@ -399,7 +416,9 @@ def test_clear_empties_only_the_tab_shown(
 
 
 def test_a_burst_from_several_services_is_kept_for_each(
-    make_view: Callable[[], LogView], small_service_buffer: BufferHandler
+    make_view: Callable[[], LogView],
+    small_service_buffer: BufferHandler,
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Keep a burst of records from each of several services."""
     view = make_view()
@@ -509,7 +528,7 @@ def test_the_colours_contrast_with_the_console_background(
     """Pick dark level colours on a light background and light ones on a dark one."""
     view = make_view()
 
-    view.setPalette(with_base(view.palette(), background))
+    console(view).setPalette(with_base(console(view).palette(), background))
 
     light_background = QtGui.QColor(background).lightness() >= 128
     assert all(
@@ -519,7 +538,11 @@ def test_the_colours_contrast_with_the_console_background(
 
 
 def test_a_palette_change_redraws_what_is_on_screen(
-    qapp: QApplication, make_view: Callable[[], LogView], logs: logging.Logger
+    qapp: QApplication,
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    wait_until: Callable[..., bool],
+    wait_shown: Callable[[QPlainTextEdit, str], None],
 ) -> None:
     """Redraw the shown records in the colours of the application palette applied."""
     original = QtGui.QPalette(qapp.palette())
@@ -532,13 +555,30 @@ def test_a_palette_change_redraws_what_is_on_screen(
         assert light in rendered(view)
 
         qapp.setPalette(with_base(original, DARK))
-        qapp.processEvents()
 
-        html = rendered(view)
-        assert view.colors[logging.ERROR] in html
-        assert light not in html
+        assert wait_until(lambda: light not in rendered(view))
+        assert view.colors[logging.ERROR] in rendered(view)
     finally:
         qapp.setPalette(original)
+
+
+def test_a_stylesheet_on_the_console_class_sets_the_colours(
+    qapp: QApplication, make_view: Callable[[], LogView], logs: logging.Logger
+) -> None:
+    """Draw in colours for the background a stylesheet gives every text console."""
+    sheet = qapp.styleSheet()
+    try:
+        qapp.setStyleSheet(f"QPlainTextEdit {{ background-color: {DARK}; }}")
+        logs.error("the detector answered nothing")
+
+        view = make_view()
+
+        assert all(
+            QtGui.QColor(color).lightness() >= 128 for color in view.colors.values()
+        )
+        assert view.colors[logging.ERROR] in rendered(view)
+    finally:
+        qapp.setStyleSheet(sheet)
 
 
 def test_a_qt_session_docks_the_built_in_view_at_the_bottom(
