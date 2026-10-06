@@ -817,12 +817,15 @@ class Session(BuildableSession):
         self._baseline = self._serialized()
 
     def apply_wiring(self) -> None:
-        """Make the links the class yields, then those the file names.
+        """Make the links the class yields, then those the file lists, then its pairs.
+
+        A link made already is not made again.
 
         Raises
         ------
         WiringError
-            If `wire` yields nothing iterable, or a link that cannot be made.
+            If `wire` yields nothing iterable, a link that cannot be made, or
+            a pairing that connects nothing.
         """
         stand_ins = {
             attribute: name
@@ -847,6 +850,8 @@ class Session(BuildableSession):
         for source, targets in self._configuration().wiring.items():
             for target in [targets] if isinstance(targets, str) else targets:
                 self._wiring.link_paths(source, target)
+        for first, second in self._configuration().pairs:
+            self._wiring.link_pair(first, second)
         self._warn_unused()
 
     def present(self) -> None:
@@ -927,6 +932,9 @@ class Session(BuildableSession):
         with. A slot is a bound method marked with `slot`, which may be a
         coroutine function, and is delivered on the thread it declares, then
         the one its class declares, then the one the frontend gives it.
+
+        [`links_between`][redsun.links_between] gives every link a pairing of
+        two components makes, to `yield from`.
 
         Every component that built exists by the time this runs. One that
         failed reads as a stand-in, and a link naming it is skipped with a

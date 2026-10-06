@@ -16,6 +16,7 @@ from redsun.ports import (
     Connection,
     Unconnected,
     WiringError,
+    links_between,
     ports,
 )
 
@@ -257,6 +258,48 @@ class Wiring:
             )
             return
         self.link(signal, slot)
+
+    def link_pair(self, first: str, second: str) -> None:
+        """Make every link [`links_between`][redsun.links_between] finds for two.
+
+        A pairing naming a component that failed to build is warned about and
+        skipped.
+
+        Raises
+        ------
+        WiringError
+            If a name is neither a built component nor one that failed, or if
+            both built and no signal of either reaches a slot of the other.
+        """
+        names = (first, second)
+        unknown = [
+            name
+            for name in names
+            if name not in self.components and name not in self.failed
+        ]
+        if unknown:
+            known = ", ".join(sorted(self.components)) or "none"
+            raise WiringError(
+                f"pairs names {unknown[0]!r}, which is not a built presenter or "
+                f"view. Built: {known}"
+            )
+        failed = [name for name in names if name in self.failed]
+        if failed:
+            logger.warning(
+                "Not pairing %s with %s: component %r was not built",
+                first,
+                second,
+                failed[0],
+            )
+            return
+        links = links_between(self.components[first], self.components[second])
+        if not links:
+            raise WiringError(
+                f"pairing {first!r} with {second!r} connects nothing: no slot of "
+                "either names a signal of the other"
+            )
+        for signal, slot in links:
+            self.link(signal, slot)
 
     @overload
     def resolve(self, path: str, kind: Literal["signal"]) -> SignalInstance: ...

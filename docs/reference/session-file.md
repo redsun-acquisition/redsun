@@ -30,6 +30,7 @@ Every key is optional.
 | `providers` | mapping | empty | classes that share values with the components, by name |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
+| `pairs` | list | empty | [components linked to each other](#pairs), two names each |
 | `hooks` | mapping | empty | the [hook providers](#hooks), by hook point |
 | `actions` | | none | menu and toolbar commands of a Qt session |
 | `color_scheme` | `system`, `light` or `dark` | `system` | the colour scheme a Qt session starts with |
@@ -143,6 +144,18 @@ storage:
 ```yaml
 wiring:
   motor_ctrl.sig_moved: motor_widget.refresh
+```
+
+## Pairs
+
+`pairs` lists two components by name. Each signal of one reaches each slot of
+the other that names it in its `signal`, both ways. A pairing that connects
+nothing is refused, and one naming a component that failed to build is skipped
+with a warning.
+
+```yaml
+pairs:
+  - [motor_ctrl, motor_widget]
 ```
 
 ## Hooks

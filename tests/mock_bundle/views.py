@@ -54,7 +54,7 @@ class MockMotorView:
         self.callbacks = callbacks
         self.readings = readings
 
-    @slot
+    @slot(signal="sig_moved")
     def refresh(self, axis: str, amount: float) -> None:
         self.refreshed = (axis, amount)
 

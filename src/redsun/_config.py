@@ -226,7 +226,10 @@ def load(
     for source in ordered:
         overlay = read(source)
         refuse_identity_conflict(data, overlay, source)
+        earlier, later = data.get("pairs"), overlay.get("pairs")
         data = merge_config(data, overlay)
+        if isinstance(earlier, list) and isinstance(later, list):
+            data["pairs"] = [*earlier, *later]
     missing = set(required) - data.keys()
     if missing:
         named = ", ".join(label(source) for source in ordered) or "no sources"
@@ -410,6 +413,13 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     wiring: dict[str, str | list[str]] = {}
     """The slots each signal reaches, both written as `component.port`."""
 
+    pairs: list[tuple[str, str]] = []
+    """Components linked to each other, two names each.
+
+    Each signal of one reaches each slot of the other that names it in its
+    `signal`, both ways.
+    """
+
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
 
@@ -467,6 +477,16 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
             raise ValueError(f"asks for frontend {value!r}; registered: {listed}")
         return value
 
+    @field_validator("pairs")
+    @classmethod
+    def two_components(cls, value: list[tuple[str, str]]) -> list[tuple[str, str]]:
+        """Refuse a pairing that names one component twice."""
+        for first, second in value:
+            if first == second:
+                # a ValueError, since pydantic reports no other at the key's location
+                raise ValueError(f"pairs {first!r} with itself; a pairing names two")
+        return value
+
     @field_validator("schema_version")
     @classmethod
     def supported_schema_version(cls, value: float) -> float:
@@ -506,7 +526,7 @@ def session_file_schema() -> dict[str, Any]:
         "type": "object",
         "additionalProperties": {"$ref": "#/$defs/HookEntry"},
     }
-    for section in (*EMPTY_AS_MAPPING, "hooks"):
+    for section in (*EMPTY_AS_MAPPING, "hooks", "pairs"):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
     return schema
 
@@ -532,6 +552,8 @@ def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDet
         key: {} if value is None and key in EMPTY_AS_MAPPING else value
         for key, value in data.items()
     }
+    if "pairs" in data and data["pairs"] is None:
+        data["pairs"] = []
     problems: list[InitErrorDetails] = []
     if TRANSPORT_KEY in data:
         del data[TRANSPORT_KEY]
