@@ -82,8 +82,9 @@ def build() -> Generator[BuildSession, None, None]:
     It takes a session class, made with the configuration given and laid over
     what the class declares, or a session already made. Sessions are shut
     down in reverse order; one the test shut down itself runs nothing again.
-    A shutdown that raises does not stop the others: the first error is
-    raised once every session has been shut down.
+    A shutdown that raises does not stop the others: once every session has
+    been shut down, its error is raised, or an `ExceptionGroup` of all of them
+    when more than one raised.
     """
     built: list[Session] = []
 
@@ -104,8 +105,10 @@ def build() -> Generator[BuildSession, None, None]:
             session.shutdown()
         except Exception as e:  # noqa: BLE001 - raised once every session is shut down
             errors.append(e)
-    if errors:
+    if len(errors) == 1:
         raise errors[0]
+    if errors:
+        raise ExceptionGroup("sessions could not shut down", errors)
 
 
 @pytest.fixture(autouse=True)
@@ -136,11 +139,10 @@ def data_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """Keep saved session settings under `tmp_path`."""
-    monkeypatch.setattr(
-        "redsun._settings.user_config_dir", lambda *a, **k: str(tmp_path)
-    )
-    return tmp_path
+    """Keep saved session settings in a `config` folder under `tmp_path`."""
+    root = tmp_path / "config"
+    monkeypatch.setattr("redsun._settings.user_config_dir", lambda *a, **k: str(root))
+    return root
 
 
 @pytest.fixture(autouse=True)
