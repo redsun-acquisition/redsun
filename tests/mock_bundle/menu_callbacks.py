@@ -1,4 +1,4 @@
-"""Module-level contributions a session's `actions` section may name."""
+"""Callbacks the `actions` section of a test session names by `module:function`."""
 
 from __future__ import annotations
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from app_model import Application
-from mock_bundle.actions import Executed
+from mock_bundle.menu_callbacks import Executed
 from qtpy.QtWidgets import QApplication, QMenu
 
 from redsun import AsPresenter, Session, provides
@@ -65,13 +65,13 @@ def test_the_section_registers_commands_on_the_session(
             {
                 "id": "probe.note",
                 "title": "Note",
-                "callback": "mock_bundle.actions:note",
+                "callback": "mock_bundle.menu_callbacks:note",
                 "menus": [{"id": "probe/tools"}],
             },
             {
                 "id": "probe.twice",
                 "title": "Twice",
-                "callback": "mock_bundle.actions:note_twice",
+                "callback": "mock_bundle.menu_callbacks:note_twice",
             },
         )
     )
@@ -97,7 +97,7 @@ def test_releasing_the_session_takes_its_commands_with_it(
             {
                 "id": "probe.note",
                 "title": "Note",
-                "callback": "mock_bundle.actions:note",
+                "callback": "mock_bundle.menu_callbacks:note",
             },
         )
     )
@@ -115,7 +115,9 @@ def test_releasing_the_session_takes_its_commands_with_it(
     ("declared", "message"),
     [
         pytest.param(
-            "mock_bundle.actions:note", "must be a list of entries", id="not-a-list"
+            "mock_bundle.menu_callbacks:note",
+            "must be a list of entries",
+            id="not-a-list",
         ),
         pytest.param([["probe.note"]], "must be a mapping", id="entry-not-a-mapping"),
         pytest.param(
@@ -123,7 +125,7 @@ def test_releasing_the_session_takes_its_commands_with_it(
                 {
                     "id": "probe.note",
                     "title": "Note",
-                    "callback": "mock_bundle.actions:note",
+                    "callback": "mock_bundle.menu_callbacks:note",
                     "menu": "probe/tools",
                 }
             ],
