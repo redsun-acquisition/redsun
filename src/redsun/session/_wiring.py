@@ -83,6 +83,7 @@ class Wiring:
         "failed",
         "frontend",
         "links",
+        "made_links",
         "names",
         "path_provider",
         "subscriptions",
@@ -102,6 +103,7 @@ class Wiring:
         # made by the session while it reads its configuration, after this
         self.path_provider: SessionPathProvider | None = None
         self.links: list[tuple[SignalInstance, SlotCallable]] = []
+        self.made_links: list[tuple[object, SlotCallable]] = []
         self.connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
         # subscription by identity: clear_sub needs the object back
@@ -147,7 +149,7 @@ class Wiring:
         )
 
     def link(self, signal: object, slot: SlotCallable) -> None:
-        """Make one link, unless an end of it belongs to a component that failed.
+        """Make one link, unless it is made already or an end of it failed to build.
 
         Raises
         ------
@@ -156,6 +158,14 @@ class Wiring:
             connectable, or if psygnal rejects the two signatures.
         """
         if skipped(signal, slot):
+            return
+        if any(sent is signal and reached == slot for sent, reached in self.made_links):
+            logger.debug(
+                "Not connecting %s to %s.%s again",
+                getattr(signal, "name", signal),
+                self.label(getattr(slot, "__self__", None)),
+                port_name(slot),
+            )
             return
         if isinstance(signal, SignalInstance):
             self.connect(signal, slot)
@@ -183,6 +193,7 @@ class Wiring:
             raise WiringError(f"cannot connect {link}: {e}") from e
 
         self.links.append((signal, slot))
+        self.made_links.append((signal, slot))
         self.connections.append(link)
         logger.debug(f"Connected {link}")
 
@@ -215,6 +226,7 @@ class Wiring:
         # the main thread during the build
         run_coro(attach())
         self.subscriptions.append((signal, forward, relay))
+        self.made_links.append((signal, slot))
         self.connections.append(link)
         logger.debug(f"Connected {link}")
 
@@ -244,7 +256,7 @@ class Wiring:
                 e.component,
             )
             return
-        self.connect(signal, slot)
+        self.link(signal, slot)
 
     @overload
     def resolve(self, path: str, kind: Literal["signal"]) -> SignalInstance: ...
@@ -311,6 +323,7 @@ class Wiring:
         for signal, slot in self.links:
             signal.disconnect(slot, missing_ok=True)
         self.links.clear()
+        self.made_links.clear()
         self.connections.clear()
 
         async def release(signal: SignalR[Any], forward: Callable[[Any], None]) -> None:
