@@ -228,24 +228,14 @@ class TestCreatePlanWidget:
         pw = create_plan_widget(_continuous_spec())
         assert pw.pause_button is None
 
-    def test_pausable_plan_has_pause_button(self) -> None:
-        """Give a pausable plan a pause button."""
-        pw = create_plan_widget(_pausable_spec())
-        assert pw.pause_button is not None
-
     def test_pausable_plan_pause_button_initially_disabled(self) -> None:
-        """Disable the pause button until the plan runs."""
+        """Give a pausable plan a pause button, disabled until the plan runs."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         assert not pw.pause_button.isEnabled()
 
-    def test_action_plan_has_actions_group(self) -> None:
-        """Give a plan with an action parameter an actions group."""
-        pw = create_plan_widget(_action_spec())
-        assert pw.actions_group is not None
-
     def test_action_plan_actions_group_initially_disabled(self) -> None:
-        """Disable the actions group until the plan runs."""
+        """Give a plan with an action an actions group, disabled until the plan runs."""
         pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
         assert not pw.actions_group.isEnabled()
@@ -277,7 +267,7 @@ class TestCreatePlanWidget:
             _continuous_spec(), toggle_callback=lambda checked: states.append(checked)
         )
         pw.run_button.setChecked(True)
-        assert True in states
+        assert states == [True]
 
     def test_parameters_returns_current_values(self) -> None:
         """Return the current parameter values by name."""

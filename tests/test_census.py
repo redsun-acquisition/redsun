@@ -571,60 +571,44 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
 
 
 @pytest.mark.parametrize(
-    ("session", "error", "match"),
+    ("session", "match"),
     [
-        pytest.param(
-            NoneApp, TypeError, "nothing in the session does", id="one-answered-by-none"
-        ),
+        pytest.param(NoneApp, "nothing in the session does", id="one-answered-by-none"),
         pytest.param(
             TwoApp,
-            TypeError,
             "but 2 do, from 'camera', 'spare'",
             id="one-answered-by-two",
         ),
         pytest.param(
             SelfApp,
-            TypeError,
             "nothing in the session does",
             id="one-answered-by-the-asker",
         ),
         pytest.param(
             MaybeTwoApp,
-            TypeError,
             "but 2 do, from 'camera', 'spare'",
             id="maybe-answered-by-two",
         ),
         pytest.param(
             RenamedApp,
-            TypeError,
-            "nothing in the session does",
+            r"(?s)nothing in the session does.*'camera': apply_camera\(factor",
             id="renamed-parameter-does-not-answer",
         ),
         pytest.param(
-            RenamedApp,
-            TypeError,
-            r"'camera': apply_camera\(factor",
-            id="near-miss-is-named",
-        ),
-        pytest.param(
             ForgetfulApp,
-            TypeError,
             "'counter': 'count' is missing",
             id="data-member-never-assigned",
         ),
         pytest.param(
             BackwardsQuestionApp,
-            TypeError,
             "knows nothing about a view",
             id="one-answered-by-a-later-layer",
         ),
     ],
 )
-def test_the_session_refuses_to_build(
-    session: type[Session], error: type[Exception], match: str
-) -> None:
+def test_the_session_refuses_to_build(session: type[Session], match: str) -> None:
     """Refuse a build when a request for one component has no single valid answer."""
-    with pytest.raises(error, match=match):
+    with pytest.raises(TypeError, match=match):
         session().build()
 
 

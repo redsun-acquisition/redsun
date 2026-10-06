@@ -280,8 +280,7 @@ class TestCreatePlanSpec:
 
         spec = create_plan_spec(plan, {})
         action_p = next(p for p in spec.parameters if p.name == "snap")
-        assert action_p.actions is not None
-        assert isinstance(action_p.actions, PlanAction)
+        assert action_p.actions == PlanAction(name="snap")
         assert action_p.choices is None
 
     def test_action_sequence_param(self) -> None:
@@ -296,8 +295,7 @@ class TestCreatePlanSpec:
 
         spec = create_plan_spec(plan, {})
         p = next(q for q in spec.parameters if q.name == "actions")
-        assert isinstance(p.actions, list)
-        assert len(p.actions) == 2
+        assert p.actions == [PlanAction(name="a"), PlanAction(name="b")]
 
     def test_two_actions_of_one_name_are_refused(self) -> None:
         """Refuse a plan declaring two actions with the same name."""
