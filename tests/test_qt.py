@@ -173,6 +173,7 @@ class BrokenApp(QtSession):
 
 @pytest.fixture
 def window(qapp: QApplication) -> Generator[QMainWindow, None, None]:
+    """Return an empty main window, deleted after the test."""
     window = QMainWindow()
     yield window
     window.deleteLater()

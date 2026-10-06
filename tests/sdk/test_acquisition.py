@@ -134,11 +134,13 @@ class RecordedPaths(SessionPathProvider):
 
 @pytest.fixture
 def plans() -> Plans:
+    """Return the plans the presenter is given."""
     return Plans()
 
 
 @pytest.fixture
 def paths(tmp_path: Path) -> RecordedPaths:
+    """Return the path provider recording what the presenter asks for."""
     return RecordedPaths(tmp_path)
 
 
@@ -146,6 +148,7 @@ def paths(tmp_path: Path) -> RecordedPaths:
 def presenter(
     plans: Plans, paths: RecordedPaths, detector: MockDetector
 ) -> Generator[AcquisitionPresenter, None, None]:
+    """Return an acquisition presenter set up with the plans and paths, shut down afterwards."""
     acquisition = AcquisitionPresenter(
         "acquisition", devices={"det1": detector, "plain": QuietAxis("plain")}
     )

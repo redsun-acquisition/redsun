@@ -58,6 +58,7 @@ def wait_until() -> Callable[..., bool]:
 
 @pytest.fixture(scope="session")
 def qapp() -> QApplication:
+    """Return the one `QApplication` of the whole run."""
     app = QApplication([])
 
     start_emitting_from_queue()

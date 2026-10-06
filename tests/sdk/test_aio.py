@@ -96,6 +96,7 @@ def clean_backend() -> Iterator[None]:
 
 @pytest.fixture
 def backend() -> CulsansAsyncioBackend:
+    """Install the async backend and return it."""
     return set_async_backend()
 
 

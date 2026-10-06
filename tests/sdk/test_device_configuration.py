@@ -10,6 +10,7 @@ from tests.sdk.mocks import SoftAxis
 
 @pytest.fixture
 async def axis() -> SoftAxis:
+    """Return a connected soft axis named `focus`."""
     device = SoftAxis("focus")
     await device.connect(mock=False)
     return device

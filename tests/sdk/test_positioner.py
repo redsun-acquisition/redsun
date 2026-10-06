@@ -65,6 +65,7 @@ class KeepOut(PositionerPresenter):
 
 @pytest.fixture
 async def stage() -> Stage:
+    """Return a connected stage."""
     device = Stage("stage")
     await device.connect(mock=False)
     return device
@@ -72,6 +73,7 @@ async def stage() -> Stage:
 
 @pytest.fixture
 def presenter(stage: Stage) -> Generator[PositionerPresenter, None, None]:
+    """Return a positioner presenter over the stage, shut down afterwards."""
     positioner = PositionerPresenter("positioner", devices={"stage": stage})
     yield positioner
     positioner.shutdown()

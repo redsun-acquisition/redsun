@@ -315,6 +315,7 @@ class DeferredApp(Session):
 
 @pytest.fixture
 def app() -> Any:
+    """Build the base session and shut it down afterwards."""
     container = App().build()
     yield container
     container.shutdown()

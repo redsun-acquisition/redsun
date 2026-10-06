@@ -25,6 +25,7 @@ STREAM = PlanAction(name="stream", toggle_states=("Start", "Stop"))
 
 @pytest.fixture
 def actions() -> ActionManager:
+    """Return an empty action manager."""
     return ActionManager()
 
 

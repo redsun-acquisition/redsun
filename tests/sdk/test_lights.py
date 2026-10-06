@@ -52,6 +52,7 @@ class SlowIntensity(SoftLight):
 
 @pytest.fixture
 async def laser() -> DimmerLight:
+    """Return a connected dimmable light."""
     device = DimmerLight("laser")
     await device.connect(mock=False)
     return device
@@ -59,6 +60,7 @@ async def laser() -> DimmerLight:
 
 @pytest.fixture
 async def led() -> SoftLight:
+    """Return a connected on-off light."""
     device = SoftLight("led")
     await device.connect(mock=False)
     return device
@@ -68,6 +70,7 @@ async def led() -> SoftLight:
 def presenter(
     laser: DimmerLight, led: SoftLight
 ) -> Generator[LightPresenter, None, None]:
+    """Return a light presenter over the laser and the led, shut down afterwards."""
     lights = LightPresenter("lights", devices={"laser": laser, "led": led})
     yield lights
     lights.shutdown()
