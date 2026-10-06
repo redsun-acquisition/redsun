@@ -1059,6 +1059,8 @@
       
         
       
+        
+      
     
     
     
@@ -1410,6 +1412,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/choose-plan-inputs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sliders-horizontal" viewBox="0 0 24 24"><path d="M10 5H3M12 19H3M14 3v4M16 17v4M21 12h-9M21 19h-5M21 5h-7M8 10v4M8 12H3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to choose the inputs of a plan
 
     
   </span>
@@ -3329,6 +3360,8 @@
       
         
       
+        
+      
     
     
     
@@ -3996,6 +4029,33 @@
     
   
   23. Pairing two components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  24. A plan widget for every parameter type it can return
 
     
   </span>
@@ -5873,12 +5933,14 @@ devices that can fill it, and needs the devices to find them.</p>
 <h3 id="plans-that-are-refused">Plans that are refused<a class="headerlink" href="#plans-that-are-refused" title="Permanent link">&para;</a></h3>
 <p>A required parameter whose annotation no input can show makes
 <code>create_plan_spec</code> raise <code>UnresolvableAnnotationError</code>, so a plan is never
-shown with a control nobody can fill in. Two actions of one name make it
-raise <code>ValueError</code>. The component describing the plans
-decides what follows: one that catches the error for each plan leaves that
-plan out and keeps the others, and one that does not fails its whole <code>setup</code>.
-<code>Any</code> is refused on purpose: it would accept everything and show as a bare
-text field.</p>
+shown with a control nobody can fill in. Such a parameter with a default is
+hidden instead: the view leaves it out and the plan keeps its default, which
+is how the <code>md</code> of most <code>bluesky</code> plans is treated. Two actions of one name
+make it raise <code>ValueError</code>. The component describing the plans decides what
+follows: one that catches the error for each plan leaves that plan out and
+keeps the others, and one that does not fails its whole <code>setup</code>. <code>Any</code> cannot
+be shown on purpose: it would accept everything and show as a bare text
+field.</p>
 <p>The check is plain Python and imports no toolkit, so a plan can be inspected
 before any application object exists.</p>
 <p>What a description holds, how each annotation is read and how the values of a

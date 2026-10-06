@@ -1059,6 +1059,8 @@
       
         
       
+        
+      
     
     
     
@@ -1410,6 +1412,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/choose-plan-inputs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sliders-horizontal" viewBox="0 0 24 24"><path d="M10 5H3M12 19H3M14 3v4M16 17v4M21 12h-9M21 19h-5M21 5h-7M8 10v4M8 12H3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to choose the inputs of a plan
 
     
   </span>
@@ -3147,6 +3178,8 @@
       
         
       
+        
+      
     
     
     
@@ -3811,6 +3844,33 @@
     
   
   23. Pairing two components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  24. A plan widget for every parameter type it can return
 
     
   </span>
@@ -4936,6 +4996,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.view.qt.utils.PlanWidget.problem_label" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;problem_label
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.view.qt.utils.PlanWidget.action_buttons" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -4984,6 +5055,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;progress_group
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.view.qt.utils.PlanWidget.problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;problems
       </span>
     </span>
   </a>
@@ -7010,6 +7092,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.view.qt.utils.PlanWidget.problem_label" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;problem_label
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.view.qt.utils.PlanWidget.action_buttons" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7058,6 +7151,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;progress_group
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.view.qt.utils.PlanWidget.problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;problems
       </span>
     </span>
   </a>
@@ -8737,6 +8841,8 @@ way reads as the user asking the action to end.</p>
     <div class="doc doc-contents ">
 
         <p>Build a complete <code>PlanWidget</code> for <em>spec</em>.</p>
+<p>Run stays disabled while an input holds an invalid value; see
+<code>PlanWidget.problems</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -9028,12 +9134,13 @@ unchecks or moves a callback.</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">container</span><span class="p">:</span> <span class="n">Container</span><span class="p">[</span><span class="n">ValueWidget</span><span class="p">[</span><span class="n">Any</span><span class="p">]],</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">device_widgets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValueWidget</span><span class="p">[</span><span class="n">Any</span><span class="p">]],</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">params_widget</span><span class="p">:</span> <span class="n">QWidget</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">action_buttons</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ActionButton</span><span class="p">],</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">actions_group</span><span class="p">:</span> <span class="n">QGroupBox</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">pause_button</span><span class="p">:</span> <span class="n">QPushButton</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">callbacks_list</span><span class="p">:</span> <span class="n">QListWidget</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">progress_group</span><span class="p">:</span> <span class="n">QGroupBox</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">problem_label</span><span class="p">:</span> <span class="n">QLabel</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">action_buttons</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ActionButton</span><span class="p">],</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">actions_group</span><span class="p">:</span> <span class="n">QGroupBox</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">pause_button</span><span class="p">:</span> <span class="n">QPushButton</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">callbacks_list</span><span class="p">:</span> <span class="n">QListWidget</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">progress_group</span><span class="p">:</span> <span class="n">QGroupBox</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -9174,9 +9281,7 @@ unchecks or moves a callback.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Device parameter widgets (<code>DeviceSequenceEdit</code> or <code>ComboBox</code>).</p>
-<p>Exposed so callers can connect validation to each widget's <code>changed</code>
-signal.</p>
+        <p>Device parameter widgets (<code>DeviceSequenceEdit</code> or <code>ComboBox</code>), in the <em>Devices</em> group.</p>
 
     </div>
 
@@ -9202,6 +9307,30 @@ signal.</p>
 
         <p>Widget holding devices_group and params_group; disabling it locks every
 parameter input but not the run, stop and pause buttons.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.view.qt.utils.PlanWidget.problem_label" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">problem_label</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#redsun.view.qt.utils.PlanWidget.problem_label" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">problem_label</span><span class="p">:</span> <span class="n">QLabel</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The first of <code>problems</code>, under the parameters; hidden while there is none.</p>
 
     </div>
 
@@ -9328,6 +9457,31 @@ rest can be checked and dragged into a different order.</p>
     <div class="doc doc-contents ">
 
         <p>The "Progress" group of the page, hidden until the plan reports a scope.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.view.qt.utils.PlanWidget.problems" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">problems</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#redsun.view.qt.utils.PlanWidget.problems" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">problems</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Why the plan cannot run, one line per invalid input, prefixed with its parameter.</p>
+<p>Run stays disabled while the list is not empty.</p>
 
     </div>
 
@@ -9467,6 +9621,7 @@ rest can be checked and dragged into a different order.</p>
     <div class="doc doc-contents ">
 
         <p>Enable or disable the whole plan widget.</p>
+<p>Enabling it enables Run only while <code>problems</code> is empty.</p>
 
 
     </div>

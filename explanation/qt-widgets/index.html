@@ -1059,6 +1059,8 @@
       
         
       
+        
+      
     
     
     
@@ -1410,6 +1412,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/choose-plan-inputs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sliders-horizontal" viewBox="0 0 24 24"><path d="M10 5H3M12 19H3M14 3v4M16 17v4M21 12h-9M21 19h-5M21 5h-7M8 10v4M8 12H3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to choose the inputs of a plan
 
     
   </span>
@@ -3290,6 +3321,8 @@
       
         
       
+        
+      
     
     
     
@@ -3957,6 +3990,33 @@
     
   
   23. Pairing two components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  24. A plan widget for every parameter type it can return
 
     
   </span>
@@ -5742,10 +5802,19 @@ and the view sends the name of the plan and <code>PlanWidget.parameters</code> t
 presenter that runs it. The view then sets the widget as the plan starts,
 pauses and ends, with <code>toggle</code> and <code>pause</code>. The widget depends on no
 presenter, and the <code>PlanSpec</code> it is built from depends on no toolkit.</p>
+<p>Each input starts from its parameter's default and returns a value of the
+annotated type. A list, set, mapping, fixed-length tuple, optional value or
+union gets an input built from the inputs of its parts, so they nest: a
+<code>dict[str, list[float]]</code> is a table whose values are lists. While an input
+holds a value the plan cannot take, a repeated mapping key or no device
+chosen, Run stays disabled, <code>PlanWidget.problems</code> lists why, and the first
+reason shows under the parameters.</p>
 <p><a href="../../how-to/run-a-plan/">How to run a plan from a presenter</a> builds the view,
 and <a href="../../how-to/write-a-continuous-plan/">How to write a plan that runs until stopped</a>
 adds the toggle, the pause button and the action buttons. The attributes of
-<code>PlanWidget</code> are in the <a href="../../reference/api/view/#qt-widgets">reference</a>.</p>
+<code>PlanWidget</code> are in the <a href="../../reference/api/view/#qt-widgets">reference</a>,
+and <a href="../../how-to/choose-plan-inputs/">How to choose the inputs of a plan</a>
+pictures the inputs a few signatures get.</p>
 <h3 id="document-callbacks">Document callbacks<a class="headerlink" href="#document-callbacks" title="Permanent link">&para;</a></h3>
 <p>A plan may require document callbacks of its own, and may let the user attach
 more. <code>create_plan_widget</code> lists both in a <em>Callbacks</em> group, given the plan's

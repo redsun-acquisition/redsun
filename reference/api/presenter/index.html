@@ -1059,6 +1059,8 @@
       
         
       
+        
+      
     
     
     
@@ -1410,6 +1412,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/choose-plan-inputs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sliders-horizontal" viewBox="0 0 24 24"><path d="M10 5H3M12 19H3M14 3v4M16 17v4M21 12h-9M21 19h-5M21 5h-7M8 10v4M8 12H3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to choose the inputs of a plan
 
     
   </span>
@@ -3147,6 +3178,8 @@
       
         
       
+        
+      
     
     
     
@@ -3811,6 +3844,33 @@
     
   
   23. Pairing two components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  24. A plan widget for every parameter type it can return
 
     
   </span>
@@ -11168,6 +11228,8 @@ build a control for it.</p>
 <ul>
 <li><strong>Action parameters</strong> are filled from the spec when the interface lacks
   them.</li>
+<li><strong>Hidden parameters</strong> get their default, so the parameters after them
+  keep their places.</li>
 <li><strong>Device parameters</strong>: names become <code>OADevice</code> instances from
   <code>devices</code>.</li>
 <li><strong>Everything else</strong> passes unchanged.</li>
@@ -11455,7 +11517,7 @@ build a control for it.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Whether the parameter is hidden from the interface, as for metadata only.</p>
+        <p>Whether no input can show the parameter, so a view leaves it out and the plan keeps its default.</p>
 
     </div>
 
@@ -11732,23 +11794,77 @@ build a control for it.</p>
 <li><code>MyDevice</code> (bare protocol) -&gt; single-select</li>
 <li>Everything else -&gt; a plain value, left to the view layer to render</li>
 </ol>
-<p>Step 5 accepts:</p>
-<ul>
-<li><code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>bytes</code> and <code>range</code></li>
-<li><code>Path</code></li>
-<li><code>datetime</code>, <code>date</code>, <code>time</code> and <code>timedelta</code></li>
-<li>any <code>Enum</code> subclass</li>
-<li>a sequence of anything that is not a device</li>
-</ul>
-<p>A required parameter with any other annotation raises
-<code>UnresolvableAnnotationError</code>.</p>
+<p>Step 5 accepts an annotation an input can show:</p>
+<table>
+<thead>
+<tr>
+<th>Annotation</th>
+<th>Shown when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>bytes</code>, <code>range</code>, <code>Path</code>, <code>datetime</code>, <code>date</code>, <code>time</code>, <code>timedelta</code>, an <code>Enum</code>, a <code>Literal</code></td>
+<td>always</td>
+</tr>
+<tr>
+<td><code>list[T]</code>, <code>Sequence[T]</code>, <code>Iterable[T]</code>, <code>tuple[T, ...]</code>, <code>set[T]</code>, <code>frozenset[T]</code>, or any one-element container a <code>list</code>, <code>tuple</code>, <code>set</code> or <code>frozenset</code> satisfies</td>
+<td><code>T</code> can be shown</td>
+</tr>
+<tr>
+<td><code>tuple[A, B]</code> of fixed length</td>
+<td>every member can be shown</td>
+</tr>
+<tr>
+<td><code>dict[K, V]</code>, <code>Mapping[K, V]</code>, or any mapping a <code>dict</code> satisfies</td>
+<td><code>K</code> is a plain type, an <code>Enum</code> or a <code>Literal</code>, and <code>V</code> can be shown</td>
+</tr>
+<tr>
+<td><code>X \| None</code></td>
+<td><code>X</code> can be shown</td>
+</tr>
+<tr>
+<td><code>A \| B</code></td>
+<td>every member can be shown</td>
+</tr>
+</tbody>
+</table>
+<p><code>Annotated</code> metadata is set aside when deciding, at every level, so
+<code>list[Annotated[float, ...]]</code> is read as <code>list[float]</code>. A device inside any of these shapes cannot be shown, and neither can <code>Any</code>, a
+<code>Callable</code>, a container without type arguments, or a container no built-in
+satisfies, such as <code>deque[T]</code> or <code>OrderedDict[K, V]</code>: the plan would receive
+a <code>list</code> or a <code>dict</code>, not the class it names.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>an input can show it</td>
+<td>an input, starting from the default</td>
+</tr>
+<tr>
+<td>no input can show it, and it has a default</td>
+<td><code>hidden=True</code>: a view leaves it out and the plan keeps its default</td>
+</tr>
+<tr>
+<td>no input can show it, and it has no default</td>
+<td><code>UnresolvableAnnotationError</code></td>
+</tr>
+</tbody>
+</table>
+<p>The inputs each annotation gets are pictured in
+<a href="../../../how-to/choose-plan-inputs/">How to choose the inputs of a plan</a>.</p>
 <h3 id="from-the-values-to-a-call">From the values to a call<a class="headerlink" href="#from-the-values-to-a-call" title="Permanent link">&para;</a></h3>
 <p>Once the user fills in the plan widget, the presenter turns the values into a
 plan
 call:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter.plan_spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">collect_arguments</span><span class="p">,</span> <span class="n">resolve_arguments</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># 1. Resolve: string device names -&gt; live device instances</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># 1. Resolve: string device names -&gt; live device instances, hidden parameters -&gt; their defaults</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_arguments</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">widget_values</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># 2. Collect: build (args, kwargs) matching the plan signature</span>
