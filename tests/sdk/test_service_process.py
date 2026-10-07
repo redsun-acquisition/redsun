@@ -63,13 +63,25 @@ def launch(
         launched.stop()
 
 
-@pytest.mark.parametrize("options", [(), ("--blocking",)])
+@pytest.mark.parametrize(
+    "options",
+    [
+        (),
+        ("--blocking",),
+        pytest.param(
+            ("--select",),
+            marks=pytest.mark.skipif(
+                sys.platform == "win32", reason="select waits on sockets only"
+            ),
+        ),
+    ],
+)
 def test_a_service_on_the_process_functions_starts_and_stops_when_asked(
     options: tuple[str, ...],
     launch: Callable[..., Service],
     service_log: pytest.LogCaptureFixture,
 ) -> None:
-    """Start a service on its declared ready text and stop it cleanly, awaiting or blocking."""
+    """Start a service on its declared ready text and stop it cleanly, awaiting, blocking or waiting in a system call."""
     service = launch(*options)
 
     service.start()

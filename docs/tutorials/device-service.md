@@ -218,11 +218,9 @@ This is the last tutorial.
 - [Reusing the built-in positioner](builtin-positioner.md) is the next
   tutorial: it replaces the nudge presenter and view with the positioner
   `redsun` ships.
-- [How to write a service with
-  FastCS](../how-to/write-a-service-with-fastcs.md) serves a stage with another
-  library, over another protocol.
-- [How to write a service](../how-to/write-a-service.md) covers services that
-  already run elsewhere, and what to do when one exits.
+- [How to write a service](../how-to/write-a-service.md) serves a stage with
+  `fastcs` over another protocol, and covers services that already run
+  elsewhere, and what to do when one exits.
 - [How to run a session without hardware](../how-to/run-without-hardware.md)
   runs the same window with no service behind it.
 - [Services](../explanation/services.md) explains why devices and services

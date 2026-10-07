@@ -4,7 +4,9 @@ Run as `python -m mock_pkg.service.process_stand_in`. It logs its level and
 one line at `DEBUG` through `logging` and `loguru`, and one through the
 `redsun` logger tree. It prints what the session told it, prints the declared
 ready text, and exits 0 once asked to stop: by awaiting the request, or with
-`--blocking` through `SIGINT`, as a blocking server does.
+`--blocking` through `SIGINT`, as a blocking server does. `--select` blocks in
+a system call that only a signal ends, as a server waiting for a client does;
+it needs a POSIX `select` on a pipe.
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
+import select
 import sys
 import time
 
@@ -29,6 +33,7 @@ from redsun.services import (
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--blocking", action="store_true")
+    parser.add_argument("--select", action="store_true")
     options = parser.parse_args()
 
     configure_logging()
@@ -39,7 +44,15 @@ def main() -> int:
     logging.getLogger("redsun.stand_in").info("from the redsun tree")
 
     print(f"identity {identity()}", flush=True)
-    if options.blocking:
+    if options.select:
+        stop_on_request()
+        ready()
+        waiting, _ = os.pipe()
+        try:
+            select.select([waiting], [], [])
+        except KeyboardInterrupt:
+            pass
+    elif options.blocking:
         stop_on_request()
         ready()
         try:
