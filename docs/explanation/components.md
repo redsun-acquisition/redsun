@@ -17,10 +17,14 @@ argument by keyword. It fills each parameter from one of these places:
 - If the [session file](glossary.md#session-file) or an inline `Declare(...)`
   gives a value for the parameter, the parameter takes that value.
 - Any other parameter is looked up **by its type**, among the values the
-  session holds before any component exists: `SessionConfig`, `Settings`,
-  `DeviceMapping`, `DevicesOf[P]`, the path provider, the catalog address,
-  and whatever the session's providers share, whether the session class lists
-  those providers or a plugin does.
+  session holds before any component exists. These are `SessionConfig`,
+  `Settings`, `DeviceMapping`, `DevicesOf[P]`, the path provider, the catalog
+  address, and the [shared values](glossary.md#shared-value) of the session's
+  providers. A provider is a class the session makes before any component,
+  only to share values. You list providers on the session class, or a plugin
+  adds them through the session file, as
+  [Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)
+  shows.
 - A Qt view's `parent` is the main window, which the frontend passes in; see
   [Frontends](frontends.md#the-qt-frontend).
 - A parameter with a default keeps its default when nothing else fills it.
@@ -74,10 +78,12 @@ anything is built, and the error tells you to move the parameter to `setup`.
 
 If `setup` raises, the session logs the error and keeps the component, but
 without whatever `setup` was going to give it. The build summary lists the
-component under `Not set up`, just as it lists one whose `setup` asks for a
-component that was declared but failed to build. A `setup` that asks for
-something nothing in the session declares is different: that's a mistake in
-the session itself, so the build stops with `TypeError`.
+component under `Not set up`. The same happens when `setup` asks for a
+component that was declared but failed to build.
+
+The build stops with `TypeError` only when `setup` asks for something that
+nothing in the session declares. No component failed in that case. The
+mistake is in how the session is written, so you fix the session.
 
 ### Sharing a value
 
@@ -104,20 +110,22 @@ optional values.
 
 ### Using a protocol without importing redsun
 
-The session checks a component against a [protocol](glossary.md#protocol) only
-by its members: their names, and for methods their signatures. It never asks
-which module the protocol came from, so a [plugin](glossary.md#plugin) can
-satisfy a protocol without naming it. It can also copy the protocol's
-definition into its own code, so that its type checker sees it, without
-depending on `redsun` for that.
+A [plugin](glossary.md#plugin) can satisfy a `redsun`
+[protocol](glossary.md#protocol) without importing `redsun`. The session
+checks a component only by its members, meaning their names and, for methods,
+their signatures, and never asks which module the protocol came from. A plugin
+can also copy the protocol's definition into its own code, so that its type
+checker sees it, without depending on `redsun` for that.
 
 Whether a copy is enough depends on the types its members name. `Axis`,
 `Light`, `DescribesAxes` and `DescribesLights` name only `ophyd-async`,
 `bluesky` or built-in types, so you can copy them whole. `HasPlans` names
 `PlanEntry`, `HasActions` names `ActionManager` and `DescribesPlans` names
 `PlanSpec`, so a component using those protocols works with those `redsun`
-types. A shared value is found by its exact type, so asking for a `RunEngine`
-or `Deferrals` needs `redsun`'s own classes.
+types. A shared value is found by its exact type, so asking for the
+`RunEngine`, or for [`Deferrals`][redsun.engine.Deferrals], which applies a
+setting change during a plan without corrupting what the plan records, needs
+`redsun`'s own classes.
 
 ## Devices
 
@@ -229,8 +237,8 @@ its name public, since other code connects to it. A slot may be `async def`.
 The session makes the connections, either in [`wire`][redsun.Session.wire] or
 from the file's `wiring` section; the components never connect themselves.
 [Wire components together](../how-to/wire-components.md) shows both ways. A
-slot on a Qt widget runs on the main thread unless it says otherwise, since a
-widget may only be used from there.
+slot on a Qt widget runs on the main thread, since a widget may only be used
+from there. A slot can choose another thread with `@slot(thread=...)`.
 
 When you write a presenter and a view for each other, each slot can say which
 signal of the other one reaches it. The session then connects the two with one

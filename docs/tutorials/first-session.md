@@ -77,14 +77,14 @@ includes `bluesky` plans that move a device, and the positioner `redsun`
 offers, which [the last tutorial](builtin-positioner.md) uses without changing
 the stage.
 
-A movable device reads its readback under its own name, so you read the
-position of `stage` as `stage`.
+A movable device reports its readback under its own name. When you read
+`stage`, its position comes back under the key `stage`, not `position`.
 
 ## 2. The view
 
 A [view](../explanation/glossary.md#view) is the part of the application the
-user sees. Add this one below `MyStage`. For each stage it hears from, it
-draws a row with a button and a label:
+user sees. Add this one below the class `MyStage`. For each stage it hears
+from, it draws a row with a button and a label:
 
 ```{.python}
 --8<-- "docs/tutorials/first_session.py:view"
@@ -94,13 +94,14 @@ draws a row with a button and a label:
 window. `sig_nudge` is a [signal](../explanation/glossary.md#signal): when you
 press a stage's button, the view sends it with the name of that stage.
 `show_reading` is a [slot](../explanation/glossary.md#slot), a method
-something else can trigger. It receives a reading, which is the value of a
-device signal under the name of that signal. For the position of a stage,
-that name is the name of the stage.
+something else can trigger. It receives a reading: a dictionary whose key is
+the name a device reports and whose entry holds the `value`. For a stage, the
+key is the stage's own name, as step 1 explained.
 
 You never call the constructor yourself, because the session does it for
-you. The session gives every view its `name` and its `parent`, and every
-component keeps its name.
+you. The session passes every view its `name`, and its `parent`, which is the
+main window. Every component stores the name it receives as `self.name`, as
+`StageView` does.
 
 ## 3. The session
 
@@ -146,16 +147,17 @@ A window opens with the view docked on the left:
 ![The first session's window, with a row for the stage: a Nudge button and
 its position](images/first-session.png)
 
-The view has one row, for `stage`. That row is there because a link from a
-device signal sends the value the signal has now, and then every new one, so
-the view heard from the stage as soon as the window opened. Press the button:
-nothing happens yet, since nothing listens to it. Close the window.
+The view has one row, for `stage`, before you've pressed anything. A link
+from a device signal sends the value the signal has when the session makes the
+link, and then every new value. So `show_reading` received the stage's
+position while the session started, and added the row for it. Press the
+button: nothing happens yet, since nothing listens to it. Close the window.
 
 ## 4. The presenter
 
 A [presenter](../explanation/glossary.md#presenter) holds what the
-application does. Add this one between `MyStage` and `StageView`. It moves a
-stage by one step:
+application does. Add this one between the classes `MyStage` and
+`StageView`. It moves a stage by one step:
 
 ```{.python}
 --8<-- "docs/tutorials/first_session.py:presenter"

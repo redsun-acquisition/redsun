@@ -101,9 +101,11 @@ local machine.
       logs it.
     - [`configure_logging`][redsun.services.configure_logging] sends the
       records of `fastcs` to the session at the level the session records
-      at. Don't call `fastcs.logging.configure_logging` after it, because
-      that replaces the output with coloured text, which the session reads as
-      `DEBUG` lines.
+      at. The session reads every line the service prints, and logs a line
+      that isn't one of these records at `DEBUG`. So don't call
+      `fastcs.logging.configure_logging`, the `fastcs` function of the same
+      name, after the `redsun` one: it replaces the records with coloured
+      text, which the session then logs as `DEBUG` lines.
     - Run alone, the service listens on every network interface of the
       machine. Launched by a session, it listens on `127.0.0.1` only, since
       the session sets `EPICS_PVAS_INTF_ADDR_LIST`; see
@@ -117,9 +119,10 @@ local machine.
     service has to ask.
     [`ready_when_reachable`][redsun.services.ready_when_reachable] keeps asking
     for the record in which `fastcs` lists the attributes of the controller.
-    When it gets an answer, it prints the ready text the declaration gives. Any
-    server of that name can answer, which is one more reason for a prefix of
-    its own.
+    When it gets an answer, it prints the ready text the declaration gives.
+    Any server serving a record of that name can answer, so if another
+    session serves the same prefix, this service counts as ready too early.
+    Give each service a prefix no other service on the machine uses.
 
 A session asks a service to stop by closing its standard input, on every
 platform. A service that blocks in a call of its own, as `caproto`'s `run`
@@ -132,11 +135,11 @@ does, calls `stop_on_request`. A service built on `asyncio` awaits
     printing raises. Clean up before you print, or don't print.
 
 Under `channel-access`, a launched service listens on a port the session
-chooses when its process starts, and no other program is told which one, so
-`caget` from another terminal doesn't find it. Under `pv-access`, another
-program on the machine reaches it with `EPICS_PVA_ADDR_LIST=127.0.0.1`. If
-other machines must reach the service, run it on its own, on the ports you set,
-and let the session attach to it.
+chooses when its process starts, and no other program is told which one. A
+Channel Access client run from another terminal, such as `caget`, doesn't find
+it. Under `pv-access`, another program on the machine reaches it with
+`EPICS_PVA_ADDR_LIST=127.0.0.1`. If other machines must reach the service, run
+it on its own, on the ports you set, and let the session attach to it.
 
 ## Point a device at it
 
@@ -217,10 +220,14 @@ Declare the service in the session class, beside the device that talks to it:
 
 `prefix` is what the devices of the service receive. `args` is what the
 process is started with, which is how the `caproto` IOC learns the same
-prefix. A service that calls [`identity`][redsun.services.identity], as the
-`fastcs` one does, needs no `args` for it. `args` is a list, or a mapping of options:
-`--` is put before each name, `true` passes the option alone, `false` leaves
-it out, and a list passes each item after it. The
+prefix. The `fastcs` service needs no prefix in `args`, because it reads the
+prefix with [`identity`][redsun.services.identity].
+
+`args` is a list, or a mapping of options. In a mapping, `--` goes before each
+name, `True` passes the option alone, `False` leaves it out, and a list passes
+each item after the option. For example,
+`args={"prefix": "CAM:", "simulate": True, "debug": False}` starts the module
+with `--prefix CAM: --simulate`. The
 [session file reference](../reference/session-file.md) has the table.
 
 `ready` is text the session waits for in the output of the service. The
@@ -357,10 +364,10 @@ a device can't speak both.
 [Services](../explanation/services.md#one-transport-per-session) says what a
 session does for each transport.
 
-A launched process learns its name and prefix from
-[`identity`][redsun.services.identity], so a module serving several sessions
-needs no arguments for them. `identity` returns `None` when no session
-launched the process:
+[`identity`][redsun.services.identity] gives a launched process the name and
+the prefix its session declared for it. A module that several sessions launch,
+each with its own prefix, reads them there and needs no `args` to pass them.
+`identity` returns `None` when no session launched the process:
 
 ```python
 from redsun.services import identity

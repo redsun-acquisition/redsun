@@ -38,10 +38,12 @@ the left becomes the component's name, and the annotation says which
 A line without `AsDevice`, `AsPresenter` or `AsView` is an ordinary
 attribute, not a component.
 
-`AsPresenter` wraps the class without replacing it, so your editor and `mypy`
-see `self.motor_ctrl` as a `MotorPresenter`. The markers start with `As` so
-that each one says what it marks, and so that none has the name of a class a
-component may itself subclass, such as `Device`.
+Once the session is built, `self.motor_ctrl` holds the `MotorPresenter` the
+session made. To your editor and `mypy`, `AsPresenter[MotorPresenter]` is still
+the `MotorPresenter` type with a marker attached, so they see the same class.
+The markers start with `As` so that each one says what it marks, and so that
+none has the name of a class a component may itself subclass, such as
+`Device`.
 
 ## Devices, presenters, views
 
@@ -76,17 +78,19 @@ runs the [build steps](glossary.md#build-step) in this order:
 | `services` | start the [services](services.md) the session launches, and the catalog |
 | `devices` | make every device |
 | `connect` | connect the devices, all at once |
-| `registry` | register what a constructor may ask for: the settings, the devices, the values of providers |
+| `registry` | collect what a component's constructor can ask for by type, such as the settings, the devices, and the [shared values](glossary.md#shared-value) of the session's providers, classes made only to share values |
 | `presenters` | make the presenters |
 | `views` | make the views |
 | `setup` | call each component's `setup` method |
-| `seal` | check what was built, close the session to further building, and record what each component would save, to notice changes later |
+| `seal` | record which components were built, and close the session to further building. It also notes the settings each component would [save](../how-to/save-a-session.md) now, so the session can later tell whether you changed any |
 | `wiring` | connect the [signals](glossary.md#signal) to the [slots](glossary.md#slot) |
 | `presentation` | put the views on screen |
 | `report` | log a summary of what was built |
 
 The order never changes. A frontend can change what happens inside a step, but
-never which steps run.
+never which steps run. The `presentation` step, for example, does nothing in a
+plain `Session`, while `QtSession` uses it to show the main window and its
+views.
 
 ### Failed components
 
@@ -121,10 +125,10 @@ graph LR
     W[connections] --> C[components, newest first] --> D[devices] --> S[services] --> L[log files]
 ```
 
-Connections go first, so nothing reaches a component that is shutting down. A
-build that fails halfway runs the same releases, so it never leaves a service
-running. You can safely call `shutdown` twice, and you can build a session
-again after it was shut down.
+The session undoes the connections first, so no signal calls a slot of a
+component that is shutting down. A build that fails halfway runs the same
+releases, so it never leaves a service running. You can safely call `shutdown`
+twice, and you can build a session again after it was shut down.
 
 ## The configuration
 
