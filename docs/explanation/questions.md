@@ -9,13 +9,12 @@ Most of the time a component asks for one thing by its type: "give me the
 this session can be reset?". The answer depends on what the session file puts
 in the session, so no one can write it down in advance.
 
-A component asks such a question in `setup`, with a
-[protocol](glossary.md#protocol) describing what it is looking
-for.
+A component asks such a question in [`setup`](glossary.md#setup), with a
+[protocol](glossary.md#protocol) that describes what it's looking for.
 
 ## Asking with an annotation
 
-The way you annotate a parameter says what you are asking for:
+How you annotate the parameter says what you're asking for:
 
 | annotation | what you get |
 | --- | --- |
@@ -48,7 +47,7 @@ class SessionPresenter:
 ```
 
 Whatever the session file puts in the session, `reset_all` resets all of it,
-and nobody keeps a list up to date.
+and nobody has to keep a list up to date.
 
 [ADR 17](decisions/0017-questions-read-from-the-annotation.md) records why the
 annotation carries the question.
@@ -56,21 +55,21 @@ annotation carries the question.
 ## How a component matches
 
 A component matches a protocol when it has every member the protocol lists,
-and each method accepts every call the protocol allows. This is
-[structural subtyping](glossary.md#structural-subtyping): the
-component does not have to inherit from the protocol, or even know it exists.
+and each of its methods accepts every call the protocol allows. This is
+[structural subtyping](glossary.md#structural-subtyping): the component
+doesn't have to inherit from the protocol, or even know it exists.
 
 - An extra parameter **with** a default still matches.
-- A renamed parameter, or an extra one without a default, does not.
-- Types are not compared. That is a type checker's job.
+- A renamed parameter, or an extra one without a default, doesn't.
+- Types aren't compared, since that's a type checker's job.
 
-The protocol does not need `runtime_checkable`, may list attributes as well as
+The protocol doesn't need `runtime_checkable`, may list attributes as well as
 methods, and may be generic: `Reading[float]` is matched as `Reading`.
 
 When a component you expected is missing from an answer,
 [`Session.satisfying`][redsun.Session.satisfying] shows the answer the session
-gives, and [`Session.rejected`][redsun.Session.rejected] says why a component
-is not in it:
+gives, and [`Session.rejected`][redsun.Session.rejected] says why the
+component isn't in it:
 
 ```python
 >>> session.satisfying(Resettable)
@@ -79,10 +78,13 @@ is not in it:
 {'loose': ["reset(hard) cannot be called as reset(): missing a required argument: 'hard'"]}
 ```
 
-It lists only components that have some of the protocol's members, so the
-near misses are easy to find.
+`rejected` lists only components that have some of the protocol's members, so
+the near misses are easy to find.
 
 ## Asking for exactly one
+
+A parameter annotated with the protocol alone asks for the one component, or
+shared value, that satisfies it:
 
 ```python
 class RoiView(QWidget):
@@ -90,7 +92,7 @@ class RoiView(QWidget):
         self.camera = camera
 ```
 
-If nothing matches, or more than one thing does, the session does not start,
+If nothing matches, or more than one thing does, the session doesn't start,
 and the error names what came close:
 
 ```text
@@ -107,21 +109,21 @@ def setup(self, roi: HasRoi | None = None) -> None:
 ```
 
 A component never answers its own single question, since that would mean
-depending on itself. In a `Mapping[str, P]` it does appear if it matches: the
-answer describes the whole session, the same for everyone who asks. Leave
-yourself out with one line when you need to:
+depending on itself. It does appear in a `Mapping[str, P]` if it matches,
+because that answer describes the whole session and is the same for everyone
+who asks. When you need to, leave yourself out with one line:
 
 ```python
 others = {name: c for name, c in self.resettable.items() if name != self.name}
 ```
 
-If the only match failed to build, the asking component is reported as not
-set up, and the session runs without it.
+If the only match failed to build, the session reports the asking component
+as not set up, and runs without it.
 
 ## Asking about devices
 
-A question in `setup` is answered by presenters, views and shared values,
-never by devices. To ask which devices can do something, use
+Devices never answer a question in `setup`; only presenters, views and shared
+values do. To ask which devices can do something, use
 [`DevicesOf`][redsun.DevicesOf] in the constructor:
 
 ```python
@@ -131,15 +133,18 @@ class MotorPresenter:
         self.motors = motors
 ```
 
-Devices exist before any presenter, so the constructor can ask. `DevicesOf`
-only works as `Mapping[str, P]` and only in a constructor. Ask for
-[`DeviceMapping`][redsun.DeviceMapping] to get every device.
+The constructor can ask because devices exist before any presenter.
+`DevicesOf` only works as `Mapping[str, P]` and only in a constructor. To get
+every device, ask for [`DeviceMapping`][redsun.DeviceMapping].
 
 ## When not to ask
 
 - To get one specific value, ask for it by its class instead.
 - If components only need to hear when something happens, connect a signal
-  to a slot in `wire`, and skip the question.
-- A component answers a question by what it has, whether it meant to or not.
-  A class with a `reset` method is `Resettable`. Rename the method if that is
-  not what you want.
+  to a slot in `wire` and skip the question.
+
+!!! warning "A component can answer a question by accident"
+
+    A component answers a question by what it has, whether it meant to or
+    not, so any class with a `reset` method is `Resettable`. If that's not
+    what you want, rename the method.
