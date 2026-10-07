@@ -3161,6 +3161,8 @@
       
         
       
+        
+      
     
     
     
@@ -3879,6 +3881,33 @@
     
   
   25. A view's placement chosen per declaration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0026-parameter-limits-from-annotated-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  26. Parameter limits from annotated-types, checked by pydantic
 
     
   </span>
@@ -5783,10 +5812,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.presenter.plan_spec.ParamDescription.annotated" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;annotated
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.presenter.plan_spec.ParamDescription.has_default" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;has_default
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.presenter.plan_spec.ParamDescription.problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;problems
       </span>
     </span>
   </a>
@@ -8087,10 +8138,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.presenter.plan_spec.ParamDescription.annotated" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;annotated
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.presenter.plan_spec.ParamDescription.has_default" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;has_default
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.presenter.plan_spec.ParamDescription.problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;problems
       </span>
     </span>
   </a>
@@ -11139,7 +11212,8 @@ build a control for it.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If <em>plan</em> declares two actions of one name.</p>
+                <p>If <em>plan</em> declares two actions of one name, or a parameter's default
+breaks its own limits.</p>
               </div>
             </td>
           </tr>
@@ -11296,6 +11370,29 @@ build a control for it.</p>
     </table>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a value breaks its parameter's limits, naming every one.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
     </div>
 
 </div>
@@ -11333,7 +11430,8 @@ build a control for it.</p>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="o">|</span> <span class="n">PlanAction</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">device_proto</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">annotated</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_empty</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -11586,6 +11684,31 @@ build a control for it.</p>
 
 
 
+<h3 id="redsun.presenter.plan_spec.ParamDescription.annotated" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">annotated</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#redsun.presenter.plan_spec.ParamDescription.annotated" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">annotated</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_empty</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The full annotation, <code>Annotated</code> metadata kept at every level; <code>annotation</code> when not given.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h3 id="redsun.presenter.plan_spec.ParamDescription.has_default" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">has_default</span>
 
@@ -11608,6 +11731,29 @@ build a control for it.</p>
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.presenter.plan_spec.ParamDescription.problems" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">problems</span>
+
+
+<a href="#redsun.presenter.plan_spec.ParamDescription.problems" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">problems</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return a line for each limit <em>value</em> breaks, located inside it: <code>points[2]: ...</code>.</p>
+<p>Empty when the annotation carries no limit. Each item of a <code>*args</code>
+given as a list or tuple, and each value of a <code>**kwargs</code> given as a
+mapping, is checked on its own.</p>
+
+
+    </div>
+
+</div>
 
 
 
@@ -11843,6 +11989,9 @@ build a control for it.</p>
 <code>Callable</code>, a container without type arguments, or a container no built-in
 satisfies, such as <code>deque[T]</code> or <code>OrderedDict[K, V]</code>: the plan would receive
 a <code>list</code> or a <code>dict</code>, not the class it names.</p>
+<p><code>annotated-types</code> limits in the metadata are kept in
+<code>ParamDescription.annotated</code> and checked by <code>ParamDescription.problems</code>; see
+<a href="../../../how-to/choose-plan-inputs/#limit-the-values-a-parameter-takes">Limit the values a parameter takes</a>.</p>
 <table>
 <thead>
 <tr>

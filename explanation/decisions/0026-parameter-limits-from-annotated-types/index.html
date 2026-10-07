@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/contribute/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0026-parameter-limits-from-annotated-types/">
       
       
-        <link rel="prev" href="../../reference/previous-changelog/">
+        <link rel="prev" href="../0025-a-views-placement-chosen-per-declaration/">
       
       
-        <link rel="next" href="../ai-contribution-policy/">
+        <link rel="next" href="../../../reference/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.67">
     
     
       
-        <title>How to contribute - Redsun</title>
+        <title>26. Parameter limits from annotated-types, checked by pydantic - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ae390e2.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.4ae390e2.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.96d1a7e4.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.96d1a7e4.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/install-table.css">
+      <link rel="stylesheet" href="../../../stylesheets/install-table.css">
     
-    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#how-to-contribute" class="md-skip">
+        <a href="#26-parameter-limits-from-annotated-types-checked-by-pydantic" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sunrise" viewBox="0 0 24 24"><path d="M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4M16 18a4 4 0 0 0-8 0"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              How to contribute
+              26. Parameter limits from annotated-types, checked by pydantic
             
           </span>
         </div>
@@ -215,7 +215,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   redsun
@@ -260,7 +260,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/" class="md-tabs__link">
+        <a href="../../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -300,7 +300,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../../../how-to/" class="md-tabs__link">
           
   
   How-to Guides
@@ -315,6 +315,8 @@
   
   
   
+    
+  
   
     
       
@@ -339,8 +341,8 @@
     
     
     
-      <li class="md-tabs__item">
-        <a href="../../explanation/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../" class="md-tabs__link">
           
   
   Explanations
@@ -380,7 +382,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -395,8 +397,6 @@
   
   
   
-    
-  
   
     
       
@@ -413,8 +413,8 @@
     
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="././" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../../how-to/contribute/" class="md-tabs__link">
           
   
   Contributing
@@ -447,7 +447,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sunrise" viewBox="0 0 24 24"><path d="M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4M16 18a4 4 0 0 0-8 0"/></svg>
@@ -477,7 +477,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -546,7 +546,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/" class="md-nav__link ">
+            <a href="../../../tutorials/" class="md-nav__link ">
               
   
   
@@ -591,7 +591,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/installation/" class="md-nav__link">
+      <a href="../../../tutorials/installation/" class="md-nav__link">
         
   
   
@@ -620,7 +620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/first-session/" class="md-nav__link">
+      <a href="../../../tutorials/first-session/" class="md-nav__link">
         
   
   
@@ -649,7 +649,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/device-protocols/" class="md-nav__link">
+      <a href="../../../tutorials/device-protocols/" class="md-nav__link">
         
   
   
@@ -678,7 +678,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/plan-controls/" class="md-nav__link">
+      <a href="../../../tutorials/plan-controls/" class="md-nav__link">
         
   
   
@@ -707,7 +707,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/acquire-images/" class="md-nav__link">
+      <a href="../../../tutorials/acquire-images/" class="md-nav__link">
         
   
   
@@ -736,7 +736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/scan-plan/" class="md-nav__link">
+      <a href="../../../tutorials/scan-plan/" class="md-nav__link">
         
   
   
@@ -765,7 +765,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/window-layout/" class="md-nav__link">
+      <a href="../../../tutorials/window-layout/" class="md-nav__link">
         
   
   
@@ -794,7 +794,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/device-service/" class="md-nav__link">
+      <a href="../../../tutorials/device-service/" class="md-nav__link">
         
   
   
@@ -823,7 +823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/builtin-positioner/" class="md-nav__link">
+      <a href="../../../tutorials/builtin-positioner/" class="md-nav__link">
         
   
   
@@ -895,7 +895,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../../how-to/" class="md-nav__link ">
               
   
   
@@ -995,7 +995,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../install-redsun/" class="md-nav__link">
+      <a href="../../../how-to/install-redsun/" class="md-nav__link">
         
   
   
@@ -1120,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-a-component/" class="md-nav__link">
+      <a href="../../../how-to/write-a-component/" class="md-nav__link">
         
   
   
@@ -1149,7 +1149,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-a-service/" class="md-nav__link">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
         
   
   
@@ -1178,7 +1178,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-a-session-file/" class="md-nav__link">
+      <a href="../../../how-to/write-a-session-file/" class="md-nav__link">
         
   
   
@@ -1207,7 +1207,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wire-components/" class="md-nav__link">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
         
   
   
@@ -1236,7 +1236,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../offer-a-pairing/" class="md-nav__link">
+      <a href="../../../how-to/offer-a-pairing/" class="md-nav__link">
         
   
   
@@ -1265,7 +1265,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../share-a-value/" class="md-nav__link">
+      <a href="../../../how-to/share-a-value/" class="md-nav__link">
         
   
   
@@ -1294,7 +1294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../package-a-plugin/" class="md-nav__link">
+      <a href="../../../how-to/package-a-plugin/" class="md-nav__link">
         
   
   
@@ -1323,7 +1323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../test-a-plugin/" class="md-nav__link">
+      <a href="../../../how-to/test-a-plugin/" class="md-nav__link">
         
   
   
@@ -1352,7 +1352,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../connect-a-device-on-demand/" class="md-nav__link">
+      <a href="../../../how-to/connect-a-device-on-demand/" class="md-nav__link">
         
   
   
@@ -1381,7 +1381,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../run-a-plan/" class="md-nav__link">
+      <a href="../../../how-to/run-a-plan/" class="md-nav__link">
         
   
   
@@ -1410,7 +1410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../choose-plan-inputs/" class="md-nav__link">
+      <a href="../../../how-to/choose-plan-inputs/" class="md-nav__link">
         
   
   
@@ -1439,7 +1439,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../run-plans-from-the-window/" class="md-nav__link">
+      <a href="../../../how-to/run-plans-from-the-window/" class="md-nav__link">
         
   
   
@@ -1468,7 +1468,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../move-devices-by-hand/" class="md-nav__link">
+      <a href="../../../how-to/move-devices-by-hand/" class="md-nav__link">
         
   
   
@@ -1497,7 +1497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../switch-and-dim-lights/" class="md-nav__link">
+      <a href="../../../how-to/switch-and-dim-lights/" class="md-nav__link">
         
   
   
@@ -1526,7 +1526,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-a-continuous-plan/" class="md-nav__link">
+      <a href="../../../how-to/write-a-continuous-plan/" class="md-nav__link">
         
   
   
@@ -1555,7 +1555,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../follow-a-plan-action/" class="md-nav__link">
+      <a href="../../../how-to/follow-a-plan-action/" class="md-nav__link">
         
   
   
@@ -1584,7 +1584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../show-plan-progress/" class="md-nav__link">
+      <a href="../../../how-to/show-plan-progress/" class="md-nav__link">
         
   
   
@@ -1683,7 +1683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../place-a-view/" class="md-nav__link">
+      <a href="../../../how-to/place-a-view/" class="md-nav__link">
         
   
   
@@ -1712,7 +1712,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-a-frontend/" class="md-nav__link">
+      <a href="../../../how-to/write-a-frontend/" class="md-nav__link">
         
   
   
@@ -1741,7 +1741,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../install-hooks/" class="md-nav__link">
+      <a href="../../../how-to/install-hooks/" class="md-nav__link">
         
   
   
@@ -1770,7 +1770,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../add-menu-actions/" class="md-nav__link">
+      <a href="../../../how-to/add-menu-actions/" class="md-nav__link">
         
   
   
@@ -1875,7 +1875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../run-without-a-gui/" class="md-nav__link">
+      <a href="../../../how-to/run-without-a-gui/" class="md-nav__link">
         
   
   
@@ -1904,7 +1904,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../run-without-hardware/" class="md-nav__link">
+      <a href="../../../how-to/run-without-hardware/" class="md-nav__link">
         
   
   
@@ -1933,7 +1933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../find-a-missing-component/" class="md-nav__link">
+      <a href="../../../how-to/find-a-missing-component/" class="md-nav__link">
         
   
   
@@ -1962,7 +1962,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configure-logging/" class="md-nav__link">
+      <a href="../../../how-to/configure-logging/" class="md-nav__link">
         
   
   
@@ -1991,7 +1991,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../profile-a-session/" class="md-nav__link">
+      <a href="../../../how-to/profile-a-session/" class="md-nav__link">
         
   
   
@@ -2020,7 +2020,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../change-a-setting-while-a-plan-runs/" class="md-nav__link">
+      <a href="../../../how-to/change-a-setting-while-a-plan-runs/" class="md-nav__link">
         
   
   
@@ -2049,7 +2049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../save-a-session/" class="md-nav__link">
+      <a href="../../../how-to/save-a-session/" class="md-nav__link">
         
   
   
@@ -2146,7 +2146,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../choose-where-files-go/" class="md-nav__link">
+      <a href="../../../how-to/choose-where-files-go/" class="md-nav__link">
         
   
   
@@ -2175,7 +2175,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../keep-a-catalog/" class="md-nav__link">
+      <a href="../../../how-to/keep-a-catalog/" class="md-nav__link">
         
   
   
@@ -2204,7 +2204,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-a-derived-product/" class="md-nav__link">
+      <a href="../../../how-to/write-a-derived-product/" class="md-nav__link">
         
   
   
@@ -2297,7 +2297,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../migrate-from-0.13/" class="md-nav__link">
+      <a href="../../../how-to/migrate-from-0.13/" class="md-nav__link">
         
   
   
@@ -2340,6 +2340,8 @@
       
   
   
+    
+  
   
   
     
@@ -2365,20 +2367,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../explanation/" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -2397,14 +2402,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
         
-          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
             <label class="md-nav__title" for="__nav_4">
               <span class="md-nav__icon md-icon"></span>
               
@@ -2433,17 +2438,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
         
           
-          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
             
   
   
@@ -2478,7 +2486,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/statement/" class="md-nav__link">
+      <a href="../../statement/" class="md-nav__link">
         
   
   
@@ -2534,17 +2542,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
             
   
   
@@ -2579,7 +2590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/session/" class="md-nav__link">
+      <a href="../../session/" class="md-nav__link">
         
   
   
@@ -2608,7 +2619,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/components/" class="md-nav__link">
+      <a href="../../components/" class="md-nav__link">
         
   
   
@@ -2637,7 +2648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/questions/" class="md-nav__link">
+      <a href="../../questions/" class="md-nav__link">
         
   
   
@@ -2666,7 +2677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/plugins/" class="md-nav__link">
+      <a href="../../plugins/" class="md-nav__link">
         
   
   
@@ -2695,7 +2706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/limits/" class="md-nav__link">
+      <a href="../../limits/" class="md-nav__link">
         
   
   
@@ -2745,17 +2756,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
             
   
   
@@ -2790,7 +2804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/services/" class="md-nav__link">
+      <a href="../../services/" class="md-nav__link">
         
   
   
@@ -2819,7 +2833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/plans/" class="md-nav__link">
+      <a href="../../plans/" class="md-nav__link">
         
   
   
@@ -2869,17 +2883,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
         
           
-          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="">
             
   
   
@@ -2914,7 +2931,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/frontends/" class="md-nav__link">
+      <a href="../../frontends/" class="md-nav__link">
         
   
   
@@ -2943,7 +2960,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/qt-widgets/" class="md-nav__link">
+      <a href="../../qt-widgets/" class="md-nav__link">
         
   
   
@@ -2993,17 +3010,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="">
             
   
   
@@ -3038,7 +3058,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/catalog/" class="md-nav__link">
+      <a href="../../catalog/" class="md-nav__link">
         
   
   
@@ -3067,7 +3087,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/derived-products/" class="md-nav__link">
+      <a href="../../derived-products/" class="md-nav__link">
         
   
   
@@ -3102,6 +3122,8 @@
                   
   
   
+    
+  
   
   
     
@@ -3169,18 +3191,21 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../explanation/decisions/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -3199,14 +3224,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_4_7" id="__nav_4_7_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_4_7" id="__nav_4_7_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
         
-          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="true">
             <label class="md-nav__title" for="__nav_4_7">
               <span class="md-nav__icon md-icon"></span>
               
@@ -3225,7 +3250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
+      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -3252,7 +3277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -3279,7 +3304,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
@@ -3306,7 +3331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -3333,7 +3358,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
+      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
         
   
   
@@ -3360,7 +3385,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
         
   
   
@@ -3387,7 +3412,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0007-typed-provider-keys/" class="md-nav__link">
+      <a href="../0007-typed-provider-keys/" class="md-nav__link">
         
   
   
@@ -3414,7 +3439,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
         
   
   
@@ -3441,7 +3466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0009-inherited-component-configuration/" class="md-nav__link">
+      <a href="../0009-inherited-component-configuration/" class="md-nav__link">
         
   
   
@@ -3468,7 +3493,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0010-toolkit-hook-points/" class="md-nav__link">
+      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
         
   
   
@@ -3495,7 +3520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
+      <a href="../0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
         
   
   
@@ -3522,7 +3547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
         
   
   
@@ -3549,7 +3574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
+      <a href="../0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
         
   
   
@@ -3576,7 +3601,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0014-typed-session-files-and-manifests/" class="md-nav__link">
+      <a href="../0014-typed-session-files-and-manifests/" class="md-nav__link">
         
   
   
@@ -3603,7 +3628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0015-collaborators-arrive-in-setup/" class="md-nav__link">
+      <a href="../0015-collaborators-arrive-in-setup/" class="md-nav__link">
         
   
   
@@ -3630,7 +3655,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0016-a-component-refused-at-declaration-is-skipped/" class="md-nav__link">
+      <a href="../0016-a-component-refused-at-declaration-is-skipped/" class="md-nav__link">
         
   
   
@@ -3657,7 +3682,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0017-questions-read-from-the-annotation/" class="md-nav__link">
+      <a href="../0017-questions-read-from-the-annotation/" class="md-nav__link">
         
   
   
@@ -3684,7 +3709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0018-wire-yields-links/" class="md-nav__link">
+      <a href="../0018-wire-yields-links/" class="md-nav__link">
         
   
   
@@ -3711,7 +3736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0019-copy-plan-progress-from-bluesky/" class="md-nav__link">
+      <a href="../0019-copy-plan-progress-from-bluesky/" class="md-nav__link">
         
   
   
@@ -3738,7 +3763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0020-a-built-in-positioner/" class="md-nav__link">
+      <a href="../0020-a-built-in-positioner/" class="md-nav__link">
         
   
   
@@ -3765,7 +3790,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0021-a-built-in-light-stack/" class="md-nav__link">
+      <a href="../0021-a-built-in-light-stack/" class="md-nav__link">
         
   
   
@@ -3792,7 +3817,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0022-a-built-in-acquisition-stack/" class="md-nav__link">
+      <a href="../0022-a-built-in-acquisition-stack/" class="md-nav__link">
         
   
   
@@ -3819,7 +3844,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0023-pairing-two-components/" class="md-nav__link">
+      <a href="../0023-pairing-two-components/" class="md-nav__link">
         
   
   
@@ -3846,7 +3871,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return/" class="md-nav__link">
+      <a href="../0024-a-plan-widget-for-every-parameter-type-it-can-return/" class="md-nav__link">
         
   
   
@@ -3873,7 +3898,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0025-a-views-placement-chosen-per-declaration/" class="md-nav__link">
+      <a href="../0025-a-views-placement-chosen-per-declaration/" class="md-nav__link">
         
   
   
@@ -3897,10 +3922,36 @@
                   
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../explanation/decisions/0026-parameter-limits-from-annotated-types/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  26. Parameter limits from annotated-types, checked by pydantic
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -3915,6 +3966,99 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Status
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Context
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Decision
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Before
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        After
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Consequences
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -3979,7 +4123,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/" class="md-nav__link ">
+            <a href="../../../reference/" class="md-nav__link ">
               
   
   
@@ -4024,7 +4168,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/glossary/" class="md-nav__link">
+      <a href="../../glossary/" class="md-nav__link">
         
   
   
@@ -4110,7 +4254,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/session-file/" class="md-nav__link">
+      <a href="../../../reference/session-file/" class="md-nav__link">
         
   
   
@@ -4139,7 +4283,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/plugin-manifest/" class="md-nav__link">
+      <a href="../../../reference/plugin-manifest/" class="md-nav__link">
         
   
   
@@ -4177,7 +4321,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/environment/" class="md-nav__link">
+      <a href="../../../reference/environment/" class="md-nav__link">
         
   
   
@@ -4206,7 +4350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/log-files/" class="md-nav__link">
+      <a href="../../../reference/log-files/" class="md-nav__link">
         
   
   
@@ -4322,7 +4466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/aio/" class="md-nav__link">
+      <a href="../../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -4351,7 +4495,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/catalog/" class="md-nav__link">
+      <a href="../../../reference/api/catalog/" class="md-nav__link">
         
   
   
@@ -4380,7 +4524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/engine/" class="md-nav__link">
+      <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -4409,7 +4553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/errors/" class="md-nav__link">
+      <a href="../../../reference/api/errors/" class="md-nav__link">
         
   
   
@@ -4438,7 +4582,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/injection/" class="md-nav__link">
+      <a href="../../../reference/api/injection/" class="md-nav__link">
         
   
   
@@ -4467,7 +4611,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/log/" class="md-nav__link">
+      <a href="../../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -4496,7 +4640,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/path_provider/" class="md-nav__link">
+      <a href="../../../reference/api/path_provider/" class="md-nav__link">
         
   
   
@@ -4525,7 +4669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/ports/" class="md-nav__link">
+      <a href="../../../reference/api/ports/" class="md-nav__link">
         
   
   
@@ -4554,7 +4698,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -4583,7 +4727,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/qt/" class="md-nav__link">
+      <a href="../../../reference/api/qt/" class="md-nav__link">
         
   
   
@@ -4612,7 +4756,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/registry/" class="md-nav__link">
+      <a href="../../../reference/api/registry/" class="md-nav__link">
         
   
   
@@ -4641,7 +4785,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/services/" class="md-nav__link">
+      <a href="../../../reference/api/services/" class="md-nav__link">
         
   
   
@@ -4670,7 +4814,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/session/" class="md-nav__link">
+      <a href="../../../reference/api/session/" class="md-nav__link">
         
   
   
@@ -4699,7 +4843,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/testing/" class="md-nav__link">
+      <a href="../../../reference/api/testing/" class="md-nav__link">
         
   
   
@@ -4728,7 +4872,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/utils/" class="md-nav__link">
+      <a href="../../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -4757,7 +4901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/view/" class="md-nav__link">
+      <a href="../../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -4786,7 +4930,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/writers/" class="md-nav__link">
+      <a href="../../../reference/api/writers/" class="md-nav__link">
         
   
   
@@ -4881,7 +5025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/changelog/" class="md-nav__link">
+      <a href="../../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -4910,7 +5054,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/previous-changelog/" class="md-nav__link">
+      <a href="../../../reference/previous-changelog/" class="md-nav__link">
         
   
   
@@ -4953,10 +5097,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -4972,22 +5114,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -5005,7 +5144,7 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
             <label class="md-nav__title" for="__nav_6">
               <span class="md-nav__icon md-icon"></span>
               
@@ -5019,38 +5158,10 @@
                   
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-heart-handshake" viewBox="0 0 24 24"><path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to contribute
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../how-to/contribute/" class="md-nav__link">
         
   
   
@@ -5067,49 +5178,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#how-a-change-goes-in" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        How a change goes in
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-guides-for-each-step" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        The guides for each step
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -5122,7 +5190,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ai-contribution-policy/" class="md-nav__link">
+      <a href="../../../how-to/ai-contribution-policy/" class="md-nav__link">
         
   
   
@@ -5171,20 +5239,17 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_3" >
         
           
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
             
   
   
@@ -5219,7 +5284,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../set-up-development/" class="md-nav__link">
+      <a href="../../../how-to/set-up-development/" class="md-nav__link">
         
   
   
@@ -5248,7 +5313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../run-tests/" class="md-nav__link">
+      <a href="../../../how-to/run-tests/" class="md-nav__link">
         
   
   
@@ -5277,7 +5342,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../run-commit-checks/" class="md-nav__link">
+      <a href="../../../how-to/run-commit-checks/" class="md-nav__link">
         
   
   
@@ -5306,7 +5371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../commits-and-prs/" class="md-nav__link">
+      <a href="../../../how-to/commits-and-prs/" class="md-nav__link">
         
   
   
@@ -5335,7 +5400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../record-a-decision/" class="md-nav__link">
+      <a href="../../../how-to/record-a-decision/" class="md-nav__link">
         
   
   
@@ -5364,7 +5429,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../make-a-release/" class="md-nav__link">
+      <a href="../../../how-to/make-a-release/" class="md-nav__link">
         
   
   
@@ -5414,20 +5479,17 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
         
           
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
             
   
   
@@ -5462,7 +5524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../write-docs/" class="md-nav__link">
+      <a href="../../../how-to/write-docs/" class="md-nav__link">
         
   
   
@@ -5491,7 +5553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../build-docs/" class="md-nav__link">
+      <a href="../../../how-to/build-docs/" class="md-nav__link">
         
   
   
@@ -5571,10 +5633,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-a-change-goes-in" class="md-nav__link">
+  <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        How a change goes in
+        Status
       </span>
     </span>
   </a>
@@ -5582,10 +5644,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-guides-for-each-step" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The guides for each step
+        Context
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Decision
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Before
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        After
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Consequences
       </span>
     </span>
   </a>
@@ -5617,7 +5729,7 @@
   
   
     <li class="md-path__item">
-      <a href="../.." class="md-path__link">
+      <a href="../../.." class="md-path__link">
         
   
   <span class="md-ellipsis">
@@ -5637,6 +5749,14 @@
     
       
         
+          
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -5649,11 +5769,91 @@
     
     
       <li class="md-path__item">
-        <a href="././" class="md-path__link">
+        <a href="../../" class="md-path__link">
           
   
   <span class="md-ellipsis">
-    Contributing
+    Explanations
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Decisions
   </span>
 
         </a>
@@ -5674,38 +5874,68 @@
   
 
 
-<h1 id="how-to-contribute">How to contribute<a class="headerlink" href="#how-to-contribute" title="Permanent link">&para;</a></h1>
-<p>These steps are for people changing <code>redsun</code> itself. If you are writing a
-session or a plugin that uses <code>redsun</code>, start with the
-<a href="../../tutorials/first-session/">tutorial</a> instead.</p>
-<h2 id="how-a-change-goes-in">How a change goes in<a class="headerlink" href="#how-a-change-goes-in" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>Open an issue</strong> describing the bug or the feature, so the change is
-   agreed on before you write it. A small fix can skip this.</li>
-<li><strong>Set up your environment</strong> once: see <a href="../set-up-development/">How to set up a development environment</a>.</li>
-<li><strong>Branch from <code>main</code></strong>, named after the kind of change and what it does:
-   <code>fix/log-folder</code>, <code>feat/strict-sessions</code>, <code>docs/glossary</code>.</li>
-<li><strong>Make the change</strong>, with tests. Run the checks before you push:
-   see <a href="../run-tests/">Run tests</a> and <a href="../run-commit-checks/">Run the commit checks</a>.</li>
-<li><strong>Open a pull request against <code>main</code></strong>, following
-   <a href="../commits-and-prs/">Commits and pull requests</a>. Give it the label that
-   says which changelog section it belongs in.</li>
-<li><strong>Wait for CI and a review.</strong> CI runs the same checks as
-   <code>uv run tox</code>. A reviewer may ask for changes; push them to the same branch.</li>
-</ol>
-<h2 id="the-guides-for-each-step">The guides for each step<a class="headerlink" href="#the-guides-for-each-step" title="Permanent link">&para;</a></h2>
+<h1 id="26-parameter-limits-from-annotated-types-checked-by-pydantic">26. Parameter limits from <code>annotated-types</code>, checked by <code>pydantic</code><a class="headerlink" href="#26-parameter-limits-from-annotated-types-checked-by-pydantic" title="Permanent link">&para;</a></h1>
+<p>Date: 2026-10-07</p>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>A plan author had no way to say that a parameter takes at least 1, or at
+most 10. The plan widget also got some ranges wrong on its own: every number
+without options was held between 0 and 999, so a negative value could not be
+typed. <code>magicgui</code> 0.10.2 reads only the first item of an <code>Annotated</code>
+annotation, and only when it is a dict, so limits written with
+<code>annotated-types</code> never reached a widget. The presenter checked no values
+before a launch.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../set-up-development/">How to set up a development environment</a></li>
-<li><a href="../run-tests/">How to run the tests</a></li>
-<li><a href="../run-commit-checks/">How to run the commit checks</a></li>
-<li><a href="../build-docs/">How to build the docs</a></li>
-<li><a href="../commits-and-prs/">How to write commits and pull requests</a></li>
-<li><a href="../write-docs/">How to write documentation</a></li>
-<li><a href="../record-a-decision/">How to record a decision</a></li>
-<li><a href="../make-a-release/">How to make a release</a></li>
+<li>Limits are written with <code>annotated-types</code>: <code>Ge</code>, <code>Le</code>, <code>Gt</code>, <code>Lt</code>,
+  <code>Interval</code>, <code>MultipleOf</code>, <code>MinLen</code>, <code>MaxLen</code> and <code>Len</code>, at any level of the
+  annotation.</li>
+<li><code>pydantic</code> checks them. A parameter with a limit gets one strict
+  <code>TypeAdapter</code>, built when the plan is read. Its errors become problem
+  lines, located inside the value: <code>points[2]: Input should be greater than
+  or equal to 0</code>. Building takes well under a millisecond and a check a few
+  microseconds.</li>
+<li>The view and the presenter use the same check. The view shows the lines and
+  keeps Run disabled; the presenter refuses a launch with them.</li>
+<li>A default that breaks its own limits leaves the plan out.</li>
+<li>A limit wins over a <code>magicgui</code> option dict that gives the same bound.</li>
+<li>Until <code>magicgui</code> reads <code>annotated-types</code> itself, the view turns the limits
+  into <code>min</code>, <code>max</code> and <code>step</code> options.</li>
+<li>A number without a limit has no range limit.</li>
 </ul>
-<p>A change written with the help of an AI tool follows the
-<a href="../ai-contribution-policy/">AI contribution policy</a>.</p>
+<p>Rejected: our own check walking each shape (about a hundred lines repeating
+what <code>pydantic</code> does); the tighter of a dict and a limit (the input would
+refuse values the presenter accepts); accepting or clamping a broken default
+(the author's mistake would reach every user, or change without a word).</p>
+<h3 id="before">Before<a class="headerlink" href="#before" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">expose</span><span class="p">(</span><span class="n">frames</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">exposure</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MsgGenerator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="k">if</span> <span class="n">frames</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">exposure</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"frames &gt;= 1 and 0 &lt; exposure &lt;= 10"</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p>The plan widget offers 0 frames and any exposure from 0 to 999, and the user
+learns about the limits only when the plan fails.</p>
+<h3 id="after">After<a class="headerlink" href="#after" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">expose</span><span class="p">(</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">frames</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Ge</span><span class="p">(</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">exposure</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Gt</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Le</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MsgGenerator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>The spin boxes stop at the limits, an exposure of 0 shows a problem and keeps
+Run disabled, and the presenter refuses the same values from code.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A plan states its limits once, in its signature, and every way of running
+  it respects them.</li>
+<li><code>ParamDescription</code> gains <code>annotated</code> and <code>problems</code>.</li>
+<li><code>create_plan_spec</code> and <code>resolve_arguments</code> raise <code>ValueError</code> for a value
+  outside its limits.</li>
+<li><code>pydantic</code> becomes part of how plans are read, beside how session files are
+  read.</li>
+<li>The view's translation of limits into <code>magicgui</code> options goes once a
+  <code>magicgui</code> release reads <code>annotated-types</code>.</li>
+</ul>
 
 
 
@@ -5714,9 +5944,6 @@ session or a plugin that uses <code>redsun</code>, start with the
 
 
 
-
-  
-  
 
 
 
@@ -5748,7 +5975,7 @@ session or a plugin that uses <code>redsun</code>, start with the
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../reference/previous-changelog/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Previous changelog">
+          <a href="../0025-a-views-placement-chosen-per-declaration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 25. A view&#x27;s placement chosen per declaration">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -5758,20 +5985,20 @@ session or a plugin that uses <code>redsun</code>, start with the
                 Previous
               </span>
               <div class="md-ellipsis">
-                Previous changelog
+                25. A view's placement chosen per declaration
               </div>
             </div>
           </a>
         
         
           
-          <a href="../ai-contribution-policy/" class="md-footer__link md-footer__link--next" aria-label="Next: AI contribution policy">
+          <a href="../../../reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                AI contribution policy
+                Reference
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -5841,12 +6068,12 @@ session or a plugin that uses <code>redsun</code>, start with the
         
           
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":"../../../redirect.json","search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.67a597eb.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.67a597eb.min.js"></script>
       
-        <script src="../../javascripts/install-table.js"></script>
+        <script src="../../../javascripts/install-table.js"></script>
       
     
   </body>

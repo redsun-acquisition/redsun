@@ -3161,6 +3161,8 @@
       
         
       
+        
+      
     
     
     
@@ -3879,6 +3881,33 @@
     
   
   25. A view's placement chosen per declaration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0026-parameter-limits-from-annotated-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  26. Parameter limits from annotated-types, checked by pydantic
 
     
   </span>
@@ -9489,7 +9518,9 @@ rest can be checked and dragged into a different order.</p>
     <div class="doc doc-contents ">
 
         <p>Why the plan cannot run, one line per invalid input, prefixed with its parameter.</p>
-<p>Run stays disabled while the list is not empty.</p>
+<p>An input's own problems come first; only an input with none is checked
+against its parameter's limits. Run stays disabled while the list is
+not empty.</p>
 
     </div>
 

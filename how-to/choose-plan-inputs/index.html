@@ -1508,6 +1508,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#limit-the-values-a-parameter-takes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Limit the values a parameter takes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#leave-a-parameter-out" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -3279,6 +3290,8 @@
       
         
       
+        
+      
     
     
     
@@ -3997,6 +4010,33 @@
     
   
   25. A view's placement chosen per declaration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0026-parameter-limits-from-annotated-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  26. Parameter limits from annotated-types, checked by pydantic
 
     
   </span>
@@ -5600,6 +5640,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#limit-the-values-a-parameter-takes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Limit the values a parameter takes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#leave-a-parameter-out" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5852,6 +5903,64 @@ Each tab shows a signature and the inputs it gets.</p>
 a <code>dict[str, list[float]]</code> is a table whose values are lists. Every
 annotation an input can show, and the shapes it cannot, are listed in
 <a href="../../reference/api/presenter/#how-an-annotation-is-read">How an annotation is read</a>.</p>
+<h2 id="limit-the-values-a-parameter-takes">Limit the values a parameter takes<a class="headerlink" href="#limit-the-values-a-parameter-takes" title="Permanent link">&para;</a></h2>
+<p>Most plan parameters only make sense in a range. A camera cannot expose for
+0 seconds, and a scan needs at least one frame. Without limits, the plan
+widget accepts any number. A wrong value is then found only when the plan
+runs: the plan raises, or a device refuses the value partway through.</p>
+<p>Write the limits in the plan's signature instead, with
+<a href="https://github.com/annotated-types/annotated-types"><code>annotated-types</code></a>. The
+plan widget stops each input at its limits, and shows why Run is disabled
+while a value is outside them. The presenter checks the same limits, so a
+plan started from code gets the same protection:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">expose</span><span class="p">(</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">frames</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Ge</span><span class="p">(</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">exposure</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Gt</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Le</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">MultipleOf</span><span class="p">(</span><span class="mf">0.001</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">points</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">MaxLen</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MsgGenerator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+</span></code></pre></div>
+<figure>
+  <img alt="A spin box for frames, a spin box for exposure with three decimals, and two rows of points" src="../images/parameters-limits-light.png#only-light" />
+  <img alt="A spin box for frames, a spin box for exposure with three decimals, and two rows of points" src="../images/parameters-limits-dark.png#only-dark" />
+</figure>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>What the input does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ge</code>, <code>Le</code>, <code>Interval</code></td>
+<td>the spin box stops at the bound</td>
+</tr>
+<tr>
+<td><code>Gt</code>, <code>Lt</code></td>
+<td>for an <code>int</code>, the spin box stops one past the bound; for a <code>float</code>, at the bound, and the bound itself is a problem</td>
+</tr>
+<tr>
+<td><code>MultipleOf</code></td>
+<td>the spin box steps by it and shows as many decimals as it needs</td>
+</tr>
+<tr>
+<td><code>MaxLen</code>, <code>Len</code></td>
+<td>a list or a mapping stops adding rows at the maximum</td>
+</tr>
+<tr>
+<td><code>MinLen</code>, a text too long</td>
+<td>a problem</td>
+</tr>
+</tbody>
+</table>
+<p>The limits work inside other types too: <code>list[Annotated[float, Ge(0)]]</code>
+limits every item. A <code>float</code> with no limit can take any value, and an <code>int</code>
+any value a 32-bit integer can hold.</p>
+<p>A plan whose default breaks its own limits is left out when the session
+builds, and the log says which limit it breaks.</p>
+<p>A <code>magicgui</code> option dict in the annotation still shapes the input, for
+example <code>{"widget_type": "Slider"}</code>. Where it gives a bound that a limit also
+gives, the limit wins.</p>
 <h2 id="leave-a-parameter-out">Leave a parameter out<a class="headerlink" href="#leave-a-parameter-out" title="Permanent link">&para;</a></h2>
 <p>A parameter no input can show, such as <code>md: dict[str, Any] | None = None</code>, is
 left out of the plan widget, and the plan keeps its default. Without a
@@ -5859,7 +5968,7 @@ default, <code>create_plan_spec</code> refuses the whole plan with
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;UnresolvableAnnotationError&lt;/span&gt;" href="../../reference/api/presenter/#redsun.presenter.plan_spec.UnresolvableAnnotationError"><code>UnresolvableAnnotationError</code></a>.</p>
 <h2 id="see-why-run-is-disabled">See why Run is disabled<a class="headerlink" href="#see-why-run-is-disabled" title="Permanent link">&para;</a></h2>
 <p>While an input holds a value the plan cannot take, such as a repeated mapping
-key or no device chosen, Run stays disabled and the first reason shows under
+key, a value outside its limits or no device chosen, Run stays disabled and the first reason shows under
 the parameters.
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;problems&lt;/span&gt;
 
