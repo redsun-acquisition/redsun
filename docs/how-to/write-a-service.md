@@ -4,62 +4,130 @@ icon: lucide/server
 
 # How to write a service
 
-Write a `caproto` [IOC](../explanation/glossary.md#ioc) for a session to
-launch, declare it, and point a device at it.
-[Services](../explanation/services.md) explains what a
-[service](../explanation/glossary.md#service) is and how a session handles it.
+Write a [service](../explanation/glossary.md#service) for a session to
+launch, declare it, and point a device at it. The tabs show a `caproto`
+[IOC](../explanation/glossary.md#ioc) served over
+[Channel Access](../explanation/glossary.md#channel-access) and a `fastcs`
+controller served over [PVAccess](../explanation/glossary.md#pvaccess); the
+rest of the page holds for both. [Services](../explanation/services.md)
+explains what a service is and how a session handles it.
 
 ## Prerequisites
 
-`redsun` depends on [`ophyd-async`](../explanation/glossary.md#ophyd-async) and
-on nothing a control-system protocol needs, so a service brings its own. For a
-`caproto` IOC reached over
-[Channel Access](../explanation/glossary.md#channel-access):
+`redsun` depends on [`ophyd-async`](../explanation/glossary.md#ophyd-async)
+and on nothing a control-system protocol needs, so a service brings its own,
+and the device side its `ophyd-async` extra:
 
-```bash
-uv add caproto "ophyd-async[ca]"
-```
+=== "caproto"
 
-For one reached over [PVAccess](../explanation/glossary.md#pvaccess), use `p4p`
-or a library built on it, such as `fastcs`, and `ophyd-async[pva]` for the
-device side.
+    ```bash
+    uv add caproto "ophyd-async[ca]"
+    ```
 
-## Write the IOC
+=== "FastCS"
+
+    ```bash
+    uv add "fastcs[epicspva]" "ophyd-async[pva]"
+    ```
+
+    !!! note "Written for `fastcs` 0.14"
+
+        The API of `fastcs` is still changing, and this page follows it. If
+        a name on this page no longer exists in the version you installed,
+        check the documentation of `fastcs`.
+
+## Write the service
 
 Besides serving its
 [process variables](../explanation/glossary.md#process-variable), a service
 that `redsun` launches must print a line when it is ready, stop when the
-session asks, and listen only on the local machine:
+session asks, and listen only on the local machine.
 
-```python
-# mylab/iocs/camera.py
-from caproto.server import PVGroup, ioc_arg_parser, pvproperty, run
+=== "caproto"
 
-from redsun.services import stop_on_request
+    ```python
+    # mylab/iocs/camera.py
+    from caproto.server import PVGroup, ioc_arg_parser, pvproperty, run
 
-
-class Camera(PVGroup):
-    exposure = pvproperty(value=0.1, name="Exposure")
+    from redsun.services import stop_on_request
 
 
-if __name__ == "__main__":
-    options, run_options = ioc_arg_parser(default_prefix="CAM:", desc="camera")
-    stop_on_request()
-    run(Camera(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
-```
+    class Camera(PVGroup):
+        exposure = pvproperty(value=0.1, name="Exposure")
 
-- `caproto` prints `Server startup complete.` once it serves. The session
-  waits for that line.
-- Closing standard input is how a session asks a service to stop, on every
-  platform. [`stop_on_request`][redsun.services.stop_on_request] turns that
-  request into `SIGINT`, so the service shuts down as it would on Ctrl+C.
-  It does nothing when no session launched the service: run on its own
-  without a terminal, a service may have its standard input closed from the
-  start. A service built on `asyncio` awaits
-  [`wait_for_stop`][redsun.services.wait_for_stop] instead.
-- If the session crashes, nobody reads the service's output any more, and
-  printing raises. Clean up before printing, or do not print.
-- `127.0.0.1` keeps a launched service off the network.
+
+    if __name__ == "__main__":
+        options, run_options = ioc_arg_parser(default_prefix="CAM:", desc="camera")
+        stop_on_request()
+        run(Camera(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
+    ```
+
+    - `caproto` prints `Server startup complete.` once it serves. The
+      session waits for that line.
+    - [`stop_on_request`][redsun.services.stop_on_request] turns the
+      session's request to stop into `SIGINT`, so the IOC shuts down as it
+      would on ++ctrl+c++. It does nothing when no session launched the IOC:
+      run on its own without a terminal, a service may have its standard
+      input closed from the start.
+    - `127.0.0.1` keeps the launched IOC off the network.
+
+=== "FastCS"
+
+    `fastcs` describes a piece of hardware as a controller with attributes.
+    `AttrRW` is an attribute that can be read and written, and `Float` says
+    what it holds:
+
+    ```{.python}
+    --8<-- "docs/examples/stage_fastcs.py:controller"
+    ```
+
+    Then serve it:
+
+    ```{.python}
+    --8<-- "docs/examples/stage_fastcs.py:serve"
+    ```
+
+    - `FastCS` serves the controller over the transports it is given, here
+      PVAccess.
+    - [`identity`][redsun.services.identity] gives the
+      [prefix](../explanation/glossary.md#prefix) the session declared, and
+      the controller is served under it. Run alone, the service falls back
+      on `STAGE:`.
+    - [`wait_for_stop`][redsun.services.wait_for_stop] returns when the
+      session asks the service to stop. Run alone, the service waits until
+      ++ctrl+c++, and the `try` around `asyncio.run` keeps that stop from
+      printing a traceback.
+    - If serving fails first, the service raises what made it fail, and the
+      session logs it.
+    - [`configure_logging`][redsun.services.configure_logging] sends the
+      records of `fastcs` to the session at the level the session records
+      at. Do not call `fastcs.logging.configure_logging` after it: that
+      replaces the output with coloured text, which the session reads as
+      `DEBUG` lines.
+    - Run alone, the service listens on every network interface of the
+      machine. Launched by a session, it listens on `127.0.0.1` only, since
+      the session sets `EPICS_PVAS_INTF_ADDR_LIST`; see
+      [Environment variables](../reference/environment.md).
+    - `fastcs` takes a prefix of letters, digits, `-` and `_`. `STAGE:` is
+      accepted, since the last colon is taken off. `LAB:STAGE:` is refused.
+    - Over PVAccess a prefix has to be the only one of its name on the
+      machine: two sessions serving the same one find each other's records.
+
+    `fastcs` prints no line of its own when it starts to serve, so the
+    service finds out by asking.
+    [`ready_when_reachable`][redsun.services.ready_when_reachable] asks for
+    the record in which `fastcs` lists the attributes of the controller until
+    it gets an answer, then prints the ready text the declaration gives. Any
+    server of that name can answer, which is one more reason for a prefix of
+    its own.
+
+Closing standard input is how a session asks a service to stop, on every
+platform. A service that blocks in a call of its own, as `caproto`'s `run`
+does, calls `stop_on_request`; a service built on `asyncio` awaits
+`wait_for_stop` instead.
+
+If the session crashes, nobody reads the service's output any more, and
+printing raises. Clean up before printing, or do not print.
 
 Under `channel-access`, a launched service listens on a port the session
 chooses when its process starts, and no other program is told which one, so
@@ -68,39 +136,90 @@ program on the machine reaches it with `EPICS_PVA_ADDR_LIST=127.0.0.1`. A
 service other machines must reach runs on its own, on the ports it is set to,
 and the session attaches to it.
 
+## Point a device at it
+
+=== "caproto"
+
+    The device names each process variable under the prefix it receives:
+
+    ```python
+    from ophyd_async.core import StandardReadable
+    from ophyd_async.epics.core import epics_signal_rw
+
+
+    class MyCamera(StandardReadable):
+        def __init__(self, prefix: str, name: str = "") -> None:
+            with self.add_children_as_readables():
+                self.exposure = epics_signal_rw(float, f"{prefix}Exposure")
+            super().__init__(name=name)
+    ```
+
+    Under the prefix `CAM:`, `exposure` reads and writes `CAM:Exposure`.
+
+=== "FastCS"
+
+    ```{.python}
+    --8<-- "docs/examples/device_fastcs.py:device"
+    ```
+
+    The device names no process variable.
+    [`fastcs_connector`][ophyd_async.fastcs.core.fastcs_connector] reads the
+    record that lists the attributes, and fills in every signal the device
+    declares. For the attribute `position` under the prefix `STAGE:`,
+    `fastcs` serves three records:
+
+    | Record | Holds |
+    | --- | --- |
+    | `STAGE:PVI` | the list of the attributes |
+    | `STAGE:Position` | the value to write |
+    | `STAGE:Position_RBV` | the value to read |
+
 ## Declare it
 
 In the session class, beside the device that talks to it:
 
-```python
-from typing import Annotated
+=== "caproto"
 
-from redsun import AsDevice, AsService, Attach, Declare, Launch
-from redsun.qt import QtSession
+    ```python
+    from typing import Annotated
+
+    from redsun import AsDevice, AsService, Attach, Declare, Launch
+    from redsun.qt import QtSession
 
 
-class MyApp(QtSession):
-    camera_ioc: Annotated[
-        AsService,
-        Launch(
-            "mylab.iocs.camera",
-            ready="Server startup complete.",
-            prefix="CAM:",
-            args={"prefix": "CAM:"},
-            stop_timeout=30,
-        ),
-    ]
-    beamline: Annotated[AsService, Attach("BL01:", address="10.0.0.5")]
-    camera: Annotated[AsDevice[MyCamera], Declare(service="camera_ioc")]
-```
+    class MyApp(QtSession):
+        camera_ioc: Annotated[
+            AsService,
+            Launch(
+                "mylab.iocs.camera",
+                ready="Server startup complete.",
+                prefix="CAM:",
+                args={"prefix": "CAM:"},
+                stop_timeout=30,
+            ),
+        ]
+        beamline: Annotated[AsService, Attach("BL01:", address="10.0.0.5")]
+        camera: Annotated[AsDevice[MyCamera], Declare(service="camera_ioc")]
+    ```
+
+=== "FastCS"
+
+    ```{.python}
+    --8<-- "docs/examples/device_fastcs.py:declare"
+    ```
+
+    The line the session waits for is printed by the service, through
+    `ready_when_reachable`. `config` names the PVAccess
+    [transport](../explanation/glossary.md#transport); see
+    [Name the transport](#name-the-transport).
 
 `prefix` is what the devices of the service receive. `args` is what the
-process is started with, and is how this IOC learns the same prefix: an IOC
-that calls [`identity`][redsun.services.identity] needs no `args` for it.
-`args` is a list, or a mapping of options: `--` is put before each name,
-`true` passes the option alone, `false` leaves it out, and a list passes each
-item after it. The [session file reference](../reference/session-file.md)
-has the table.
+process is started with, and is how the `caproto` IOC learns the same prefix:
+a service that calls [`identity`][redsun.services.identity], as the `fastcs`
+one does, needs no `args` for it. `args` is a list, or a mapping of options:
+`--` is put before each name, `true` passes the option alone, `false` leaves
+it out, and a list passes each item after it. The
+[session file reference](../reference/session-file.md) has the table.
 
 `ready` is text the session waits for in the output of the service: the
 first line containing it marks the service ready, so give text an error
@@ -125,6 +244,16 @@ any device connects. See
 The device gets the service's prefix as its `prefix` argument, so giving the
 device a `prefix` of its own is refused. A device whose service did not start
 is left out.
+
+## Check that it starts
+
+Run the session from the folder that holds the module of the service, since
+that is where it looks for it. For the `fastcs` example, the session logs:
+
+```text
+Service 'stage_service' started
+Services started: 1/1
+```
 
 ## Serve several devices from one service
 
@@ -273,3 +402,49 @@ a log file of its own. A service calling
 the level the session records at, and each record keeps its level instead of
 arriving as a `DEBUG` line; see
 [Log from a service](configure-logging.md#log-from-a-service).
+
+## Quiet the type checker for `fastcs`
+
+`fastcs` ships no `py.typed` file, so a type checker cannot see its types.
+`mypy` reports the import:
+
+```text
+Skipping analyzing "fastcs.controllers": module is installed, but missing
+library stubs or py.typed marker  [import-untyped]
+```
+
+and, in strict mode, the class written on top of it:
+
+```text
+Class cannot subclass "Controller" (has type "Any")  [misc]
+```
+
+To quiet both, add this to the configuration of `mypy` in `pyproject.toml`,
+with the name of your module in the second entry:
+
+```toml
+[[tool.mypy.overrides]]
+module = ["fastcs.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["stage_fastcs"]
+disable_error_code = ["misc"]
+```
+
+## The `fastcs` example in full
+
+??? example "The service"
+
+    ```{.python}
+    --8<-- "docs/examples/stage_fastcs.py"
+    ```
+
+??? example "The session"
+
+    The presenter and the view are the ones of the tutorial
+    [Describing a device with a protocol](../tutorials/device-protocols.md).
+
+    ```{.python}
+    --8<-- "docs/examples/device_fastcs.py"
+    ```

@@ -1,4 +1,4 @@
-"""The session of the guide "How to write a service with FastCS"."""
+"""The session of the `fastcs` example in the guide "How to write a service"."""
 
 from __future__ import annotations
 

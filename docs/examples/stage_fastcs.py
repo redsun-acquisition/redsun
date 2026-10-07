@@ -1,4 +1,4 @@
-"""The service of the guide "How to write a service with FastCS"."""
+"""The `fastcs` service of the guide "How to write a service"."""
 
 from __future__ import annotations
 
@@ -46,5 +46,8 @@ if __name__ == "__main__":
     configure_logging()
     me = identity()
     prefix = me.prefix if me else "STAGE:"
-    asyncio.run(serve(prefix.rstrip(":")))
+    try:
+        asyncio.run(serve(prefix.rstrip(":")))
+    except KeyboardInterrupt:
+        pass
 # --8<-- [end:serve]

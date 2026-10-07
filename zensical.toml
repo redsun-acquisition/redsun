@@ -32,7 +32,6 @@ nav = [
         { "Build a session" = [
             "how-to/write-a-component.md",
             "how-to/write-a-service.md",
-            "how-to/write-a-service-with-fastcs.md",
             "how-to/write-a-session-file.md",
             "how-to/wire-components.md",
             "how-to/offer-a-pairing.md",
@@ -221,6 +220,10 @@ accent = "red"
 toggle = { icon = "lucide/moon", name = "Switch to system preference" }
 
 [project.plugins.search]
+
+[project.plugins.redirects.redirect_maps]
+"how-to/write-a-service-with-fastcs.md" = "how-to/write-a-service.md"
+
 [project.plugins.autorefs]
 [project.plugins.mkdocstrings]
 [project.plugins.mkdocstrings.handlers.python]

@@ -17,7 +17,6 @@ Learn how to write the parts of a
 
 - [How to write a component](write-a-component.md)
 - [How to write a service](write-a-service.md)
-- [How to write a service with FastCS](write-a-service-with-fastcs.md)
 - [How to write a session file](write-a-session-file.md)
 - [How to wire components together](wire-components.md)
 - [How to offer a pairing](offer-a-pairing.md)
