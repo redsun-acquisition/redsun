@@ -12,7 +12,7 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
   without it.
 - Voice, headings and terms: the section below. The contributing page has
   a short version for people; this skill holds the full rules.
-- Material-style admonitions (`!!! warning`), mermaid fences for diagrams.
+- Material-style admonitions (`!!! warning`); diagrams as below.
 - Reference pages are generated from docstrings: fix the docstring, not the
   `.md`, when reference content is wrong.
 - Architectural decisions are recorded as ADRs under
@@ -82,6 +82,35 @@ first. Acronyms and rare words also go in `includes/abbreviations.md`.
 Write the claim, not a field's jargon ("can't change without breaking X", not
 "load-bearing"); everyday idioms any reader knows are fine. No em or en
 dashes, arrows as `->`, no sales words, no closing summary sentence.
+
+## Diagrams
+
+A diagram replaces the paragraphs it can show. The text around it keeps only
+what a picture cannot say: why, the exceptions, and links. Diagrams are D2 in
+`d2` fences, drawn when the site is built by `markdown-d2`.
+
+- Start every diagram with `...@diagrams/style` and give shapes its classes:
+  `layer`, `step`, `current`, `done`, `failed`, `process`, `hardware`, `file`,
+  `note`, `gap`, `hidden`. Pick no colours of your own; the themes colour
+  every diagram in light and dark mode.
+- Every diagram has a `title`: it is the caption under the picture and the
+  name screen readers announce.
+- A label names the thing in a few words. A longer description goes in a
+  `tooltip`, which the reader opens by pointing at the shape.
+- Show a process as boards the reader steps through. Use `steps` to build a
+  picture up, and `scenarios` to highlight one stage of a fixed picture with
+  the `current` class. The site moves shared shapes between boards with a
+  morph; set `transition="fade"` on a block where moving shapes would not
+  help.
+- Keep every board the same size: declare all shapes on the first board, give
+  the ones a later step brings the `hidden` class, and show them by changing
+  their class in that step. A board that grows wider than the content column
+  is shrunk to fit, and its text becomes too small to read.
+- A chain of more than about five shapes turns back instead of running off the
+  page. Put it in a grid (`grid-rows`, `grid-columns`) and declare the second
+  row's shapes right to left; fill empty cells with `gap`. Setting `direction`
+  on a container has no effect with the `dagre` and `elk` layouts.
+- Check every board of every diagram on the built site, in both themes.
 
 ## Tutorials
 
