@@ -193,7 +193,7 @@ def interrupt_when_stdin_closes() -> None:
     """Send `SIGINT` to the main thread of this process once standard input closes."""
     sys.stdin.read()
     main = threading.main_thread().ident
-    if hasattr(signal, "pthread_kill") and main is not None:
+    if sys.platform != "win32" and main is not None:
         # on POSIX a signal raised here reaches this thread only, and a main
         # thread blocked in a system call such as select would not wake for it
         signal.pthread_kill(main, signal.SIGINT)
