@@ -145,6 +145,59 @@
       "title": "StorageConfig",
       "type": "object"
     },
+    "ViewEntry": {
+      "additionalProperties": true,
+      "description": "A view's entry, with the key the session keeps from its constructor.",
+      "properties": {
+        "plugin_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The plugin whose manifest lists the component.",
+          "title": "Plugin Name"
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The component's id in that manifest.",
+          "title": "Plugin Id"
+        },
+        "placement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where the view attaches, as a word or mapping the session's frontend reads.",
+          "title": "Placement"
+        }
+      },
+      "title": "ViewEntry",
+      "type": "object"
+    },
     "HookEntry": {
       "additionalProperties": false,
       "description": "One provider of the `hooks` section, and every hook point it serves.",
@@ -293,7 +346,7 @@
       "anyOf": [
         {
           "additionalProperties": {
-            "$ref": "#/$defs/ComponentEntry"
+            "$ref": "#/$defs/ViewEntry"
           },
           "default": {},
           "description": "Views by name.",

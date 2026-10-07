@@ -3308,6 +3308,8 @@
       
         
       
+        
+      
     
     
     
@@ -4002,6 +4004,33 @@
     
   
   24. A plan widget for every parameter type it can return
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0025-a-views-placement-chosen-per-declaration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  25. A view's placement chosen per declaration
 
     
   </span>
@@ -5803,8 +5832,14 @@ a <code>QWidget</code> in a dock or in the centre, and a <code>QAction</code> in
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 </span></code></pre></div>
-<p>A view that sets <code>placement</code> from a property is checked as soon as it is
-made, since only the object can answer.</p>
+<p>A declaration can give its own <code>placement</code>. The session then uses it
+instead of the class's, and checks it the same way, before anything is built.
+A view that sets <code>placement</code> from a property is checked only once it is made,
+since only the object can answer. That form is deprecated.</p>
+<p>A frontend also reads the <code>placement</code> words of a session file, with
+<code>read_placement</code>. For example, Qt turns <code>left</code> into a dock on the left and
+<code>central</code> into the central area. The core of <code>redsun</code> knows none of these
+words.</p>
 <h2 id="the-qt-frontend">The Qt frontend<a class="headerlink" href="#the-qt-frontend" title="Permanent link">&para;</a></h2>
 <p>A Qt view's constructor starts with <code>(name: str, parent: QWidget)</code>, written
 exactly like that. <code>QtSession</code> passes its main window as the parent, so a view

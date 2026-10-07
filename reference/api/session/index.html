@@ -3159,6 +3159,8 @@
       
         
       
+        
+      
     
     
     
@@ -3850,6 +3852,33 @@
     
   
   24. A plan widget for every parameter type it can return
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0025-a-views-placement-chosen-per-declaration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  25. A view's placement chosen per declaration
 
     
   </span>
@@ -5818,6 +5847,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;thread_of
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Frontend.read_placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_placement
       </span>
     </span>
   </a>
@@ -7884,6 +7924,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;thread_of
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Frontend.read_placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_placement
       </span>
     </span>
   </a>
@@ -10767,7 +10818,8 @@ spells the three out. A member is its own name in a message, so it needs no
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">refusal</span><span class="p">:</span> <span class="ne">Exception</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">frontend</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">Frontend</span><span class="p">]</span> <span class="o">=</span> <span class="n">Frontend</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -10778,6 +10830,9 @@ spells the three out. A member is its own name in a message, so it needs no
 <p><code>key</code> is a distinct type per component name, so two instances of one
 class stay separable in a type-keyed graph. A device's <code>service</code> and
 <code>autoconnect</code> keywords are kept here, not passed to its constructor.
+A view's <code>placement</code> keyword is kept here too, read and checked against
+the frontend: <code>placement</code> is where the view attaches, or <code>None</code> when its
+class answers from a property and only the built instance can say.
 <code>refusal</code> is why the class cannot be built in its layer, or <code>None</code>; a
 refused declaration is never built. <code>attribute</code> is the annotation the
 session class declares it under and <code>source</code> the configuration entry its
@@ -10972,7 +11027,7 @@ before anything is built.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Where the component asks to be attached.</p>
+        <p>Where the component asks to be attached when its declaration names no placement.</p>
 
     </div>
 
@@ -11705,6 +11760,54 @@ overrides it.</p>
         <p>Return the thread the slots of <em>consumer</em> run on when nothing else says.</p>
 <p>Asked after the slot itself and the class of <em>consumer</em>. <code>None</code>
 here: the slot runs on the thread that emits.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.Frontend.read_placement" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">read_placement</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.Frontend.read_placement" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">read_placement</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Placement</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the placement a session file's <em>value</em> names, in this frontend's words.</p>
+<p>A frontend that attaches views overrides it; this one reads no word.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always, naming the frontend.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

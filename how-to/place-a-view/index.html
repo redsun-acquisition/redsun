@@ -1795,10 +1795,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#place-one-view-class-in-different-places" class="md-nav__link">
+  <a href="#override-a-views-default-placement" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Place one view class in different places
+        Override a view's default placement
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tab-docks-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Tab docks together
       </span>
     </span>
   </a>
@@ -3299,6 +3310,8 @@
       
         
       
+        
+      
     
     
     
@@ -3990,6 +4003,33 @@
     
   
   24. A plan widget for every parameter type it can return
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0025-a-views-placement-chosen-per-declaration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  25. A view's placement chosen per declaration
 
     
   </span>
@@ -5604,10 +5644,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#place-one-view-class-in-different-places" class="md-nav__link">
+  <a href="#override-a-views-default-placement" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Place one view class in different places
+        Override a view's default placement
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tab-docks-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Tab docks together
       </span>
     </span>
   </a>
@@ -5846,35 +5897,90 @@ class built on it.</p>
 <p>The session creates the menu or toolbar the first time a view names it, and
 adds every later view naming it to the same one. For a command that needs no
 view of its own, see <a href="../add-menu-actions/">Add menu actions</a>.</p>
-<h2 id="place-one-view-class-in-different-places">Place one view class in different places<a class="headerlink" href="#place-one-view-class-in-different-places" title="Permanent link">&para;</a></h2>
-<p>A class attribute gives every instance the same placement. To choose it per
-declaration, answer <code>placement</code> from a property and take the value as a
-constructor keyword:</p>
+<h2 id="override-a-views-default-placement">Override a view's default placement<a class="headerlink" href="#override-a-views-default-placement" title="Permanent link">&para;</a></h2>
+<p>Every view class has a default place in the window, its <code>placement</code>. To put
+a view somewhere else, give <code>placement</code> when you declare it. The session uses
+your value instead of the default. It does not pass <code>placement</code> to the view,
+so this works for any view, including the built-in ones:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QWidget</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsView</span><span class="p">,</span> <span class="n">Declare</span><span class="p">,</span> <span class="n">Placement</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">Area</span><span class="p">,</span> <span class="n">Dock</span><span class="p">,</span> <span class="n">QtSession</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsView</span><span class="p">,</span> <span class="n">Declare</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">Central</span><span class="p">,</span> <span class="n">Dock</span><span class="p">,</span> <span class="n">QtSession</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.builtins</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogView</span><span class="p">,</span> <span class="n">PositionerView</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">parent</span><span class="p">:</span> <span class="n">QWidget</span><span class="p">,</span> <span class="n">area</span><span class="p">:</span> <span class="n">Area</span> <span class="o">=</span> <span class="s2">"left"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">area</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="nd">@property</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">placement</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Placement</span><span class="p">:</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="k">return</span> <span class="n">Dock</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="p">)</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>    <span class="n">left_panel</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">MyView</span><span class="p">]</span>
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>    <span class="n">right_panel</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsView</span><span class="p">[</span><span class="n">MyView</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">area</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)]</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">stage</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsView</span><span class="p">[</span><span class="n">PositionerView</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">placement</span><span class="o">=</span><span class="n">Dock</span><span class="p">(</span><span class="s2">"left"</span><span class="p">))]</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">log</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsView</span><span class="p">[</span><span class="n">LogView</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">placement</span><span class="o">=</span><span class="n">Central</span><span class="p">())]</span>
 </span></code></pre></div>
-<p>A placement from a property is checked once the view is built rather than
-when it is declared.</p>
+<p>In a session file, write <code>placement</code> as a word or a short mapping:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">views</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">stage</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">positioner</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">placement</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">left</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th><code>placement</code></th>
+<th>Where the view goes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>left</code>, <code>right</code>, <code>top</code>, <code>bottom</code></td>
+<td>a dock on that edge</td>
+</tr>
+<tr>
+<td><code>central</code></td>
+<td>the central area</td>
+</tr>
+<tr>
+<td><code>{dock: left, group: tools}</code></td>
+<td>a dock on that edge, in a tab with the other docks of group <code>tools</code></td>
+</tr>
+<tr>
+<td><code>{menu: Acquire}</code></td>
+<td>an entry in the menu <code>Acquire</code></td>
+</tr>
+<tr>
+<td><code>{toolbar: Acquisition}</code></td>
+<td>an entry in the toolbar <code>Acquisition</code></td>
+</tr>
+</tbody>
+</table>
+<p>The session checks the placement before it builds anything. If a view fails
+to build, its error message appears where you placed it. A view whose
+constructor has its own <code>placement</code> parameter is refused, because the session
+keeps that name for itself.</p>
+<div class="admonition warning">
+<p class="admonition-title">Deprecated: a <code>placement</code> property</p>
+<p>Some views return <code>placement</code> from a property, to choose it per
+declaration. This still works, but it is deprecated and will be removed
+in 0.16. The session can read such a placement only after it builds the
+view. So it checks it late, and if the view fails to build, no error
+message appears in the window. Give <code>placement</code> in the declaration
+instead.</p>
+</div>
+<h2 id="tab-docks-together">Tab docks together<a class="headerlink" href="#tab-docks-together" title="Permanent link">&para;</a></h2>
+<p>Docks on the same edge with the same group open as tabs. The tabs follow the
+order you declare the views in:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsView</span><span class="p">,</span> <span class="n">Declare</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dock</span><span class="p">,</span> <span class="n">QtSession</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.builtins</span><span class="w"> </span><span class="kn">import</span> <span class="n">LightView</span><span class="p">,</span> <span class="n">PositionerView</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">stage</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="n">AsView</span><span class="p">[</span><span class="n">PositionerView</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">placement</span><span class="o">=</span><span class="n">Dock</span><span class="p">(</span><span class="s2">"right"</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">"hardware"</span><span class="p">))</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="p">]</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">lights</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="n">AsView</span><span class="p">[</span><span class="n">LightView</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">placement</span><span class="o">=</span><span class="n">Dock</span><span class="p">(</span><span class="s2">"right"</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">"hardware"</span><span class="p">))</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="p">]</span>
+</span></code></pre></div>
 <h2 id="see-a-changed-placement-take-effect">See a changed placement take effect<a class="headerlink" href="#see-a-changed-placement-take-effect" title="Permanent link">&para;</a></h2>
 <p>A session started with <code>run</code> saves where the user left the docks when it
 ends, and puts them back the next time. A dock that was saved keeps its
@@ -5889,9 +5995,9 @@ file, listed in
 placement needs, is left out, and the build summary lists it under
 <code>Not built</code>. Here <code>MyView</code>, a <code>QWidget</code>, asks for a <code>MenuItem</code>; the real
 lines end with the file and line they were logged from:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>[29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>[29-09-26|08:42:44][WARNING]: Session built: 0/0 devices, 0/0 presenters, 0/1 views
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Not built: snap (view)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>[29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>[29-09-26|08:42:44][WARNING]: Session built: 0/0 devices, 0/0 presenters, 0/1 views
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Not built: snap (view)
 </span></code></pre></div>
 
 

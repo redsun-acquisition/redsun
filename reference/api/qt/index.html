@@ -3159,6 +3159,8 @@
       
         
       
+        
+      
     
     
     
@@ -3850,6 +3852,33 @@
     
   
   24. A plan widget for every parameter type it can return
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0025-a-views-placement-chosen-per-declaration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  25. A view's placement chosen per declaration
 
     
   </span>
@@ -4784,6 +4813,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.read_placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_placement
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.Qt.thread_of" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -4899,6 +4939,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;area
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Dock.group" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;group
       </span>
     </span>
   </a>
@@ -6288,6 +6339,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.read_placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_placement
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.Qt.thread_of" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6403,6 +6465,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;area
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Dock.group" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;group
       </span>
     </span>
   </a>
@@ -7413,6 +7486,57 @@ first line of the signature.</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="redsun.qt.Qt.read_placement" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">read_placement</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.qt.Qt.read_placement" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">read_placement</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Placement</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the Qt placement a session file's <em>value</em> names.</p>
+<p><code>left</code>, <code>right</code>, <code>top</code> or <code>bottom</code> is a dock against that edge and
+<code>central</code> the main area; <code>{dock: &lt;edge&gt;, group: &lt;name&gt;}</code> a dock tabbed
+with its group, <code>{menu: &lt;name&gt;}</code> an entry in that menu and
+<code>{toolbar: &lt;name&gt;}</code> an entry in that toolbar.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>value</em> is none of these.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="redsun.qt.Qt.thread_of" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">thread_of</span>
 
@@ -7632,7 +7756,7 @@ said three ways.</p>
   </span>
 
 <a href="#redsun.qt.Dock" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Dock</span><span class="p">(</span><span class="n">area</span><span class="p">:</span> <span class="n">Area</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Dock</span><span class="p">(</span><span class="n">area</span><span class="p">:</span> <span class="n">Area</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -7646,7 +7770,7 @@ said three ways.</p>
 
 
 
-        <p>A panel against one edge of the window.</p>
+        <p>A panel against one edge of the window, tabbed with the docks of its group.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -7708,6 +7832,31 @@ said three ways.</p>
     <div class="doc doc-contents ">
 
         <p>Edge the panel sits against.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.qt.Dock.group" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">group</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#redsun.qt.Dock.group" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Name of the docks it is tabbed with on the same edge; <code>None</code> for none.</p>
 
     </div>
 
@@ -7979,12 +8128,16 @@ said three ways.</p>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">attach</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">window</span><span class="p">:</span> <span class="n">QMainWindow</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">views</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AttachableComponent</span><span class="p">],</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">placements</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Placement</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
         <p>Attach every view of <em>views</em> to <em>window</em> where it asks to be.</p>
+<p><em>placements</em> gives, by name, the placement a view's declaration chose;
+any other view is placed where its <code>placement</code> asks. Docks of one edge
+and group are tabbed together, in the order of <em>views</em>.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
