@@ -235,8 +235,8 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   without the extra never imports it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change -> docstring, and a changelog label on the pull request.
-  The changelog is written from the labels at release time
-  (`docs/how-to/make-a-release.md`); never edit `docs/reference/changelog.md` by
+  The changelog is written from the labels at release time ("Making a release"
+  in `docs/how-to/contribute.md`); never edit `docs/reference/changelog.md` by
   hand. A change that breaks existing code also gets the `breaking` label and a
   line on the current `docs/how-to/migrate-from-*.md` page.
 

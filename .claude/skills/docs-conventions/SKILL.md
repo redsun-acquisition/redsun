@@ -10,7 +10,8 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
 - One authoritative source per fact; cross-link instead of restating. A
   sentence of recap next to the link is fine when the page cannot be followed
   without it.
-- Voice, headings and glossary linking: `docs/how-to/write-docs.md`.
+- Voice, headings and terms: the section below. The contributing page has
+  a short version for people; this skill holds the full rules.
 - Material-style admonitions (`!!! warning`), mermaid fences for diagrams.
 - Reference pages are generated from docstrings: fix the docstring, not the
   `.md`, when reference content is wrong.
@@ -38,6 +39,49 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
   inventory is missing from `inventories` in `zensical.toml`. If the project
   genuinely publishes no such object (event-model's `DocumentRouter`, for
   one), write it as a plain code span rather than an xref.
+
+## Voice, headings and terms
+
+Write for a reader around 15 years old who knows some Python and nothing about
+`redsun` or lab hardware, as if explaining in person. Use the
+`writing-with-flow` skill for how sentences and paragraphs connect.
+
+- Talk to the reader as "you"; name who does what ("you declare the device",
+  "the session starts the service"). The project promising future work is
+  "we": "We will provide tutorials on this in the future".
+- Open each section and each paragraph with its point, framed as what the
+  reader gets. Start a sentence from what the reader already knows, end it on
+  the new part; keep one subject per paragraph.
+- Say each point once: no paragraph repeats its section's first sentence, and
+  none opens with a label ("The devices are the model") before saying what
+  the thing does.
+- Most sentences short, lengths varied; join related ideas with "so",
+  "because", "which means". Contractions are fine. Active voice.
+- A catch the reader can run into goes in a `!!! warning` box: the title names
+  what goes wrong, the last sentence says what to do.
+- Show a short code example when it is clearer than a paragraph.
+
+| stiff | friendly |
+| --- | --- |
+| A view's class names where it attaches by default. | Each view class has a default place in the window. You can pick another when you declare the view. |
+| There is no way to hand the session a new value later. | You can't hand the session a new value after it starts. |
+| `redsun` is a library you build an acquisition program with. | `redsun` is a toolkit for building your own acquisition software. |
+
+Headings name the topic in a few words ("Devices and services", "Unexpected
+exits"); a question works on a page of limits ("Can I add a value after
+startup?"). The claim goes in the section's first sentence. Use the real name
+of the thing, never "part", "role" or "aspect"; no sentences, no "cannot" or
+"must", no "while ..." clauses. How-to and tutorial steps say what the reader
+does ("Declare the device").
+
+Each technical word has one definition, in `docs/explanation/glossary.md`; link
+it on its first use on a page. A few words in passing next to the link are
+fine; a second full definition is not. Add a missing term to the glossary
+first. Acronyms and rare words also go in `includes/abbreviations.md`.
+
+Write the claim, not a field's jargon ("can't change without breaking X", not
+"load-bearing"); everyday idioms any reader knows are fine. No em or en
+dashes, arrows as `->`, no sales words, no closing summary sentence.
 
 ## Tutorials
 
