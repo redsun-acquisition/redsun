@@ -42,8 +42,8 @@ application with a graphical interface. With `redsun` you can:
 - run acquisitions as `bluesky` [plans](explanation/glossary.md#plan), each
   with a [plan widget](explanation/glossary.md#plan-widget) built from its
   parameters;
-- use the built-in components for common tasks: a log window, controls to
-  move stages and switch lights, and a panel that runs plans;
+- use the [built-in components](explanation/plugins.md#built-in-components)
+  for common tasks, so you write only what is specific to your instrument;
 - give every acquisition file a place and a name, under one folder per
   session;
 - search past [runs](explanation/glossary.md#run) in a
