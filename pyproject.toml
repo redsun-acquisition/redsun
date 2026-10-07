@@ -25,6 +25,7 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
+    "annotated-types>=0.7",
     "bluesky>=1.15.1",
     "culsans>=0.11.0",
     "in-n-out>=0.2.1",

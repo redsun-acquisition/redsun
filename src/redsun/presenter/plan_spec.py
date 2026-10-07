@@ -14,7 +14,7 @@ import collections.abc as cabc
 import datetime
 import enum
 import inspect
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 from inspect import Parameter, _empty, signature
 from pathlib import Path
@@ -30,6 +30,8 @@ from typing import (
     get_origin,
 )
 
+from pydantic import ConfigDict, PydanticUserError, TypeAdapter, ValidationError
+from pydantic_core import SchemaError
 from typing_extensions import Format, evaluate_forward_ref, get_annotations
 
 from redsun.engine.actions import PlanAction
@@ -43,6 +45,7 @@ from redsun.presenter.utils import (
 
 from ._shapes import (
     container_type,
+    has_limits,
     is_fixed_tuple,
     is_mapping,
     safe_issubclass,
@@ -54,6 +57,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from ophyd_async.core import Device as OADevice
+
+_STRICT = ConfigDict(strict=True, arbitrary_types_allowed=True)
+"""How a parameter's limits are checked: no conversion, any class accepted."""
+
+_MISMATCH = ("_type", "is_instance_of")
+"""Endings of a `pydantic` error type saying the value is of another type."""
 
 
 class UnresolvableAnnotationError(TypeError):
@@ -106,6 +115,23 @@ class ParamKind(IntEnum):
     """Any number of values given by name, as `**kwargs`."""
 
 
+def _where(value: Any, loc: tuple[int | str, ...]) -> str:
+    """Return *loc* as indexes into *value*: `[2]`, `['x'][0]`.
+
+    A part that indexes nothing in *value*, such as the tag `pydantic` gives a
+    union member, is left out.
+    """
+    text = ""
+    for part in loc:
+        if isinstance(value, cabc.Mapping) and part in value:
+            text += f"[{part!r}]"
+            value = value[part]
+        elif isinstance(part, int) and isinstance(value, (list, tuple, set, frozenset)):
+            text += f"[{part}]"
+            value = list(value)[part]
+    return text
+
+
 @dataclass
 class ParamDescription:
     """Description of one plan parameter."""
@@ -139,6 +165,57 @@ class ParamDescription:
 
     device_proto: type[Any] | None = None
     """Device class or runtime-checkable protocol of a device parameter, used to look devices up when resolving arguments."""
+
+    annotated: Any = _empty
+    """The full annotation, `Annotated` metadata kept at every level; `annotation` when not given."""
+
+    _adapter: TypeAdapter[Any] | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
+
+    def __post_init__(self) -> None:
+        """Fill `annotated` from `annotation`, and build the check of its limits.
+
+        Raises
+        ------
+        TypeError
+            If the annotation's limits cannot be built into a check.
+        """
+        if self.annotated is _empty:
+            self.annotated = self.annotation
+        if not has_limits(self.annotated):
+            return
+        try:
+            self._adapter = TypeAdapter(self.annotated, config=_STRICT)
+        except (PydanticUserError, SchemaError) as error:
+            raise TypeError(
+                f"parameter {self.name!r}: its limits cannot be checked: {error}"
+            ) from error
+
+    def problems(self, value: Any) -> list[str]:
+        """Return a line for each limit *value* breaks, located inside it: `points[2]: ...`.
+
+        Empty when the annotation carries no limit.
+        """
+        if self._adapter is None:
+            return []
+        try:
+            self._adapter.validate_python(value)
+        except ValidationError as error:
+            errors = error.errors()
+        except TypeError as error:
+            # a limit that does not fit its type fails only once a value comes
+            return [f"{self.name}: {error}"]
+        else:
+            return []
+        # a union reports a type mismatch for every member but the matching one
+        broken = [e for e in errors if not e["type"].endswith(_MISMATCH)] or errors[:1]
+        lines: list[str] = []
+        for e in broken:
+            line = f"{self.name}{_where(value, e['loc'])}: {e['msg']}"
+            if line not in lines:
+                lines.append(line)
+        return lines
 
     @property
     def has_default(self) -> bool:
@@ -384,7 +461,8 @@ def create_plan_spec(
         If an annotation names something missing at runtime, or no view can
         build a control for it.
     ValueError
-        If *plan* declares two actions of one name.
+        If *plan* declares two actions of one name, or a parameter's default
+        breaks its own limits.
     """
     func_obj: cabc.Callable[..., cabc.Generator[Any, Any, Any]] = getattr(
         plan, "__func__", plan
@@ -455,19 +533,29 @@ def create_plan_spec(
         if not shown and param.default is _empty:
             raise UnresolvableAnnotationError(func_obj.__name__, name, ann)
 
-        params.append(
-            ParamDescription(
-                name=name,
-                kind=pkind,
-                annotation=ann,
-                default=param.default,
-                choices=fields.choices,
-                multiselect=fields.multiselect,
-                hidden=not shown,
-                actions=actions_meta,
-                device_proto=fields.device_proto,
-            )
+        description = ParamDescription(
+            name=name,
+            kind=pkind,
+            annotation=ann,
+            default=param.default,
+            choices=fields.choices,
+            multiselect=fields.multiselect,
+            hidden=not shown,
+            actions=actions_meta,
+            device_proto=fields.device_proto,
+            annotated=raw_ann,
         )
+        broken = (
+            description.problems(param.default)
+            if param.default is not _empty and shown and actions_meta is None
+            else []
+        )
+        if broken:
+            raise ValueError(
+                f"Plan {func_obj.__name__!r}: the default of {name!r} breaks its "
+                f"own limits: {'; '.join(broken)}"
+            )
+        params.append(description)
 
     declared = [
         action.name
@@ -569,6 +657,11 @@ def resolve_arguments(
         The plan specification.
     param_values
         Parameter values from the interface.
+
+    Raises
+    ------
+    ValueError
+        If a value breaks its parameter's limits, naming every one.
     """
     values: dict[str, Any] = dict(param_values)
 
@@ -582,6 +675,18 @@ def resolve_arguments(
             values[p.name] = p.actions
         elif p.hidden:
             values[p.name] = p.default
+
+    broken = [
+        line
+        for p in spec.parameters
+        if p.name in param_values
+        and p.device_proto is None
+        and p.actions is None
+        and not p.hidden
+        for line in p.problems(param_values[p.name])
+    ]
+    if broken:
+        raise ValueError("; ".join(broken))
 
     resolved: dict[str, Any] = {}
 

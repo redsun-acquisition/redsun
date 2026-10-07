@@ -5351,6 +5351,7 @@ wheels = [
 name = "redsun"
 source = { editable = "." }
 dependencies = [
+    { name = "annotated-types" },
     { name = "bluesky" },
     { name = "culsans" },
     { name = "in-n-out" },
@@ -5495,6 +5496,7 @@ zarr = [
 [package.metadata]
 requires-dist = [
     { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.10.0" },
+    { name = "annotated-types", specifier = ">=0.7" },
     { name = "app-model", marker = "extra == 'pyqt'", specifier = ">=0.5.1" },
     { name = "app-model", marker = "extra == 'pyside'", specifier = ">=0.5.1" },
     { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
