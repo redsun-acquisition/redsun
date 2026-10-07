@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 import pytest
@@ -250,3 +251,22 @@ def test_a_list_stops_growing_at_its_maximum_length(
     [remove, _] = buttons(widget, "-")
     remove.click()
     assert add.isEnabled()
+
+
+@pytest.mark.parametrize(
+    ("annotation", "default"),
+    [
+        (Annotated[int, {"choices": [1, 2, 3]}], 2),
+        (Annotated[float, {"choices": [0.5, 1.0]}], 1.0),
+        (Annotated[int, Ge(0), {"choices": [1, 2]}], 2),
+        (Annotated[datetime, Gt(datetime(2020, 1, 1))], datetime(2021, 1, 1)),
+        (Annotated[str, MaxLen(3)], "ab"),
+    ],
+)
+def test_a_widget_that_takes_no_range_still_builds(
+    qapp: QtWidgets.QApplication, annotation: Any, default: Any
+) -> None:
+    """Build a choice box, a date or a text field whose annotation carries limits or choices."""
+    widget = build("value", annotation, default=default)
+
+    assert widget.value == default

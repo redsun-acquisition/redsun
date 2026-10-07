@@ -69,11 +69,15 @@ def type_name(ann: Any) -> str:
 
 
 def limit_options(bare: Any, limit: at.BaseMetadata) -> dict[str, Any]:
-    """Return the widget options *limit* gives a value of type *bare*.
+    """Return the spin box options *limit* gives a value of type *bare*.
 
-    An exclusive bound moves to the next integer for an `int`; for any other
-    type the bound itself is the limit, and the value on it is a problem.
+    Only an `int` or a `float` gets any: the widgets of other types take no
+    bounds, and the problem lines enforce their limits. An exclusive bound
+    moves to the next integer for an `int`; for a `float` the bound itself is
+    the limit, and the value on it is a problem.
     """
+    if bare is not int and bare is not float:
+        return {}
     integer = bare is int
     match limit:
         case at.Ge(bound):
@@ -98,8 +102,9 @@ def widget_options(ann: Any) -> dict[str, Any]:
     """Return the `magicgui` options of the widget for *ann*, a leaf type.
 
     Option dicts in the metadata are merged, then the limits apply, winning
-    over a dict that gives the same option. A number with no bound and no
-    `widget_type` gets the widest range its widget allows.
+    over a dict that gives the same option. A number with no bound gets the
+    widest range its spin box allows, unless a `widget_type` or `choices`
+    asks for another widget.
     """
     bare = unwrap(ann)
     options: dict[str, Any] = {}
@@ -118,8 +123,9 @@ def widget_options(ann: Any) -> dict[str, Any]:
                 limited[key],
                 options[key],
             )
-    options.update(limited)
-    if "widget_type" not in options:
+    if "choices" not in options:
+        options.update(limited)
+    if "widget_type" not in options and "choices" not in options:
         if bare is float:
             options.setdefault("min", -math.inf)
             options.setdefault("max", math.inf)
