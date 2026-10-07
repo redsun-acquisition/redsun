@@ -136,8 +136,9 @@ device, meaning a subclass of `ophyd_async.core.Device`. `redsun` adds nothing
 to the device [layer](glossary.md#layer), so for signals, detectors and the
 base classes, see the `ophyd-async` documentation.
 
-Your devices describe what the setup contains and what can be controlled.
-Reaching the hardware is best left to a [service](glossary.md#service), and
+Your devices are a model of your whole setup: what it contains and what can
+be controlled, as a tree of devices and their signals. Reaching the hardware
+is best left to a [service](glossary.md#service), and
 [Devices and services](services.md#devices-and-services) explains why the two
 are kept apart.
 

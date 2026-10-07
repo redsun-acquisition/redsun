@@ -31,6 +31,22 @@ position, or a camera with an exposure time and a region of interest. Each
 device is a set of signals that presenters and plans read and set, so it says
 what can be controlled but not how to reach the hardware.
 
+Together, the devices are a model of your whole setup, written the way the
+people using it think about it: a microscope has a stage, the stage has an X
+and a Y axis, and each axis has a position. `ophyd-async` builds devices as a
+tree for exactly this reason, since a device can hold other devices as its
+children, down to the signals. A service describes no setup at all. It only
+makes some piece of hardware reachable, so the same model can sit on top of
+real hardware or of a simulation.
+
+!!! note "One device for the whole setup"
+
+    We intend each setup to be described by a single device at the root of
+    such a tree, such as a `MyMicroscope` that holds its stage and its camera.
+    For now, some features of `redsun` look only at the devices a session
+    declares and not at their children, so declare each piece a plan or a
+    view needs, such as the stage and the camera, as a device of its own.
+
 Reaching the hardware is the service's job. A service opens the serial port or
 the camera, speaks the vendor's protocol or runs the vendor's library, and
 offers the result as [process variables](glossary.md#process-variable). It
