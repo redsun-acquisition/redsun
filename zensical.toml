@@ -296,7 +296,7 @@ dedent_subsections = true
 
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
-    { name = "mermaid", class = "mermaid" }
+    { name = "d2", class = "d2", format = { object = "markdown_d2.formatter", kwds = { root = "docs", transition = "morph" } }, validator = "markdown_d2.validator" },
 ]
 
 [project.markdown_extensions.pymdownx.tabbed]
