@@ -234,13 +234,18 @@ class PlanWidget:
     def problems(self) -> list[str]:
         """Why the plan cannot run, one line per invalid input, prefixed with its parameter.
 
-        Run stays disabled while the list is not empty.
+        An input's own problems come first; only an input with none is checked
+        against its parameter's limits. Run stays disabled while the list is
+        not empty.
         """
-        return [
-            located(w.name, problem)
-            for w in self.container
-            for problem in problems_of(w)
-        ]
+        described = {p.name: p for p in self.spec.parameters}
+        found: list[str] = []
+        for w in self.container:
+            own = [located(w.name, problem) for problem in problems_of(w)]
+            if not own and w.name in described:
+                own = described[w.name].problems(w.value)
+            found.extend(own)
+        return found
 
     def _check(self) -> None:
         problems = self.problems

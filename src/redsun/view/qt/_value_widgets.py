@@ -7,10 +7,13 @@ the annotated type and a `problems` list, and builds its inner widgets with
 
 from __future__ import annotations
 
+import logging
+import math
 from collections.abc import Iterable, Mapping
 from types import NoneType
 from typing import Any, Literal, get_args, get_origin
 
+import annotated_types as at
 from magicgui import widgets as mgw
 from magicgui.types import Undefined
 from magicgui.widgets.bases import ValuedContainerWidget, Widget
@@ -20,10 +23,18 @@ from ...presenter._shapes import (
     container_type,
     is_fixed_tuple,
     is_mapping,
+    limits_of,
+    max_length,
+    metadata,
     union_members,
     unwrap,
     without_none,
 )
+
+logger = logging.getLogger("redsun")
+
+INT_RANGE = (-(2**31), 2**31 - 1)
+"""The range of a Qt spin box for integers."""
 
 
 def problems_of(widget: Any) -> list[str]:
@@ -57,6 +68,67 @@ def type_name(ann: Any) -> str:
     return getattr(ann, "__name__", repr(ann))
 
 
+def limit_options(bare: Any, limit: at.BaseMetadata) -> dict[str, Any]:
+    """Return the widget options *limit* gives a value of type *bare*.
+
+    An exclusive bound moves to the next integer for an `int`; for any other
+    type the bound itself is the limit, and the value on it is a problem.
+    """
+    integer = bare is int
+    match limit:
+        case at.Ge(bound):
+            return {"min": bound}
+        case at.Gt(int(bound)) if integer:
+            return {"min": bound + 1}
+        case at.Gt(bound):
+            return {"min": bound}
+        case at.Le(bound):
+            return {"max": bound}
+        case at.Lt(int(bound)) if integer:
+            return {"max": bound - 1}
+        case at.Lt(bound):
+            return {"max": bound}
+        case at.MultipleOf(step):
+            return {"step": step}
+        case _:
+            return {}
+
+
+def widget_options(ann: Any) -> dict[str, Any]:
+    """Return the `magicgui` options of the widget for *ann*, a leaf type.
+
+    Option dicts in the metadata are merged, then the limits apply, winning
+    over a dict that gives the same option. A number with no bound and no
+    `widget_type` gets the widest range its widget allows.
+    """
+    bare = unwrap(ann)
+    options: dict[str, Any] = {}
+    for item in metadata(ann):
+        if isinstance(item, Mapping):
+            options.update(item)
+    limited: dict[str, Any] = {}
+    for limit in limits_of(metadata(ann)):
+        limited.update(limit_options(bare, limit))
+    for key in limited.keys() & options.keys():
+        if options[key] != limited[key]:
+            logger.debug(
+                "%s: the limit's %s=%r replaces the option dict's %r",
+                type_name(ann),
+                key,
+                limited[key],
+                options[key],
+            )
+    options.update(limited)
+    if "widget_type" not in options:
+        if bare is float:
+            options.setdefault("min", -math.inf)
+            options.setdefault("max", math.inf)
+        elif bare is int:
+            options.setdefault("min", INT_RANGE[0])
+            options.setdefault("max", INT_RANGE[1])
+    return options
+
+
 def create_value_widget(ann: Any, value: Any = Undefined, name: str = "") -> Any:
     """Build the widget showing a value of type *ann*, starting from *value*.
 
@@ -87,15 +159,17 @@ def build_value_widget(ann: Any, value: Any, name: str) -> Any:
     if members:
         return UnionEdit(members, value, name=name)
     if is_mapping(bare):
-        return MappingEdit(bare, value, name=name)
+        return MappingEdit(bare, value, name=name, max_items=max_length(ann))
     if is_fixed_tuple(bare):
         return FixedTupleEdit(bare, value, name=name)
     if container_type(bare) is not None:
-        return SequenceEdit(bare, value, name=name)
+        return SequenceEdit(bare, value, name=name, max_items=max_length(ann))
     # without a value magicgui gets its sentinel rather than None: a widget
     # that cannot hold None, such as the CheckBox built for a bool, raises on
     # being handed one
-    return mgw.create_widget(annotation=ann, name=name, value=value)
+    return mgw.create_widget(
+        annotation=bare, name=name, value=value, options=widget_options(ann)
+    )
 
 
 def holds(ann: Any, value: Any) -> bool:
@@ -274,10 +348,18 @@ class SequenceEdit(ValuedContainerWidget[Any]):
     """Rows of one element type, each removable, and a button adding one.
 
     Returns a `list`, `tuple`, `set` or `frozenset`, as the annotation names;
-    a repeated item in a set is dropped.
+    a repeated item in a set is dropped. The add button is disabled while the
+    rows reach *max_items*.
     """
 
-    def __init__(self, ann: Any, value: Any = Undefined, name: str = "") -> None:
+    def __init__(
+        self,
+        ann: Any,
+        value: Any = Undefined,
+        name: str = "",
+        max_items: int | None = None,
+    ) -> None:
+        self._max_items = max_items
         self._element = get_args(ann)[0]
         self._built = container_type(ann)
         self._add = mgw.PushButton(text="+")
@@ -295,13 +377,18 @@ class SequenceEdit(ValuedContainerWidget[Any]):
         edit.changed.connect(lambda _: self.changed.emit(self.value))
         self._rows.append(row)
         self._insert_widget(len(self._rows) - 1, row)
+        self._limit()
         self.changed.emit(self.value)
 
     def _remove(self, row: Row) -> None:
         index = self._rows.index(row)
         self._rows.pop(index)
         self._pop_widget(index)
+        self._limit()
         self.changed.emit(self.value)
+
+    def _limit(self) -> None:
+        self._add.enabled = self._max_items is None or len(self._rows) < self._max_items
 
     def get_value(self) -> Any:
         """Return the rows' values in the built-in the annotation names."""
@@ -328,10 +415,18 @@ class SequenceEdit(ValuedContainerWidget[Any]):
 class MappingEdit(ValuedContainerWidget[dict[Any, Any]]):
     """Key and value rows, each removable, and a button adding one.
 
-    A key that repeats another is reported in `problems`.
+    A key that repeats another is reported in `problems`. The add button is
+    disabled while the rows reach *max_items*.
     """
 
-    def __init__(self, ann: Any, value: Any = Undefined, name: str = "") -> None:
+    def __init__(
+        self,
+        ann: Any,
+        value: Any = Undefined,
+        name: str = "",
+        max_items: int | None = None,
+    ) -> None:
+        self._max_items = max_items
         self._key, self._value = get_args(ann)
         self._add = mgw.PushButton(text="+")
         super().__init__(name=name, labels=False, widgets=[self._add])
@@ -350,13 +445,18 @@ class MappingEdit(ValuedContainerWidget[dict[Any, Any]]):
         value_edit.changed.connect(lambda _: self.changed.emit(self.value))
         self._rows.append(row)
         self._insert_widget(len(self._rows) - 1, row)
+        self._limit()
         self.changed.emit(self.value)
 
     def _remove(self, row: Row) -> None:
         index = self._rows.index(row)
         self._rows.pop(index)
         self._pop_widget(index)
+        self._limit()
         self.changed.emit(self.value)
+
+    def _limit(self) -> None:
+        self._add.enabled = self._max_items is None or len(self._rows) < self._max_items
 
     def _repeated(self) -> set[Any]:
         keys = [row.edits[0].value for row in self._rows]
