@@ -40,7 +40,7 @@ show the code this page describes.
 
 ---
 
-## A plan that ends by itself
+## Plans that end by themselves
 
 The simplest plan does its steps and stops, such as a walk that reads the
 position of a stage and moves it forward a few times. It is an ordinary
@@ -60,7 +60,7 @@ stage offers the plans that move it, and no central list names them.
 
 ---
 
-## Running the plans of a session
+## Running a session's plans
 
 One presenter has the `RunEngine`. In `setup` it asks the session for every
 component that satisfies `HasPlans`, and keeps what they offer. That is a

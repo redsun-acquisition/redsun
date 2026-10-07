@@ -24,7 +24,7 @@ the [components](glossary.md#component) it is made of.
 - [How devices, presenters and views fit together](components.md)
 - [How a component asks the session what it holds](questions.md)
 - [How plugins provide components](plugins.md)
-- [What a running session cannot change](limits.md)
+- [Limitations](limits.md)
 
 ### Hardware and plans
 

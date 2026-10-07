@@ -90,7 +90,7 @@ in this order:
 The order never changes. A frontend changes what happens inside a step, never
 which steps run.
 
-### A component that fails to build
+### Failed components
 
 A device that does not connect, or a presenter whose constructor raises, is
 logged and left out. The session carries on without it, and the summary at
@@ -168,7 +168,7 @@ The merged result is checked before anything is built. A misspelled key or a
 value of the wrong type raises [`ConfigurationError`][redsun.ConfigurationError],
 which lists every problem as `section.key: what`. [Session file](../reference/session-file.md) lists every key.
 
-### A session with no class
+### Sessions without a class
 
 A file can describe a whole session, with every component taken from a
 [plugin](plugins.md):
@@ -184,10 +184,10 @@ up as a `QtSession`. Such a session has no class name to fall back on, so its
 file must set `session`. [Run a session without a GUI](../how-to/run-without-a-gui.md)
 shows a file naming no frontend at all.
 
-## The session's name
+## Session name
 
-`session` in the configuration names the session; without it, the session is
-named after its class. The name is used for:
+You set the session's name with the `session` key in the configuration. If you
+leave it out, the session is named after its class. The name is used for:
 
 - the folder its data, catalog and log files go in;
 - the application its menus and commands are registered on;
@@ -200,7 +200,7 @@ launched service writes to a file of its own beside it. The files follow the
 data folder if it moves while the session runs, and close last at shutdown.
 [Configure logging](../how-to/configure-logging.md) shows where they go.
 
-## Protocols a session is built from
+## Session protocols
 
 A session is written against two [protocols](glossary.md#protocol):
 

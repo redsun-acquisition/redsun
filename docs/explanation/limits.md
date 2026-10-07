@@ -2,26 +2,28 @@
 icon: lucide/ban
 ---
 
-# What a running session cannot change
+# Limitations
 
 Some things are fixed once a session is built. This page lists them, and says
 what to do instead. For the parts `redsun` leaves to you, see
 [Why redsun exists](statement.md#what-redsun-leaves-to-you).
 
-## A value cannot be added while the session runs
+## Can I add a value after startup?
 
-Values enter a session in three ways, all before it starts running: a
-component, a method marked with [`provides`][redsun.provides], or a plugin's
-provider. There is no way to hand the session a new value later.
+No. Every value reaches the session before it starts running, in one of three
+ways: from a component, from a method marked with
+[`provides`][redsun.provides], or from a plugin's provider. You can't hand the
+session a new value later.
 
-If something fills up over time, share an object that changes, once, and let
-others read it as it changes.
+If something fills up over time, share one object that changes, and let others
+read it as it changes.
 
-## A shared value cannot be optional
+## Can a shared value be optional?
 
-The session decides what exists by reading types, before anything is built. A
-`provides` method returning `Roi | None` shares a value of type `Roi | None`,
-not `Roi`, so a component asking for `Roi | None` never receives it:
+No. The session decides what exists by reading types, before anything is
+built. A `provides` method returning `Roi | None` shares a value of type
+`Roi | None`, not `Roi`, so a component asking for `Roi | None` never
+receives it:
 
 ```python
 @provides
@@ -40,9 +42,9 @@ def roi(self) -> Roi:
 Whether a value exists at all is decided by whether the component sharing it
 is in the session.
 
-## Two components cannot share one type
+## Can two components share a type?
 
-A type names one value, so two components sharing `Readings` is an error:
+No. A type names one value, so two components sharing `Readings` is an error:
 
 ```text
 TypeError: 'plot_b' and 'plot_a' both share 'Readings'.
@@ -51,28 +53,28 @@ A shared type identifies one value; give them distinct types.
 
 Give each value its own type.
 
-## A type used for lookup must be imported normally
+## How must I import a lookup type?
 
-The session reads a constructor's annotations while the program runs, to know
-what to pass. A type imported only under `if TYPE_CHECKING:` is not there when
-it looks:
+Normally, not under `if TYPE_CHECKING:`. The session reads a constructor's
+annotations while the program runs, to know what to pass. A type imported only
+under `if TYPE_CHECKING:` is not there when it looks:
 
 ```text
 TypeError: cannot read the constructor of MotorPresenter: 'Calibration' is not
 available at runtime.
 ```
 
-Import such types normally. This applies to the constructor and `setup` of a
-component, the return type of a `provides` method, and the session class body.
-Everywhere else, `TYPE_CHECKING` imports work as usual.
+This applies to the constructor and `setup` of a component, the return type of
+a `provides` method, and the session class body. Everywhere else,
+`TYPE_CHECKING` imports work as usual.
 
-## One frontend per process
+## Can I run two frontends?
 
-A `QtSession` owns the `QApplication`, and Qt allows one per process. Two
-sessions in one process must also have different names, since each registers
-an application under its name.
+Not in one process. A `QtSession` owns the `QApplication`, and Qt allows one
+per process. Two sessions in one process must also have different names, since
+each registers an application under its name.
 
-## Nothing restarts a crashed service
+## What happens when a service crashes?
 
-A launched service that exits is logged and reported with a signal, and stays
-down. See [Services](services.md#a-service-exiting).
+The session logs it and emits a signal, and the service stays down. Nothing
+restarts it. See [Services](services.md#unexpected-exits).

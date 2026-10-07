@@ -7,7 +7,7 @@ icon: lucide/search
 A [component](../explanation/glossary.md#component) that the session could
 not build, set up or connect is logged and left out, and the window opens
 without it. Find the reason in the log, or make the session stop on it.
-[Sessions](../explanation/session.md#a-component-that-fails-to-build)
+[Sessions](../explanation/session.md#failed-components)
 explains why a session carries on without it.
 
 ## Prerequisites

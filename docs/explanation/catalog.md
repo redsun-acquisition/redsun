@@ -29,7 +29,7 @@ A catalog indexes only its session's runs; a question across sessions means
 opening each catalog. In exchange, everything a session produced lives under
 one directory and can be archived or deleted as a unit.
 
-## A registered file can be changed through the catalog
+## Writing to registered files
 
 Registering a file records where it is; it does not protect it. `tiled`'s
 array write routes, `write`, `write_block` and `patch`, reach a registered

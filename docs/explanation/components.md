@@ -121,7 +121,7 @@ the base classes.
 
 The devices of a session model the setup: what it contains and what can be
 controlled. Reaching the hardware is best left to a service, and
-[Devices model the setup, services drive the hardware](services.md#devices-model-the-setup-services-drive-the-hardware)
+[Devices and services](services.md#devices-and-services)
 explains why the two are kept apart.
 
 A session makes a device as `cls(name=<name>, **kwargs)`, so every

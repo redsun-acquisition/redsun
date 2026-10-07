@@ -20,10 +20,10 @@ and transport to the devices that use it.
     part for now, and a service is the preferred way to reach hardware.
     Guidance on devices that wrap a third-party package will follow.
 
-## Devices model the setup, services drive the hardware
+## Devices and services
 
-A session splits a setup into two parts that know as little about each other as
-possible.
+A session splits your setup into devices and services, which know as little
+as possible about each other.
 
 The devices are the model. Together they describe what the setup contains: a
 stage with an X and a Y position, a camera with an exposure time and a region
@@ -218,11 +218,11 @@ component brings what its own service speaks, `caproto` or `p4p` or `fastcs`,
 and `ophyd-async[ca]` or `ophyd-async[pva]` for the device side; see
 [Write a service](../how-to/write-a-service.md).
 
-## What a launched service is told
+## What a launched service receives
 
-Besides its transport's variables, a launched process is told its name and
-prefix, the ready text of its declaration, and the level the session records
-at. A Python service reads them through the functions of `redsun.services`:
+When the session launches a service, it passes along the service's name and
+prefix, the ready text from its declaration, and the level the session logs
+at, on top of the transport's variables. A Python service reads them through the functions of `redsun.services`:
 [`identity`][redsun.services.identity],
 [`ready`][redsun.services.ready] and
 [`configure_logging`][redsun.services.configure_logging].
@@ -231,10 +231,10 @@ at. A Python service reads them through the functions of `redsun.services`:
 A module serving several sessions names its channels from its identity rather
 than taking arguments for it.
 
-## A service exiting
+## Unexpected exits
 
-A launched service that exits unasked is logged at `ERROR` with its exit code
-and last lines of output, and emits
+If a launched service stops on its own, the session logs it at `ERROR` with
+its exit code and last lines of output, and the service emits
 [`sig_exited`][redsun.services.Service.sig_exited] with its name and code.
 Nothing restarts it. While it is down, reads and writes on its devices raise
 `TimeoutError` after ten seconds; once it is back they answer again without a
@@ -250,14 +250,15 @@ exited. A presenter slot touching anything bound to the main thread declares
 An attached service has no process to watch; an outage shows as timeouts on its
 devices.
 
-## What a service's output becomes
+## Service output
 
-Each line a launched service prints is logged under `redsun.service.<name>` and
-written to its own log file beside the application's. A line that is a JSON log
+Everything a launched service prints ends up in the logs. Each line is
+logged under `redsun.service.<name>` and written to the service's own log
+file, next to the application's. A line that is a JSON log
 record keeps its level and time; any other line is logged at `DEBUG`. See
 [Log from a service](../how-to/configure-logging.md#log-from-a-service).
 
-## What is not here
+## Not supported yet
 
 - **Restarting a crashed service.**
 - **Standby**, a service releasing its hardware while connected, is for now

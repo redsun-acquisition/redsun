@@ -13,7 +13,9 @@ A component asks such a question in `setup`, with a
 [protocol](glossary.md#protocol) describing what it is looking
 for.
 
-## The shape of the parameter is the question
+## Asking with an annotation
+
+The way you annotate a parameter says what you are asking for:
 
 | annotation | what you get |
 | --- | --- |

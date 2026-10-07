@@ -16,7 +16,7 @@ Devices whose moving parts are `ophyd-async` movables, such as a
 `StandardMovable` or an EPICS `Motor`. The Python blocks below are parts of
 one script; the whole script is at the end.
 
-## Which parts are axes
+## How the positioner finds axes
 
 The positioner looks inside every device for its axes. An axis is a part that
 `set` moves, `locate` reports and `subscribe` follows: it satisfies

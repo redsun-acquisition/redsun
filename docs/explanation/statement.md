@@ -15,7 +15,10 @@ graph TD
     redsun -->|assembles| application
 ```
 
-## The role of each part
+## SDK, components and application
+
+`redsun` is both the toolkit you write components with and the application
+that runs them.
 
 - **`redsun` as SDK** provides the patterns components are written in: devices, presenters and views, and the signals, slots and shared values they exchange, so every package is written the same way.
 - **Components** are packages users write: hardware drivers, logic and interfaces built on the `redsun` SDK.
@@ -62,7 +65,7 @@ from you, or from a plugin:
 
 A service that crashes is not restarted, and a program can run only one
 [frontend](glossary.md#frontend).
-[What a running session cannot change](limits.md) explains both.
+[Limitations](limits.md) explains both.
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [micro-manager]: https://micro-manager.org/

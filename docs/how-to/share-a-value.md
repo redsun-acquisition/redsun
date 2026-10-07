@@ -108,6 +108,6 @@ providers:
 - The type is the key. Two components sharing the same type is an error, so
   give distinct values distinct types.
 - A `provides` method returning `X | None` does not make an optional `X`. See
-  [Limits](../explanation/limits.md#a-shared-value-cannot-be-optional).
+  [Limits](../explanation/limits.md#can-a-shared-value-be-optional).
 - Import the type normally, not under `if TYPE_CHECKING:`, since the session
   reads it while running.
