@@ -6,10 +6,11 @@ from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import bluesky.plans as bp
 import pytest
+from annotated_types import Gt
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
@@ -186,6 +187,11 @@ def _gains_plan(gains: dict[str, float] = {"x": 1.0}) -> MsgGenerator[None]:
 
 def _tables_plan(tables: list[dict[str, int]] = [{"a": 1}]) -> MsgGenerator[None]:
     """Take a list of mappings."""
+    yield from ()
+
+
+def _exposure_plan(exposure: Annotated[float, Gt(0)] = 1.0) -> MsgGenerator[None]:
+    """Take an exposure above zero."""
     yield from ()
 
 
@@ -749,6 +755,18 @@ def test_a_problem_inside_a_list_of_mappings_keeps_run_disabled() -> None:
 
     assert (pw.problems, pw.run_button.isEnabled()) == (
         ["tables[0]: empty key"],
+        False,
+    )
+
+
+def test_a_value_at_an_exclusive_bound_keeps_run_disabled() -> None:
+    """Disable Run and say why when a float sits on a bound the spin box allows."""
+    pw = create_plan_widget(create_plan_spec(_exposure_plan, {}))
+
+    pw.container["exposure"].value = 0.0
+
+    assert (pw.problems, pw.run_button.isEnabled()) == (
+        ["exposure: Input should be greater than 0"],
         False,
     )
 

@@ -10,6 +10,8 @@ import types
 from types import NoneType
 from typing import Annotated, Any, Union, get_args, get_origin
 
+import annotated_types as at
+
 
 def safe_issubclass(cls: Any, parent: Any) -> bool:
     """`issubclass` returning `False` instead of raising `TypeError`."""
@@ -24,6 +26,41 @@ def unwrap(ann: Any) -> Any:
     while get_origin(ann) is Annotated:
         ann = get_args(ann)[0]
     return ann
+
+
+def metadata(ann: Any) -> tuple[Any, ...]:
+    """Return the `Annotated` metadata of *ann* at its outer level, none for a bare type."""
+    if get_origin(ann) is not Annotated:
+        return ()
+    return get_args(ann)[1:]
+
+
+def limits_of(items: tuple[Any, ...]) -> list[at.BaseMetadata]:
+    """Return the `annotated-types` limits among *items*, a group such as `Interval` opened."""
+    found: list[at.BaseMetadata] = []
+    for item in items:
+        if isinstance(item, at.GroupedMetadata):
+            found.extend(limits_of(tuple(item)))
+        elif isinstance(item, at.BaseMetadata):
+            found.append(item)
+    return found
+
+
+def has_limits(ann: Any) -> bool:
+    """Return True if *ann* carries an `annotated-types` limit at any level."""
+    if limits_of(metadata(ann)):
+        return True
+    return any(has_limits(arg) for arg in get_args(unwrap(ann)))
+
+
+def max_length(ann: Any) -> int | None:
+    """Return the most items *ann*'s outer limits allow, or `None` without such a limit."""
+    lengths = [
+        limit.max_length
+        for limit in limits_of(metadata(ann))
+        if isinstance(limit, at.MaxLen)
+    ]
+    return min(lengths) if lengths else None
 
 
 def union_members(ann: Any) -> tuple[Any, ...]:

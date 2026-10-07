@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 import pytest
-from magicgui.widgets.bases import BaseValueWidget
+from annotated_types import Ge, Gt, Le, Lt, MaxLen, MultipleOf
+from magicgui.widgets.bases import BaseValueWidget, RangedWidget
 from qtpy import QtWidgets
 
-from redsun.view.qt._value_widgets import problems_of
+from redsun.view.qt._value_widgets import problems_of, widget_options
 from redsun.view.qt._widget_factory import create_param_widget
 from tests.sdk.mocks import param
 from tests.sdk.view.helpers import type_into
@@ -181,3 +184,89 @@ def test_a_union_refuses_a_value_no_member_holds(
 
     with pytest.raises(ValueError, match="no member"):
         widget.value = "soon"
+
+
+@pytest.mark.parametrize(
+    ("annotation", "expected"),
+    [
+        (Annotated[int, Ge(1), Le(9)], {"min": 1, "max": 9}),
+        (Annotated[int, Gt(0), Lt(10)], {"min": 1, "max": 9}),
+        (Annotated[float, Gt(0), Le(10)], {"min": 0, "max": 10}),
+        (Annotated[float, MultipleOf(0.001)], {"step": 0.001}),
+        (Annotated[int, Le(10), {"max": 20}], {"max": 10}),
+        (Annotated[int, {"max": 20}], {"max": 20}),
+    ],
+)
+def test_limits_become_widget_options(
+    annotation: Any, expected: dict[str, Any]
+) -> None:
+    """Turn limits into min, max and step, a limit beating a conflicting dict."""
+    options = widget_options(annotation)
+
+    assert {key: options[key] for key in expected} == expected
+
+
+@pytest.mark.parametrize(
+    ("annotation", "low", "high"),
+    [
+        (float, -math.inf, math.inf),
+        (int, -(2**31), 2**31 - 1),
+    ],
+)
+def test_a_number_without_a_bound_has_no_range_limit(
+    qapp: QtWidgets.QApplication, annotation: Any, low: float, high: float
+) -> None:
+    """Give an unbounded number the widest range its widget allows, not 0 to 999."""
+    widget = build("value", annotation, default=0)
+
+    assert isinstance(widget, RangedWidget)
+    assert (widget.min, widget.max) == (low, high)
+
+
+def test_a_slider_and_a_bool_keep_their_own_range() -> None:
+    """Leave a slider's finite range and a bool's widget alone."""
+    assert "min" not in widget_options(Annotated[float, {"widget_type": "FloatSlider"}])
+    assert widget_options(bool) == {}
+
+
+def test_a_step_with_more_digits_shows_more_decimals(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Show as many decimals as a MultipleOf step needs."""
+    widget = build("exposure", Annotated[float, MultipleOf(0.001)], default=0.001)
+
+    assert widget.native.decimals() == 3
+
+
+def test_a_list_stops_growing_at_its_maximum_length(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Disable the add button once a list holds as many items as its limit allows."""
+    widget = build("points", Annotated[list[float], MaxLen(2)], default=[0.0])
+    [add] = buttons(widget, "+")
+
+    add.click()
+
+    assert not add.isEnabled()
+    [remove, _] = buttons(widget, "-")
+    remove.click()
+    assert add.isEnabled()
+
+
+@pytest.mark.parametrize(
+    ("annotation", "default"),
+    [
+        (Annotated[int, {"choices": [1, 2, 3]}], 2),
+        (Annotated[float, {"choices": [0.5, 1.0]}], 1.0),
+        (Annotated[int, Ge(0), {"choices": [1, 2]}], 2),
+        (Annotated[datetime, Gt(datetime(2020, 1, 1))], datetime(2021, 1, 1)),
+        (Annotated[str, MaxLen(3)], "ab"),
+    ],
+)
+def test_a_widget_that_takes_no_range_still_builds(
+    qapp: QtWidgets.QApplication, annotation: Any, default: Any
+) -> None:
+    """Build a choice box, a date or a text field whose annotation carries limits or choices."""
+    widget = build("value", annotation, default=default)
+
+    assert widget.value == default

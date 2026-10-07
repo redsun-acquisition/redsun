@@ -116,7 +116,7 @@ def make_value_widget(p: ParamDescription) -> mgw.Widget:
     return cast(
         "mgw.Widget",
         create_value_widget(
-            p.annotation, p.default if p.has_default else Undefined, name=p.name
+            p.annotated, p.default if p.has_default else Undefined, name=p.name
         ),
     )
 

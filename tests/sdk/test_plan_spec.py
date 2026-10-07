@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import pytest
+from annotated_types import Ge, Gt, Interval, Le, Len, MaxLen, MinLen, MultipleOf
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 
@@ -30,6 +31,16 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
 
+def _broken_default(frames: Annotated[int, Ge(1)] = 0) -> MsgGenerator[None]:
+    yield from ()
+
+
+def _option_dict(
+    frames: Annotated[int, Ge(1), {"widget_type": "Slider"}] = 1,
+) -> MsgGenerator[None]:
+    yield from ()
+
+
 @pytest.fixture
 def mock_motor() -> XYStage:
     """Single mock motor device."""
@@ -50,6 +61,19 @@ def one_motor(mock_motor: XYStage) -> dict[str, XYStage]:
 
 def _make_spec(*params: ParamDescription) -> PlanSpec:
     return PlanSpec(name="plan", docs="", parameters=list(params))
+
+
+def limited(
+    name: str, annotation: Any, default: Any = Parameter.empty
+) -> ParamDescription:
+    """Describe a parameter whose full annotation is *annotation*."""
+    return ParamDescription(
+        name=name,
+        kind=ParamKind.POSITIONAL_OR_KEYWORD,
+        annotation=annotation,
+        default=default,
+        annotated=annotation,
+    )
 
 
 @pytest.mark.parametrize(
@@ -730,3 +754,166 @@ def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
     assert spec.parameters[0].device_proto is Readable
     camera = one_detector["cam"]
     assert resolved["dets"] == ([camera] if listed else camera)
+
+
+@pytest.mark.parametrize(
+    ("annotation", "value", "lines"),
+    [
+        (Annotated[int, Ge(1)], 0, ["p: Input should be greater than or equal to 1"]),
+        (Annotated[int, Ge(1)], 1, []),
+        (Annotated[float, Gt(0), Le(10)], 0.0, ["p: Input should be greater than 0"]),
+        (
+            Annotated[float, Gt(0), Le(10)],
+            11.0,
+            ["p: Input should be less than or equal to 10"],
+        ),
+        (
+            Annotated[float, Interval(ge=-1, lt=1)],
+            1.0,
+            ["p: Input should be less than 1"],
+        ),
+        (Annotated[float, MultipleOf(0.001)], 0.003, []),
+        (Annotated[int, MultipleOf(2)], 3, ["p: Input should be a multiple of 2"]),
+        (
+            Annotated[str, MinLen(1)],
+            "",
+            ["p: String should have at least 1 character"],
+        ),
+        (
+            Annotated[list[float], MaxLen(2)],
+            [1.0, 2.0, 3.0],
+            ["p: List should have at most 2 items after validation, not 3"],
+        ),
+        (
+            Annotated[list[float], Len(2, 3)],
+            [1.0],
+            ["p: List should have at least 2 items after validation, not 1"],
+        ),
+        (
+            list[Annotated[int, Ge(0)]],
+            [1, -1],
+            ["p[1]: Input should be greater than or equal to 0"],
+        ),
+        (
+            dict[str, list[Annotated[int, Ge(0)]]],
+            {"a": [1, -2]},
+            ["p['a'][1]: Input should be greater than or equal to 0"],
+        ),
+        (Annotated[float, Gt(0)] | None, None, []),
+        (Annotated[float, Gt(0)] | None, 0.0, ["p: Input should be greater than 0"]),
+        (
+            Annotated[float, Gt(0)] | list[Annotated[float, Ge(0)]],
+            0.0,
+            ["p: Input should be greater than 0"],
+        ),
+        (
+            Annotated[float, Gt(0)] | list[Annotated[float, Ge(0)]],
+            [1.0, -1.0],
+            ["p[1]: Input should be greater than or equal to 0"],
+        ),
+        (Annotated[int, Ge(1)], "x", ["p: Input should be a valid integer"]),
+        (int, -5, []),
+    ],
+)
+def test_a_value_is_checked_against_its_limits(
+    annotation: Any, value: Any, lines: list[str]
+) -> None:
+    """Report each limit a value breaks, located inside it, and nothing for a value within them."""
+    assert limited("p", annotation).problems(value) == lines
+
+
+def test_a_limit_that_cannot_apply_to_its_type_is_a_problem() -> None:
+    """Report a limit that does not fit its type as a problem instead of raising."""
+    [line] = limited("p", Annotated[dict[str, int], Ge(0)]).problems({"a": 1})
+
+    assert line.startswith("p: ")
+    assert "ge" in line
+
+
+def test_a_limit_that_cannot_be_built_is_refused() -> None:
+    """Refuse a parameter whose limit cannot be built, with a TypeError naming it."""
+    with pytest.raises(TypeError, match="'p'"):
+        limited("p", Annotated[int, Ge("a")])
+
+
+def test_a_default_breaking_its_limits_refuses_the_plan() -> None:
+    """Refuse a plan whose default breaks its own limits, naming the parameter."""
+    with pytest.raises(
+        ValueError, match="the default of 'frames' breaks its own limits"
+    ):
+        create_plan_spec(_broken_default, {})
+
+
+def test_the_spec_keeps_the_whole_annotation() -> None:
+    """Keep the outer Annotated metadata, option dict included, beside the bare type."""
+    [frames] = create_plan_spec(_option_dict, {}).parameters
+
+    assert frames.annotation is int
+    assert frames.annotated == Annotated[int, Ge(1), {"widget_type": "Slider"}]
+
+
+def test_resolving_a_value_outside_its_limits_is_refused() -> None:
+    """Refuse values outside their limits, listing every broken one."""
+    spec = _make_spec(
+        limited("frames", Annotated[int, Ge(1)]),
+        limited("exposure", Annotated[float, Gt(0)]),
+    )
+
+    with pytest.raises(ValueError) as caught:
+        resolve_arguments(spec, {"frames": 0, "exposure": 0.0}, {})
+
+    assert str(caught.value) == (
+        "frames: Input should be greater than or equal to 1; "
+        "exposure: Input should be greater than 0"
+    )
+
+
+def test_a_device_parameter_is_never_checked_against_limits() -> None:
+    """Leave a device parameter's chosen names unchecked, whatever limits it carries."""
+    detectors = ParamDescription(
+        name="detectors",
+        kind=ParamKind.POSITIONAL_OR_KEYWORD,
+        annotation=Sequence[Readable[Any]],
+        default=Parameter.empty,
+        device_proto=Readable,
+        annotated=Annotated[Sequence[Readable[Any]], MinLen(1)],
+    )
+
+    assert detectors.problems(["cam"]) == []
+
+
+@pytest.mark.parametrize(
+    ("kind", "value", "lines"),
+    [
+        (ParamKind.VAR_POSITIONAL, (1.0, 2.0), []),
+        (
+            ParamKind.VAR_POSITIONAL,
+            (1.0, -2.0),
+            ["values[1]: Input should be greater than or equal to 0"],
+        ),
+        (
+            ParamKind.VAR_POSITIONAL,
+            -2.0,
+            ["values: Input should be greater than or equal to 0"],
+        ),
+        (ParamKind.VAR_KEYWORD, {"a": 1.0}, []),
+        (
+            ParamKind.VAR_KEYWORD,
+            {"a": 1.0, "b": -1.0},
+            ["values['b']: Input should be greater than or equal to 0"],
+        ),
+    ],
+)
+def test_each_value_of_a_variadic_parameter_is_checked(
+    kind: ParamKind, value: Any, lines: list[str]
+) -> None:
+    """Check each item of *args and each value of **kwargs against the limits, not the whole."""
+    values = ParamDescription(
+        name="values",
+        kind=kind,
+        annotation=float,
+        default=Parameter.empty,
+        annotated=Annotated[float, Ge(0)],
+    )
+
+    assert values.problems(value) == lines

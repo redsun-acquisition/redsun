@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 import pytest
+from annotated_types import Ge
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 
@@ -54,7 +55,12 @@ class Plans:
             "pausable": {"plan": self.pausable},
             "read": {"plan": self.read},
             "guarded": {"plan": self.guarded},
+            "limited": {"plan": self.limited},
         }
+
+    def limited(self, frames: Annotated[int, Ge(1)] = 1) -> MsgGenerator[None]:
+        """End at once, taking a frame count of at least one."""
+        yield from ()
 
     def rest(self) -> MsgGenerator[None]:
         """End at once."""
@@ -218,6 +224,19 @@ def test_values_the_plan_cannot_take_are_reported_and_not_run(
     assert [r.exc_info for r in caplog.records if r.levelname != "DEBUG"] == [None]
 
 
+def test_a_value_outside_its_limits_is_refused_before_launch(
+    presenter: AcquisitionPresenter,
+) -> None:
+    """Report a plan failed with the broken limit, and start nothing."""
+    seen, _ = record(presenter)
+
+    presenter.launch("limited", {"frames": 0})
+
+    assert seen == [
+        ("failed", "limited", "frames: Input should be greater than or equal to 1")
+    ]
+
+
 def test_a_launch_while_a_plan_runs_is_refused(
     presenter: AcquisitionPresenter, plans: Plans, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -301,6 +320,7 @@ def test_a_plan_no_widget_can_show_is_left_out(
         "pausable",
         "read",
         "guarded",
+        "limited",
     }
     assert ("'odd'" in warnings, "'flat'" in warnings) == (True, True)
 

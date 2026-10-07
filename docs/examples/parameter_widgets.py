@@ -5,8 +5,9 @@ from __future__ import annotations
 import enum
 from collections.abc import Sequence  # noqa: TC003
 from functools import cached_property
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
+from annotated_types import Ge, Gt, Le, MaxLen, MultipleOf
 from bluesky.protocols import Movable, Readable  # noqa: TC002
 from bluesky.utils import MsgGenerator  # noqa: TC002
 from ophyd_async.core import (
@@ -93,6 +94,16 @@ def pause_between(delay: float | list[float] = 0.0) -> MsgGenerator[None]:
     yield from ()
 
 
+# --8<-- [start:limits]
+def expose(
+    frames: Annotated[int, Ge(1)] = 1,
+    exposure: Annotated[float, Gt(0), Le(10), MultipleOf(0.001)] = 0.1,
+    points: Annotated[list[float], MaxLen(3)] = [0.0, 1.0],
+) -> MsgGenerator[None]:
+    # --8<-- [end:limits]
+    yield from ()
+
+
 PLANS = {
     "values": snap,
     "choices": bin_frames,
@@ -101,6 +112,7 @@ PLANS = {
     "optional": acquire,
     "mapping": amplify,
     "union": pause_between,
+    "limits": expose,
 }
 """Each tab of the reference section, with the plan it pictures."""
 
