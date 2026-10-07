@@ -4,16 +4,17 @@ icon: lucide/play
 
 # How to run a plan from a presenter
 
-Offer a [plan](../explanation/glossary.md#plan) from a component, run it on a
-[`RunEngine`](../explanation/glossary.md#runengine) in a presenter, and show
-its [plan widget](../explanation/glossary.md#plan-widget) in a view.
+This guide shows how to offer a [plan](../explanation/glossary.md#plan) from a
+component, run it on a [`RunEngine`](../explanation/glossary.md#runengine) in a
+presenter, and show its [plan widget](../explanation/glossary.md#plan-widget)
+in a view.
 [How presenters run plans](../explanation/plans.md) explains how the three
 components work together.
 
 ## Prerequisites
 
-A Qt session with a device for the plan to move. Here it is `MyMotor`, a
-device with a `position` signal. The tutorial
+You need a Qt session with a device for the plan to move. Here it is `MyMotor`,
+a device with a `position` signal. The tutorial
 [Building controls for a plan](../tutorials/plan-controls.md) builds the same
 three components one step at a time.
 
@@ -47,12 +48,12 @@ class MyController:
         return {"walk": {"plan": self.walk}}
 ```
 
-Annotate every parameter with a type a plan widget can show; the list is in
+Annotate every parameter with a type a plan widget can show. The list is in
 [How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read),
 and [How to choose the inputs of a plan](choose-plan-inputs.md) shows the
-inputs a few signatures get.
-A device parameter takes a device class or a runtime-checkable protocol, and
-the user chooses among the devices of the session that match it.
+inputs a few signatures get. A device parameter takes a device class or a
+runtime-checkable protocol, and the user chooses among the devices of the
+session that match it.
 
 ## Run them in a presenter
 
@@ -105,11 +106,11 @@ class PlanPresenter(Loggable):
         future.add_done_callback(lambda _: self.sig_finished.emit())
 ```
 
-- `providers` is answered with every component that satisfies `HasPlans`, by
-  name. See [Questions](../explanation/questions.md).
+- The session answers `providers` with every component that satisfies
+  `HasPlans`, by name. See [Questions](../explanation/questions.md).
 - Catching `UnresolvableAnnotationError` leaves out a plan whose parameters no
-  plan widget can show, and `ValueError` one declaring two actions of one
-  name. The other plans are kept.
+  plan widget can show, and catching `ValueError` leaves out one declaring two
+  actions of one name. The other plans stay.
 - `sig_finished` is sent when the plan ends, whether it succeeded or failed.
 
 To run the plans with document callbacks, ask `setup` for
@@ -169,10 +170,10 @@ class PlanView(QWidget):
         self.setEnabled(True)
 ```
 
-The combo box chooses which plan widget the stacked widget shows.
-`PlanWidget.parameters` holds the values the user chose, with each device
-given by its name. The view stays disabled until the presenter reports that
-the plan ended.
+The combo box chooses which plan widget the stacked widget shows, and
+`PlanWidget.parameters` holds the values the user chose, with each device given
+by its name. The view stays disabled until the presenter reports that the plan
+ended.
 
 ## Declare and link them
 
@@ -194,10 +195,10 @@ class MyApp(QtSession):
         yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
 ```
 
-No link names `ctrl`: the session hands it to the presenter and the view in
-`setup`. Another component with a `plan_map` adds its plans to both, with no
-change to either.
+No link names `ctrl`, because the session hands it to the presenter and the
+view in `setup`. Another component with a `plan_map` adds its plans to both,
+with no change to either.
 
-A plan that runs until the user stops it needs more from the presenter and
-the view; see
+A plan that runs until the user stops it needs more from the presenter and the
+view. See
 [How to write a plan that runs until stopped](write-a-continuous-plan.md).

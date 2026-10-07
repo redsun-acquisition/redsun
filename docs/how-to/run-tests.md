@@ -4,7 +4,7 @@ icon: lucide/flask-conical
 
 # How to run the tests
 
-Run the `redsun` test suite, type-check it against both
+Here you run the `redsun` test suite, type-check it against both
 [Qt bindings](../explanation/glossary.md#qt-binding), and produce coverage
 reports.
 
@@ -50,19 +50,19 @@ uv run tox -e tests -- tests/test_container.py::test_function_name
 uv run tox -e tests -- -k "test_wiring"
 ```
 
-The project environment skips the sync, so it is faster while editing:
+The project environment skips the sync, so it's faster while editing:
 
 ```bash
 uv run pytest tests/sdk/ -x
 ```
 
-Tests marked `@pytest.mark.qt` are skipped when no display is available.
+Tests marked `@pytest.mark.qt` are skipped when there's no display.
 
 ## Run the tests against a service outside the process
 
 Tests marked `@pytest.mark.compose` talk to an
 [IOC](../explanation/glossary.md#ioc) in a container started from
-`tests/compose/compose.yaml`. They are skipped unless `REDSUN_COMPOSE` is set,
+`tests/compose/compose.yaml`. They're skipped unless `REDSUN_COMPOSE` is set,
 so the rest of the suite needs no container runtime. With Docker running:
 
 ```bash
@@ -89,9 +89,11 @@ Each environment installs only its own binding and sets `QT_API`, which
 selects the branches `qtpy` shows the type checker. A green `mypy-pyqt` says
 nothing about `mypy-pyside`.
 
-Running `mypy` in the project environment is not the same check: that
-environment holds both bindings, so it reports errors neither binding has on
-its own and can miss errors CI catches.
+!!! warning "`mypy` in the project environment gives different results"
+
+    The project environment holds both bindings, so `mypy` there reports errors
+    neither binding has on its own and can miss errors CI catches. Run the
+    `tox` environments instead.
 
 ## Generate a coverage report
 

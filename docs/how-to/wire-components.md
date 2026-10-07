@@ -4,13 +4,13 @@ icon: lucide/cable
 
 # How to wire components together
 
-Components do not connect themselves. A presenter declares
+Components don't connect themselves. A presenter declares
 [signals](../explanation/glossary.md#signal), a view declares signals and
 [slots](../explanation/glossary.md#slot), and the
 [session](../explanation/glossary.md#session) says which signal reaches which
 slot.
 
-You can write the connections in the session class or in the session file;
+You can write the connections in the session class or in the session file, and
 each example below shows both. Picking a tab switches every tab on the site to
 the same form.
 
@@ -24,8 +24,9 @@ the same form.
 
 ## Mark a method as a slot
 
-Decorate it with [`slot`][redsun.slot]. Only marked methods can be connected,
-so marking one makes its name and arguments public.
+Decorate a method with [`slot`][redsun.slot] to let the session connect to it.
+Only marked methods can be connected, so marking one makes its name and
+arguments public.
 
 ```python
 from typing import Any
@@ -84,7 +85,7 @@ class DetectorPresenter:
     def configure(self, settings: dict[str, Any]) -> None: ...
 ```
 
-The examples below connect this presenter and the view above, together with a
+The examples below connect this presenter to the view above, and to a
 `DetectorView` that sends `sig_property_changed`.
 
 ## Declare the connections
@@ -92,8 +93,8 @@ The examples below connect this presenter and the view above, together with a
 === "Session class"
 
     Every component exists when `wire` runs, under the attribute it was declared
-    as. `wire` is a generator: yield a signal and the slot it reaches, one pair
-    per link.
+    as. `wire` is a generator, so you yield a signal and the slot it reaches,
+    one pair per link.
 
     ```python
     from collections.abc import Iterator
@@ -113,8 +114,8 @@ The examples below connect this presenter and the view above, together with a
     ```
 
     Each attribute has the type it was declared with, so a misspelled signal is a
-    type error before the program runs. A `wire` that returns `None`, an
-    ordinary method with no `yield`, raises [`WiringError`][redsun.WiringError].
+    type error before the program runs. If `wire` is an ordinary method with no
+    `yield`, it returns `None` and raises [`WiringError`][redsun.WiringError].
 
 === "Session file"
 
@@ -143,18 +144,19 @@ The examples below connect this presenter and the view above, together with a
       det_widget.sig_property_changed: det_ctrl.configure
     ```
 
-    A signal's port is its attribute name; a slot's port is the name the slot
-    declares.
+    A signal's port is its attribute name, and a slot's port is the name the
+    slot declares.
 
-A session may use both: `wire` runs first, then the `wiring` section. The
-[path provider](../explanation/glossary.md#path-provider) can be wired too, as
+A session may use both, and `wire` runs first, then the `wiring` section. You
+can wire the [path provider](../explanation/glossary.md#path-provider) too, as
 `path_provider`.
 
-!!! warning "Call a component or connect to it, not both"
+!!! warning "Calling and connecting the same action"
 
-    A component can reach another in two ways. It can ask for it in `setup`
+    A component can reach another in two ways: it can ask for it in `setup`
     and call its methods, or it can send a signal that the session connects
-    to one of its slots. Use one way for one action. This view uses both:
+    to one of its slots. This view uses both for one action, so each click
+    moves the stage twice. Use one way for one action:
 
     ```python
     class StageView(QWidget):
@@ -176,17 +178,16 @@ A session may use both: `wire` runs first, then the `wiring` section. The
             yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
     ```
 
-    Each click moves the stage twice. The session cannot see which methods a
-    component calls, so when it builds it names every component that holds
-    another and is also connected to it:
+    The session can't see which methods a component calls, so when it builds it
+    names every component that holds another and is also connected to it:
 
     ```text
     'stage_view' holds 'stage_ctrl' and is also connected to it; a bundle reaches a component one way, by calling it or by a signal
     ```
 
-    The two ways may also do different things, which is allowed: the warning
-    asks you to check. Asking for a value a component shares, such as a
-    `PlanSpec`, is not holding the component and logs nothing.
+    The two ways may also do different things, which is allowed, and the log
+    line only asks you to check. Asking for a value a component shares, such as
+    a `PlanSpec`, doesn't count as holding the component and logs nothing.
 
 ## Connect a coroutine
 
@@ -199,7 +200,7 @@ class MotorPresenter:
         await self.devices[motor].set(position)
 ```
 
-It is delivered differently from a plain method:
+The session delivers it differently from a plain method:
 
 - it runs on `redsun`'s shared event loop, not on the thread that emitted;
 - the emitter does not wait for it to finish;
@@ -207,9 +208,9 @@ It is delivered differently from a plain method:
 
 If you need the emitter to wait, connect a plain method that calls
 `run_coro(...)` from `redsun.aio` instead. To stop a task such a slot started,
-for instance from a stop button, use `cancel_task(task)` from `redsun.aio`: called
-from another thread, it waits for the task to pause rather than cancelling it
-while it runs.
+for instance from a stop button, use `cancel_task(task)` from `redsun.aio`.
+Called from another thread, it waits for the task to pause rather than
+cancelling it while it runs.
 
 Every session installs the async backend `psygnal` needs for coroutine slots
 when it is built, and removes it at shutdown.
@@ -252,8 +253,8 @@ component owns the signal.
 
 ## Choose the thread a slot runs on
 
-A slot runs on the thread that emitted, unless something says otherwise. In
-order, the thread comes from:
+A slot runs on the thread that emitted, unless something says otherwise. The
+session looks for the thread in this order:
 
 1. `@slot(thread=...)`, for one method;
 2. `__redsun_slot_thread__` on the class, for every slot of it;
@@ -262,7 +263,7 @@ order, the thread comes from:
    widget's slots on the main thread, since a widget may only be used from
    there.
 
-A session with no frontend asks nothing at the third step. A slot that is a
+A session with no frontend skips the third step. A slot that is a
 coroutine function runs on the session's event loop whatever the frontend.
 
 ## Observe a device signal
@@ -317,9 +318,9 @@ det_widget.sig_action_request -> det_ctrl.request
 
 ## Find what is not connected
 
-A wrong port name fails the build. A forgotten connection fails nowhere: the
-signal just reaches nothing. [`unconnected`][redsun.Session.unconnected]
-finds it:
+A wrong port name fails the build, but a forgotten connection fails nowhere,
+because the signal just reaches nothing.
+[`unconnected`][redsun.Session.unconnected] finds it:
 
 ```python
 print(app.unconnected)
@@ -335,9 +336,9 @@ uses.
 
 ## Read a failure
 
-A wrong connection stops the build and names both ends. A connection to a
-component that failed to build is the exception: it is logged and skipped,
-and the other connections are still made.
+A wrong connection stops the build and names both ends. The exception is a
+connection to a component that failed to build: the session logs it, skips it
+and still makes the other connections.
 
 ```text
 Not connecting mover.sig_moved -> panel.on_moved: component 'panel' was not built
@@ -357,8 +358,8 @@ Not connecting mover.sig_moved -> panel.on_moved: component 'panel' was not buil
 
 ## Pair two components
 
-Two components whose slots name the signals of the other are connected
-with one line, `pairs: - [a, b]` in the file or
+Two components whose slots name the signals of the other connect with one
+line, `pairs: - [a, b]` in the file or
 `yield from links_between(self.a, self.b)` in `wire`. The `pairs` section
 runs after `wiring`. [Offer a pairing](offer-a-pairing.md) shows how a
 component offers one.

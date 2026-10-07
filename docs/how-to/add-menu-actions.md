@@ -5,8 +5,8 @@ icon: lucide/menu
 # How to add menu actions to a Qt session
 
 A Qt session can offer commands in its menus and toolbars without a view for
-each: "turn on verbose logging", "open the data folder". You list them in the
-`actions` section of the session file.
+each, such as "turn on verbose logging" or "open the data folder". You list
+them in the `actions` section of the session file.
 
 ## Declare an action
 
@@ -26,13 +26,13 @@ actions:
 - `menus` lists the menus the command appears in, by menu id.
 
 The session reads the section while it builds, and registers every action on
-the app-model `Application` it owns. Reading the section imports nothing: the
-callback is imported the first time someone runs the command.
+the app-model `Application` it owns. Reading the section imports nothing, so
+the callback is imported the first time someone runs the command.
 
 ## Write the callback
 
-A callback is an ordinary function. Its parameters are filled by type from
-the same values the components were built from, so it can ask for the
+A callback is an ordinary function. The session fills its parameters by type
+from the same values the components were built from, so it can ask for the
 session's [`Settings`][redsun.Settings], a
 [shared value](../explanation/glossary.md#shared-value), or the devices:
 
@@ -49,8 +49,8 @@ def enable_debug_logging() -> None:
 
 ## Show the menu
 
-An action appears in a menu only when the window shows that menu. Show it
-from a `configure_main_view` [hook](install-hooks.md), which receives the main
+An action appears in a menu only when the window shows that menu, so show the
+menu from a `configure_main_view` [hook](install-hooks.md), which receives the main
 window:
 
 ```python

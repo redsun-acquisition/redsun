@@ -6,13 +6,13 @@ icon: lucide/anchor
 
 A [hook](../explanation/glossary.md#hook) acts on the session's toolkit, not on
 a component: it makes the application object, styles every window, or shows a
-splash screen while the session builds. It is an ordinary class, and it never
-changes what the session builds.
+splash screen while the session builds. A hook is an ordinary class, and it
+never changes what the session builds.
 
 Each [hook point](../explanation/glossary.md#hook-point) is named after the
 method it calls, and a session installs one provider per point. You can name a
-provider in the session class or in the session file; each example below shows
-both. Picking a tab switches every tab on the site to the same form.
+provider in the session class or in the session file, and each example below
+shows both. Picking a tab switches every tab on the site to the same form.
 
 === "Session class"
 
@@ -38,13 +38,13 @@ A provider serves a point by having the method of its protocol. It may
 inherit from the protocol too, which lets a type checker hold it to the
 signature.
 
-All five belong to the Qt frontend, so they work on a
+All five belong to the Qt frontend, so they only work on a
 [`QtSession`][redsun.qt.QtSession]. A plain [`Session`][redsun.Session] calls
 no hook points and refuses a hook.
 
 ## Write a provider
 
-A class with the point's method:
+A provider is a class with the point's method:
 
 ```python
 from qtpy.QtWidgets import QApplication
@@ -58,7 +58,7 @@ class DarkTheme:
         app.setStyleSheet(f"QWidget {{ background: #202020; color: {self.accent}; }}")
 ```
 
-It inherits nothing: having the method is enough.
+It doesn't inherit from anything, because having the method is enough.
 
 ## Install it
 
@@ -118,7 +118,7 @@ It inherits nothing: having the method is enough.
 ## Serve more than one hook point
 
 A provider that keeps something between two points is installed at both as
-one object.
+one object, so the state it keeps is shared.
 
 === "Session class"
 
@@ -153,9 +153,10 @@ one object.
 
 ## Show a splash screen during the build
 
-`during_build` covers a span of time, not a moment. It returns a context
-manager, entered before the first build step and closed after the last. What
-it yields is called with each step's name as the step starts:
+`during_build` covers a span of time, not a moment, so it returns a context
+manager that the session enters before the first build step and closes after
+the last. The session calls what the manager yields with each step's name as
+the step starts:
 
 ```python
 from collections.abc import Callable, Generator
@@ -187,8 +188,8 @@ class Splash:
             screen.close()
 ```
 
-Check the image in the constructor: a missing file gives an empty `QPixmap`
-instead of an error, and a splash that shows nothing.
+Check the image in the constructor, because a missing file gives an empty
+`QPixmap` instead of an error, and a splash that shows nothing.
 
 The steps reported are those in `BUILD_STEPS`:
 
@@ -198,9 +199,8 @@ from redsun.session import BUILD_STEPS
 
 Size a progress bar from `len(BUILD_STEPS)` rather than counting by hand, so
 it stays right when the steps change. Each step is reported when it starts,
-so fill the bar to the end after the `yield`.
-
-The `finally` closes the splash even when the build fails.
+so fill the bar to the end after the `yield`. The `finally` closes the splash
+even when the build fails.
 
 ## Undo what a hook did
 

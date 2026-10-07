@@ -4,7 +4,8 @@ icon: lucide/compass
 
 # How-to Guides
 
-Practical step-by-step guides for one task each.
+Each guide walks you through one task, step by step. If you're new to
+`redsun`, the [tutorials](../tutorials/index.md) are a better place to start.
 
 ### Install
 
@@ -12,8 +13,8 @@ Practical step-by-step guides for one task each.
 
 ### Build a session
 
-Learn how to write the parts of a
-[session](../explanation/glossary.md#session) and put them together.
+Write the parts of a [session](../explanation/glossary.md#session) and put
+them together.
 
 - [How to write a component](write-a-component.md)
 - [How to write a service](write-a-service.md)
@@ -32,8 +33,7 @@ Learn how to write the parts of a
 
 ### Extend the window
 
-Learn how to change what a Qt session shows, without changing what it
-builds.
+Change what a Qt session shows, without changing what it builds.
 
 - [How to place a view in the window](place-a-view.md)
 - [How to write a frontend](write-a-frontend.md)
@@ -42,7 +42,7 @@ builds.
 
 ### Run a session
 
-Learn how to run a session, follow what it does and keep its settings.
+Run a session, follow what it does and keep its settings.
 
 - [How to run a session without a GUI](run-without-a-gui.md)
 - [How to run a session without hardware](run-without-hardware.md)
@@ -54,8 +54,9 @@ Learn how to run a session, follow what it does and keep its settings.
 
 ### Store data
 
-Learn how to keep a [catalog](../explanation/glossary.md#catalog) of runs and
-write what is computed from them.
+Choose where acquisition files go, keep a
+[catalog](../explanation/glossary.md#catalog) of runs, and write what you
+compute from them.
 
 - [How to choose where acquisition files go](choose-where-files-go.md)
 - [How to keep a catalog of runs](keep-a-catalog.md)
@@ -63,11 +64,11 @@ write what is computed from them.
 
 ### Upgrade
 
-Learn how to move code written for an earlier release.
+Move code written for an earlier release to this one.
 
 - [How to migrate from 0.13](migrate-from-0.13.md)
 
 ### Contribute
 
-The guides for changing `redsun` itself are in a section of their own,
+The guides for changing `redsun` itself have a section of their own,
 [Contributing](contribute.md).

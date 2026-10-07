@@ -4,14 +4,15 @@ icon: lucide/mouse-pointer-click
 
 # How to follow a plan action from a view
 
-Show a button for each action of a plan, ask for the action when the button
-is pressed, and set the button from what the plan answers.
+This guide shows how to show a button for each action of a plan, ask for the
+action when the button is pressed, and set the button from what the plan
+answers.
 [How presenters run plans](../explanation/plans.md#following-an-action-from-a-view)
 explains the states an action goes through.
 
 ## Prerequisites
 
-A component that offers a plan declaring actions, and owns the
+You need a component that offers a plan declaring actions, and owns the
 `ActionManager` the plan waits on. See
 [In-flight actions](../explanation/plans.md#in-flight-actions).
 
@@ -51,9 +52,8 @@ class MyView(QWidget):
 
 `ask` and `ask_or_release` are the `action_clicked_callback` and
 `action_toggled_callback` of the [plan widget](../explanation/qt-widgets.md#plan-widgets),
-here `self.widget`. `release` shows a button released without emitting
-`toggled`, which unchecking it would: the view would then ask an action that
-already ended to end.
+here `self.widget`. `release` shows a button released without emitting `toggled`, which unchecking
+it would, and the view would then ask an action that already ended to end.
 
 ## Link the view and the component
 
@@ -69,11 +69,12 @@ class MyApp(QtSession):
         yield self.ctrl.actions.sig_changed, self.panel.on_action_changed
 ```
 
-The `wiring` section of a session file cannot make these links. A path there
-is `component.port`, and the ports of a component do not include those of an
-object it holds.
+!!! warning "The `wiring` section can't make these links"
 
-The session records an `ActionManager` under the name of the component holding it,
-so the two links are recorded as `panel.sig_action_request -> ctrl.request`
+    A path in `wiring` is `component.port`, and the ports of a component don't
+    include those of an object it holds. Make the links in `wire`.
+
+The session records an `ActionManager` under the name of the component holding
+it, so it records the two links as `panel.sig_action_request -> ctrl.request`
 and `ctrl.sig_changed -> panel.on_action_changed`. See
 [Inspect what is connected](../how-to/wire-components.md#inspect-what-is-connected).

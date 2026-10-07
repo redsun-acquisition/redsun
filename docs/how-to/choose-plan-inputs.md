@@ -5,18 +5,18 @@ icon: lucide/sliders-horizontal
 # How to choose the inputs of a plan
 
 A plan widget gives each parameter of a plan an input chosen by the
-parameter's annotation, and the input starts from the parameter's default.
-Pick the annotation for the input you want.
+parameter's annotation, and the input starts from the parameter's default. This
+guide shows which annotation gives which input.
 
 ## Prerequisites
 
-A plan a presenter offers, as in
+You need a plan a presenter offers, as in
 [How to run a plan from a presenter](run-a-plan.md).
 
 ## Annotate each parameter
 
-Device parameters go to the *Devices* group, the others to *Parameters*.
-Each tab shows a signature and the inputs it gets.
+The plan widget puts device parameters in the *Devices* group and the others
+in *Parameters*. Each tab shows a signature and the inputs it gets.
 
 === "Numbers and text"
 
@@ -95,23 +95,23 @@ Each tab shows a signature and the inputs it gets.
       ![A combo box choosing float or list of float above a spin box](images/parameters-union-dark.png#only-dark)
     </figure>
 
-Lists, sets, mappings, fixed-length tuples, optional values and unions nest:
-a `dict[str, list[float]]` is a table whose values are lists. Every
-annotation an input can show, and the shapes it cannot, are listed in
+Lists, sets, mappings, fixed-length tuples, optional values and unions nest,
+so a `dict[str, list[float]]` is a table whose values are lists. Every
+annotation an input can show, and the shapes it can't, are listed in
 [How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read).
 
 ## Limit the values a parameter takes
 
-Most plan parameters only make sense in a range. A camera cannot expose for
-0 seconds, and a scan needs at least one frame. Without limits, the plan
-widget accepts any number. A wrong value is then found only when the plan
-runs: the plan raises, or a device refuses the value partway through.
+Most plan parameters only make sense in a range. A camera can't expose for 0
+seconds, and a scan needs at least one frame. Without limits, the plan widget
+accepts any number, and you find a wrong value only when the plan runs, when
+the plan raises or a device refuses the value partway through.
 
-Write the limits in the plan's signature instead, with
+To avoid that, write the limits in the plan's signature with
 [`annotated-types`](https://github.com/annotated-types/annotated-types). The
-plan widget stops each input at its limits, and shows why Run is disabled
-while a value is outside them. The presenter checks the same limits, so a
-plan started from code gets the same protection:
+plan widget stops each input at its limits, and shows why Run is disabled while
+a value is outside them. The presenter checks the same limits, so a plan
+started from code gets the same protection:
 
 ```{.python}
 --8<-- "docs/examples/parameter_widgets.py:limits"
@@ -130,28 +130,30 @@ plan started from code gets the same protection:
 | `MaxLen`, `Len` | a list or a mapping stops adding rows at the maximum |
 | `MinLen`, a text too long | a problem |
 
-The limits work inside other types too: `list[Annotated[float, Ge(0)]]`
-limits every item. A `float` with no limit can take any value, and an `int`
-any value a 32-bit integer can hold.
+The limits work inside other types too, so `list[Annotated[float, Ge(0)]]`
+limits every item. A `float` with no limit can take any value, and an `int` any
+value a 32-bit integer can hold.
 
-A plan whose default breaks its own limits is left out when the session
-builds, and the log says which limit it breaks.
+!!! warning "A default that breaks its own limits drops the plan"
 
-A `magicgui` option dict in the annotation still shapes the input, for
-example `{"widget_type": "Slider"}`. Where it gives a bound that a limit also
-gives, the limit wins.
+    The session leaves the plan out when it builds, and the log says which
+    limit the default breaks. Pick a default inside the limits.
+
+A `magicgui` option dict in the annotation still shapes the input, for example
+`{"widget_type": "Slider"}`. Where it gives a bound that a limit also gives,
+the limit wins.
 
 ## Leave a parameter out
 
-A parameter no input can show, such as `md: dict[str, Any] | None = None`, is
-left out of the plan widget, and the plan keeps its default. Without a
+The plan widget leaves out a parameter no input can show, such as
+`md: dict[str, Any] | None = None`, and the plan keeps its default. Without a
 default, `create_plan_spec` refuses the whole plan with
 [`UnresolvableAnnotationError`][redsun.presenter.plan_spec.UnresolvableAnnotationError].
 
 ## See why Run is disabled
 
-While an input holds a value the plan cannot take, such as a repeated mapping
-key, a value outside its limits or no device chosen, Run stays disabled and the first reason shows under
-the parameters.
-[`PlanWidget.problems`][redsun.view.qt.utils.PlanWidget.problems] lists
-every reason.
+While an input holds a value the plan can't take, such as a repeated mapping
+key, a value outside its limits or no device chosen, Run stays disabled and the
+first reason shows under the parameters.
+[`PlanWidget.problems`][redsun.view.qt.utils.PlanWidget.problems] lists every
+reason.

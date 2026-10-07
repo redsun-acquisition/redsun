@@ -18,11 +18,11 @@ uv run tox -e docs
 
 This builds the site, then runs `scripts/check_xrefs.py`, which reports every
 cross-reference that resolves to nothing. `zensical build` alone passes with
-such references, so prefer the `tox` environment. It installs what the docs
-need by itself, from `uv.lock`.
+such references, so prefer the `tox` environment, which also installs what the
+docs need from `uv.lock`.
 
-Zensical lives in the `docs` dependency group, which `dev` does not include,
-so a command running it directly names the group:
+Zensical is in the `docs` dependency group, which `dev` doesn't include, so a
+command that runs it directly names the group:
 
 ```bash
 uv run --group docs zensical build     # build only, no cross-reference check
@@ -46,10 +46,10 @@ build runs the script and saves a picture of the window it opens:
 uv run --group docs python scripts/screenshots.py
 ```
 
-`uv run tox -e docs` runs this first. When serving the site with `zensical
+`uv run tox -e docs` runs this first. If you serve the site with `zensical
 serve`, run it once yourself, or the tutorial shows a missing image. The
-pictures are generated, so they are not in git. The window opens on screen
-for a moment, and needs a display: CI starts a virtual one.
+pictures are generated, so they aren't in git. The window opens on screen for a
+moment and needs a display, which CI provides with a virtual one.
 
 To add a picture, add the script and the image's path to `SCREENSHOTS` in
 `scripts/screenshots.py`.

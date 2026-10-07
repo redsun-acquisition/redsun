@@ -11,11 +11,10 @@ An [ADR](../explanation/glossary.md#adr) records one decision about how
 ## When to write one
 
 Write one when a change decides how parts of `redsun` fit together, and a
-future contributor would otherwise ask "why is it like this?". For example:
+future contributor would otherwise ask "why is it like this?". Examples are
 the order a build runs in, what a component may ask for, or where acquisition
-files are written.
-
-A bug fix or a new option that follows an existing decision does not need one.
+files are written. A bug fix, or a new option that follows an existing
+decision, doesn't need one.
 
 ## How to write one
 
@@ -28,5 +27,5 @@ A bug fix or a new option that follows an existing decision does not need one.
 
 ## Changing a decision
 
-An accepted ADR is never edited. Write a new one that replaces it, and set
-the old one's status to "Superseded by" with a link to the new one.
+Don't edit an accepted ADR. Write a new one that replaces it, and set the old
+one's status to "Superseded by" with a link to the new one.

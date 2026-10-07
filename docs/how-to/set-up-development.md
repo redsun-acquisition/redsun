@@ -4,7 +4,7 @@ icon: lucide/wrench
 
 # How to set up a development environment
 
-Get a copy of `redsun` you can change and test.
+These steps give you a copy of `redsun` you can change and test.
 
 ## Clone and install
 
@@ -23,7 +23,7 @@ pip install -e . --group dev
 
 ## Install the git hook
 
-Once per clone, so formatting and lint run on every commit:
+Do this once per clone, so formatting and lint run on every commit:
 
 ```bash
 uv run prek install
@@ -39,5 +39,5 @@ uv run tox
 
 This runs every check CI runs: lint, type checks against both
 [Qt bindings](../explanation/glossary.md#qt-binding), the tests and the docs
-build. Each one gets its own environment built from `uv.lock`, so your result
-matches CI's. [Run tests](run-tests.md) explains each environment.
+build. Each check gets its own environment built from `uv.lock`, so your
+result matches CI's. [Run tests](run-tests.md) explains each environment.

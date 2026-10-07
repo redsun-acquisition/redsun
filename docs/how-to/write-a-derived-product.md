@@ -4,35 +4,36 @@ icon: lucide/layers
 
 # How to write a derived product
 
-A component computing something from a [run](../explanation/glossary.md#run), a
-median over a scan or a filtered copy of each frame, writes it against the
-store the device wrote. The acquisition belongs to the service and its device
-([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md));
-a derived product is the one thing `redsun` writes.
+A component that computes something from a [run](../explanation/glossary.md#run),
+such as a median over a scan or a filtered copy of each frame, writes the result
+against the store the device wrote. The acquisition belongs to the service and
+its device
+([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md)),
+so a derived product is the one thing `redsun` writes.
 [Derived products](../explanation/derived-products.md) says why a product is
 handed over rather than carried by a
 [document](../explanation/glossary.md#document).
 
 ## Install the extra
 
-`zarr` brings `acquire-zarr`, which every product needs. `ome-zarr` brings
-`ome-writers[acquire-zarr]` as well, needed only to write beside an OME-Zarr
-image.
+The `zarr` extra brings `acquire-zarr`, which every product needs. The
+`ome-zarr` extra also brings `ome-writers[acquire-zarr]`, which you need only to
+write beside an OME-Zarr image.
 
 ```bash
 pip install "redsun[zarr]"
 pip install "redsun[ome-zarr]"
 ```
 
-Without `acquire-zarr`, importing `redsun.writers` raises
-`ImportError` naming the extra. Without `ome-writers`, the first product
-placed beside an image does.
+Without `acquire-zarr`, importing `redsun.writers` raises `ImportError` naming
+the extra. Without `ome-writers`, the first product placed beside an image
+raises it.
 
 ## Declare each product before the run
 
-A [`Writer`][redsun.writers.Writer] holds every product a component
-writes. Declare them in the constructor, since a store's arrays are all sized
-when its stream opens:
+A [`Writer`][redsun.writers.Writer] holds every product a component writes.
+Declare them in the constructor, because a store's arrays are all sized when
+its stream opens:
 
 ```python
 from collections.abc import Sequence
@@ -53,15 +54,15 @@ class MedianPresenter(DocumentRouter):
             self._writer.derive(f"{source}_filtered", source=source)
 ```
 
-`sources` holds the [data keys](../explanation/glossary.md#data-key) to
-compute from. It comes from the session file, like any other argument of a
+`sources` holds the [data keys](../explanation/glossary.md#data-key) to compute
+from, and it comes from the session file like any other argument of a
 component.
 
-`derive` takes the layout and the store from the run: the `descriptor`
-naming `source` gives the frame shape and dtype, the `stream_resource`
-naming it gives the store. A key described as `external: STREAM:` leads
-its shape with the frames per event, which is dropped. `declare` gives both up front, for a product the
-run says nothing about:
+`derive` takes the layout and the store from the run. The `descriptor` naming
+`source` gives the frame shape and dtype, and the `stream_resource` naming it
+gives the store. A key described as `external: STREAM:` leads its shape with
+the frames per event, which `derive` drops. For a product the run says nothing
+about, `declare` gives both up front:
 
 ```python
 self._writer.declare("mask", shape=(512, 512), dtype="uint8", store=store_uri)
@@ -69,9 +70,9 @@ self._writer.declare("mask", shape=(512, 512), dtype="uint8", store=store_uri)
 
 ## Forward the documents
 
-The writer learns the run from its documents. Forward each one after the
-component's own dispatch, so the writer sees `stop` after the component
-wrote what it computes there:
+The writer learns about the run from its documents, so forward each one after
+the component's own dispatch. That way the writer sees `stop` only after the
+component has written what it computes there:
 
 ```python
 def __call__(self, name: str, doc: dict[str, Any], validate: bool = False) -> Any:
@@ -82,10 +83,10 @@ def __call__(self, name: str, doc: dict[str, Any], validate: bool = False) -> An
 
 ## Hand the data over
 
-`append` takes one frame, or a stack of frames, of a product written as the
-run goes; `write` takes the whole of one computed at the end. Below, `source`
-is one of the data keys, and `filtered` and `median` are the arrays the
-component computed for it:
+Use `append` for a product you write as the run goes, one frame or a stack of
+frames at a time, and `write` for one you compute at the end and hand over
+whole. Below, `source` is one of the data keys, and `filtered` and `median` are
+the arrays the component computed for it:
 
 ```python
 def event(self, doc: Event) -> Event:
@@ -104,20 +105,25 @@ def shutdown(self) -> None:
 ```
 
 The store's stream opens on the first `append` or `write` against it, with
-every product of that store known by then, and closes at the `stop` of the
-run that named the store. A run nested inside another sees what the outer
-run declared, so a product computed at the nested run's stop can go to the
-outer run's store. A product
-declared after that is refused with a `WriterError` naming it. `shutdown`
-closes whatever a session ending mid-run left open, so the store stays
-readable.
+every product of that store known by then, and closes at the `stop` of the run
+that named the store. A run nested inside another sees what the outer run
+declared, so a product computed at the nested run's stop can go to the outer
+run's store.
+
+!!! warning "A product declared after the stream opens"
+
+    The writer refuses a product declared once its store's stream is open, with
+    a `WriterError` naming it. Declare every product in the constructor.
+
+`shutdown` closes whatever a session that ended mid-run left open, so the store
+stays readable.
 
 ## Where the product goes
 
-The `stream_resource` document names the format and the store; the writer
-reads the store's root and decides. `redsun.writers` exports the two
-mimetypes it knows as `ZARR` and `OME_ZARR`, for a device writing either into
-its documents:
+The `stream_resource` document names the format and the store, and the writer
+reads the store's root to decide where the product goes. `redsun.writers`
+exports the two mimetypes it knows as `ZARR` and `OME_ZARR`, for a device that
+writes either into its documents:
 
 | Mimetype | Store root | Product goes | `write` returns |
 | --- | --- | --- | --- |
@@ -125,17 +131,19 @@ its documents:
 | `application/x-ome-zarr` | a plain group | a key of the same store, with NGFF metadata of its own | the store's URI |
 | `application/x-ome-zarr` | an image, a plate, a `bioformats2raw` layout | a store of its own beside it, named `<store>_<data_key>.ome.zarr` | the new store's URI |
 
-Adding a key to a root carrying OME-Zarr metadata drops it, which is why the
-product goes beside such a root. A store of its own is written whole, since
-`ome-writers` allocates every frame at open: `append` to it is refused, and
-`write` finishes it at once. A `stream_resource` with a mimetype the writer
-does not know is logged once, and the product is skipped for that run.
+Adding a key to a root that carries OME-Zarr metadata drops it, which is why
+the product goes beside such a root. A store of its own is written whole,
+because `ome-writers` allocates every frame at open, so `append` to it is
+refused and `write` finishes it at once. If a `stream_resource` has a mimetype
+the writer doesn't know, the writer logs it once and skips the product for that
+run.
 
 ## What is written with the product
 
-Two mappings land on the product's own group, never on the store's root,
-which a stream closing on the store rewrites: the `metadata` given to
-`write`, as given, and a `redsun` mapping the writer fills from the run.
+Two mappings land on the product's own group, never on the store's root, which
+a stream closing on the store rewrites. One is the `metadata` you give to
+`write`, as given, and the other is a `redsun` mapping the writer fills from the
+run.
 
 | Key | Value |
 | --- | --- |
@@ -146,5 +154,5 @@ which a stream closing on the store rewrites: the `metadata` given to
 
 ## Register it, or not
 
-A writer registers nothing. A product that belongs in a catalog is put there
-by the same component; the two are separate choices.
+A writer registers nothing, so a product that belongs in a catalog has to be
+put there by the same component. Writing and registering are separate choices.

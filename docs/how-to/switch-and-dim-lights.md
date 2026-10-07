@@ -4,36 +4,37 @@ icon: lucide/lightbulb
 
 # How to switch and dim lights
 
-Add the built-in light stack to a session: a presenter that switches your
-light sources on and off and sets their intensity, and a view with a group per
-light. [ADR 21](../explanation/decisions/0021-a-built-in-light-stack.md)
+This guide shows how to add the built-in light stack to a session. It has a
+presenter that switches your light sources on and off and sets their intensity,
+and a view with a group per light. [ADR 21](../explanation/decisions/0021-a-built-in-light-stack.md)
 explains the design.
 
 ## Prerequisites
 
-Devices with an `enabled` signal, and an `intensity` signal for those you dim.
-The Python blocks below are parts of one script; the whole script is at the
-end.
+You need devices with an `enabled` signal, and an `intensity` signal for those
+you dim. The Python blocks below are parts of one script, and the whole script
+is at the end.
 
 ## What makes a device a light
 
-A device is a light when its `enabled` is a boolean signal it can write. When
-it also has an `intensity`, a numeric signal it can write, it is dimmable; a
-light without one is switched on and off only. A device whose `enabled` is not
-a boolean signal, such as a detector with an `enabled` counter, is not taken.
+A device is a light when its `enabled` is a boolean signal it can write. If it
+also has an `intensity`, a numeric signal it can write, you can dim it, while a
+light without one only switches on and off. The presenter skips a device whose
+`enabled` is not a boolean signal, such as a detector with an `enabled`
+counter.
 
-The wavelength and other details are not part of this contract. Declare them
-as configuration, with `StandardReadableFormat.CONFIG_SIGNAL`, and they appear
-in the view's Configuration tab:
+The wavelength and other details aren't part of this contract. Declare them as
+configuration, with `StandardReadableFormat.CONFIG_SIGNAL`, and they appear in
+the view's Configuration tab:
 
 ```{.python}
 --8<-- "docs/examples/lights.py:device"
 ```
 
 An intensity whose descriptor reports limits, as an EPICS record does, gets a
-slider as well as a number field. The `LimitedBackend` above stands in for
-such a device; a soft signal reports no limits, and a light whose intensity
-has none gets the number field alone.
+slider as well as a number field. The `LimitedBackend` above stands in for such
+a device. A soft signal reports no limits, so a light whose intensity has none
+gets the number field alone.
 
 ## Declare it in a session file
 
@@ -68,8 +69,8 @@ The pairing makes the seven links between the two. Written out, they are:
     ```
 
 The presenter takes every light of the session, or only those named under
-`include`. A light that cannot be read within `timeout` seconds (10 by
-default) when the session starts is left out with a warning.
+`include`. It leaves out, with a warning, a light it can't read within
+`timeout` seconds (10 by default) when the session starts.
 
 ## Declare it in Python
 
@@ -86,27 +87,27 @@ slider and intensity field, and an LED that is on](images/lights.png)
   click asks for the other state, and the button changes when the light
   confirms it.
 - The slider and the number field show the intensity the light reads back,
-  except while you drag the slider or type in the field. The intensity is
-  written when you let the slider go, when you press Enter or leave the field
+  except while you drag the slider or type in the field. The view writes the
+  intensity when you let the slider go, when you press Enter or leave the field
   after changing it, and at each step of the field's arrows or the slider's
   keys. Leaving the field unchanged writes nothing.
-- With "Write while dragging" ticked in the Advanced tab, the intensity is also
-  written during a drag, at most every 100 ms. The view's
-  `write_while_dragging` keyword sets the default; once ticked or cleared in the
-  tab, the choice is kept in the session's [`Settings`][redsun.Settings] and
+- With "Write while dragging" ticked in the Advanced tab, the view also writes
+  the intensity during a drag, at most every 100 ms. The view's
+  `write_while_dragging` keyword sets the default. Once you tick or clear the
+  box, the session's [`Settings`][redsun.Settings] keep your choice, and it
   wins over the keyword.
-- When intensities are asked for faster than the light answers, only the
-  newest is written after the one in progress.
+- When you ask for intensities faster than the light answers, only the newest
+  is written after the one in progress.
 - A value outside the limits, an intensity for a light without one, or a write
-  that fails is shown in the light's group, after "failed".
+  that fails shows in the light's group, after "failed".
 - The Configuration tab shows each light's configuration, such as its
   wavelength, and writes the entries that can be written.
 
 ## Hold the lights during a plan
 
 A plan that locks a light disables its controls, and the presenter refuses
-writes to it. The engine is not a session component, so these links are made
-in `wire()`, from the presenter that holds the engine:
+writes to it. The engine isn't a session component, so you make these links in
+`wire()`, from the presenter that holds the engine:
 
 ```python
 yield self.ctrl.engine.sig_locks_changed, self.lights_view.set_locked
@@ -115,9 +116,9 @@ yield self.ctrl.engine.sig_locks_changed, self.lights.set_locked
 
 With the built-in acquisition stack, pairing its presenter with the view,
 `- [acquisition, lights_view]`, makes the view's link, and pairing it with
-the presenter, `- [acquisition, lights]`, makes the presenter's;
+the presenter, `- [acquisition, lights]`, makes the presenter's.
 [Run plans from the window](run-plans-from-the-window.md#share-the-engine)
-shows it.
+shows how.
 
 ## Customize it
 

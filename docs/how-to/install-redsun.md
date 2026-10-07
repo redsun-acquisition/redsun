@@ -4,13 +4,13 @@ icon: lucide/download
 
 # How to install redsun
 
-Install `redsun` with the tools you already use, and with the extras your
-session needs. The tutorials follow one way only, in
+You can install `redsun` with the tools you already use, adding the extras
+your session needs. The tutorials show only one way, in
 [Installation](../tutorials/installation.md).
 
 ## Prerequisites
 
-Python 3.11 or later.
+You need Python 3.11 or later.
 
 ## Create a virtual environment
 
@@ -61,9 +61,9 @@ Python 3.11 or later.
 
 ## Choose the extras
 
-`redsun` is on [PyPI](https://pypi.org/project/redsun/). On its own it
-installs what a session without a window needs. Everything else is an extra,
-which you name in the command:
+`redsun` is on [PyPI](https://pypi.org/project/redsun/). On its own it installs
+what a session without a window needs, and you add everything else as an extra
+by naming it in the command:
 
 <!-- one button for each extra in pyproject.toml; tests/test_install_page.py
 checks that the two agree -->
@@ -113,15 +113,15 @@ commas.</p></noscript>
 | `testing` | `pytest` | [testing a plugin](test-a-plugin.md), as a development dependency |
 | `profile` | `pyinstrument` and `py-spy` | [profiling a session](profile-a-session.md), as a development dependency |
 
-`redsun` supports PyQt6 and PySide6
+`redsun` supports the PyQt6 and PySide6
 [bindings](../explanation/glossary.md#qt-binding) through `qtpy`. Install one
-of them to create a Qt session. A
-[headless session](run-without-a-gui.md) does not require them.
+of them to create a Qt session. A [headless session](run-without-a-gui.md)
+doesn't need either.
 
-!!! warning
+!!! warning "The `tiled` extra on Python 3.14"
 
-    Due to an upstream limitation, `tiled` is currently not supported for
-    Python 3.14.
+    `tiled` doesn't support Python 3.14 yet, so the `tiled` extra installs
+    nothing there. Use Python 3.13 or earlier if you need a catalog.
 
 ## Check the installation
 
@@ -129,6 +129,6 @@ of them to create a Qt session. A
 python -c "import redsun; print(redsun.__version__)"
 ```
 
-It prints the version that was installed.
+It prints the version you installed.
 
 To change `redsun` itself, see [How to contribute](contribute.md).

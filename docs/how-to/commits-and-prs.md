@@ -28,20 +28,20 @@ refactor(session): read each session file once
 - log the files in the order they are layered
 ```
 
-Write what changed in plain words, so someone who has not seen the diff
+Write what changed in plain words, so someone who hasn't seen the diff
 understands it.
 
 ## Issues
 
-An issue title follows the same form as a commit's first line, naming the
+An issue title takes the same form as a commit's first line and names the
 change it asks for: `fix: log files stay open after shutdown`,
 `feat: add a toolbar placement`. The issue templates start the title for
 you.
 
 ## Pull requests
 
-Open the pull request against `main`. The title follows the same rules as a
-commit's first line, since the changelog entry is made from it:
+Open the pull request against `main`. Its title follows the same rules as a
+commit's first line, because the changelog entry is made from it:
 `feat(session): add strict sessions` is listed under *Added* as "Add strict
 sessions".
 
@@ -59,8 +59,8 @@ coverage and the checks you ran: CI reports them on the pull request.
 
 ## Labels
 
-Every pull request needs one label saying which changelog section it goes in.
-CI refuses a pull request without one.
+Every pull request needs one label saying which changelog section it goes in,
+and CI refuses a pull request without one.
 
 | label | changelog section |
 | --- | --- |

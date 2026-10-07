@@ -4,9 +4,9 @@ icon: lucide/package
 
 # How to make a release
 
-The changelog is written from the pull requests merged since the last
-release, grouped by their [labels](commits-and-prs.md#labels). Nobody edits
-it by hand.
+A release starts with the changelog, which a script writes from the pull
+requests merged since the last release, grouped by their
+[labels](commits-and-prs.md#labels). Don't edit it by hand.
 
 ## Prerequisites
 
@@ -28,8 +28,8 @@ The script asks GitHub for the pull requests merged since the last final
 release, and writes a section for them at the top of
 `docs/reference/changelog.md`, with the date and a compare link.
 
-Read the section. A title that reads badly is fixed by renaming the pull
-request it came from, so the changelog and GitHub agree. Then discard the
+Read the section. If a title reads badly, rename the pull request it came
+from, so the changelog and GitHub agree. Then discard the
 section with `git checkout docs/reference/changelog.md` and run the script
 again.
 
@@ -57,9 +57,13 @@ git push origin v0.14.1
 ```
 
 The tag publishes the package to PyPI and the docs, and creates the GitHub
-release, whose notes are the changelog section. For a tag whose version has
-no section, the package build fails with a message naming the `prepare`
-command, and neither PyPI nor the GitHub release gets anything.
+release, whose notes are the changelog section.
+
+!!! warning "A tag without a changelog section"
+
+    If the tag's version has no section, the package build fails with a
+    message naming the `prepare` command, and neither PyPI nor the GitHub
+    release gets anything. Run step 1 before you tag.
 
 ## Release candidates
 

@@ -4,19 +4,19 @@ icon: lucide/server
 
 # How to write a service
 
-Write a [service](../explanation/glossary.md#service) for a session to
-launch, declare it, and point a device at it. The tabs show a `caproto`
-[IOC](../explanation/glossary.md#ioc) served over
+This guide shows how to write a [service](../explanation/glossary.md#service)
+for a session to launch, declare it, and point a device at it. The tabs show a
+`caproto` [IOC](../explanation/glossary.md#ioc) served over
 [Channel Access](../explanation/glossary.md#channel-access) and a `fastcs`
-controller served over [PVAccess](../explanation/glossary.md#pvaccess); the
+controller served over [PVAccess](../explanation/glossary.md#pvaccess). The
 rest of the page holds for both. [Services](../explanation/services.md)
 explains what a service is and how a session handles it.
 
 ## Prerequisites
 
 `redsun` depends on [`ophyd-async`](../explanation/glossary.md#ophyd-async)
-and on nothing a control-system protocol needs, so a service brings its own,
-and the device side its `ophyd-async` extra:
+but not on any control-system protocol, so you install the packages your
+service needs, plus the `ophyd-async` extra for the device side:
 
 === "caproto"
 
@@ -38,10 +38,10 @@ and the device side its `ophyd-async` extra:
 
 ## Write the service
 
-Besides serving its
-[process variables](../explanation/glossary.md#process-variable), a service
-that `redsun` launches must print a line when it is ready, stop when the
-session asks, and listen only on the local machine.
+A service that `redsun` launches does three things besides serving its
+[process variables](../explanation/glossary.md#process-variable): it prints a
+line when it is ready, stops when the session asks, and listens only on the
+local machine.
 
 === "caproto"
 
@@ -66,9 +66,9 @@ session asks, and listen only on the local machine.
       session waits for that line.
     - [`stop_on_request`][redsun.services.stop_on_request] turns the
       session's request to stop into `SIGINT`, so the IOC shuts down as it
-      would on ++ctrl+c++. It does nothing when no session launched the IOC:
-      run on its own without a terminal, a service may have its standard
-      input closed from the start.
+      would on ++ctrl+c++. It does nothing when no session launched the IOC,
+      because a service run on its own without a terminal may have its
+      standard input closed from the start.
     - `127.0.0.1` keeps the launched IOC off the network.
 
 === "FastCS"
@@ -97,12 +97,12 @@ session asks, and listen only on the local machine.
       session asks the service to stop. Run alone, the service waits until
       ++ctrl+c++, and the `try` around `asyncio.run` keeps that stop from
       printing a traceback.
-    - If serving fails first, the service raises what made it fail, and the
-      session logs it.
+    - If serving fails first, the service raises the error and the session
+      logs it.
     - [`configure_logging`][redsun.services.configure_logging] sends the
       records of `fastcs` to the session at the level the session records
-      at. Do not call `fastcs.logging.configure_logging` after it: that
-      replaces the output with coloured text, which the session reads as
+      at. Don't call `fastcs.logging.configure_logging` after it, because
+      that replaces the output with coloured text, which the session reads as
       `DEBUG` lines.
     - Run alone, the service listens on every network interface of the
       machine. Launched by a session, it listens on `127.0.0.1` only, since
@@ -114,27 +114,29 @@ session asks, and listen only on the local machine.
       machine: two sessions serving the same one find each other's records.
 
     `fastcs` prints no line of its own when it starts to serve, so the
-    service finds out by asking.
-    [`ready_when_reachable`][redsun.services.ready_when_reachable] asks for
-    the record in which `fastcs` lists the attributes of the controller until
-    it gets an answer, then prints the ready text the declaration gives. Any
+    service has to ask.
+    [`ready_when_reachable`][redsun.services.ready_when_reachable] keeps asking
+    for the record in which `fastcs` lists the attributes of the controller.
+    When it gets an answer, it prints the ready text the declaration gives. Any
     server of that name can answer, which is one more reason for a prefix of
     its own.
 
-Closing standard input is how a session asks a service to stop, on every
+A session asks a service to stop by closing its standard input, on every
 platform. A service that blocks in a call of its own, as `caproto`'s `run`
-does, calls `stop_on_request`; a service built on `asyncio` awaits
+does, calls `stop_on_request`. A service built on `asyncio` awaits
 `wait_for_stop` instead.
 
-If the session crashes, nobody reads the service's output any more, and
-printing raises. Clean up before printing, or do not print.
+!!! warning "Printing after a session crash raises"
+
+    If the session crashes, nobody reads the service's output any more, and
+    printing raises. Clean up before you print, or don't print.
 
 Under `channel-access`, a launched service listens on a port the session
 chooses when its process starts, and no other program is told which one, so
-`caget` from another terminal does not find it. Under `pv-access`, another
-program on the machine reaches it with `EPICS_PVA_ADDR_LIST=127.0.0.1`. A
-service other machines must reach runs on its own, on the ports it is set to,
-and the session attaches to it.
+`caget` from another terminal doesn't find it. Under `pv-access`, another
+program on the machine reaches it with `EPICS_PVA_ADDR_LIST=127.0.0.1`. If
+other machines must reach the service, run it on its own, on the ports you set,
+and let the session attach to it.
 
 ## Point a device at it
 
@@ -176,7 +178,7 @@ and the session attaches to it.
 
 ## Declare it
 
-In the session class, beside the device that talks to it:
+Declare the service in the session class, beside the device that talks to it:
 
 === "caproto"
 
@@ -214,41 +216,46 @@ In the session class, beside the device that talks to it:
     [Name the transport](#name-the-transport).
 
 `prefix` is what the devices of the service receive. `args` is what the
-process is started with, and is how the `caproto` IOC learns the same prefix:
-a service that calls [`identity`][redsun.services.identity], as the `fastcs`
-one does, needs no `args` for it. `args` is a list, or a mapping of options:
+process is started with, which is how the `caproto` IOC learns the same
+prefix. A service that calls [`identity`][redsun.services.identity], as the
+`fastcs` one does, needs no `args` for it. `args` is a list, or a mapping of options:
 `--` is put before each name, `true` passes the option alone, `false` leaves
 it out, and a list passes each item after it. The
 [session file reference](../reference/session-file.md) has the table.
 
-`ready` is text the session waits for in the output of the service: the
-first line containing it marks the service ready, so give text an error
-message would not contain. Without `ready`, the session does not wait, and
-connects the devices of a service that may not serve yet.
+`ready` is text the session waits for in the output of the service. The
+first line containing it marks the service ready, so pick text an error
+message would not contain.
+
+!!! warning "Without `ready` the session doesn't wait"
+
+    The session then connects the devices of a service that may not serve
+    yet. Set `ready` on every launched service.
 
 A service that prints no line of its own once it serves calls
 [`ready`][redsun.services.ready], which prints the text the declaration gives,
-so the text is written in one place. A PVAccess service can call
+so you write the text in one place. A PVAccess service can call
 [`ready_when_reachable`][redsun.services.ready_when_reachable] with one of its
-own process variables instead: it prints the text once that variable answers.
+own process variables instead, and it prints the text once that variable
+answers.
 
-`Launch` is a service the session starts and stops. `Attach` is one already
-running elsewhere: nothing starts or stops, and its devices only get its
-[prefix](../explanation/glossary.md#prefix). Its devices find it by
-searching the network, and through the address list of your environment.
-When the search does not reach it, on another subnet for instance, give its
-`address`: the session adds it to the address list of its transport before
-any device connects. See
+`Launch` declares a service the session starts and stops. `Attach` declares
+one already running elsewhere: the session starts and stops nothing, and its
+devices only get the service's [prefix](../explanation/glossary.md#prefix).
+They find it by searching the network and through the address list of your
+environment. When the search doesn't reach it, on another subnet for instance,
+give its `address`, and the session adds it to the address list of its
+transport before any device connects. See
 [Environment variables](../reference/environment.md).
 
-The device gets the service's prefix as its `prefix` argument, so giving the
-device a `prefix` of its own is refused. A device whose service did not start
-is left out.
+The device gets the service's prefix as its `prefix` argument, so the session
+refuses a device that also gives a `prefix` of its own. A device whose service
+didn't start is left out.
 
 ## Check that it starts
 
 Run the session from the folder that holds the module of the service, since
-that is where it looks for it. For the `fastcs` example, the session logs:
+that is where the session looks for it. For the `fastcs` example, the session logs:
 
 ```text
 Service 'stage_service' started
@@ -257,9 +264,9 @@ Services started: 1/1
 
 ## Serve several devices from one service
 
-Every device naming a service gets the same prefix. The devices tell their
-process variables apart by the rest of the name, which a constructor keyword
-can carry:
+Every device naming a service gets the same prefix, so the devices tell their
+process variables apart by the rest of the name. A constructor keyword can
+carry it:
 
 ```python
 from ophyd_async.core import StandardReadable
@@ -297,7 +304,7 @@ class MyApp(QtSession):
 ```
 
 A plugin can also list the service in its [manifest](../explanation/plugins.md),
-so a session file names it without Python:
+which lets a session file name it without Python:
 
 ```yaml
 # mylab/redsun.yaml
@@ -328,8 +335,9 @@ devices:
 
 ## Name the transport
 
-Every service of a session speaks one [transport](../explanation/glossary.md#transport),
-`channel-access` unless the configuration says otherwise:
+All the services of a session speak one
+[transport](../explanation/glossary.md#transport), `channel-access` unless the
+configuration says otherwise:
 
 ```yaml
 services:
@@ -345,14 +353,14 @@ class MyApp(QtSession):
 
 An unknown transport, or two sources naming different ones, raises when the
 configuration is read. The transport holds for every device of the session, so
-no device speaks both.
+a device can't speak both.
 [Services](../explanation/services.md#one-transport-per-session) says what a
 session does for each transport.
 
 A launched process learns its name and prefix from
 [`identity`][redsun.services.identity], so a module serving several sessions
-needs no arguments for them. It returns `None` when no session launched the
-process:
+needs no arguments for them. `identity` returns `None` when no session
+launched the process:
 
 ```python
 from redsun.services import identity
@@ -364,8 +372,8 @@ prefix = me.prefix if me else ""
 ## React when it exits
 
 A launched service that exits by itself sends `sig_exited` with its name and
-exit code. A service is set on the session under its name, so `wire` can
-connect it:
+exit code. The session holds each service under its name, so `wire` can
+connect the signal to a slot:
 
 ```python
 from collections.abc import Iterator
@@ -391,8 +399,8 @@ class MyApp(QtSession):
         yield self.camera_ioc.sig_exited, self.presenter.on_service_exited
 ```
 
-Without `thread="main"`, a presenter's slot runs on the thread reading the
-service's output.
+Without `thread="main"`, the slot runs on the thread that reads the service's
+output.
 
 ## Log from it
 
@@ -405,7 +413,7 @@ arriving as a `DEBUG` line; see
 
 ## Quiet the type checker for `fastcs`
 
-`fastcs` ships no `py.typed` file, so a type checker cannot see its types.
+`fastcs` ships no `py.typed` file, so a type checker can't see its types.
 `mypy` reports the import:
 
 ```text
@@ -419,8 +427,8 @@ and, in strict mode, the class written on top of it:
 Class cannot subclass "Controller" (has type "Any")  [misc]
 ```
 
-To quiet both, add this to the configuration of `mypy` in `pyproject.toml`,
-with the name of your module in the second entry:
+To quiet both, add this to the `mypy` configuration in `pyproject.toml`, with
+the name of your module in the second entry:
 
 ```toml
 [[tool.mypy.overrides]]

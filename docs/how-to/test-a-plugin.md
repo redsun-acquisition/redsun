@@ -4,14 +4,15 @@ icon: lucide/flask-conical
 
 # How to test a plugin
 
-Test the components and services of a plugin with the fixtures `redsun` uses
-for its own tests, from [`redsun.testing`](../reference/api/testing.md).
+You can test the components and services of a plugin with the fixtures
+`redsun` uses for its own tests, from
+[`redsun.testing`](../reference/api/testing.md).
 
 ## Prerequisites
 
-A plugin package with `pytest` tests. See
-[Package components as a plugin](package-a-plugin.md). The blocks below are
-parts of one test module; the whole module is at the end.
+You need a plugin package with `pytest` tests, as
+[Package components as a plugin](package-a-plugin.md) describes. The blocks
+below are parts of one test module, and the whole module is at the end.
 
 ## Install the fixtures
 
@@ -26,7 +27,7 @@ uv add --dev "redsun[testing]" pytest-asyncio
 
 ## Load them
 
-Load the module as a `pytest` plugin, in `pyproject.toml`:
+Load the module as a `pytest` plugin in `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
@@ -34,31 +35,37 @@ addopts = "-p redsun.testing"
 asyncio_mode = "auto"
 ```
 
-From then on every test keeps session settings and session log files under
-its own `tmp_path`, and so do acquisition files and catalogs a session puts in
+From then on every test keeps its session settings and session log files under
+its own `tmp_path`. So do the acquisition files and catalogs a session puts in
 their default location, and every test drops the `psygnal` emissions it left
-queued for another thread. A session whose configuration names its own `storage`
-directory still writes there. The fixtures doing this run for each test, so
-a session built in a fixture scoped to a module or the whole run is not
-covered. Nothing loads the module unless a suite asks for it, so these
-fixtures never reach a project that only installs `redsun`.
+queued for another thread. A session whose configuration names its own
+`storage` directory still writes there. Nothing loads the module unless a suite
+asks for it, so these fixtures never reach a project that only installs
+`redsun`.
 
-The module defines no `qapp` fixture. A session with a window needs a
-`QApplication`: take the `qapp` fixture of `pytest-qt`, or define one.
+!!! warning "Sessions built in wider fixtures"
+
+    The fixtures run for each test, so they don't cover a session built in a
+    fixture scoped to a module or the whole run. Build the session in a
+    per-test fixture.
+
+The module defines no `qapp` fixture, and a session with a window needs a
+`QApplication`. Take the `qapp` fixture of `pytest-qt`, or define one.
 
 ## Build a session
 
 Ask for [`build`][redsun.testing.build]. It builds a session class with the
-configuration given, and shuts the session down when the test ends:
+configuration you give it, and shuts the session down when the test ends:
 
 ```{.python}
 --8<-- "docs/examples/plugin_tests.py:build"
 ```
 
 `mock: True` connects every device to a simulated backend, as in
-[Run without hardware](run-without-hardware.md). It does not suit a device
+[Run without hardware](run-without-hardware.md). That doesn't suit a device
 whose signals come from its service when it connects, as a `fastcs` device's
-do: mocked, it has none. Test such a device against its service instead.
+do, because a mocked one has none. Test such a device against its service
+instead.
 
 ## Start a service
 
@@ -77,15 +84,18 @@ file names under `services.transport`:
 --8<-- "docs/examples/plugin_tests.py:service"
 ```
 
-The service is stopped when the test ends, its transport is released as
-when a session ends, and the EPICS address list it added itself to is
-restored, so the next test starts from the same list. The test reads the
-prefix from the service it gets back.
+When the test ends, the fixture stops the service, releases its transport as a
+session does, and restores the EPICS address list the service added itself to,
+so the next test starts from the same list. The test reads the prefix from the
+service it gets back.
 
-Prefer `pv-access` for services started in tests. A Channel Access client
-reads its address list once, the first time the process uses Channel Access,
-so under `channel-access` a service started after that is not found. Start
-every Channel Access service a suite needs before its first client connects.
+!!! warning "Channel Access services started late are not found"
+
+    A Channel Access client reads its address list once, the first time the
+    process uses Channel Access, so under `channel-access` a service started
+    after that isn't found. Prefer `pv-access` for services started in tests, or
+    start every Channel Access service the suite needs before its first client
+    connects.
 
 ## The example in full
 
