@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtWidgets import QApplication, QDockWidget
+from qtpy.QtWidgets import QApplication, QDockWidget, QWidget
 
-from redsun import AsView, Placement
+from redsun import AsView, Declare, Placement
 from redsun.qt import Dock, QtSession
 
 if TYPE_CHECKING:
@@ -23,6 +23,8 @@ pytestmark = pytest.mark.qt
 
 LEFT = QtNamespace.DockWidgetArea.LeftDockWidgetArea
 RIGHT = QtNamespace.DockWidgetArea.RightDockWidgetArea
+TOP = QtNamespace.DockWidgetArea.TopDockWidgetArea
+BOTTOM = QtNamespace.DockWidgetArea.BottomDockWidgetArea
 
 
 class Charts(Panel):  # type: ignore[misc]
@@ -34,6 +36,60 @@ class LayoutApp(QtSession):
 
     panel: AsView[Panel]
     charts: AsView[Charts]
+
+
+class Grouped(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("left", group="tools")
+
+
+class GroupedRight(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("right", group="tools")
+
+
+class GroupedApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "grouped-session"}
+
+    first: AsView[Grouped]
+    second: AsView[Grouped]
+    alone: AsView[Panel]
+    other_edge: AsView[GroupedRight]
+
+
+class TakesPlacement(Panel):  # type: ignore[misc]
+    def __init__(self, name: str, parent: QWidget, placement: str = "") -> None:
+        super().__init__(name, parent)
+
+
+class Stages(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "stages-session"}
+
+    upper: Annotated[AsView[Panel], Declare(placement=Dock("top"))]
+    lower: Annotated[AsView[Panel], Declare(placement="bottom")]
+    default: AsView[Panel]
+
+
+class TakesPlacementApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "takes-placement"}
+
+    taking: AsView[TakesPlacement]
+
+
+def builtin_session(
+    plugin_id: str, presenter: str | None, placement: str | None
+) -> QtSession:
+    """Return a session declaring one built-in view, and its presenter, from a file."""
+    view: dict[str, Any] = {"plugin_name": "redsun", "plugin_id": plugin_id}
+    if placement is not None:
+        view["placement"] = placement
+    config: dict[str, Any] = {
+        "session": f"placed-{plugin_id}-{placement}",
+        "views": {"view": view},
+    }
+    if presenter is not None:
+        config["presenters"] = {
+            "presenter": {"plugin_name": "redsun", "plugin_id": presenter}
+        }
+    return QtSession.from_config(config)
 
 
 def _dock(app: QtSession, name: str) -> QDockWidget:
@@ -113,3 +169,115 @@ def test_a_session_that_was_never_shown_writes_nothing(
     build(LayoutApp).shutdown()
 
     assert not (config_home / "layout-session.json").exists()
+
+
+def test_docks_of_one_edge_and_group_open_as_tabs(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Tab the docks of one edge and group together, and stack the rest beside them."""
+    app = build(GroupedApp)
+    window = app.main_window
+
+    assert window.tabifiedDockWidgets(_dock(app, "first")) == [_dock(app, "second")]
+    assert window.tabifiedDockWidgets(_dock(app, "alone")) == []
+    assert window.tabifiedDockWidgets(_dock(app, "other_edge")) == []
+
+
+@pytest.mark.parametrize(
+    ("plugin_id", "presenter", "default"),
+    [
+        ("acquisition", "acquisition", LEFT),
+        ("lights", "lights", RIGHT),
+        ("positioner", "positioner", RIGHT),
+        ("logs", None, BOTTOM),
+    ],
+)
+def test_a_built_in_view_docks_where_its_entry_places_it(
+    qapp: QApplication,
+    build: BuildSession,
+    plugin_id: str,
+    presenter: str | None,
+    default: QtNamespace.DockWidgetArea,
+) -> None:
+    """Dock each built-in view where its entry's placement says, on its own edge without one."""
+    placed = build(builtin_session(plugin_id, presenter, "top"))
+    unplaced = build(builtin_session(plugin_id, presenter, None))
+
+    assert placed.main_window.dockWidgetArea(_dock(placed, "view")) is TOP
+    assert unplaced.main_window.dockWidgetArea(_dock(unplaced, "view")) is default
+
+
+def test_each_declaration_of_one_view_class_docks_where_it_says(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Dock declarations of one class where each places it, as an object or a word, else on the class's edge."""
+    app = build(Stages)
+
+    areas = {
+        name: app.main_window.dockWidgetArea(_dock(app, name))
+        for name in ("upper", "lower", "default")
+    }
+    assert areas == {"upper": TOP, "lower": BOTTOM, "default": LEFT}
+
+
+@pytest.mark.parametrize(
+    ("config", "missing", "reason"),
+    [
+        (
+            {"views": {"panel": {"placement": "middle"}}},
+            "panel",
+            "names nothing Qt attaches",
+        ),
+        (
+            {
+                "presenters": {
+                    "lights": {
+                        "plugin_name": "redsun",
+                        "plugin_id": "lights",
+                        "placement": "left",
+                    }
+                }
+            },
+            "lights",
+            "only a view takes a 'placement'",
+        ),
+    ],
+)
+def test_a_placement_that_cannot_be_used_skips_only_its_component(
+    qapp: QApplication,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    config: dict[str, Any],
+    missing: str,
+    reason: str,
+) -> None:
+    """Skip a component given an unreadable or misplaced placement, and build the rest."""
+    app = build(LayoutApp, config)
+
+    assert missing not in {**app.views, **app.presenters}
+    assert "charts" in app.views
+    assert reason in caplog.text
+
+
+def test_a_view_taking_placement_itself_is_refused(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Refuse a view whose constructor takes the key a view declaration reserves."""
+    app = build(TakesPlacementApp)
+
+    assert "taking" not in app.views
+    assert "reserves for the session" in caplog.text
+
+
+def test_a_moved_dock_is_logged_against_its_declared_edge(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log a saved layout keeping a dock off the edge its declaration names, not its class's."""
+    first = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
+    first.main_window.addDockWidget(LEFT, _dock(first, "panel"))
+    first.save_layout()
+    first.shutdown()
+
+    build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
+
+    assert "'panel' stays on the left, where it was left, not on the top" in caplog.text

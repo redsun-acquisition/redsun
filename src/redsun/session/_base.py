@@ -1467,9 +1467,9 @@ class Session(BuildableSession):
     def _verify(self, declaration: Declaration, instance: object) -> None:
         """Check a component just built against the protocol of its layer.
 
-        A member assigned in `__init__` is invisible on the class, so a view
-        answering `placement` from anything but a class attribute is only
-        checkable now.
+        A view whose class answers `placement` from a property, deprecated,
+        is only checkable now; any other view's placement was checked when it
+        was declared.
 
         Raises
         ------
@@ -1486,7 +1486,7 @@ class Session(BuildableSession):
                 f"does not satisfy {protocol.__name__!r}: " + "; ".join(reasons)
             )
         attachable = as_protocol(instance, AttachableComponent) if view else None
-        if attachable is not None:
+        if attachable is not None and declaration.placement is None:
             self.frontend.check_placement(
                 attachable, attachable.placement, f"view {declaration.name!r}"
             )

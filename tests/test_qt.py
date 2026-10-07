@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
 import yaml
@@ -15,6 +15,7 @@ from app_model import Action, Application
 from app_model.types import MenuRule
 from psygnal import Signal, emit_queued
 from qtpy.QtCore import QEvent
+from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction, QCloseEvent
 from qtpy.QtWidgets import (
     QApplication,
@@ -42,6 +43,7 @@ from redsun import (
     AsPresenter,
     AsView,
     AttachableComponent,
+    Declare,
     Placement,
     Session,
     slot,
@@ -169,6 +171,17 @@ class BrokenApp(QtSession):
     panel: AsView[Panel]
     broken_panel: AsView[BrokenPanel]
     broken_ctrl: AsPresenter[BrokenPresenter]
+
+
+class GroupedPanel(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("left", group="tools")
+
+
+class GroupedBrokenApp(QtSession):
+    panel: AsView[GroupedPanel]
+    broken: Annotated[
+        AsView[BrokenPanel], Declare(placement=Dock("left", group="tools"))
+    ]
 
 
 @pytest.fixture
@@ -1009,6 +1022,42 @@ def test_a_dock_on_an_unknown_edge_is_refused() -> None:
         Dock("bottm")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("value", "placement"),
+    [
+        ("left", Dock("left")),
+        ("bottom", Dock("bottom")),
+        ("central", Central()),
+        ({"dock": "top"}, Dock("top")),
+        ({"dock": "right", "group": "tools"}, Dock("right", group="tools")),
+        ({"menu": "Acquire"}, MenuItem("Acquire")),
+        ({"toolbar": "Acquisition"}, ToolBarItem("Acquisition")),
+    ],
+)
+def test_qt_reads_each_placement_a_session_file_writes(
+    value: object, placement: Placement
+) -> None:
+    """Read each word and mapping a session file uses for a Qt placement."""
+    assert Qt.read_placement(value) == placement
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "middle",
+        {"dock": "middle"},
+        {"dok": "left"},
+        {"menu": "A", "toolbar": "B"},
+        {"dock": "left", "group": "g", "extra": "x"},
+        3,
+    ],
+)
+def test_qt_refuses_a_placement_it_cannot_read(value: object) -> None:
+    """Refuse a value naming no Qt placement, listing the forms Qt reads."""
+    with pytest.raises(ValueError, match="left, right, top, bottom, central"):
+        Qt.read_placement(value)
+
+
 def test_a_failed_view_leaves_its_reason_where_it_would_have_been(
     qapp: QApplication, build: BuildSession
 ) -> None:
@@ -1019,6 +1068,34 @@ def test_a_failed_view_leaves_its_reason_where_it_would_have_been(
         label.text() for label in _widget(docks["broken_panel"]).findChildren(QLabel)
     ]
     assert labels == ["broken_panel could not be built:\nno detector attached"]
+
+
+def test_a_failed_view_leaves_its_reason_where_its_declaration_placed_it(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put a failed view's placeholder on the edge its declaration names, not its class's."""
+    session = build(BrokenApp, {"views": {"broken_panel": {"placement": "top"}}})
+    dock = session.main_window.findChild(QDockWidget, "broken_panel")
+
+    assert dock is not None
+    assert (
+        session.main_window.dockWidgetArea(dock)
+        is QtNamespace.DockWidgetArea.TopDockWidgetArea
+    )
+
+
+def test_a_failed_view_in_a_dock_group_is_tabbed_with_it(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Tab a failed view's placeholder with the docks of the group its declaration names."""
+    session = build(GroupedBrokenApp)
+    window = session.main_window
+    panel = window.findChild(QDockWidget, "panel")
+    broken = window.findChild(QDockWidget, "broken")
+
+    assert panel is not None
+    assert broken is not None
+    assert window.tabifiedDockWidgets(panel) == [broken]
 
 
 def test_the_status_bar_counts_the_components_that_failed(

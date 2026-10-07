@@ -56,6 +56,22 @@ class Frontend:
         return None
 
     @classmethod
+    def read_placement(cls, value: object) -> Placement:
+        """Return the placement a session file's *value* names, in this frontend's words.
+
+        A frontend that attaches views overrides it; this one reads no word.
+
+        Raises
+        ------
+        ValueError
+            Always, naming the frontend.
+        """
+        raise ValueError(
+            f"{cls.__name__} reads no placement from a session file; give a "
+            "placement object in Python instead"
+        )
+
+    @classmethod
     def check_placement(
         cls, view: type | object, placement: Placement, where: str
     ) -> None:

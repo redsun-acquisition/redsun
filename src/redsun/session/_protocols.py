@@ -95,7 +95,7 @@ class AttachableComponent(NamedComponent, Protocol):
 
     @property
     def placement(self) -> Placement:
-        """Where the component asks to be attached."""
+        """Where the component asks to be attached when its declaration names no placement."""
         ...
 
 

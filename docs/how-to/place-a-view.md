@@ -85,39 +85,79 @@ The session creates the menu or toolbar the first time a view names it, and
 adds every later view naming it to the same one. For a command that needs no
 view of its own, see [Add menu actions](add-menu-actions.md).
 
-## Place one view class in different places
+## Override a view's default placement
 
-A class attribute gives every instance the same placement. To choose it per
-declaration, answer `placement` from a property and take the value as a
-constructor keyword:
+Every view class has a default place in the window, its `placement`. To put
+a view somewhere else, give `placement` when you declare it. The session uses
+your value instead of the default. It does not pass `placement` to the view,
+so this works for any view, including the built-in ones:
 
 ```python
 from typing import Annotated
 
-from qtpy.QtWidgets import QWidget
-
-from redsun import AsView, Declare, Placement
-from redsun.qt import Area, Dock, QtSession
-
-
-class MyView(QWidget):
-    def __init__(self, name: str, parent: QWidget, area: Area = "left") -> None:
-        super().__init__(parent)
-        self.name = name
-        self.area = area
-
-    @property
-    def placement(self) -> Placement:
-        return Dock(self.area)
+from redsun import AsView, Declare
+from redsun.qt import Central, Dock, QtSession
+from redsun.view.qt.builtins import LogView, PositionerView
 
 
 class MyApp(QtSession):
-    left_panel: AsView[MyView]
-    right_panel: Annotated[AsView[MyView], Declare(area="right")]
+    stage: Annotated[AsView[PositionerView], Declare(placement=Dock("left"))]
+    log: Annotated[AsView[LogView], Declare(placement=Central())]
 ```
 
-A placement from a property is checked once the view is built rather than
-when it is declared.
+In a session file, write `placement` as a word or a short mapping:
+
+```yaml
+views:
+  stage:
+    plugin_name: redsun
+    plugin_id: positioner
+    placement: left
+```
+
+| `placement` | Where the view goes |
+| --- | --- |
+| `left`, `right`, `top`, `bottom` | a dock on that edge |
+| `central` | the central area |
+| `{dock: left, group: tools}` | a dock on that edge, in a tab with the other docks of group `tools` |
+| `{menu: Acquire}` | an entry in the menu `Acquire` |
+| `{toolbar: Acquisition}` | an entry in the toolbar `Acquisition` |
+
+The session checks the placement before it builds anything. If a view fails
+to build, its error message appears where you placed it. A view whose
+constructor has its own `placement` parameter is refused, because the session
+keeps that name for itself.
+
+!!! warning "Deprecated: a `placement` property"
+
+    Some views return `placement` from a property, to choose it per
+    declaration. This still works, but it is deprecated and will be removed
+    in 0.16. The session can read such a placement only after it builds the
+    view. So it checks it late, and if the view fails to build, no error
+    message appears in the window. Give `placement` in the declaration
+    instead.
+
+## Tab docks together
+
+Docks on the same edge with the same group open as tabs. The tabs follow the
+order you declare the views in:
+
+```python
+from typing import Annotated
+
+from redsun import AsView, Declare
+from redsun.qt import Dock, QtSession
+from redsun.view.qt.builtins import LightView, PositionerView
+
+
+class MyApp(QtSession):
+    stage: Annotated[
+        AsView[PositionerView], Declare(placement=Dock("right", group="hardware"))
+    ]
+    lights: Annotated[
+        AsView[LightView], Declare(placement=Dock("right", group="hardware"))
+    ]
+```
 
 ## See a changed placement take effect
 

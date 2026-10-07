@@ -140,10 +140,13 @@ AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
 EDGES: Final = {area: edge for edge, area in AREAS.items()}
 """The edge each Qt dock area stands for."""
 
+EDGE_NAMES: Final = frozenset(get_args(Area))
+"""The words for an edge of the window."""
+
 
 @dataclass(frozen=True)
 class Dock(Placement):
-    """A panel against one edge of the window.
+    """A panel against one edge of the window, tabbed with the docks of its group.
 
     Raises
     ------
@@ -153,6 +156,9 @@ class Dock(Placement):
 
     area: Area
     """Edge the panel sits against."""
+
+    group: str | None = None
+    """Name of the docks it is tabbed with on the same edge; `None` for none."""
 
     def __post_init__(self) -> None:
         if self.area not in get_args(Area):
@@ -244,6 +250,41 @@ class Qt(Frontend):
             f"{where} is declared as a view, but {view.__name__}'s constructor "
             "does not start with '(name: str, parent: QWidget)', which the Qt "
             "session passes to every view; neither may sit after a '/' or a '*'"
+        )
+
+    @classmethod
+    def read_placement(cls, value: object) -> Placement:
+        """Return the Qt placement a session file's *value* names.
+
+        `left`, `right`, `top` or `bottom` is a dock against that edge and
+        `central` the main area; `{dock: <edge>, group: <name>}` a dock tabbed
+        with its group, `{menu: <name>}` an entry in that menu and
+        `{toolbar: <name>}` an entry in that toolbar.
+
+        Raises
+        ------
+        ValueError
+            If *value* is none of these.
+        """
+        match value:
+            case "central":
+                return Central()
+            case str(edge) if edge in EDGE_NAMES:
+                return Dock(cast("Area", edge))
+            case {"dock": str(edge), "group": str(group), **rest} if (
+                not rest and edge in EDGE_NAMES
+            ):
+                return Dock(cast("Area", edge), group=group)
+            case {"dock": str(edge), **rest} if not rest and edge in EDGE_NAMES:
+                return Dock(cast("Area", edge))
+            case {"menu": str(menu), **rest} if not rest:
+                return MenuItem(menu)
+            case {"toolbar": str(toolbar), **rest} if not rest:
+                return ToolBarItem(toolbar)
+        raise ValueError(
+            f"placement {value!r} names nothing Qt attaches; give one of "
+            "left, right, top, bottom, central, {dock: <edge>, group: <name>}, "
+            "{menu: <name>} or {toolbar: <name>}"
         )
 
     @classmethod
@@ -470,7 +511,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration().color_scheme)
         )
-        attach(window, self._with_placeholders())
+        attach(window, self._with_placeholders(), self._declared_placements())
         failures = {**self._failed, **self._not_set_up}
         bar = window.statusBar()
         if failures and bar is not None:
@@ -483,7 +524,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _with_placeholders(self) -> dict[str, AttachableComponent]:
         """Return the views in declaration order, a placeholder for each failed one.
 
-        Only a view whose class names a dock or the centre gets one; a menu or
+        Only a view whose declaration names a dock or the centre gets one; a menu or
         toolbar item has no place to show it in.
         """
         built = self.views
@@ -494,10 +535,18 @@ class QtSession(DesktopSession[QMainWindow], Session):
             if name in built:
                 views[name] = built[name]
                 continue
-            placement = getattr(declaration.cls, "placement", None)
+            placement = declaration.placement
             if name in self._failed and isinstance(placement, (Dock, Central)):
                 views[name] = FailedView(name, self._failed[name], placement)
         return views
+
+    def _declared_placements(self) -> dict[str, Placement]:
+        """Return, by name, the placement each view's declaration chose."""
+        return {
+            name: declaration.placement
+            for name, declaration in self.declarations.items()
+            if declaration.kind is Layer.VIEW and declaration.placement is not None
+        }
 
     def restore_layout(self) -> None:
         """Put the window back where this user last left it.
@@ -517,8 +566,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     def _log_moved_docks(self) -> None:
         """Log each dock that is not on the edge its placement asks for."""
+        declared = self._declared_placements()
         for name, view in self.views.items():
-            placement = view.placement
+            placement = declared.get(name) or view.placement
             if not isinstance(placement, Dock):
                 continue
             # pyside6 annotates the result as optional and pyqt6 does not
@@ -772,8 +822,16 @@ def application() -> QApplication:
     return cast("QApplication", QApplication.instance() or QApplication(sys.argv))
 
 
-def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> None:
+def attach(
+    window: QMainWindow,
+    views: Mapping[str, AttachableComponent],
+    placements: Mapping[str, Placement] | None = None,
+) -> None:
     """Attach every view of *views* to *window* where it asks to be.
+
+    *placements* gives, by name, the placement a view's declaration chose;
+    any other view is placed where its `placement` asks. Docks of one edge
+    and group are tabbed together, in the order of *views*.
 
     Raises
     ------
@@ -782,14 +840,19 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
         toolkit type that placement demands.
     """
     central: dict[str, QWidget] = {}
+    groups: dict[tuple[Area, str], QDockWidget] = {}
     for name, view in views.items():
-        placement = view.placement
+        placement = (placements or {}).get(name) or view.placement
         Qt.check_placement(view, placement, f"view {name!r}")
         match placement:
             case Central():
                 central[name] = named(name, view, QWidget)
             case Dock():
-                add_dock(window, name, named(name, view, QWidget), placement)
+                dock = add_dock(window, name, named(name, view, QWidget), placement)
+                if placement.group is not None:
+                    first = groups.setdefault((placement.area, placement.group), dock)
+                    if first is not dock:
+                        window.tabifyDockWidget(first, dock)
             case MenuItem():
                 add_menu_item(window, named(name, view, QAction), placement)
             case ToolBarItem():
@@ -809,14 +872,17 @@ def named(name: str, view: object, required: type[T]) -> T:
     return widget
 
 
-def add_dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
-    """Put *widget* in a dock of *window*, in the area *placement* names."""
+def add_dock(
+    window: QMainWindow, name: str, widget: QWidget, placement: Dock
+) -> QDockWidget:
+    """Put *widget* in a dock of *window*, in the area *placement* names, and return it."""
     # Qt matches a dock to its saved place by object name, and drops one that
     # has none, so the component's declared name is what carries the layout
     dock = QDockWidget(name, window)
     dock.setObjectName(name)
     dock.setWidget(widget)
     window.addDockWidget(AREAS[placement.area], dock)
+    return dock
 
 
 def add_menu_item(window: QMainWindow, action: QAction, placement: MenuItem) -> None:
