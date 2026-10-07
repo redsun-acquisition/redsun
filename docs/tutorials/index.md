@@ -4,8 +4,9 @@ icon: lucide/graduation-cap
 
 # Tutorials
 
-Nine tutorials that build one application, step by step. New users start
-here, and follow them in order: each adds to the script of the one before.
+If you're new to `redsun`, start here. Over nine tutorials you build one
+application step by step, so follow them in order: each one adds to the
+script you finished in the one before.
 
 | Tutorial | You end with |
 | --- | --- |
@@ -19,4 +20,4 @@ here, and follow them in order: each adds to the script of the one before.
 | [Putting a device behind a service](device-service.md) | a third stage, in a program of its own |
 | [Reusing the built-in positioner](builtin-positioner.md) | the stages moved by the positioner `redsun` ships |
 
-None of the tutorials needs hardware.
+You don't need any hardware for these tutorials.

@@ -5,29 +5,29 @@ icon: lucide/camera
 # Acquiring images
 
 In this tutorial you add a camera to the session, and a presenter that offers
-a plan to acquire with it. You find the frames on disk, and show the last one
-in the window. It continues from
+a plan to acquire with it. You then find the frames on disk, and show the
+last one in the window. It continues from
 [Building controls for a plan](plan-controls.md).
 
 The camera is a simulated one that ships with
 [`ophyd-async`](../explanation/glossary.md#ophyd-async), so you need no
-hardware and write no device. The presenter and the view of the plans stay as
-they are: the session passes them the new plan.
+hardware and don't write a device. The presenter and the view of the plans
+stay as they are, because the session passes them the new plan.
 
 ## Before you start
 
 !!! note "What you need"
 
-    `h5py`, which the camera writes its file with and the session reads it
-    with. It does not come with `redsun`:
+    `h5py`, which the camera uses to write its file and the session uses to
+    read it. It doesn't come with `redsun`:
 
     ```bash
     uv add h5py
     ```
 
-    `h5py` comes without information on its types, which `mypy` reports as
-    an error. If you keep checking the types of the script, add these lines
-    to `pyproject.toml` first:
+    `h5py` comes without information on its types, and `mypy` reports that
+    as an error. If you keep checking the types of the script, add these
+    lines to `pyproject.toml` first:
 
     ```toml
     [tool.mypy]
@@ -49,20 +49,20 @@ from ophyd_async.sim import SimBlobDetector
 from qtpy.QtGui import QImage, QPixmap
 ```
 
-Nothing you wrote so far changes in this tutorial either.
+Nothing you've written so far changes in this tutorial either.
 
 ## 1. Say what a camera is
 
-A plan says what it needs from a device, as the plan of the stages did. Add a
-second protocol below `HasPosition`:
+Like `walk`, the new plan says what it needs from a device with a protocol.
+Add a second protocol below `HasPosition`:
 
 ```{.python}
 --8<-- "docs/tutorials/acquire_images.py:camera"
 ```
 
-A camera is a device that can be read, and triggered to take a frame. Both
-protocols come from [`bluesky`](../explanation/glossary.md#bluesky). The
-stages can be read and not triggered, so they are not cameras.
+A camera is a device you can read, and trigger to take a frame. Both
+protocols come from [`bluesky`](../explanation/glossary.md#bluesky). You can
+read the stages but not trigger them, so they aren't cameras.
 
 ## 2. Offer a plan for it
 
@@ -72,24 +72,25 @@ Add a presenter below `PlanView`:
 --8<-- "docs/tutorials/acquire_images.py:camera_ctrl"
 ```
 
-It offers a plan, as `StagePlans` does: `snap` wraps
+It offers a plan, as `StagePlans` does. The plan, `snap`, wraps
 [`count`][bluesky.plans.count], a plan `bluesky` already has.
 
-It also follows the plan while it runs. The
+The presenter also follows the plan while it runs. The
 [`RunEngine`][redsun.engine.RunEngine] describes what happens in
-[documents](../explanation/glossary.md#document), and a `DocumentRouter`
-receives each kind in a method of its name. This one reads
-[`StreamResource`](../explanation/glossary.md#streamresource), in which a
-device says which file it wrote. Of the two the camera sends in a run, the one
-named `camera` holds its frames. `show_last` turns the URI of that file into a
-path with the two functions of `urllib`, opens it, and sends the last frame
-with `sig_frame`, once the plan has ended.
+[documents](../explanation/glossary.md#document), records it emits while a
+plan runs, and a `DocumentRouter` receives each kind of document in the
+method named after it. This one reads
+[`StreamResource`](../explanation/glossary.md#streamresource), the document
+in which a device says which file it wrote. The camera sends two of them in a
+run, and the one named `camera` holds its frames. Once the plan has ended,
+`show_last` turns the URI of that file into a path with the two functions of
+`urllib`, opens the file, and sends the last frame with `sig_frame`.
 
 ## 3. Run it
 
 Add these two lines to the session, the first among the devices and the
-second among the presenters. A device that already exists needs no code,
-only its line:
+second among the presenters. A device someone else already wrote needs no
+code from you, only its line:
 
 ```python
 camera: AsDevice[SimBlobDetector]
@@ -106,15 +107,15 @@ uv run first_session.py
 Session built: 3/3 devices, 4/4 presenters, 2/2 views
 ```
 
-The list of the plans has a second entry, `snap`. Choose it: the view shows
-the plan widget of `snap`, with a list that holds `camera` and an input for
-`frames`. You connected nothing: `CameraPresenter` offers a plan, so the
-session passed it to `PlanPresenter` and to `PlanView`. It is a
-`DocumentRouter`, so the session passed it to `PlanPresenter` a second time,
-among `callbacks`.
+The list of the plans has a second entry, `snap`. Choose it, and the view
+shows the plan widget of `snap`, with a list that holds `camera` and an input
+for `frames`. You didn't connect anything. Because `CameraPresenter` offers a
+plan, the session passed it to `PlanPresenter` and to `PlanView`. Because
+it's also a `DocumentRouter`, the session passed it to `PlanPresenter` a
+second time, among `callbacks`.
 
-Press **Run**: the view greys out and comes back. The frames are acquired,
-and nothing shows them yet. Close the window.
+Press **Run**: the view greys out and comes back. The camera acquires the
+frames, but nothing shows them yet. Close the window.
 
 ## 4. Show the frame
 
@@ -124,12 +125,12 @@ Add a view below `CameraPresenter`:
 --8<-- "docs/tutorials/acquire_images.py:image_view"
 ```
 
-`show_frame` turns the frame into an image, and stretches its values over the
-whole scale of greys first, since the camera writes small numbers.
+`show_frame` turns the frame into an image. Since the camera writes small
+numbers, it first stretches the values over the whole scale of greys.
 
 ## 5. Add it to the session
 
-Add the highlighted lines. You already have the first two:
+Add the highlighted lines. You already added the first two in step 3:
 
 ```{.python hl_lines="5 9 12 20-23"}
 --8<-- "docs/tutorials/acquire_images.py:session"
@@ -139,8 +140,8 @@ The first two links reach the
 [path provider](../explanation/glossary.md#path-provider) of the session,
 [`self.path_provider`][redsun.Session.path_provider], which tells the camera
 where to write.
-[`set_plan`][redsun.path_provider.SessionPathProvider.set_plan] gives it the
-name of the plan that is about to run, and
+[`set_plan`][redsun.path_provider.SessionPathProvider.set_plan] gives the
+path provider the name of the plan that's about to run, and
 [`reset_plan`][redsun.path_provider.SessionPathProvider.reset_plan] clears it
 afterwards.
 
@@ -163,8 +164,8 @@ concentric rings](images/acquire-images.png)
 
 ## 7. Find the files
 
-The frames are in the folder `redsun` keeps for you, under the name of the
-session and the date:
+The frames are in the folder `redsun` keeps for you, sorted by the name of
+the session and the date:
 
 ```text
 redsun/
@@ -181,11 +182,12 @@ redsun/
 | Linux | `~/.local/share/redsun` |
 
 Open the folder, then press **Run** again: `snap_00001.h5` appears beside the
-first. The files are named after the plan. The one of step 3 is there too, as
-`unknown_00000.h5`: the path provider had not been told the name of the plan.
+first, since the files are named after the plan. The file from step 3 is
+there too, as `unknown_00000.h5`, because nothing had told the path provider
+the name of the plan yet.
 
 The session chose the folder and the name, and created the folder. The camera
-wrote the file, in the format it chose. `redsun` itself writes no acquisition
+wrote the file, in a format it chose. `redsun` itself writes no acquisition
 data.
 
 ??? example "The whole script"
@@ -196,16 +198,16 @@ data.
 
 ## What you built
 
-A session with a camera beside its two stages, and a second plan to choose in
-the view of the plans. Its plan widget acquires as many frames as you ask
-for, the last one shows in the window, and every acquisition is a file of its
-own on disk, in a folder named after the session and the day. The plan
-reached its widget and the `RunEngine` without a line of yours joining them.
+You added a camera beside the two stages, and a second plan to choose in the
+view of the plans. Its plan widget acquires as many frames as you ask for,
+and the last one shows in the window. Every acquisition is a file of its own
+on disk, in a folder named after the session and the day. The plan reached
+its widget and the `RunEngine` without a line of yours joining them.
 
 ## Next steps
 
-- [Scanning a stage with the camera](scan-plan.md) is the next tutorial: it
-  adds a plan that uses a stage and the camera together.
+- [Scanning a stage with the camera](scan-plan.md) is the next tutorial,
+  where you add a plan that uses a stage and the camera together.
 - [Write a session file](../how-to/write-a-session-file.md) shows how to keep
   the files in another folder.
 - [Components](../explanation/components.md#where-a-device-writes) explains

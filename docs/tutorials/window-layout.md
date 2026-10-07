@@ -9,8 +9,8 @@ buttons of the stages below it. It continues from
 [Scanning a stage with the camera](scan-plan.md).
 
 Each view says where it goes with its
-[placement](../explanation/glossary.md#placement). You will change two of
-them, and find out what the window remembers between two runs.
+[placement](../explanation/glossary.md#placement). You change two of them,
+and find out what the window remembers from one run to the next.
 
 ## Before you start
 
@@ -26,10 +26,10 @@ from redsun.qt import Central
 
 ## 1. Put the image in the centre
 
-Every view you wrote so far is a [`Dock`][redsun.qt.Dock]: a panel against
-one edge of the window. [`Central`][redsun.qt.Central] is the main area of
-the window. In the class `ImageView`, change the line of the placement to
-this one, and leave the rest of the class as it is:
+Every view you've written so far is a [`Dock`][redsun.qt.Dock], a panel
+against one edge of the window. [`Central`][redsun.qt.Central] is the main
+area of the window instead. In the class `ImageView`, change the placement
+line to this one, and leave the rest of the class as it is:
 
 ```python
 placement: Placement = Central()
@@ -41,12 +41,12 @@ Run the script:
 uv run first_session.py
 ```
 
-The image has the middle of the window, with the stages on its left and the
-plans on its right.
+The image now has the middle of the window, with the stages on its left and
+the plans on its right.
 
 ## 2. Move the stages to the bottom
 
-In the class `StageView`, change the line of the placement to this one:
+In the class `StageView`, change the placement line to this one:
 
 ```python
 placement: Placement = Dock("bottom")
@@ -54,16 +54,16 @@ placement: Placement = Dock("bottom")
 
 Run the script again. The stages are still on the left.
 
-Nothing is wrong with the line. The window saves where its docks are when
-you close it, and puts them back the next time. A placement says where a
-view goes when the window has nothing saved for it. The image moved at once
-in step 1 because it stopped being a dock, and the window saves where its
-docks are.
+Nothing is wrong with the line. When you close the window, it saves where
+its docks are, and the next time it opens it puts them back. A placement only
+says where a view goes when the window has nothing saved for it. The image
+moved at once in step 1 because it stopped being a dock, and the window only
+saves where its docks are.
 
 ## 3. Forget the saved layout
 
 The window keeps its layout in one file, named after the session. Close the
-window and delete the file:
+window, then delete the file:
 
 | Platform | File |
 | --- | --- |
@@ -77,8 +77,8 @@ Run the script once more:
 uv run first_session.py
 ```
 
-The stages are below the image. Choose `snap` in the list of the plans and
-press **Run**:
+This time the stages are below the image. Choose `snap` in the list of the
+plans and press **Run**:
 
 ![The window of the session: an image of concentric rings in the centre, the
 rows of the stages below it and the plan widget of snap on the
@@ -87,7 +87,7 @@ right](images/window-layout.png)
 ## 4. Move a dock by hand
 
 Drag the view of the plans by its title, and drop it on the left edge of the
-window. Close the window, and run the script again: the plans are on the
+window. Close the window and run the script again: the plans are on the
 left, where you left them.
 
 ??? example "The whole script"
@@ -98,15 +98,15 @@ left, where you left them.
 
 ## What you built
 
-A window with the image in its centre, the stages below it and the plans
-beside it. Each view starts where its placement says, and stays where you
-drag it.
+You arranged the window with the image in its centre, the stages below it
+and the plans beside it. Each view starts where its placement says, and
+stays where you drag it.
 
 ## Next steps
 
 - [Putting a device behind a service](device-service.md) is the next
-  tutorial: it adds a stage that lives in a program of its own.
+  tutorial, where you add a stage that lives in a program of its own.
 - [How a frontend shows a session on screen](../explanation/frontends.md)
-  lists the placements, menus and toolbars included.
+  lists the placements, along with the menus and toolbars.
 - [How to save a session](../how-to/save-a-session.md) says what else the
-  file of step 3 holds.
+  file from step 3 holds.
