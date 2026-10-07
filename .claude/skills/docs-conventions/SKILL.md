@@ -7,8 +7,10 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
 
 - Diataxis under `docs/`: `tutorials/` (learning), `how-to/` (task),
   `explanation/` (rationale), `reference/api/` (mkdocstrings-generated facts).
-- One authoritative source per fact; cross-link instead of restating.
-- Writing style and glossary linking: `docs/how-to/write-docs.md`.
+- One authoritative source per fact; cross-link instead of restating. A
+  sentence of recap next to the link is fine when the page cannot be followed
+  without it.
+- Voice, headings and glossary linking: `docs/how-to/write-docs.md`.
 - Material-style admonitions (`!!! warning`), mermaid fences for diagrams.
 - Reference pages are generated from docstrings: fix the docstring, not the
   `.md`, when reference content is wrong.
@@ -54,8 +56,8 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
 - Each page: "Before you start" with a "What you need" note, numbered steps,
   a window the reader can see early, "What you built" saying what the reader
   built, and "Next steps". No time estimates.
-- A few sentences after a block, not paragraphs of explanation: link the
-  explanation page instead.
+- After a block, say what it does and why the reader needs it, in a few
+  sentences. Leave the full explanation to the explanation page and link it.
 - Pictures come from `scripts/screenshots.py`, run by the docs build.
 
 ## Guides with more than one block of code
