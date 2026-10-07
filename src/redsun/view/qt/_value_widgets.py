@@ -31,6 +31,11 @@ def problems_of(widget: Any) -> list[str]:
     return list(getattr(widget, "problems", []))
 
 
+def located(where: str, problem: str) -> str:
+    """Return *problem* prefixed with *where* it is: `points[2]: ...` or `gains: ...`."""
+    return f"{where}{problem}" if problem.startswith("[") else f"{where}: {problem}"
+
+
 def type_name(ann: Any) -> str:
     """Return a short name for *ann*, as a union lists its members: `list of float`."""
     ann = unwrap(ann)
@@ -314,7 +319,7 @@ class SequenceEdit(ValuedContainerWidget[Any]):
     def problems(self) -> list[str]:
         """Each row's problems, prefixed with its position."""
         return [
-            f"[{i}]: {problem}"
+            located(f"[{i}]", problem)
             for i, row in enumerate(self._rows)
             for problem in problems_of(row.edits[0])
         ]
@@ -378,7 +383,7 @@ class MappingEdit(ValuedContainerWidget[dict[Any, Any]]):
             found.append("empty key")
         for row in self._rows:
             found.extend(
-                f"[{row.edits[0].value!r}]: {problem}"
+                located(f"[{row.edits[0].value!r}]", problem)
                 for problem in problems_of(row.edits[1])
             )
         return found
@@ -414,7 +419,7 @@ class FixedTupleEdit(ValuedContainerWidget[tuple[Any, ...]]):
     def problems(self) -> list[str]:
         """Each member's problems, prefixed with its position."""
         return [
-            f"[{i}]: {problem}"
+            located(f"[{i}]", problem)
             for i, edit in enumerate(self._edits)
             for problem in problems_of(edit)
         ]

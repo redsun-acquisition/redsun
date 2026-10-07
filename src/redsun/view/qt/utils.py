@@ -23,7 +23,7 @@ from qtpy import QtWidgets as QtW
 from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
 
-from ._value_widgets import problems_of
+from ._value_widgets import located, problems_of
 from ._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
@@ -237,7 +237,9 @@ class PlanWidget:
         Run stays disabled while the list is not empty.
         """
         return [
-            f"{w.name}: {problem}" for w in self.container for problem in problems_of(w)
+            located(w.name, problem)
+            for w in self.container
+            for problem in problems_of(w)
         ]
 
     def _check(self) -> None:

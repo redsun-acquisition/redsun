@@ -25,6 +25,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 from qtpy.QtCore import QLocale
@@ -37,7 +38,14 @@ from qtpy.QtWidgets import (
 )
 
 from redsun.presenter.plan_spec import create_plan_spec
+from redsun.qt import ColorSchemeMode
 from redsun.view.qt.utils import create_plan_widget
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+
+    from bluesky.utils import MsgGenerator
+    from ophyd_async.core import Device
 
 SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
     Path("docs/tutorials/first_session.py"): (
@@ -111,7 +119,10 @@ WIDGETS = Path("docs/examples/parameter_widgets.py")
 """The plans whose parameter widgets the plan inputs guide pictures, by tab."""
 
 WIDGET_PICTURES = Path("docs/how-to/images")
-"""Where each tab's picture is written, as `parameters-<tab>.png`."""
+"""Where each tab's pictures are written, as `parameters-<tab>-<scheme>.png`."""
+
+WIDGET_SCHEMES = (ColorSchemeMode.LIGHT, ColorSchemeMode.DARK)
+"""The colour schemes each tab is pictured in, one per theme of the site."""
 
 WIDGET_WIDTH = 420
 """Width in pixels of a picture of parameter widgets."""
@@ -188,7 +199,7 @@ def capture(
 
 
 def photograph_widgets() -> None:
-    """Save a picture of the parameter widgets each plan of `WIDGETS` gets.
+    """Save a light and a dark picture of the parameter widgets each plan of `WIDGETS` gets.
 
     The picture is the plan widget's parameters alone, its *Devices* and
     *Parameters* groups, without the run buttons and outside any window.
@@ -197,22 +208,34 @@ def photograph_widgets() -> None:
     app = QApplication([])
     example = runpy.run_path(str(WIDGETS))
     devices = example["devices"]()
-    for tab, plan in example["PLANS"].items():
-        widget = create_plan_widget(create_plan_spec(plan, devices))
-        widget.group_box.resize(WIDGET_WIDTH, widget.group_box.sizeHint().height())
-        widget.group_box.show()
-        for _ in range(10):
-            app.processEvents()
-            time.sleep(0.05)
-        # the first input takes the focus, and its cursor would be in the picture
-        focused = app.focusWidget()
-        if focused is not None:
-            focused.clearFocus()
-        target = WIDGET_PICTURES / f"parameters-{tab}.png"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        widget.params_widget.grab().save(str(target))
-        widget.group_box.close()
-        print(f"wrote {target}")
+    for scheme in WIDGET_SCHEMES:
+        scheme.apply()
+        for tab, plan in example["PLANS"].items():
+            target = WIDGET_PICTURES / f"parameters-{tab}-{scheme}.png"
+            photograph_plan(app, plan, devices, target)
+
+
+def photograph_plan(
+    app: QApplication,
+    plan: Callable[..., MsgGenerator[None]],
+    devices: Mapping[str, Device],
+    target: Path,
+) -> None:
+    """Save a picture of the parameter widgets of *plan* to *target*."""
+    widget = create_plan_widget(create_plan_spec(plan, devices))
+    widget.group_box.resize(WIDGET_WIDTH, widget.group_box.sizeHint().height())
+    widget.group_box.show()
+    for _ in range(10):
+        app.processEvents()
+        time.sleep(0.05)
+    # the first input takes the focus, and its cursor would be in the picture
+    focused = app.focusWidget()
+    if focused is not None:
+        focused.clearFocus()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    widget.params_widget.grab().save(str(target))
+    widget.group_box.close()
+    print(f"wrote {target}")
 
 
 def main(arguments: list[str]) -> None:

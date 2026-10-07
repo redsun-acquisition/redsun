@@ -129,7 +129,10 @@ class ParamDescription:
     """Whether several values can be selected, as for `Sequence[OADevice]`."""
 
     hidden: bool = False
-    """Whether no input can show the parameter, so a view leaves it out and the plan keeps its default."""
+    """Whether no input can show the parameter.
+
+    A view leaves a hidden parameter out, and the plan keeps its default.
+    """
 
     actions: Sequence[PlanAction] | PlanAction | None = None
     """Actions taken from the parameter's default value, if any."""

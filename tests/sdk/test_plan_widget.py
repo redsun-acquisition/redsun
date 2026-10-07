@@ -748,7 +748,7 @@ def test_a_problem_inside_a_list_of_mappings_keeps_run_disabled() -> None:
     inner.click()
 
     assert (pw.problems, pw.run_button.isEnabled()) == (
-        ["tables: [0]: empty key"],
+        ["tables[0]: empty key"],
         False,
     )
 
