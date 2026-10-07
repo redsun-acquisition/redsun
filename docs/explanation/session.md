@@ -47,52 +47,95 @@ none has the name of a class a component may itself subclass, such as
 
 ## Devices, presenters, views
 
-A session is split into three layers, which together form the
-[DVP](glossary.md#dvp) pattern:
+A session is split into three layers of components, which together form the
+[DVP](glossary.md#dvp) pattern, short for Device-View-Presenter. Below them sit
+the services, which reach the hardware:
 
 ```mermaid
-graph LR
-    D[devices] --> P[presenters] --> V[views]
+flowchart LR
+    subgraph app [session process]
+        V["views<br/>widgets"] -- uses --> P["presenters<br/>application logic"] -- uses --> D["devices<br/>ophyd-async"]
+        V -- uses --> D
+    end
+    D -- "prefix, over Channel Access or PVAccess" --> S["services<br/>their own processes"]
+    S --> H[(hardware)]
 ```
 
-- **Devices** talk to hardware. They are
-  [`ophyd-async`](glossary.md#ophyd-async) devices.
-- **Presenters** hold the behaviour: they run plans, compute things from the
-  data, and drive the devices.
-- **Views** show things on screen and pass on what the user does.
+- **Devices** describe your setup. Each one is an
+  [`ophyd-async`](glossary.md#ophyd-async) device: a set of signals, such as a
+  position or an exposure time, that presenters and plans can read and set. A device
+  knows what can be controlled, but nothing about when or why.
+- **Presenters** hold the application logic, which decides what happens and
+  when. A presenter runs [plans](plans.md) to acquire data, computes results
+  from the [documents](glossary.md#document) a run produces, moves devices when
+  asked to, and keeps whatever state the application needs between those
+  steps.
+- **Views** are what the user sees and touches. A view holds the widgets,
+  shows what the devices and presenters report, such as a position or an
+  image, and turns what the user does, such as pressing a button, into a
+  signal that a presenter acts on. Deciding what that signal leads to is left
+  to the presenter.
 
-The session builds the layers in that order, and a component may only use what
-its own layer or an earlier one owns. A presenter never knows about a view,
-which is what lets it run without a screen, for example in a test.
+The [services](services.md) are not a layer, because they are separate
+programs rather than components the session builds. A service owns the
+hardware and offers it to the devices under a [prefix](glossary.md#prefix).
+The session starts the services it launches before it builds anything else,
+and stops them after every component. A device that needs no hardware, such as
+a simulated stage, needs no service.
+
+The session builds the layers in the order devices, presenters, views. A
+component can receive, in its constructor or `setup`, only what its own layer
+or an earlier one owns, so a view may take presenters and devices, while a
+presenter never holds a view. Signals and slots are different: they connect
+components across layers in either direction. Because a presenter holds no
+view, it can run without a screen, for example in a test.
 [Components](components.md) explains what each layer may contain.
 
 ## What a build does
 
-[`build`][redsun.Session.build] runs a fixed list of steps. It first reads the
-[configuration](glossary.md#configuration) and gets the
-[frontend](glossary.md#frontend) ready (for Qt, the `QApplication`). Then it
-runs the [build steps](glossary.md#build-step) in this order:
+[`build`][redsun.Session.build] reads the
+[configuration](glossary.md#configuration), gets the
+[frontend](glossary.md#frontend) ready, and then runs the
+[build steps](glossary.md#build-step) in a fixed order:
 
-| step | what happens |
-| --- | --- |
-| `services` | start the [services](services.md) the session launches, and the catalog |
-| `devices` | make every device |
-| `connect` | connect the devices, all at once |
-| `registry` | collect what a component's constructor can ask for by type, such as the settings, the devices, and the [shared values](glossary.md#shared-value) of the session's providers, classes made only to share values |
-| `presenters` | make the presenters |
-| `views` | make the views |
-| `setup` | call each component's `setup` method |
-| `seal` | record which components were built, and close the session to further building. It also notes the settings each component would [save](../how-to/save-a-session.md) now, so the session can later tell whether you changed any |
-| `wiring` | connect the [signals](glossary.md#signal) to the [slots](glossary.md#slot) |
-| `presentation` | put the views on screen |
-| `report` | log a summary of what was built |
+```mermaid
+flowchart LR
+    subgraph start [before the steps]
+        direction TB
+        C["read the configuration"] --> R["get the frontend ready<br/>(for Qt, the QApplication)"]
+    end
+    subgraph make [start services, make the components]
+        direction TB
+        S1["services<br/>start launched services and the catalog"] --> S2["devices<br/>make every device"]
+        S2 --> S3["connect<br/>connect the devices, all at once"]
+        S3 --> S4["registry<br/>collect what constructors can ask for"]
+        S4 --> S5["presenters<br/>make the presenters"]
+        S5 --> S6["views<br/>make the views"]
+    end
+    subgraph finish [put them to work]
+        direction TB
+        S7["setup<br/>call each setup method"] --> S8["seal<br/>record what was built"]
+        S8 --> S9["wiring<br/>connect signals to slots"]
+        S9 --> S10["presentation<br/>put the views on screen"]
+        S10 --> S11["report<br/>log a summary"]
+    end
+    start --> make --> finish
+```
+
+Two steps do more than their names say. `registry` collects everything a
+component's constructor can ask for by type: the settings, the devices, and
+the [shared values](glossary.md#shared-value) of the session's
+[providers](glossary.md#provider), which are classes made only to share values. `seal` records which components
+were built and closes the session to further building. It also notes the
+settings each component would [save](../how-to/save-a-session.md) now, so the
+session can later tell whether you changed any.
 
 The order never changes. A frontend can change what happens inside a step, but
 never which steps run. The `presentation` step, for example, does nothing in a
 plain `Session`, while `QtSession` uses it to show the main window and its
 views.
 
-### Failed components
+### Components that fail to build
 
 If a device doesn't connect, or a presenter's constructor raises, the session
 logs it and leaves that component out. The session carries on without it, and
@@ -107,10 +150,12 @@ something is missing.
 [How to find out why a component is missing](../how-to/find-a-missing-component.md)
 shows how to read the summary and the log, and how to make a session strict.
 
-A component nothing reaches, or a value nobody asks for, is logged as a
-warning and kept. Neither is a mistake: a session under construction has
-components nothing reaches yet, and a [plugin](glossary.md#plugin) may ship
-one that a particular session doesn't use.
+Two other cases only log a warning, and the session keeps what it built: a
+component that shares nothing, asks for nothing and isn't wired to anything,
+and a shared value that no component asks for. Neither is a mistake. While
+you're still putting a session together, some components aren't connected
+yet, and a [plugin](glossary.md#plugin) may ship components or values that
+your session has no use for.
 
 ## Shutting down
 
@@ -132,21 +177,72 @@ twice, and you can build a session again after it was shut down.
 
 ## The configuration
 
-A session reads its settings from the [session files](glossary.md#session-file)
-and mappings listed in `config`. Each component's name is also its key in the
-file:
+You can describe a session in one of two ways: declare its components in a
+Python class, or list them all in a [session file](glossary.md#session-file).
+Either way, the settings come from the files and mappings the session reads,
+and the same rules decide how those sources combine.
 
-```yaml
-session: my-lab
-frontend: qt
+=== "Declared in a class"
 
-presenters:
-  motor_ctrl:
-    step: 2.0
-```
+    A session class names each component as a typed attribute, so the components
+    and their classes live in your code, where your editor and `mypy` can check
+    them. Files are optional. When the class lists some in `config`, they supply
+    the settings: the session name and the arguments of the
+    components the class declares. Each component's name is also its key in the
+    file:
 
-The session reads the sources in order and merges them: a later source wins,
-and nested sections merge key by key. Two rules are different:
+    ```python
+    class MyApp(QtSession):
+        config = "session.yaml"
+
+        motor_ctrl: AsPresenter[MotorPresenter]
+    ```
+
+    ```yaml
+    session: my-lab
+
+    presenters:
+      motor_ctrl:
+        step: 2.0
+    ```
+
+    A file can also add a component the class doesn't declare, by naming the
+    [plugin](plugins.md) that provides it, as
+    [Components from a file and from a class](plugins.md#components-from-a-file-and-from-a-class)
+    shows.
+
+=== "Described in a file"
+
+    A session can come entirely from its files, with every component taken
+    from a plugin. You then need no class of your own:
+
+    ```python
+    from redsun import Session
+
+    app = Session.from_config("session.yaml").build()
+    ```
+
+    ```yaml
+    session: my-lab
+    frontend: qt
+
+    devices:
+      stage:
+        plugin_name: mylab
+        plugin_id: stage
+    ```
+
+    The `frontend` key picks the class the session is built on, so a file naming
+    `qt` comes up as a `QtSession`. Such a session has no class name to fall back
+    on, so its files must set `session`.
+    [Run a session without a GUI](../how-to/run-without-a-gui.md) shows a file
+    that names no frontend at all.
+
+### Merging the sources
+
+A session reads its sources in order, whether a class lists them in `config`
+or you pass them to `from_config`, and merges them: a later source wins, and
+nested sections merge key by key. Two rules are different:
 
 - A component's entry is replaced whole. If a later file names `motor_ctrl`,
   it replaces every setting of `motor_ctrl`, since one file should own a
@@ -167,28 +263,13 @@ class Simulation(Instrument):
     config = "simulation.yaml"  # read after common.yaml
 ```
 
-The session checks the merged result before anything is built. A misspelled
-key or a value of the wrong type raises
-[`ConfigurationError`][redsun.ConfigurationError], which lists every problem
-as `section.key: what`. [Session file](../reference/session-file.md) lists
-every key.
+!!! tip "Every mistake in the configuration at once"
 
-### Sessions without a class
-
-A file can describe a whole session, with every component taken from a
-[plugin](plugins.md):
-
-```python
-from redsun import Session
-
-app = Session.from_config("session.yaml").build()
-```
-
-The `frontend` key picks the class the session is built on, so a file naming
-`qt` comes up as a `QtSession`. Such a session has no class name to fall back
-on, so its file must set `session`.
-[Run a session without a GUI](../how-to/run-without-a-gui.md) shows a file
-that names no frontend at all.
+    The session checks the merged result before anything is built. A
+    misspelled key or a value of the wrong type raises
+    [`ConfigurationError`][redsun.ConfigurationError], which lists every
+    problem as `section.key: what`. [Session file](../reference/session-file.md)
+    lists every key.
 
 ## Session name
 
