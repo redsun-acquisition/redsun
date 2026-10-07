@@ -25,7 +25,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![Spin boxes for exposure and frames, and a text field for label](images/parameters-values.png)
+      ![Spin boxes for exposure and frames, and a text field for label](images/parameters-values-light.png#only-light)
+      ![Spin boxes for exposure and frames, and a text field for label](images/parameters-values-dark.png#only-dark)
     </figure>
 
 === "Choices"
@@ -35,7 +36,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![A combo box offering fast and slow, and one offering the binnings](images/parameters-choices.png)
+      ![A combo box offering fast and slow, and one offering the binnings](images/parameters-choices-light.png#only-light)
+      ![A combo box offering fast and slow, and one offering the binnings](images/parameters-choices-dark.png#only-dark)
     </figure>
 
 === "Devices"
@@ -45,7 +47,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![A Devices group with a box per readable device and a combo box for the motor, then a Parameters group with exposure and frames](images/parameters-devices.png)
+      ![A Devices group with a box per readable device and a combo box for the motor, then a Parameters group with exposure and frames](images/parameters-devices-light.png#only-light)
+      ![A Devices group with a box per readable device and a combo box for the motor, then a Parameters group with exposure and frames](images/parameters-devices-dark.png#only-dark)
     </figure>
 
 === "Lists"
@@ -55,7 +58,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![Three rows of positions, each with a remove button, and a button adding one](images/parameters-lists.png)
+      ![Three rows of positions, each with a remove button, and a button adding one](images/parameters-lists-light.png#only-light)
+      ![Three rows of positions, each with a remove button, and a button adding one](images/parameters-lists-dark.png#only-dark)
     </figure>
 
 === "Optional"
@@ -65,7 +69,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![An unticked set box beside a disabled spin box](images/parameters-optional.png)
+      ![An unticked set box beside a disabled spin box](images/parameters-optional-light.png#only-light)
+      ![An unticked set box beside a disabled spin box](images/parameters-optional-dark.png#only-dark)
     </figure>
 
 === "Mapping"
@@ -75,7 +80,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![Two rows, each a key field and a value spin box, and a button adding one](images/parameters-mapping.png)
+      ![Two rows, each a key field and a value spin box, and a button adding one](images/parameters-mapping-light.png#only-light)
+      ![Two rows, each a key field and a value spin box, and a button adding one](images/parameters-mapping-dark.png#only-dark)
     </figure>
 
 === "Union"
@@ -85,7 +91,8 @@ Each tab shows a signature and the inputs it gets.
     ```
 
     <figure markdown="span">
-      ![A combo box choosing float or list of float above a spin box](images/parameters-union.png)
+      ![A combo box choosing float or list of float above a spin box](images/parameters-union-light.png#only-light)
+      ![A combo box choosing float or list of float above a spin box](images/parameters-union-dark.png#only-dark)
     </figure>
 
 Lists, sets, mappings, fixed-length tuples, optional values and unions nest:
