@@ -40,17 +40,19 @@ and the application that runs them.
 
 ## Design philosophy
 
-`redsun` follows three principles:
+Three ideas shape how `redsun` is built:
 
-1. **Don't reinvent the wheel.** Use existing tools, such as the
-   [`bluesky`](glossary.md#bluesky) hardware protocols and Qt for the
-   interface, instead of writing new ones, and give you what you need to put
-   them together.
-2. **Be modular.** You pick only the components you need. A plugin that
-   provides a motor controller works without one that provides a camera
-   interface.
-3. **Give users control.** You own your data and metadata. The framework gives
-   structure, but it doesn't decide what the data means or how it's organized.
+1. **It builds on tools that already exist.** `redsun` uses the hardware
+   protocols of [`bluesky`](glossary.md#bluesky),
+   [`ophyd-async`](glossary.md#ophyd-async) for devices and Qt for the window,
+   rather than writing its own. What it adds is what you need to put them
+   together into one application.
+2. **You take only what you need.** Each component stands on its own, so a
+   session holds only the ones you declare, and a plugin that offers a motor
+   controller works without one that offers a camera.
+3. **Your data stays yours.** `redsun` gives every file a place and a name,
+   but your devices write the data, in the formats they choose, and what the
+   data means and how you organize it is up to you.
 
 ## Why not use Bluesky directly?
 
