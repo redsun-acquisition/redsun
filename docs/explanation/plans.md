@@ -23,9 +23,9 @@ components that offer plans; it asks the session which ones do.
   window, that's the main thread, so the window freezes. The `redsun` one
   hands the plan to a background thread and returns at once.
 - **`PlanSpec`**, a description of a plan's parameters. It's read from the
-  plan's signature and type hints, and names no [toolkit](glossary.md#toolkit), so a component offers
-  a plan once and a view in any toolkit builds its controls from the same
-  description. For Qt, those controls are a
+  plan's signature and type hints, and names no [toolkit](glossary.md#toolkit),
+  so a component offers a plan once and a view in any toolkit builds its
+  controls from the same description. For Qt, those controls are a
   [plan widget](glossary.md#plan-widget).
 - **Continuous plans**, which run until they're stopped and take actions from
   the user while they run. They let the user work with a running plan: a live
@@ -48,10 +48,10 @@ rather than classes, as in
 the plan works with any device that has what it reads and sets.
 
 A component offers its plans through a `plan_map` method, which returns each
-plan under its name as a [`PlanEntry`][redsun.PlanEntry]. A component with
-that method satisfies the [`HasPlans`][redsun.HasPlans] protocol. An entry
-may also list the [document callbacks](glossary.md#callback) the plan needs, under `callbacks`, and
-say under `extendable` whether the user may attach more.
+plan under its name as a [`PlanEntry`][redsun.PlanEntry]. A component with that
+method satisfies the [`HasPlans`][redsun.HasPlans] protocol. An entry may also
+list the [document callbacks](glossary.md#callback) the plan needs, under
+`callbacks`, and say under `extendable` whether the user may attach more.
 
 The plans stay with the component they belong to: a component that holds a
 stage offers the plans that move it, and no central list names them.
@@ -80,12 +80,12 @@ A view builds a plan widget from a description, which `create_plan_spec`
 makes from the plan's signature. To get the plans, the view asks the session
 the same question the presenter asks, and then describes the plans itself.
 
-The presenter can't hand its descriptions over as a
-[shared value](glossary.md#shared-value), because the session reads a shared
-value when it makes the component, and the presenter only learns which plans
-exist later, in `setup`. So the view asks for the session's devices too,
-although it moves none of them: for each device parameter, a description
-lists the devices that can fill it, so it needs the devices to find them.
+The presenter can't simply share its descriptions with the view as a
+[shared value](glossary.md#shared-value). The session reads shared values when
+it makes a component, but the presenter only learns which plans exist later,
+in `setup`. So the view describes the plans itself, and for that it also asks
+for the session's devices, although it moves none of them: a description
+lists, for each device parameter, the devices that can fill it.
 
 ### Plans that are refused
 
@@ -94,7 +94,8 @@ If a required parameter has an annotation that no input can show,
 shown with a control nobody can fill in. If such a parameter has a default,
 it's hidden instead: the view leaves it out and the plan keeps its default,
 which is how the `md` parameter of most `bluesky` plans is treated. Two
-actions with the same name make `create_plan_spec` raise `ValueError`.
+actions with the same name make `create_plan_spec` raise `ValueError`, since
+the name is what tells a plan's actions apart.
 
 The component that describes the plans decides what happens next. One that
 catches the error for each plan leaves that plan out and keeps the others,
@@ -149,13 +150,13 @@ is stopped while it waits.
     An action that is running when the plan is stopped stays running until
     the plan calls `done`. Call `done` in a `finally` block.
 
-Each call to `wait` makes new latches for the actions it offers. A
-latch is an object a plan waits on until another thread sets it; the
-[engine reference](../reference/api/engine.md#waiting-on-a-latch) describes
-the one `redsun` uses. Because the latches are new each time, a request left
-over from an earlier launch of the plan can't start an action of this one.
-The `RunEngine` itself has no code for actions: it receives the latches `wait`
-made and waits on them.
+Each call to `wait` makes new latches for the actions it offers. A latch is an
+object a plan waits on until another thread sets it; the [engine
+reference](../reference/api/engine.md#waiting-on-a-latch) describes the one
+`redsun` uses. Because the latches are new each time, a request left over from
+an earlier launch of the plan can't start an action of this one. The
+`RunEngine` itself has no code for actions: it receives the latches `wait` made
+and waits on them.
 
 `wait` doesn't time out. While it waits, it yields a
 [checkpoint](glossary.md#checkpoint) every `poll_interval` seconds, as the
@@ -165,11 +166,8 @@ request needs a device that streams frames on its own.
 
 The user asks for an action through `request`, a [slot](glossary.md#slot)
 that's safe to call from any thread and raises nothing. Asking for an action
-no plan offers changes nothing and is logged as a warning, and so is asking an
-action that isn't running to end.
-
-The name is what tells a plan's actions apart, so `create_plan_spec` refuses
-a plan that declares two actions with the same name.
+no plan offers changes nothing and is logged as a warning, and so is asking to
+end an action that isn't running.
 
 ### Toggle actions
 
@@ -216,4 +214,4 @@ of it from the next state.
 - [`engine/actions` API](../reference/api/engine.md#actions)
 - [`engine/plan_stubs` API](../reference/api/engine.md#plan-stubs)
 - [`presenter/plan_spec` API](../reference/api/presenter.md#plan-specification)
-- [How the Qt widgets of redsun work](qt-widgets.md#plan-widgets)
+- [How the Qt widgets work](qt-widgets.md#plan-widgets)

@@ -11,13 +11,15 @@ but turning them into a complete application with a usable interface is still
 hard work.
 
 `redsun` fills that gap. It's a toolkit for building your own acquisition
-software out of separate parts that react to each other's events.
+software out of small, separate components that work together by sending each
+other signals.
 
 ```mermaid
-graph TD
-    redsun -->|provides SDK for| components
-    components -->|loaded by| redsun
-    redsun -->|assembles| application
+flowchart LR
+    SDK["redsun as SDK<br/>devices, presenters, views,<br/>signals and slots"] -- "you write with it" --> C["your components<br/>in your code or a plugin"]
+    C -- "declared in" --> S["a session<br/>class or session file"]
+    Shell["redsun as application shell"] -- "builds and connects" --> S
+    S --> App["your application<br/>window, plans, data"]
 ```
 
 ## SDK, components and application
@@ -28,8 +30,10 @@ and the application that runs them.
 - **`redsun` as SDK** gives you the patterns to write components in: devices,
   presenters and views, and the signals, slots and shared values they
   exchange, so every package is written the same way.
-- **[Components](glossary.md#component)** are packages that users write:
-  hardware drivers, logic and interfaces built on the `redsun` SDK.
+- **[Components](glossary.md#component)** are the classes you write, or
+  install from a [plugin](glossary.md#plugin): devices that describe your
+  hardware, presenters that hold the application logic, and views that show
+  it on screen.
 - **`redsun` as application shell** discovers plugins, builds their components
   into a [session](glossary.md#session), connects them, and launches the
   application.
@@ -40,7 +44,8 @@ and the application that runs them.
 
 1. **Don't reinvent the wheel.** Use existing tools, such as the
    [`bluesky`](glossary.md#bluesky) hardware protocols and Qt for the
-   interface, and ship the tools to build the wheel.
+   interface, instead of writing new ones, and give you what you need to put
+   them together.
 2. **Be modular.** You pick only the components you need. A plugin that
    provides a motor controller works without one that provides a camera
    interface.
@@ -78,9 +83,13 @@ come from you or from a plugin:
 | Not included | Where it comes from |
 | --- | --- |
 | hardware drivers | the devices and services you write or install |
-| an acquisition panel | a [view](glossary.md#view) you write; `redsun` builds the [plan widget](glossary.md#plan-widget) of each plan, see [Qt widgets](qt-widgets.md) |
-| an image viewer | a view you write |
+| an image viewer | a [view](glossary.md#view) you write |
 | a writer for acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
+
+A panel that runs your plans is built in, as
+[How to run plans from the window](../how-to/run-plans-from-the-window.md)
+shows, and `redsun` builds the [plan widget](glossary.md#plan-widget) of each
+plan for a panel of your own; see [Qt widgets](qt-widgets.md).
 
 `redsun` also doesn't restart a service that crashes, and a program can run
 only one [frontend](glossary.md#frontend). [Limitations](limits.md) explains

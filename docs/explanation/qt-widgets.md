@@ -2,10 +2,11 @@
 icon: lucide/layout-panel-left
 ---
 
-# How the Qt widgets of redsun work
+# How the Qt widgets work
 
 `redsun.view.qt` gives you Qt widgets to use in the views of a session: the
-controls of a plan, and a tree of a device's settings.
+controls of a plan, buttons for the actions of a running plan, and a tree of a
+device's settings.
 
 ---
 
@@ -16,7 +17,7 @@ controls of a plan, and a tree of a device's settings.
 an input for each parameter and a button to run the plan, and a continuous
 plan also gets a toggle, a pause button and a button for each action.
 `create_plan_widget` returns a `PlanWidget`, a frozen dataclass that owns the
-widget tree, and its `group_box` is the page your view adds to its layout.
+widget tree, and its `group_box` is the widget your view adds to its layout.
 
 A plan widget runs nothing itself. When a button is pressed, it calls the view
 back, and the view sends the plan's name and `PlanWidget.parameters` to the
@@ -43,11 +44,11 @@ the inputs a few signatures get, and the
 
 ### Document callbacks
 
-A plan may require [document callbacks](glossary.md#callback) of its own, the objects that receive
-the [documents](glossary.md#document) of a run, and may let the user attach
-more. `create_plan_widget` lists both in a *Callbacks* group. You pass it the
-plan's own callbacks, whether the plan is extendable, and the callbacks the
-user may attach, by name:
+A plan may require [document callbacks](glossary.md#callback) of its own, the
+objects that receive the [documents](glossary.md#document) of a run, and may
+let the user attach more. `create_plan_widget` lists both in a *Callbacks*
+group. You pass it the plan's own callbacks, whether the plan is extendable,
+and the callbacks the user may attach, by name:
 
 ```python
 widget = create_plan_widget(

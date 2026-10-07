@@ -16,15 +16,14 @@ argument by keyword. It fills each parameter from one of these places:
 - `name` is always the component's name.
 - If the [session file](glossary.md#session-file) or an inline `Declare(...)`
   gives a value for the parameter, the parameter takes that value.
-- Any other parameter is looked up **by its type**, among the values the
-  session holds before any component exists. These are `SessionConfig`,
-  `Settings`, `DeviceMapping`, `DevicesOf[P]`, the path provider, the catalog
-  address, and the [shared values](glossary.md#shared-value) of the session's
-  [providers](glossary.md#provider). A provider is a class the session makes before any component,
-  only to share values. You list providers on the session class, or a plugin
-  adds them through the session file, as
+- Any other parameter is looked up **by its type**, among what the session
+  holds before any component exists: its settings (`SessionConfig`,
+  `Settings`), the devices (`DeviceMapping`, `DevicesOf[P]`), the path
+  provider, the catalog address, and the
+  [shared values](glossary.md#shared-value) of its
+  [providers](glossary.md#provider), classes made only to share values.
   [Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)
-  shows.
+  shows how to add one.
 - A Qt view's `parent` is the main window, which the frontend passes in; see
   [Frontends](frontends.md#the-qt-frontend).
 - A parameter with a default keeps its default when nothing else fills it.
@@ -42,13 +41,12 @@ If the file gives `step`, the presenter gets that value, and otherwise it gets
 
 !!! warning "The session can't see types imported under `if TYPE_CHECKING:`"
 
-    The session reads each parameter's annotation while the program runs, to
-    decide what to pass. A type you import only under `if TYPE_CHECKING:`
-    doesn't exist at that point, so the session leaves the component out and
-    logs a `TypeError`. Import
-    the types of these parameters with a normal import;
-    [Limitations](limits.md#can-i-import-parameter-types-under-if-type_checking) lists where this
-    applies.
+    The session reads each parameter's annotation while the program runs, to decide
+    what to pass. A type you import only under `if TYPE_CHECKING:` doesn't
+    exist at that point, so the session leaves the component out and logs a
+    `TypeError`. Import the types of these parameters with a normal import;
+    [Limitations](limits.md#can-i-import-parameter-types-under-if-type_checking)
+    lists where this applies.
 
 ### What arrives in `setup`
 
@@ -155,8 +153,9 @@ to ten seconds for each. A device that doesn't connect is left out, just like
 one that failed to build, and the summary lists it as `camera (device, not
 connected)`.
 
-If you declare a device with [`autoconnect=False`](glossary.md#autoconnect), the session leaves it
-unconnected, so your session's code can connect it when it chooses. The build
+If you declare a device with [`autoconnect=False`](glossary.md#autoconnect),
+the session leaves it unconnected, so your session's code can connect it when
+it chooses. The build
 then can't leave the device out because its hardware is missing, so a
 component has to decide what to do when the connection fails. See
 [How to connect a device on demand](../how-to/connect-a-device-on-demand.md).
@@ -193,8 +192,8 @@ another command.
 
 ## Presenters
 
-A [presenter](glossary.md#presenter) holds the session's application logic. It may run
-[`bluesky`](glossary.md#bluesky) [plans](plans.md), react to the
+A [presenter](glossary.md#presenter) holds the session's application logic. It
+may run [`bluesky`](glossary.md#bluesky) [plans](plans.md), react to the
 [documents](glossary.md#document) a run produces, move a device directly, or
 talk to another program. Because it never touches a widget, it works without a
 screen.
@@ -235,8 +234,9 @@ class MotorView(QWidget):
     def refresh(self, motor: str, position: float) -> None: ...
 ```
 
-Signal names start with `sig_`. A slot must be marked with `slot`, which makes
-its name public, since other code connects to it. A slot may be `async def`.
+By convention, signal names start with `sig_`. A slot must be marked with
+`slot`, and since other code connects to it by name, it's part of the
+component's public interface. A slot may be `async def`.
 
 The session makes the connections, either in [`wire`][redsun.Session.wire] or
 from the file's `wiring` section; the components never connect themselves.

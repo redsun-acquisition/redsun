@@ -2,7 +2,7 @@
 icon: lucide/list-ordered
 ---
 
-# How a session build sequence works
+# How a session works
 
 A [session](glossary.md#session) is one running application. It knows which
 [components](glossary.md#component) to make, makes them in the right order,
@@ -39,11 +39,10 @@ A line without `AsDevice`, `AsPresenter` or `AsView` is an ordinary
 attribute, not a component.
 
 Once the session is built, `self.motor_ctrl` holds the `MotorPresenter` the
-session made. To your editor and `mypy`, `AsPresenter[MotorPresenter]` is still
-the `MotorPresenter` type with a marker attached, so they see the same class.
-The markers start with `As` so that each one says what it marks, and so that
-none has the name of a class a component may itself subclass, such as
-`Device`.
+session made. Your editor and `mypy` see it as a `MotorPresenter` too, because
+`AsPresenter[...]` only adds a marker to the type. The `As` at the start of
+each marker's name keeps it from clashing with classes such as `Device`, which
+a component may subclass.
 
 ## Devices, presenters, views
 
@@ -63,8 +62,8 @@ flowchart LR
 
 - **Devices** describe your setup. Each one is an
   [`ophyd-async`](glossary.md#ophyd-async) device: a set of signals, such as a
-  position or an exposure time, that presenters and plans can read and set. A device
-  knows what can be controlled, but nothing about when or why.
+  position or an exposure time, that presenters and plans can read and set.
+  A device knows what can be controlled, but nothing about when or why.
 - **Presenters** hold the application logic, which decides what happens and
   when. A presenter runs [plans](plans.md) to acquire data, computes results
   from the [documents](glossary.md#document) a run produces, moves devices when
@@ -77,7 +76,7 @@ flowchart LR
   to the presenter.
 
 The [services](services.md) are not a layer, because they are separate
-programs rather than components the session builds. A service owns the
+programs rather than components the session builds. A service talks to the
 hardware and offers it to the devices under a [prefix](glossary.md#prefix).
 The session starts the services it launches before it builds anything else,
 and stops them after every component. A device that needs no hardware, such as
@@ -123,12 +122,13 @@ flowchart LR
 ```
 
 Two steps do more than their names say. `registry` collects everything a
-component's constructor can ask for by type: the settings, the devices, and
-the [shared values](glossary.md#shared-value) of the session's
-[providers](glossary.md#provider), which are classes made only to share values. `seal` records which components
-were built and closes the session to further building. It also notes the
-settings each component would [save](../how-to/save-a-session.md) now, so the
-session can later tell whether you changed any.
+component's constructor can ask for by type: the settings, the devices, and the
+[shared values](glossary.md#shared-value) of the session's
+[providers](glossary.md#provider), which are classes made only to share values.
+`seal` records which components were built and closes the session to further
+building. It also notes the settings each component would
+[save](../how-to/save-a-session.md) now, so the session can later tell whether
+you changed any.
 
 The order never changes. A frontend can change what happens inside a step, but
 never which steps run. The `presentation` step, for example, does nothing in a
@@ -186,10 +186,9 @@ and the same rules decide how those sources combine.
 
     A session class names each component as a typed attribute, so the components
     and their classes live in your code, where your editor and `mypy` can check
-    them. Files are optional. When the class lists some in `config`, they supply
-    the settings: the session name and the arguments of the
-    components the class declares. Each component's name is also its key in the
-    file:
+    them. Files are optional. When the class lists some in `config`, they
+    supply the settings: the session name and the arguments of the components
+    the class declares. Each component's name is also its key in the file:
 
     ```python
     class MyApp(QtSession):
@@ -283,10 +282,12 @@ for:
 
 ## Log files
 
-Each run writes its log to a file in the session's folder, and each launched
-service writes to a file of its own beside it. The log files follow the data
-folder if it moves while the session runs, and they close last at shutdown.
-[Configure logging](../how-to/configure-logging.md) shows where they go.
+Each run writes its log to a file under `logs/<session>` in the root folder
+the session's data goes under, and each launched service writes to a file of
+its own beside it. The log files follow the root if it moves while the session
+runs, and they close last at shutdown.
+[Configure logging](../how-to/configure-logging.md#find-a-sessions-log-file)
+shows the layout.
 
 ## Session protocols
 

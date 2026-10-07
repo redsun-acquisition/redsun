@@ -12,7 +12,7 @@
 
 # `redsun`
 
-`redsun` is a [CPython] toolkit for building your own modular software for scientific data acquisition. It builds on the [Bluesky] ecosystem and makes no assumptions about your hardware, so each lab can build the control software its experiments need.
+`redsun` is a [Python] toolkit for building your own modular software for scientific data acquisition. It builds on the [Bluesky] ecosystem and makes no assumptions about your hardware, so each lab can build the control software its experiments need.
 
 To learn `redsun`, start with the [tutorials], where you build one application step by step without any hardware.
 
@@ -125,7 +125,7 @@ This design makes a clear point: `redsun` is first of all about device control, 
 The [documentation] covers everything else.
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
-[cpython]: https://www.python.org/
+[python]: https://www.python.org/
 [documentation]: https://redsun-acquisition.github.io/redsun/
 [tutorials]: https://redsun-acquisition.github.io/redsun/tutorials/
 

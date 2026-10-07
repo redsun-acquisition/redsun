@@ -4,18 +4,18 @@ icon: lucide/monitor
 
 # How a frontend shows a session on screen
 
-A [frontend](glossary.md#frontend) is the part that shows your session to a
-person: a desktop window today, and perhaps a web page in the future. `redsun`
-ships one frontend, for Qt.
+A [frontend](glossary.md#frontend) is what shows your session to a person: a
+desktop window today, and perhaps a web page in the future. `redsun` ships one
+frontend, for Qt.
 
 The core of `redsun` knows nothing about windows. It builds components and
 connects them, and a frontend adds two things on top:
 
 - a session class for you to subclass, such as
-  [`QtSession`][redsun.qt.QtSession], which knows how to start the [toolkit](glossary.md#toolkit) and
-  put views on screen. It lives in the frontend's own package, `redsun.qt`,
-  because importing it imports the toolkit, and a session without a window
-  doesn't install the toolkit;
+  [`QtSession`][redsun.qt.QtSession], which knows how to start the
+  [toolkit](glossary.md#toolkit) and put views on screen. It lives in the
+  frontend's own package, `redsun.qt`, because importing it imports the
+  toolkit, and a session without a window doesn't install the toolkit;
 - a [`Frontend`][redsun.Frontend] class, which lists the
   [placements](glossary.md#placement) it can show.
 
@@ -80,7 +80,8 @@ You choose the [Qt binding](glossary.md#qt-binding) with `QT_API`, which
 ### Hook points
 
 A [hook](glossary.md#hook) lets you act at fixed moments of a Qt session's
-build without changing what it builds. The Qt frontend calls five
+life, from making the application to closing the window, without changing
+what the session builds. The Qt frontend calls five
 [hook points](glossary.md#hook-point), the named moments where a hook runs:
 
 | point | called with | to |
@@ -134,9 +135,11 @@ overrides it.
 
 ### What a frontend provides
 
-Presenters working on other threads call a view's
-[slots](glossary.md#slot), but most toolkits let a view be used from one
-thread only. A frontend settles that in three places:
+A frontend provides three things: the placements it shows, the thread its
+views' [slots](glossary.md#slot) run on, and the delivery of calls held for
+that thread. The last two matter because presenters working on other threads
+call a view's slots, while most toolkits let a view be used from one thread
+only:
 
 | what | where | the Qt frontend |
 | --- | --- | --- |
@@ -151,4 +154,4 @@ loop, as often as the views should follow the presenters.
 
 Coroutine slots need nothing from the frontend, because every session sets the
 backend that runs them when it starts its runtime. That's why a frontend's
-`start_runtime` calls the one it overrides.
+`start_runtime` must call the `start_runtime` it overrides.

@@ -4,10 +4,10 @@ icon: lucide/server-cog
 
 # How a session runs and talks to services
 
-A service is a server your devices talk to, such
-as an [EPICS](glossary.md#epics) [IOC](glossary.md#ioc), a camera server or a
-motion controller's gateway. Your [`ophyd-async`](glossary.md#ophyd-async)
-devices talk to it over [Channel Access](glossary.md#channel-access) or
+A service is a server your devices talk to, such as an
+[EPICS](glossary.md#epics) [IOC](glossary.md#ioc), a camera server or a motion
+controller's gateway. Your [`ophyd-async`](glossary.md#ophyd-async) devices
+talk to it over [Channel Access](glossary.md#channel-access) or
 [PVAccess](glossary.md#pvaccess), and `redsun` takes no part in that. What
 `redsun` handles is everything around it: it starts the service when the
 session launches it, notices when it exits, stops it cleanly, and gives its
@@ -28,8 +28,8 @@ possible about each other.
 
 Devices describe what your setup contains, such as a stage with an X and a Y
 position, or a camera with an exposure time and a region of interest. Each
-device is a set of signals the session reads and sets, so it says what can be
-controlled but not how to reach the hardware.
+device is a set of signals that presenters and plans read and set, so it says
+what can be controlled but not how to reach the hardware.
 
 Reaching the hardware is the service's job. A service opens the serial port or
 the camera, speaks the vendor's protocol or runs the vendor's library, and

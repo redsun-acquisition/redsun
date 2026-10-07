@@ -29,8 +29,8 @@ devices that name it.
 ### Autoconnect
 
 `autoconnect` is the keyword of a device [declaration](#declaration) that
-says whether the [build](#build) connects the device, and it is `true` unless
-you set it. A device declared with `autoconnect=False` stays unconnected until
+says whether the [build](#build) connects the device. It's on unless you turn
+it off. A device declared with `autoconnect=False` stays unconnected until
 your session's code connects it.
 
 ### bluesky
@@ -119,8 +119,8 @@ and keeps next to the data it came from, such as a median over a scan. A
 
 ### Device
 
-A device is one part of your setup as the session sees it: the values it can
-read and set. You write devices with [`ophyd-async`](#ophyd-async), and
+A device describes one piece of your setup, such as a stage or a camera,
+through the values you can read and set. You write devices with [`ophyd-async`](#ophyd-async), and
 together they model the setup. For now, the preferred way to reach the
 hardware is a [service](#service); see [Services](services.md). Devices are
 the first [layer](#layer) to be built.
@@ -159,8 +159,8 @@ the server allows, sets them. See
 
 ### Frontend
 
-A frontend is the part of `redsun` that shows a session on screen, such as the
-Qt one. A session file names it by its registered name (`frontend: qt`), and a
+A frontend is what shows a session on screen, such as the Qt one that
+`redsun` ships. A session file names it by its registered name (`frontend: qt`), and a
 package can register its own.
 
 ### Hook
@@ -193,10 +193,11 @@ when it shuts down.
 ### Layer
 
 A layer is one of the three groups a component belongs to: devices, presenters
-or views. Layers are built in that order, so a component's
-[`setup`](#setup) can only ask for what its own layer or an earlier one owns,
-and its constructor for no other component at all. [Signals](#signal) and
-[slots](#slot) connect across layers in either direction.
+or views. Layers are built in that order, and a component can receive only
+what its own layer or an earlier one owns. A presenter's constructor can take
+devices, which already exist, while components of its own layer reach it only
+in [`setup`](#setup). [Signals](#signal) and [slots](#slot) connect across
+layers in either direction.
 
 ### Link
 
@@ -395,12 +396,11 @@ in `setup`, or in its constructor when a provider shares it.
 
 ### Signal
 
-A signal is a message that a component sends, through
-[`psygnal`](#psygnal), to every [slot](#slot) connected to it, and by
-convention its name starts with `sig_`.
-Each public signal is a [port](#port), as is each member of a `SignalGroup`
-the component holds. A value of a device is a
-[device signal](#device-signal), which is a different thing.
+A signal is a message that a component sends, through [`psygnal`](#psygnal), to
+every [slot](#slot) connected to it, and by convention its name starts with
+`sig_`. Each public signal is a [port](#port), as is each member of a
+`SignalGroup` the component holds. A value of a device is a [device
+signal](#device-signal), which is a different thing.
 
 ### Slot
 
@@ -413,11 +413,10 @@ components rely on them.
 A stack is a [presenter](#presenter) and a [view](#view) written to work
 together: each slot of one names, with `slot(signal=...)`, the signal of the
 other that reaches it. The session still builds them as two components, and a
-[pairing](#pairing) joins them, so either can be replaced by one with the
-same ports. `redsun` ships three: the
-positioner (`PositionerPresenter`, `PositionerView`), the light stack
-(`LightPresenter`, `LightView`) and the acquisition stack
-(`AcquisitionPresenter`, `AcquisitionView`).
+[pairing](#pairing) joins them, so either can be replaced by one with the same
+ports. `redsun` ships three: the positioner (`PositionerPresenter`,
+`PositionerView`), the light stack (`LightPresenter`, `LightView`) and the
+acquisition stack (`AcquisitionPresenter`, `AcquisitionView`).
 
 ### StreamDatum
 
@@ -453,8 +452,8 @@ their data to a program or a browser over the network. See the
 
 ### Toolkit
 
-A toolkit is the GUI library a [frontend](#frontend) shows views with, such
-as Qt. Only the frontend's own package imports it, so a session without a
+A toolkit is the library of windows and widgets a [frontend](#frontend) shows
+views with, such as Qt. Only the frontend's own package imports it, so a session without a
 window doesn't need it installed.
 
 ### Transport

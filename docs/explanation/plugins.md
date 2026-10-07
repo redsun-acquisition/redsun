@@ -31,9 +31,9 @@ doesn't use them.
 
 Besides the three [layers](glossary.md#layer), a manifest has two more groups.
 `providers` lists classes that share values with every component without being
-components themselves. Each method a [provider](glossary.md#provider) marks with
-[`provides`][redsun.provides] shares a [value](glossary.md#shared-value), and
-the provider's constructor receives shared values only, never the keys of a
+components themselves. Each method a [provider](glossary.md#provider) marks
+with [`provides`][redsun.provides] shares a [value](glossary.md#shared-value),
+and the provider's constructor receives shared values only, never the keys of a
 session file. `services` lists the [services](services.md) a session can
 launch.
 
@@ -64,8 +64,19 @@ declaration and needs no `plugin_name`.
 
 ## Built-in components
 
-`redsun` is a plugin of itself, named `redsun`, and it offers one view, the
-log window:
+`redsun` is a plugin of itself, named `redsun`. It offers three
+[stacks](glossary.md#stack), each a presenter and a view written to work
+together, and a log window:
+
+| id | presenter | view | for |
+| --- | --- | --- | --- |
+| `positioner` | `PositionerPresenter` | `PositionerView` | [moving devices by hand](../how-to/move-devices-by-hand.md) |
+| `lights` | `LightPresenter` | `LightView` | [switching and dimming lights](../how-to/switch-and-dim-lights.md) |
+| `acquisition` | `AcquisitionPresenter` | `AcquisitionView` | [running plans from the window](../how-to/run-plans-from-the-window.md) |
+| `logs` | none | `LogView` | [showing the log](../how-to/configure-logging.md#show-the-logs-in-the-application) |
+
+A session file names each one by `plugin_name: redsun` and its id, under
+`presenters` or `views`:
 
 ```yaml
 views:
@@ -75,4 +86,3 @@ views:
 ```
 
 In a Qt session, the log view docks at the bottom.
-[Configure logging](../how-to/configure-logging.md) describes what it shows.

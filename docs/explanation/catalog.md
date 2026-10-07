@@ -22,13 +22,13 @@ opens its own client with `tiled`'s `from_uri` and gets the whole client API.
 The server reads `application/x-ome-zarr` files with `ome-tiled`, which serves
 an OME-Zarr image as one array whose `dims` are its axis names. The session
 also registers `ome-tiled`'s consolidator for `TiledWriter`, the callback of
-`bluesky-tiled-plugins` that writes a run's documents into the catalog. A consolidator
-is a class `TiledWriter` uses to turn a
-[`StreamResource`](glossary.md#streamresource) and the [`StreamDatum`](glossary.md#streamdatum) documents
-after it into one catalog entry, and this one reads the image's shape, chunks
-and axis names from its store. The writer then stores an image with the shape
-of its store rather than one derived from the
-[documents](glossary.md#document).
+`bluesky-tiled-plugins` that writes a run's documents into the catalog. A
+consolidator is a class `TiledWriter` uses to turn a
+[`StreamResource`](glossary.md#streamresource) and the
+[`StreamDatum`](glossary.md#streamdatum) documents after it into one catalog
+entry, and this one reads the image's shape, chunks and axis names from its
+store. The writer then stores an image with the shape of its store rather than
+one derived from the [documents](glossary.md#document).
 
 ## One catalog per session
 

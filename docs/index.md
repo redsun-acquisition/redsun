@@ -20,7 +20,7 @@ hide:
 !!! note "Project status"
     `redsun` is usable today, but it's still maturing, so expect breaking changes.
 
-`redsun` is a [CPython] toolkit for building your own modular software for scientific data acquisition. It builds on the [Bluesky] ecosystem and makes no assumptions about your hardware, so each lab can build the control software its experiments need.
+`redsun` is a [Python] toolkit for building your own modular software for scientific data acquisition. It builds on the [Bluesky] ecosystem and makes no assumptions about your hardware, so each lab can build the control software its experiments need.
 
 To learn `redsun`, start with the [tutorials](tutorials/index.md), where you
 build one application step by step without any hardware.
@@ -42,7 +42,8 @@ application with a graphical interface. With `redsun` you can:
 - run acquisitions as `bluesky` [plans](explanation/glossary.md#plan), each
   with a [plan widget](explanation/glossary.md#plan-widget) built from its
   parameters;
-- use the built-in views, starting with a log window;
+- use the built-in components for common tasks: a log window, controls to
+  move stages and switch lights, and a panel that runs plans;
 - give every acquisition file a place and a name, under one folder per
   session;
 - search past [runs](explanation/glossary.md#run) in a
@@ -54,8 +55,7 @@ services behind them, the presenters and views, and the plans for your
 acquisitions.
 
 `redsun` isn't a ready-made microscope program. It comes with no hardware
-drivers, no acquisition panel and no image viewer, and it leaves writing the
-data to your devices.
+drivers and no image viewer, and it leaves writing the data to your devices.
 [Why redsun exists](explanation/statement.md#coming-from-micro-manager) has
 the details, and compares its parts with those of Micro-Manager.
 
@@ -115,4 +115,4 @@ defines the technical terms it uses.
 </div>
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
-[cpython]: https://www.python.org/
+[python]: https://www.python.org/

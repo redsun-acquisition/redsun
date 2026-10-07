@@ -20,7 +20,7 @@ to you.
 Learn how a [session](glossary.md#session) is built, and about the
 [components](glossary.md#component) it's made of.
 
-- [How a session build sequence works](session.md)
+- [How a session works](session.md)
 - [How devices, presenters and views fit together](components.md)
 - [How a component asks the session what it holds](questions.md)
 - [How plugins provide components](plugins.md)
@@ -40,7 +40,7 @@ Learn about the [frontend](glossary.md#frontend) that shows a session on
 screen.
 
 - [How a frontend shows a session on screen](frontends.md)
-- [How the Qt widgets of redsun work](qt-widgets.md)
+- [How the Qt widgets work](qt-widgets.md)
 
 ### Data
 
