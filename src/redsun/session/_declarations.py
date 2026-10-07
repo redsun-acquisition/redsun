@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import inspect
 import logging
+import warnings
+from collections.abc import Mapping
 from dataclasses import KW_ONLY, dataclass, field
 from enum import StrEnum
 from typing import (
@@ -23,7 +25,7 @@ from redsun.errors import HookError, PluginError
 from redsun.services import Service
 from redsun.view import Placement
 
-from .._config import DeviceEntry
+from .._config import DeviceEntry, ViewEntry
 from .._hooks import known_points
 from .._structural import protocol_of
 from ..injection._census import devices_protocol
@@ -35,7 +37,7 @@ from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
 
     from .._config import ComponentEntry, SessionFile
     from ..services._service import ArgValue
@@ -216,6 +218,9 @@ class Declaration:
     `key` is a distinct type per component name, so two instances of one
     class stay separable in a type-keyed graph. A device's `service` and
     `autoconnect` keywords are kept here, not passed to its constructor.
+    A view's `placement` keyword is kept here too, read and checked against
+    the frontend: `placement` is where the view attaches, or `None` when its
+    class answers from a property and only the built instance can say.
     `refusal` is why the class cannot be built in its layer, or `None`; a
     refused declaration is never built. `attribute` is the annotation the
     session class declares it under and `source` the configuration entry its
@@ -237,6 +242,7 @@ class Declaration:
         "key",
         "kind",
         "name",
+        "placement",
         "refusal",
         "service",
         "source",
@@ -252,6 +258,7 @@ class Declaration:
         attribute: str | None = None,
         source: str | None = None,
         refusal: Exception | None = None,
+        frontend: type[Frontend] = Frontend,
     ) -> None:
         self.cls = cls
         self.name = name
@@ -260,9 +267,19 @@ class Declaration:
         self.kind = kind
         self.service: str | None = None
         self.autoconnect = True
-        self.cfg_kwargs = (
-            take_device_keys(self, cfg_kwargs) if kind is Layer.DEVICE else cfg_kwargs
-        )
+        self.placement: Placement | None = None
+        if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
+            refusal = TypeError(
+                f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
+            )
+        if kind is Layer.DEVICE:
+            cfg_kwargs = take_device_keys(self, cfg_kwargs)
+        elif kind is Layer.VIEW and refusal is None:
+            try:
+                cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
+            except (TypeError, ValueError) as error:
+                refusal = error
+        self.cfg_kwargs = cfg_kwargs
         self.key: Key = NewType(name, cls)
         self.instance: Device | NamedComponent | None = None
         self.refusal = refusal
@@ -309,6 +326,56 @@ def take_device_keys(
             "takes true or false"
         )
     declaration.autoconnect = autoconnect
+    return rest
+
+
+def take_view_placement(
+    declaration: Declaration, kwargs: dict[str, Any], frontend: type[Frontend]
+) -> dict[str, Any]:
+    """Move a view's `placement` from *kwargs* onto *declaration*, read and checked.
+
+    A declared placement wins over the class's; *frontend* reads a word or
+    mapping. Without one the class attribute is kept, or nothing when the
+    class answers from a property, which is deprecated.
+
+    Returns the keywords left for the view's constructor.
+
+    Raises
+    ------
+    TypeError
+        If the view's class takes `placement` itself, the value is not a
+        placement, or *frontend* does not attach it.
+    ValueError
+        If *frontend* cannot read the value.
+    """
+    where = f"view {declaration.name!r}"
+    if "placement" in inspect.signature(declaration.cls).parameters:
+        raise TypeError(
+            f"{declaration.cls.__name__} ({where}) takes a 'placement' keyword of "
+            "its own, which a view declaration reserves for the session"
+        )
+    rest = dict(kwargs)
+    declared = rest.pop("placement", None)
+    if declared is None:
+        default = inspect.getattr_static(declaration.cls, "placement", None)
+        if isinstance(default, Placement):
+            declaration.placement = default
+        else:
+            warnings.warn(
+                f"{where}: answering 'placement' from a property is deprecated "
+                "and is removed in 0.16; declare 'placement' instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return rest
+    if isinstance(declared, (str, Mapping)):
+        declared = frontend.read_placement(declared)
+    if not isinstance(declared, Placement):
+        raise TypeError(
+            f"{where} gives placement={declared!r}, which is not a placement"
+        )
+    frontend.check_placement(declaration.cls, declared, where)
+    declaration.placement = declared
     return rest
 
 
@@ -603,6 +670,7 @@ def read(
             attribute=attr,
             source=cfg_key,
             refusal=refused,
+            frontend=frontend,
         )
 
     declarations.update(from_config(config, declarations, frontend))
@@ -827,7 +895,12 @@ def from_config(
             elif refused is None:
                 refused = refusal(target, kind, where, frontend)
             found[cfg_key] = Declaration(
-                target, cfg_key, kind, keywords(entry), refusal=refused
+                target,
+                cfg_key,
+                kind,
+                keywords(entry),
+                refusal=refused,
+                frontend=frontend,
             )
     return found
 
@@ -898,8 +971,8 @@ def is_marked(hint: Any, marker: type) -> bool:
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
     """Return the keywords *entry* gives its component, none for no entry.
 
-    A device's `service` and `autoconnect` are among them where the entry
-    gives them.
+    A device's `service` and `autoconnect`, and a view's `placement`, are
+    among them where the entry gives them.
     """
     if entry is None:
         return {}
@@ -909,4 +982,6 @@ def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
             found["service"] = entry.service
         if "autoconnect" in entry.model_fields_set:
             found["autoconnect"] = entry.autoconnect
+    if isinstance(entry, ViewEntry) and "placement" in entry.model_fields_set:
+        found["placement"] = entry.placement
     return found

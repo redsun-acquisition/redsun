@@ -60,6 +60,7 @@ entry.
 | `plugin_id` | text | none | the id of the class in that manifest |
 | `service` | text | none | devices only: the service whose [prefix](../explanation/glossary.md#prefix) the device gets |
 | `autoconnect` | true or false | `true` | devices only: whether the build connects the device |
+| `placement` | text or mapping | the view's own | views only: where the view goes in the window, as a word or mapping the frontend reads |
 | any other key | | | an argument of the constructor |
 
 An entry for a component the session class declares leaves out `plugin_name`

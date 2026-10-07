@@ -511,7 +511,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration().color_scheme)
         )
-        attach(window, self._with_placeholders())
+        attach(window, self._with_placeholders(), self._declared_placements())
         failures = {**self._failed, **self._not_set_up}
         bar = window.statusBar()
         if failures and bar is not None:
@@ -524,7 +524,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _with_placeholders(self) -> dict[str, AttachableComponent]:
         """Return the views in declaration order, a placeholder for each failed one.
 
-        Only a view whose class names a dock or the centre gets one; a menu or
+        Only a view whose declaration names a dock or the centre gets one; a menu or
         toolbar item has no place to show it in.
         """
         built = self.views
@@ -535,10 +535,18 @@ class QtSession(DesktopSession[QMainWindow], Session):
             if name in built:
                 views[name] = built[name]
                 continue
-            placement = getattr(declaration.cls, "placement", None)
+            placement = declaration.placement
             if name in self._failed and isinstance(placement, (Dock, Central)):
                 views[name] = FailedView(name, self._failed[name], placement)
         return views
+
+    def _declared_placements(self) -> dict[str, Placement]:
+        """Return, by name, the placement each view's declaration chose."""
+        return {
+            name: declaration.placement
+            for name, declaration in self.declarations.items()
+            if declaration.kind is Layer.VIEW and declaration.placement is not None
+        }
 
     def restore_layout(self) -> None:
         """Put the window back where this user last left it.
@@ -558,8 +566,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     def _log_moved_docks(self) -> None:
         """Log each dock that is not on the edge its placement asks for."""
+        declared = self._declared_placements()
         for name, view in self.views.items():
-            placement = view.placement
+            placement = declared.get(name) or view.placement
             if not isinstance(placement, Dock):
                 continue
             # pyside6 annotates the result as optional and pyqt6 does not
@@ -813,10 +822,16 @@ def application() -> QApplication:
     return cast("QApplication", QApplication.instance() or QApplication(sys.argv))
 
 
-def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> None:
+def attach(
+    window: QMainWindow,
+    views: Mapping[str, AttachableComponent],
+    placements: Mapping[str, Placement] | None = None,
+) -> None:
     """Attach every view of *views* to *window* where it asks to be.
 
-    Docks of one edge and group are tabbed together, in the order of *views*.
+    *placements* gives, by name, the placement a view's declaration chose;
+    any other view is placed where its `placement` asks. Docks of one edge
+    and group are tabbed together, in the order of *views*.
 
     Raises
     ------
@@ -827,7 +842,7 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
     central: dict[str, QWidget] = {}
     groups: dict[tuple[Area, str], QDockWidget] = {}
     for name, view in views.items():
-        placement = view.placement
+        placement = (placements or {}).get(name) or view.placement
         Qt.check_placement(view, placement, f"view {name!r}")
         match placement:
             case Central():

@@ -386,6 +386,13 @@ class DeviceEntry(ComponentEntry):
     """Whether the build connects the device."""
 
 
+class ViewEntry(ComponentEntry):
+    """A view's entry, with the key the session keeps from its constructor."""
+
+    placement: str | dict[str, str] | None = None
+    """Where the view attaches, as a word or mapping the session's frontend reads."""
+
+
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
@@ -419,7 +426,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     presenters: dict[str, ComponentEntry] = {}
     """Presenters by name."""
 
-    views: dict[str, ComponentEntry] = {}
+    views: dict[str, ViewEntry] = {}
     """Views by name."""
 
     storage: StorageConfig | None = None

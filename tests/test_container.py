@@ -313,6 +313,23 @@ class DeferredApp(Session):
     stray: AsView[Deferred]
 
 
+class Turning(Attachable):
+    """A view answering its placement from a property, which a declaration replaces."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @property
+    def placement(self) -> Placement:
+        return Elsewhere()
+
+
+class TurningApp(Session):
+    frontend = Toy
+
+    turning: Annotated[AsView[Turning], Declare(placement=Panel("left"))]
+
+
 @pytest.fixture
 def app() -> Any:
     """Build the base session and shut it down afterwards."""
@@ -1308,6 +1325,24 @@ def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
 
     assert "stray" not in app.views
     assert "view 'stray' asks to be attached" in caplog.text
+
+
+def test_a_placement_answered_from_a_property_is_deprecated(
+    build: BuildSession,
+) -> None:
+    """Warn that answering placement from a property is deprecated, naming what replaces it."""
+    with pytest.warns(DeprecationWarning, match="declare 'placement'"):
+        build(DeferredApp)
+
+
+def test_a_declared_placement_replaces_a_property_without_a_warning(
+    build: BuildSession, recwarn: pytest.WarningsRecorder
+) -> None:
+    """Use the declared placement over a property, with no deprecation warning."""
+    app = build(TurningApp)
+
+    assert "turning" in app.views
+    assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
 
 
 def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
