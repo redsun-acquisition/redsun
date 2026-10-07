@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Protocol
 
 from psygnal import Signal
 from qtpy import QtWidgets as QtW
@@ -17,7 +17,21 @@ from ..._settings import Settings  # noqa: TC001
 from ._light_group import LightGroup
 
 if TYPE_CHECKING:
+    from redsun.utils.devices import LightInfo
     from redsun.view import Placement
+
+
+class MakesLightGroup(Protocol):
+    """Builds the widget of one light as `LightView.setup` asks for it."""
+
+    def __call__(
+        self,
+        device: str,
+        info: LightInfo,
+        *,
+        write_while_dragging: bool,
+        parent: QtW.QWidget,
+    ) -> LightGroup: ...
 
 
 class LightView(QtW.QWidget, Loggable):
@@ -39,8 +53,8 @@ class LightView(QtW.QWidget, Loggable):
     placement: Placement = Dock("right")
     """Where the view sits in the main window."""
 
-    group_class: ClassVar[type[LightGroup]] = LightGroup
-    """Widget built for each light; a subclass may name a subclass of its own."""
+    group_class: ClassVar[MakesLightGroup] = LightGroup
+    """Widget built for each light; a subclass may name a subclass of its own that takes the same arguments."""
 
     sig_enabled = Signal(str, bool)
     """Device, and the state asked for."""

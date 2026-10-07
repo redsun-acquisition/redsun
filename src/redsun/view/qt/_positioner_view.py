@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Sequence  # noqa: TC003
-from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    NotRequired,
+    Protocol,
+    TypedDict,
+    TypeGuard,
+)
 
 from psygnal import Signal
 from qtpy import QtCore
@@ -20,6 +28,9 @@ from ..._settings import Settings  # noqa: TC001
 from ._positioner_group import PositionerGroup, StepBox, tool_button
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from redsun.utils.devices import AxisInfo
     from redsun.view import Placement
 
 DEFAULT_STEPS = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0)
@@ -30,6 +41,22 @@ REPEAT_INTERVAL_RANGE = (10, 300)
 
 REPEAT_INTERVAL_TICK = 50
 """Milliseconds between two ticks of the repeat interval slider."""
+
+
+class MakesPositionerGroup(Protocol):
+    """Builds the widget of one device as `PositionerView.setup` asks for it."""
+
+    def __call__(
+        self,
+        device: str,
+        axes: Mapping[str, AxisInfo],
+        *,
+        steps: Sequence[float],
+        repeat_delay: int,
+        repeat_interval: int,
+        step_box: StepBox,
+        parent: QtW.QWidget,
+    ) -> PositionerGroup: ...
 
 
 class SavedPosition(TypedDict):
@@ -144,8 +171,8 @@ class PositionerView(QtW.QWidget, Loggable):
     placement: Placement = Dock("right")
     """Where the view sits in the main window."""
 
-    group_class: ClassVar[type[PositionerGroup]] = PositionerGroup
-    """Widget built for each device; a subclass may name a subclass of its own."""
+    group_class: ClassVar[MakesPositionerGroup] = PositionerGroup
+    """Widget built for each device; a subclass may name a subclass of its own that takes the same arguments."""
 
     sig_move = Signal(str, str, float)
     """Device, axis and step, when a step button is pressed or repeats, or an arrow key steps."""
