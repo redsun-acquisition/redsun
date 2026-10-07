@@ -11,12 +11,13 @@ does with the other devices.
 
 ## Prerequisites
 
-A session declaring the device, and a component that uses it. The blocks
-below are parts of one script; the whole script is at the end.
+You need a session that declares the device, and a component that uses it.
+The blocks below are parts of one script, and the whole script is at the end.
 
 ## Declare the device unconnected
 
-Give the declaration [`autoconnect=False`](../explanation/glossary.md#autoconnect):
+Give the declaration
+[`autoconnect=False`](../explanation/glossary.md#autoconnect):
 
 ```{.python}
 --8<-- "docs/examples/connect_on_demand.py:declare"
@@ -36,7 +37,8 @@ devices:
 ```
 
 The build creates the device and adds it to `devices`, but doesn't connect it.
-[Session file](../reference/session-file.md#components) lists what `autoconnect` accepts.
+[Session file](../reference/session-file.md#components) lists what
+`autoconnect` accepts.
 
 ## Connect it from a component
 

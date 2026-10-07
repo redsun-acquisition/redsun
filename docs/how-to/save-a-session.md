@@ -8,9 +8,9 @@ A session keeps two kinds of state, and each is saved in its own place:
 
 - The components and their settings make up what the session is. They live in
   the session file, and you can save a changed copy of it.
-- Where one person left the docks, their colour scheme and the answer they gave
-  a prompt are how they like to run it. They belong to their machine, in the
-  session's settings.
+- How one person likes to run it, such as where they left the docks, their
+  colour scheme and their answers to prompts, belongs to their machine. It
+  lives in the session's settings.
 
 ## Let a component be saved
 
@@ -33,6 +33,8 @@ component without `serialize` keeps them too.
 
 ## Save the configuration
 
+Write what the session would now be rebuilt with to a new file:
+
 ```python
 path = app.write("my-lab-2026-09.yaml")
 ```
@@ -40,7 +42,7 @@ path = app.write("my-lab-2026-09.yaml")
 [`write`][redsun.Session.write] saves one flat file, whatever the session was
 built from, so the file opens on its own. It doesn't keep comments.
 
-!!! warning "Writing over the file the session was built from"
+!!! warning "Overwriting a session file in use"
 
     Other sessions may read the same file, so `write` raises
     `ConfigurationInUse` if you write over a file the session was built from.

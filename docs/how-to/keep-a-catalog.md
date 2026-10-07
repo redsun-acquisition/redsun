@@ -53,8 +53,9 @@ the root with `storage.base_dir` before starting.
 
 ## Record runs
 
-Nothing enters the catalog unless a component puts it there, and the
-`TiledWriter` of `bluesky-tiled-plugins` writes whole runs. The presenter that
+Nothing enters the catalog unless a component puts it there. The
+`TiledWriter` of `bluesky-tiled-plugins` is a callback that writes a run's
+documents into the catalog. The presenter that
 owns the [`RunEngine`](../explanation/glossary.md#runengine) asks for the
 catalog's address and subscribes a writer:
 
@@ -103,7 +104,8 @@ client = from_uri(address.uri)
 image = client[run_uid]["primary"]["det"].read()
 ```
 
-You can put a [derived product](../explanation/glossary.md#derived-product) into the catalog with
-`client[run_uid].write_array(...)`, or into the acquisition's store
-([Write a derived product](write-a-derived-product.md)). For what a client can
-do to a registered file, see [The session catalog](../explanation/catalog.md).
+You can put a [derived product](../explanation/glossary.md#derived-product)
+into the catalog with `client[run_uid].write_array(...)`, or into the
+acquisition's store ([Write a derived product](write-a-derived-product.md)).
+For what a client can do to a registered file, see [The session
+catalog](../explanation/catalog.md).

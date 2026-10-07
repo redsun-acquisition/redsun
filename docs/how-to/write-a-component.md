@@ -93,6 +93,9 @@ class StageView(QWidget):
 
 ## Add them to a session
 
+Declare each component on a session class, and connect the view's button to
+the presenter, and the presenter back to the view, in `wire`:
+
 ```python
 from collections.abc import Iterator
 
@@ -215,14 +218,22 @@ def test_nudge_moves_by_one_step() -> None:
     assert run_coro(stage.position.get_value()) == 2.0
 ```
 
-To test it inside a session without a window, build a plain
-[`Session`][redsun.Session]: it makes every component and shows nothing. Give
-it `mock: true` and its devices connect as `connect(mock=True)` does, with no
-service launched:
+To test it inside a session without a window, declare the same components on
+a plain [`Session`][redsun.Session], which makes every component and shows
+nothing. Give it `mock: true`, and its devices connect as
+`connect(mock=True)` does, with no service launched:
 
 ```python
+from redsun import AsDevice, AsPresenter, Session
+
+
+class MyHeadlessApp(Session):
+    stage: AsDevice[MyStage]
+    stage_ctrl: AsPresenter[StagePresenter]
+
+
 def test_the_session_builds_without_hardware() -> None:
-    app = MyApp({"mock": True}).build()
+    app = MyHeadlessApp({"mock": True}).build()
 
     assert set(app.devices) == {"stage"}
     app.shutdown()

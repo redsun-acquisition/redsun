@@ -4,25 +4,31 @@ icon: lucide/anchor
 
 # How to install hooks
 
-A [hook](../explanation/glossary.md#hook) acts on the session's toolkit, not on
-a component: it makes the application object, styles every window, or shows a
-splash screen while the session builds. A hook is an ordinary class, and it
-never changes what the session builds.
+A [hook](../explanation/glossary.md#hook) changes how the application itself
+starts and looks, rather than what it contains. With a hook you can create the
+Qt application object yourself, apply a style to every window, or show a
+splash screen while the session builds. The class you write for this is called
+a hook provider. It's an ordinary class, and it never changes which components
+the session builds.
 
-Each [hook point](../explanation/glossary.md#hook-point) is named after the
-method it calls, and a session installs one provider per point. You can name a
-provider in the session class or in the session file, and each example below
-shows both. Picking a tab switches every tab on the site to the same form.
+A hook acts at one of a fixed set of moments, called
+[hook points](../explanation/glossary.md#hook-point). Each point is named after
+the method the session calls on your provider, and a session has one provider
+for each point at most.
+
+You can install a provider from the session class or from the session file.
+Every example below shows both, as tabs, and picking a tab switches every tab
+on the site to the same choice.
 
 === "Session class"
 
-    Declare the provider with `AsHook`, under the attribute that names the
+    Declare the provider with `AsHook`, as an attribute named after the hook
     point.
 
 === "Session file"
 
-    Name the provider in the `hooks` section, under the point's name, with its
-    import path.
+    Name the provider in the `hooks` section, under the name of the hook
+    point, with the path to import it from.
 
 ## Pick a hook point
 

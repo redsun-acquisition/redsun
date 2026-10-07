@@ -10,7 +10,7 @@ them in the `actions` section of the session file.
 
 ## Declare an action
 
-Each entry takes the fields of an app-model `Action`:
+Each entry takes the fields of an `app-model` `Action`:
 
 ```yaml
 actions:
@@ -26,7 +26,7 @@ actions:
 - `menus` lists the menus the command appears in, by menu id.
 
 The session reads the section while it builds, and registers every action on
-the app-model `Application` it owns. Reading the section imports nothing: the
+the `app-model` `Application` it owns. Reading the section imports nothing: the
 callback is imported the first time someone runs the command.
 
 ## Write the callback
@@ -50,8 +50,8 @@ def enable_debug_logging() -> None:
 ## Show the menu
 
 An action appears in a menu only when the window shows that menu, so show the
-menu from a `configure_main_view` [hook](install-hooks.md), which receives the main
-window:
+menu from a `configure_main_view` [hook](install-hooks.md), which receives the
+main window:
 
 ```python
 from app_model.backends.qt import QModelMainWindow
@@ -78,5 +78,5 @@ naming the entry:
 | --- | --- |
 | `actions section of MyApp must be a list of entries, ...` | `actions` is not a list |
 | `actions entry at position 2 must be a mapping, ...` | an entry is not a mapping |
-| `actions entry 'x' carries unknown key(s) ...` | a key app-model does not know, often a typo |
-| `actions entry 'x' is not an action: ...` | app-model refused the values |
+| `actions entry 'x' carries unknown key(s) ...` | a key `app-model` does not know, often a typo |
+| `actions entry 'x' is not an action: ...` | `app-model` refused the values |

@@ -4,14 +4,14 @@ icon: lucide/layers
 
 # How to write a derived product
 
-A component that computes something from a [run](../explanation/glossary.md#run),
-such as a median over a scan or a filtered copy of each frame, writes the result
-against the store the device wrote. The acquisition belongs to the service and
-its device
-([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md)),
-so a [derived product](../explanation/glossary.md#derived-product) is the one thing `redsun` writes.
-[Derived products](../explanation/derived-products.md) says why a product is
-handed over rather than carried by a
+A component that computes something from a
+[run](../explanation/glossary.md#run), such as a median over a scan or a
+filtered copy of each frame, writes the result against the store the device
+wrote. The acquisition belongs to the service and its device ([ADR
+0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md)),
+so a [derived product](../explanation/glossary.md#derived-product) is the one
+thing `redsun` writes. [Derived products](../explanation/derived-products.md)
+says why a product is handed over rather than carried by a
 [document](../explanation/glossary.md#document).
 
 ## Install the extra
@@ -132,7 +132,7 @@ writes either into its documents:
 | `application/x-ome-zarr` | an image, a plate, a `bioformats2raw` layout | a store of its own beside it, named `<store>_<data_key>.ome.zarr` | the new store's URI |
 
 Adding a key to a root that carries OME-Zarr metadata drops it, which is why
-the product goes beside such a root. A store of its own is written whole,
+the product goes beside such a root. A store of its own is written all at once,
 because `ome-writers` allocates every frame at open, so `append` to it is
 refused and `write` finishes it at once. If a `stream_resource` has a mimetype
 the writer doesn't know, the writer logs it once and skips the product for that

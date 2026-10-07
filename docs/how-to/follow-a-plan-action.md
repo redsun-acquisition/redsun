@@ -51,9 +51,11 @@ class MyView(QWidget):
 ```
 
 `ask` and `ask_or_release` are the `action_clicked_callback` and
-`action_toggled_callback` of the [plan widget](../explanation/qt-widgets.md#plan-widgets),
-here `self.widget`. `release` shows a button released without emitting `toggled`, which unchecking
-it would, and the view would then ask an action that already ended to end.
+`action_toggled_callback` of the
+[plan widget](../explanation/qt-widgets.md#plan-widgets), here `self.widget`.
+`release` shows a button as released without emitting `toggled`. Unchecking
+the button would emit it, and the view would then ask to end an action that
+has already ended.
 
 ## Link the view and the component
 

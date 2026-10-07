@@ -6,9 +6,9 @@ icon: lucide/sliders-horizontal
 
 A user may change a device setting from a view while the engine runs a plan,
 and the change has to be applied without corrupting what the plan records. A
-camera's region of interest is the usual case.
-If it changes halfway through a point, one event stream carries frames of two
-shapes, and the store the service writes no longer matches the
+camera's region of interest is the usual case. If it changes halfway through a
+point, one event stream carries frames of two shapes, and the store the service
+writes no longer matches the
 [`StreamResource`](../explanation/glossary.md#streamresource) describing it.
 Any setting a plan's readings depend on has the same problem.
 
@@ -19,7 +19,7 @@ about it, so every plan gets the behaviour, and the plan is neither suspended
 nor rewound. A change asked for during a plan's last message runs before the
 plan returns, so whoever waits on the plan's result finds it applied.
 
-## Build one beside the engine
+## Create it beside the engine
 
 Whoever owns the [`RunEngine`][redsun.engine.RunEngine] builds the
 `Deferrals` and [shares](../explanation/glossary.md#shared-value) it:

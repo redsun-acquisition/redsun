@@ -4,9 +4,10 @@ icon: lucide/loader
 
 # How to show a plan's progress
 
-A plan can report how far it has got, so that the user sees it on the plan's
-page. The plan opens a progress scope for each thing it counts, and the page
-shows a bar for every scope while the plan runs.
+A plan can report how far it has got, so that the user sees it in the plan's
+[plan widget](../explanation/glossary.md#plan-widget). The plan opens a
+progress scope for each thing it counts, and the plan widget shows a bar for
+every scope while the plan runs.
 
 ## Prerequisites
 
@@ -32,7 +33,7 @@ The engine finishes every scope still open when the plan ends, however it ends,
 so a plan that fails or is stopped leaves no bar behind. A plan that reports
 nothing shows no bar.
 
-## Show it on the page
+## Show it in the plan widget
 
 The engine announces every open scope on `RunEngine.sig_progress`. The
 presenter that owns the engine passes the signal on through a signal of its
@@ -48,7 +49,8 @@ connected in its `__init__`, once it has made the engine:
 --8<-- "docs/examples/continuous_plan.py:progress-connect"
 ```
 
-The view hands what it receives to the page of the plan that is running:
+The view hands what it receives to the plan widget of the plan that is
+running:
 
 ```{.python}
 --8<-- "docs/examples/continuous_plan.py:progress-view"
@@ -71,8 +73,8 @@ A status that reports its progress, such as a detector's `complete` or a
 motor's `set` in `ophyd-async`, fills the bar. A status that reports nothing
 gets a bar with no end, which moves back and forth until the status is done.
 The example's shutter is a soft signal and opens at once, so its bar is gone
-almost as soon as it appears. A real shutter or motor keeps the bar on the page
-for as long as it moves.
+almost as soon as it appears. A real shutter or motor keeps the bar in the plan
+widget for as long as it moves.
 
 The plan still waits on the status itself. A status that fails closes its
 scope, and the failure reaches the plan through its `wait`. The scope belongs
@@ -80,8 +82,8 @@ to the status, so the plan doesn't update or finish it with `update_progress`.
 
 ## What a bar shows
 
-Each scope is a row of the page's "Progress" group, indented under its parent.
-The page hides the group while no scope is open.
+Each scope is a row of the plan widget's "Progress" group, indented under its
+parent. The plan widget hides the group while no scope is open.
 
 | the scope has | the bar | the text |
 | --- | --- | --- |

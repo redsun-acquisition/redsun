@@ -12,15 +12,16 @@ explains what a frontend is responsible for.
 
 ## Prerequisites
 
-The [toolkit](../explanation/glossary.md#toolkit) the frontend shows views with. The example below prints one line
-of text for each view to the terminal, so it needs nothing beyond `redsun`.
-The blocks below are parts of one script, and the whole script is at the end.
+You need the [toolkit](../explanation/glossary.md#toolkit) your frontend
+shows views with. The example below prints one line of text for each view to
+the terminal, so it needs nothing beyond `redsun`. The blocks below are parts
+of one script, and the whole script is at the end.
 
 ## Define the placements
 
-A placement is a frozen dataclass subclassing
-[`Placement`][redsun.Placement]. Define one for each place your toolkit can
-put a view, plus a base class that the views of that place must be a subclass of:
+A placement is a frozen dataclass subclassing [`Placement`][redsun.Placement].
+Define one for each place your toolkit can put a view, plus a base class that
+the views of that place must be a subclass of:
 
 ```{.python}
 --8<-- "docs/examples/console_frontend.py:placement"
@@ -63,8 +64,9 @@ own, call `psygnal.emit_queued()` from a timer of that loop instead.
   `parent`, override the property
   [`view_arguments`][redsun.Session.view_arguments].
 - To make toolkit objects before any component exists, such as the
-  application object of the toolkit, override `start_runtime` and call the
-  one it overrides first: that one sets the backend coroutine slots run on.
+  application object of the toolkit, override `start_runtime` and call
+  `super().start_runtime()` first, which sets the backend that coroutine slots
+  run on.
 
 ## Write a view for it
 

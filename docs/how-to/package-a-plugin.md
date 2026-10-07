@@ -12,8 +12,8 @@ session finds one.
 
 ## Prerequisites
 
-Components that already work when a session class declares them; see
-[Write a component](write-a-component.md).
+You need components that already work when a session class declares them;
+see [Write a component](write-a-component.md).
 
 ## Lay out the package
 

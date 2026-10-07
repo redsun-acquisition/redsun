@@ -75,6 +75,8 @@ The presenter takes every light of the session, or only those named under
 
 ## Declare it in Python
 
+In a session class, declare both components and pair them in `wire()`:
+
 ```{.python}
 --8<-- "docs/examples/lights.py:session"
 ```
@@ -126,7 +128,7 @@ shows how.
 The view takes a `group_class` for the widget built per light, and its `tabs`
 property holds the Lights, Configuration and Advanced tabs, to which a
 subclass may add. A stack of your own that reads and writes device
-configuration can use the same parts the light stack and the positioner do:
+configuration can use the same classes the light stack and the positioner do:
 [`DeviceConfiguration`][redsun.presenter.DeviceConfiguration] in the
 presenter and [`ConfigurationTab`][redsun.view.qt.treeview.ConfigurationTab]
 in the view.

@@ -25,11 +25,25 @@ them together.
 - [How to package components as a plugin](package-a-plugin.md)
 - [How to test a plugin](test-a-plugin.md)
 - [How to connect a device on demand](connect-a-device-on-demand.md)
+
+### Write plans
+
+Offer [plans](../explanation/glossary.md#plan), run them, and show their
+controls and progress.
+
 - [How to run a plan from a presenter](run-a-plan.md)
 - [How to choose the inputs of a plan](choose-plan-inputs.md)
 - [How to write a plan that runs until stopped](write-a-continuous-plan.md)
 - [How to follow a plan action from a view](follow-a-plan-action.md)
 - [How to show a plan's progress](show-plan-progress.md)
+
+### Use the built-in components
+
+Add the presenters and views `redsun` ships, instead of writing your own.
+
+- [How to run plans from the window](run-plans-from-the-window.md)
+- [How to move devices by hand](move-devices-by-hand.md)
+- [How to switch and dim lights](switch-and-dim-lights.md)
 
 ### Extend the window
 

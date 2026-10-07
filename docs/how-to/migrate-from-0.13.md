@@ -4,10 +4,10 @@ icon: lucide/arrow-right-left
 
 # How to migrate from 0.13
 
-The next release replaces the container layer (`redsun.containers`,
-`redsun.virtual`, `AppContainer`) with the session layer that 0.13 did not
-ship. Nothing of the old layer is kept under its old name, so this page lists each
-change and what to write instead.
+Release 0.14 replaced the container layer of 0.13 (`redsun.containers`,
+`redsun.virtual`, `AppContainer`) with sessions. Nothing of the old layer is
+kept under its old name, so this page lists each change and what to write
+instead.
 
 ## Imports
 
@@ -287,10 +287,10 @@ def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
 - `wait_for_actions` never timed out, and still does not: the argument is the
   time between two checkpoints.
 - `wait_for_actions` raises `ValueError` when `events` is empty.
-- `actions` is an `ActionManager` from `redsun.engine.actions`, made by whoever owns
-  the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
-- `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None` where it
-  defaulted to `("On", "Off")`.
+- `actions` is an `ActionManager` from `redsun.engine.actions`, made by
+  whoever owns the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
+- `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None`
+  where it defaulted to `("On", "Off")`.
 - `create_plan_spec` raises `ValueError` for a plan declaring two actions of
   one name.
 

@@ -88,8 +88,8 @@ class PlanPresenter(Loggable):
         self.plans: dict[str, PlanEntry] = {}
         self.specs: dict[str, PlanSpec] = {}
 
-    def setup(self, providers: Mapping[str, HasPlans]) -> None:
-        for component in providers.values():
+    def setup(self, plan_sources: Mapping[str, HasPlans]) -> None:
+        for component in plan_sources.values():
             for plan, entry in component.plan_map().items():
                 try:
                     self.specs[plan] = create_plan_spec(entry["plan"], self.devices)
@@ -106,7 +106,7 @@ class PlanPresenter(Loggable):
         future.add_done_callback(lambda _: self.sig_finished.emit())
 ```
 
-- The session answers `providers` with every component that satisfies
+- The session answers `plan_sources` with every component that satisfies
   `HasPlans`, by name. See [Questions](../explanation/questions.md).
 - Catching `UnresolvableAnnotationError` leaves out a plan whose parameters no
   plan widget can show, and catching `ValueError` leaves out one declaring two
@@ -145,8 +145,8 @@ class PlanView(QWidget):
         layout.addWidget(self.pages)
         self.widgets: dict[str, PlanWidget] = {}
 
-    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
-        for component in providers.values():
+    def setup(self, plan_sources: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
+        for component in plan_sources.values():
             for entry in component.plan_map().values():
                 try:
                     self.add_plan(create_plan_spec(entry["plan"], devices))
@@ -176,6 +176,9 @@ by its name. The view stays disabled until the presenter reports that the plan
 ended.
 
 ## Declare and link them
+
+Declare the four components, and link the view's run request to the presenter
+and the presenter's end-of-plan signal back to the view:
 
 ```python
 from collections.abc import Iterator

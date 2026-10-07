@@ -4,12 +4,11 @@ icon: lucide/move
 
 # How to move devices by hand
 
-`redsun` comes with a built-in positioner that you can add to a session to
-move your [devices](../explanation/glossary.md#device) by hand. Its presenter
-moves their axes, and its view has a row per axis,
-where you step the axis, send it to a position, stop it and change its
-settings.
-[ADR 20](../explanation/decisions/0020-a-built-in-positioner.md) explains the
+`redsun` comes with a built-in positioner that you can add to a session to move
+your [devices](../explanation/glossary.md#device) by hand. Its presenter moves
+their axes, and its view has a row per axis, where you step the axis, send it
+to a position, stop it and change its settings. [ADR
+20](../explanation/decisions/0020-a-built-in-positioner.md) explains the
 design.
 
 ## Prerequisites
@@ -20,12 +19,12 @@ script, and the whole script is at the end.
 
 ## How the positioner finds axes
 
-The positioner looks inside every device for its axes. An axis is a part that
-`set` moves, `locate` reports and `subscribe` follows, which means it satisfies
-`AsyncLocatable` from `ophyd-async` and `Subscribable` from `bluesky`, and it
-isn't a signal. The search stops at each axis it finds, so the signals of an
-axis never show up as axes. A device that is itself movable is its own single
-axis.
+The positioner looks inside every device for its axes. An axis is a piece of a
+device that `set` moves, `locate` reports and `subscribe` follows, which means
+it satisfies `AsyncLocatable` from `ophyd-async` and `Subscribable` from
+`bluesky`, and it isn't a signal. The search stops at each axis it finds, so
+the signals of an axis never show up as axes. A device that is itself movable
+is its own single axis.
 
 The view shows each axis under its attribute name, or under its dotted path,
 such as `left.x`, when two axes of one device share a name. This stage has two

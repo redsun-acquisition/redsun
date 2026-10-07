@@ -63,7 +63,8 @@ def wire(self) -> Iterator[Link]:
 ```
 
 Each signal of one component reaches each slot of the other naming it, both
-ways. Only [`psygnal`](../explanation/glossary.md#psygnal) signals are matched, so link a device signal on its own.
+ways. Only [`psygnal`](../explanation/glossary.md#psygnal) signals are matched,
+so link a device signal on its own.
 
 ## What the session checks
 

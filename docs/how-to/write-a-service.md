@@ -134,12 +134,13 @@ does, calls `stop_on_request`. A service built on `asyncio` awaits
     If the session crashes, nobody reads the service's output any more, and
     printing raises. Clean up before you print, or don't print.
 
-Under `channel-access`, a [launched service](../explanation/glossary.md#launched-service) listens on a port the session
-chooses when its process starts, and no other program is told which one. A
-Channel Access client run from another terminal, such as `caget`, doesn't find
-it. Under `pv-access`, another program on the machine reaches it with
-`EPICS_PVA_ADDR_LIST=127.0.0.1`. If other machines must reach the service, run
-it on its own, on the ports you set, and let the session attach to it.
+Under `channel-access`, a [launched
+service](../explanation/glossary.md#launched-service) listens on a port the
+session chooses when its process starts, and no other program is told which
+one. A Channel Access client run from another terminal, such as `caget`,
+doesn't find it. Under `pv-access`, another program on the machine reaches it
+with `EPICS_PVA_ADDR_LIST=127.0.0.1`. If other machines must reach the service,
+run it on its own, on the ports you set, and let the session attach to it.
 
 ## Point a device at it
 
@@ -224,12 +225,11 @@ prefix. The `fastcs` service needs no prefix in `args`, because it reads the
 prefix with [`identity`][redsun.services.identity].
 
 `args` is a list, or a mapping of options. In a mapping, `--` goes before each
-name, `True` passes the option alone, `False` leaves it out (`true` and
-`false` in a session file), and a list passes
-each item after the option. For example,
+name, `True` passes the option alone, `False` leaves it out (`true` and `false`
+in a session file), and a list passes each item after the option. For example,
 `args={"prefix": "CAM:", "simulate": True, "debug": False}` starts the module
-with `--prefix CAM: --simulate`. The
-[session file reference](../reference/session-file.md) has the table.
+with `--prefix CAM: --simulate`. The [session file
+reference](../reference/session-file.md) has the table.
 
 `ready` is text the session waits for in the output of the service. The
 first line containing it marks the service ready, so pick text an error
@@ -263,7 +263,8 @@ didn't start is left out.
 ## Check that it starts
 
 Run the session from the folder that holds the module of the service, since
-that is where the session looks for it. For the `fastcs` example, the session logs:
+that is where the session looks for it. For the `fastcs` example, the session
+logs:
 
 ```text
 Service 'stage_service' started
@@ -299,7 +300,8 @@ class MyApp(QtSession):
 
 `x` reads `ST:X:Position`, and `y` reads `ST:Y:Position`.
 
-A bundle can write the declaration once and share it:
+A package can define the declaration once, as a type alias, for every session
+to reuse:
 
 ```python
 CameraIoc: TypeAlias = Annotated[

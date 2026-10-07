@@ -102,9 +102,11 @@ The build doesn't connect a device declared with `autoconnect=False`; see
 
 To give a mocked device its values, set its signals from a component that only
 a mocked session declares. [`set_mock_value`][ophyd_async.core.set_mock_value]
-works on signals the device only reads, such as a [readback](../explanation/glossary.md#readback), and
+works on signals the device only reads, such as a
+[readback](../explanation/glossary.md#readback), and
 [`callback_on_mock_put`][ophyd_async.core.callback_on_mock_put] makes the
-readback follow each value written to the [setpoint](../explanation/glossary.md#setpoint):
+readback follow each value written to the
+[setpoint](../explanation/glossary.md#setpoint):
 
 ```python
 from typing import Any, ClassVar

@@ -4,16 +4,25 @@ icon: lucide/scroll-text
 
 # How to configure logging
 
-`redsun` logs to one logger, also called `redsun`. By default it's at `INFO`
-and writes to `sys.stdout`, with a formatter that names the component each
-record came from:
+`redsun` reports what it does as log messages: the components it builds, the
+services it starts, and anything that goes wrong. This page shows how to
+choose how much of that you see, where it goes, and how to log from your own
+code.
+
+All of these messages go through one Python logger, named `redsun`. Out of
+the box it shows messages at level `INFO` and above, and prints them to the
+console (`sys.stdout`). Each line starts with the time, the level, and the
+class and name of the component that wrote it:
 
 ```text
 [29-08-26|14:02:46][INFO][MyMotor -> stage]: Connected
 [29-08-26|14:02:46][DEBUG][MyMotor -> stage]: setpoint=1.5 (motor.py:88)
 ```
 
-[Log files](../reference/log-files.md) describes the shape of a record.
+The second line is at `DEBUG`, so you only see it after lowering the level,
+as the next section shows. A line at any level other than `INFO` also ends
+with the file and line of code that wrote it.
+[Log files](../reference/log-files.md) describes every part of a line.
 
 ## Set the level for a session
 
@@ -63,10 +72,25 @@ unknown name raises `ValueError`.
 
 ## Find a session's log file
 
-A session also writes the records of a run to a file, which it opens when the
-build reads the configuration and closes in `shutdown()`. Each launched service
-gets a file of its own. [Log files](../reference/log-files.md) says where the
-files are, what they are called and how long they are kept.
+A session also writes the records of each run to a file, which it opens when
+the build reads the configuration and closes in `shutdown()`. Each launched
+service gets a file of its own. For a session named `my-lab` with a launched
+service `camera_ioc`, the files look like this:
+
+```text
+<root>/logs/my-lab/
+|-- app/
+|   |-- 2026-09-13T14-02-46_8120.log         the run that started at 14:02:46
+|   `-- 2026-09-13T09-15-02_4410.log         an earlier run
+`-- services/
+    |-- 2026-09-13T14-02-46_8120.camera_ioc.log
+    `-- 2026-09-13T09-15-02_4410.camera_ioc.log
+```
+
+`<root>` is `storage.base_dir` from the session file, or your user data folder
+when that isn't set. Each file name is the time the run started and the id of
+its process. [Log files](../reference/log-files.md) gives the data folder on
+each platform and how long the files are kept.
 
 [`session_log`][redsun.log.session_log] returns the handler writing the current
 run, and `session_log("camera_ioc")` returns the one writing that service's
@@ -89,10 +113,12 @@ from redsun.services import configure_logging
 configure_logging()
 ```
 
-After that, the service's `logging` records, and its `loguru` records when
-`loguru` is installed, reach the session at the level the session records at.
-Each keeps its level, time, logger name and traceback. If you start the service
-outside a session, it logs at `INFO`.
+After that, the service's `logging` records reach the session at the level
+the session records at. So do its `loguru` records when `loguru` is installed.
+`loguru` is a logging library that some service frameworks use in place of
+`logging`: `fastcs` is one, so a `fastcs` service's own messages arrive too.
+Each record keeps its level, time, logger name and traceback. If you start the
+service outside a session, it logs at `INFO`.
 
 A service not written in Python writes one JSON object per line, in either of
 two layouts: the layout of `loguru` with `serialize=True`, or an object with the

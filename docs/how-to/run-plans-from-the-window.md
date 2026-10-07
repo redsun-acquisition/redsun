@@ -64,6 +64,8 @@ The pairing makes the twelve links between the two. Written out, they are:
 
 ## Declare it in Python
 
+In a session class, declare both components and pair them in `wire()`:
+
 ```{.python}
 --8<-- "docs/examples/acquisition.py:session"
 ```
@@ -81,8 +83,8 @@ directory, the motor to move and the plan's parameters](images/acquisition.png)
   `@continuous(pausable=True)` also has Pause, which becomes Resume. See
   [Write a plan that runs until stopped](write-a-continuous-plan.md).
 - Run stays disabled while a list of devices the plan needs is empty.
-- When a plan raises, its page shows "failed:" and the error until it runs
-  again, and the session log holds the full traceback.
+- When a plan raises, its plan widget shows "failed:" and the error until it
+  runs again, and the session log holds the full traceback.
 - Each run's files are named after its plan. "Choose root..." sets the
   directory runs write under, and "Browse root" opens it in the system's file
   browser.
@@ -129,7 +131,7 @@ pairs:
 A component whose plans wait for the user, through an
 [`ActionManager`][redsun.engine.actions.ActionManager] held as `actions`, is a
 [`HasActions`][redsun.HasActions]. The presenter passes on the state of every
-such component's actions, so their buttons on the plan's page follow them with
+such component's actions, so their buttons in the plan widget follow them with
 no link of their own, and a press reaches the component of the running plan.
 
 ## The example in full

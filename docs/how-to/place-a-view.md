@@ -12,8 +12,8 @@ a frontend checks it.
 
 ## Prerequisites
 
-A session built on [`QtSession`][redsun.qt.QtSession], and a view whose
-constructor starts with `(name: str, parent: QWidget)`. See
+You need a session built on [`QtSession`][redsun.qt.QtSession], and a view
+whose constructor starts with `(name: str, parent: QWidget)`. See
 [Write a component](write-a-component.md).
 
 ## Put a widget in a dock or in the centre
@@ -163,13 +163,13 @@ class MyApp(QtSession):
 ## See a changed placement take effect
 
 A session started with `run` saves where the user left the docks when it
-ends, and puts them back the next time. A dock that was saved keeps its saved
-place, so a new placement for it doesn't show, while a view under a name not
-saved before takes its placement. The log says which docks the saved layout
-keeps away from their placement. To start every dock from its placement again,
-close the session and remove the `window.state` key from its settings file,
-listed in
-[The session's settings](save-a-session.md#the-sessions-settings).
+ends, and puts them back the next time. So a dock that was saved stays where
+the user left it, and a new placement for it doesn't show. Only a view whose
+name wasn't saved before takes its placement. The log says which docks the
+saved layout keeps away from their placement. To start every dock from its
+placement again, close the session and remove the `window.state` key from its
+settings file, as
+[The session's settings](save-a-session.md#the-sessions-settings) describes.
 
 ## Read a failure
 

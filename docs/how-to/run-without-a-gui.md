@@ -38,6 +38,8 @@ shows something and there is nothing here to show it on.
 
 ## Build, use, shut down
 
+Build the session, use its components, and shut it down:
+
 ```python
 app = MyApp().build()
 # app.stage_ctrl, app.stage and every other component are ready to use
@@ -83,9 +85,10 @@ app = Session.from_config("session.yaml").build()
 ```
 
 When you layer several files, leave `frontend` out of every one of them. If
-one file names it and another doesn't, they disagree about what kind of session
-this is, and [Sessions](../explanation/session.md#merging-the-sources) says that
-isn't allowed.
+any file names a frontend, the merged configuration names it too, and the
+session is built on that frontend;
+[Merging the sources](../explanation/session.md#merging-the-sources) explains
+how files combine.
 
 ## Naming a frontend without its packages
 

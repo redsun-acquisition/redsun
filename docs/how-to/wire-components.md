@@ -25,8 +25,8 @@ the same form.
 ## Mark a method as a slot
 
 Decorate a method with [`slot`][redsun.slot] to let the session connect to it.
-Only marked methods can be connected, so marking one makes its name and
-arguments public.
+Only marked methods can be connected. Once a method is marked, other code
+relies on its name and arguments, so treat them as public.
 
 ```python
 from typing import Any
@@ -213,8 +213,9 @@ for instance from a stop button, use `cancel_task(task)` from `redsun.aio`.
 Called from another thread, it waits for the task to pause rather than
 cancelling it while it runs.
 
-Every session installs the async backend [`psygnal`](../explanation/glossary.md#psygnal) needs for coroutine slots
-when it is built, and removes it at shutdown.
+Every session installs the async backend
+[`psygnal`](../explanation/glossary.md#psygnal) needs for coroutine slots when
+it is built, and removes it at shutdown.
 
 ## Address a signal group
 
@@ -286,6 +287,9 @@ class MyApp(QtSession):
 The slot receives each reading. The subscription is released at shutdown.
 
 ## Inspect what is connected
+
+`connections` lists every link the session made, with the thread a slot runs
+on when it isn't the one that emitted:
 
 ```python
 for link in app.connections:

@@ -25,6 +25,8 @@ You need the `profile` extra, which installs `pyinstrument` and `py-spy`:
 
 ## Profile the start
 
+To see what makes a session slow to open, pass `profile="start"`:
+
 ```python
 MyApp(profile="start").run()
 ```
@@ -48,6 +50,8 @@ build reads from left to right, and the widest blocks are where the time went.
 
 ## Profile the whole run
 
+To profile everything until the session closes, pass `profile="run"`:
+
 ```python
 MyApp(profile="run").run()
 ```
@@ -62,6 +66,8 @@ session did while you used it.
     a profile with timings taken without one.
 
 ## Keep the profile somewhere else
+
+`profile_dir` names another folder for the file:
 
 ```python
 MyApp(profile="start", profile_dir="D:/profiles").run()

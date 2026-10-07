@@ -68,8 +68,8 @@ pairings of every file.
 
 To stop a later source from changing what kind of session this is,
 `schema_version`, `frontend` and `services.transport` must be the same in every
-source that sets them. A later source also replaces a component's entry whole: a later file
-naming `motor_ctrl` gives all of its settings.
+source that sets them. A later source also replaces a component's entry whole:
+a later file naming `motor_ctrl` gives all of its settings.
 
 A file that only makes sense layered over another, such as one holding a
 `presenters` section alone, is fine, because only the merged result is

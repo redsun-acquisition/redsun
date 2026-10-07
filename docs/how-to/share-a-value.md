@@ -71,9 +71,10 @@ you get `None`.
 
 ## Share a value no component owns
 
-A value that belongs to no component, such as a calibration loaded from a
-file, comes from a [provider](../explanation/glossary.md#provider). A provider is an ordinary class whose `provides`
-methods share values before any component is made.
+A value that belongs to no component, such as a calibration loaded from a file,
+comes from a [provider](../explanation/glossary.md#provider). A provider is an
+ordinary class whose `provides` methods share values before any component is
+made.
 
 ```python
 from redsun import SessionConfig, provides
@@ -109,6 +110,6 @@ providers:
 - The type is the key. Two components can't share the same type, so give
   distinct values distinct types.
 - A `provides` method returning `X | None` doesn't make an optional `X`. See
-  [Limits](../explanation/limits.md#can-a-shared-value-be-optional).
+  [Limitations](../explanation/limits.md#can-a-shared-value-be-optional).
 - Import the type normally, not under `if TYPE_CHECKING:`, since the session
   reads it while running.
