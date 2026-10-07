@@ -866,3 +866,54 @@ def test_resolving_a_value_outside_its_limits_is_refused() -> None:
         "frames: Input should be greater than or equal to 1; "
         "exposure: Input should be greater than 0"
     )
+
+
+def test_a_device_parameter_is_never_checked_against_limits() -> None:
+    """Leave a device parameter's chosen names unchecked, whatever limits it carries."""
+    detectors = ParamDescription(
+        name="detectors",
+        kind=ParamKind.POSITIONAL_OR_KEYWORD,
+        annotation=Sequence[Readable[Any]],
+        default=Parameter.empty,
+        device_proto=Readable,
+        annotated=Annotated[Sequence[Readable[Any]], MinLen(1)],
+    )
+
+    assert detectors.problems(["cam"]) == []
+
+
+@pytest.mark.parametrize(
+    ("kind", "value", "lines"),
+    [
+        (ParamKind.VAR_POSITIONAL, (1.0, 2.0), []),
+        (
+            ParamKind.VAR_POSITIONAL,
+            (1.0, -2.0),
+            ["values[1]: Input should be greater than or equal to 0"],
+        ),
+        (
+            ParamKind.VAR_POSITIONAL,
+            -2.0,
+            ["values: Input should be greater than or equal to 0"],
+        ),
+        (ParamKind.VAR_KEYWORD, {"a": 1.0}, []),
+        (
+            ParamKind.VAR_KEYWORD,
+            {"a": 1.0, "b": -1.0},
+            ["values['b']: Input should be greater than or equal to 0"],
+        ),
+    ],
+)
+def test_each_value_of_a_variadic_parameter_is_checked(
+    kind: ParamKind, value: Any, lines: list[str]
+) -> None:
+    """Check each item of *args and each value of **kwargs against the limits, not the whole."""
+    values = ParamDescription(
+        name="values",
+        kind=kind,
+        annotation=float,
+        default=Parameter.empty,
+        annotated=Annotated[float, Ge(0)],
+    )
+
+    assert values.problems(value) == lines

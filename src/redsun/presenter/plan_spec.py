@@ -176,6 +176,9 @@ class ParamDescription:
     def __post_init__(self) -> None:
         """Fill `annotated` from `annotation`, and build the check of its limits.
 
+        A device or action parameter gets no check: its value comes from the
+        session, not from the user.
+
         Raises
         ------
         TypeError
@@ -183,7 +186,11 @@ class ParamDescription:
         """
         if self.annotated is _empty:
             self.annotated = self.annotation
-        if not has_limits(self.annotated):
+        if (
+            self.device_proto is not None
+            or self.actions is not None
+            or not has_limits(self.annotated)
+        ):
             return
         try:
             self._adapter = TypeAdapter(self.annotated, config=_STRICT)
@@ -195,24 +202,42 @@ class ParamDescription:
     def problems(self, value: Any) -> list[str]:
         """Return a line for each limit *value* breaks, located inside it: `points[2]: ...`.
 
-        Empty when the annotation carries no limit.
+        Empty when the annotation carries no limit. Each item of a `*args`
+        given as a list or tuple, and each value of a `**kwargs` given as a
+        mapping, is checked on its own.
         """
         if self._adapter is None:
             return []
+        if self.kind is ParamKind.VAR_POSITIONAL and isinstance(value, (list, tuple)):
+            return [
+                line
+                for i, item in enumerate(value)
+                for line in self._check(item, f"{self.name}[{i}]")
+            ]
+        if self.kind is ParamKind.VAR_KEYWORD and isinstance(value, cabc.Mapping):
+            return [
+                line
+                for key, item in value.items()
+                for line in self._check(item, f"{self.name}[{key!r}]")
+            ]
+        return self._check(value, self.name)
+
+    def _check(self, value: Any, where: str) -> list[str]:
+        assert self._adapter is not None
         try:
             self._adapter.validate_python(value)
         except ValidationError as error:
             errors = error.errors()
         except TypeError as error:
             # a limit that does not fit its type fails only once a value comes
-            return [f"{self.name}: {error}"]
+            return [f"{where}: {error}"]
         else:
             return []
         # a union reports a type mismatch for every member but the matching one
         broken = [e for e in errors if not e["type"].endswith(_MISMATCH)] or errors[:1]
         lines: list[str] = []
         for e in broken:
-            line = f"{self.name}{_where(value, e['loc'])}: {e['msg']}"
+            line = f"{where}{_where(value, e['loc'])}: {e['msg']}"
             if line not in lines:
                 lines.append(line)
         return lines
@@ -547,7 +572,7 @@ def create_plan_spec(
         )
         broken = (
             description.problems(param.default)
-            if param.default is not _empty and shown and actions_meta is None
+            if param.default is not _empty and shown
             else []
         )
         if broken:
@@ -679,10 +704,7 @@ def resolve_arguments(
     broken = [
         line
         for p in spec.parameters
-        if p.name in param_values
-        and p.device_proto is None
-        and p.actions is None
-        and not p.hidden
+        if p.name in param_values and not p.hidden
         for line in p.problems(param_values[p.name])
     ]
     if broken:
