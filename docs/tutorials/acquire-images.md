@@ -75,14 +75,14 @@ Add a presenter below `PlanView`:
 It offers a plan, as `StagePlans` does. The plan, `snap`, wraps
 [`count`][bluesky.plans.count], a plan `bluesky` already has.
 
-The presenter also follows the plan while it runs. The
-[`RunEngine`][redsun.engine.RunEngine] describes what happens in
-[documents](../explanation/glossary.md#document), records it emits while a
-plan runs, and a `DocumentRouter` receives each kind of document in the
-method named after it. This one reads
-[`StreamResource`](../explanation/glossary.md#streamresource), the document
-in which a device says which file it wrote. The camera sends two of them in a
-run, and the one named `camera` holds its frames. Once the plan has ended,
+The presenter also follows the plan as it goes. The
+[`RunEngine`][redsun.engine.RunEngine] emits
+[documents](../explanation/glossary.md#document), records of what happens,
+and a `DocumentRouter` such as this presenter gets each kind in a method of
+the same name. This one handles
+[`StreamResource`](../explanation/glossary.md#streamresource), which a device
+emits to say which file it wrote. The camera emits two in a run, and the one
+named `camera` holds its frames. Once the plan has ended,
 `show_last` turns the URI of that file into a path with the two functions of
 `urllib`, opens the file, and sends the last frame with `sig_frame`.
 
@@ -208,8 +208,8 @@ its widget and the `RunEngine` without a line of yours joining them.
 
 - [Scanning a stage with the camera](scan-plan.md) is the next tutorial,
   where you add a plan that uses a stage and the camera together.
-- [Write a session file](../how-to/write-a-session-file.md) shows how to keep
-  the files in another folder.
+- [How to choose where acquisition files go](../how-to/choose-where-files-go.md)
+  shows how to keep the files in another folder.
 - [Components](../explanation/components.md#where-a-device-writes) explains
   how the path of a file is made.
 - [How to keep a catalog of runs](../how-to/keep-a-catalog.md) makes the

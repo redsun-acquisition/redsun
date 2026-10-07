@@ -55,10 +55,10 @@ placement: Placement = Dock("bottom")
 Run the script again. The stages are still on the left.
 
 Nothing is wrong with the line. When you close the window, it saves where
-its docks are, and the next time it opens it puts them back. A placement only
-says where a view goes when the window has nothing saved for it. The image
-moved at once in step 1 because it stopped being a dock, and the window saves
-where its docks are.
+its docks are, and the next time it opens it puts them back, so a placement
+only says where a view goes when the window has nothing saved for it. The
+image moved at once in step 1 because a central view isn't a dock, so the
+window had nothing saved for it.
 
 ## 3. Forget the saved layout
 

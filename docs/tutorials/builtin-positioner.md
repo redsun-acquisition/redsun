@@ -21,10 +21,10 @@ go back to. It continues from
 
 The positioner works with any device that `ophyd-async` can move and that
 reports its position as it changes. Your three stages already qualify, so you
-don't change any of them. Since
-[Writing your first session](first-session.md), each one has been a `StandardMovable`, which gives it the `set`, `locate`,
-`stop` and `subscribe` methods the positioner uses. The positioner replaces
-the nudge presenter and view, and nothing else in the session.
+don't change any of them. Since [Writing your first session](first-session.md),
+each one has been a `StandardMovable`, which gives it the `set`, `locate`,
+`stop` and `subscribe` methods the positioner uses. The positioner replaces the
+nudge presenter and view, and nothing else in the session.
 
 Open `first_session.py`, and add these imports below the ones it has:
 
@@ -85,6 +85,10 @@ what the stages do: where they are, whether they're moving, why a move
 failed, their limits and their configuration. These links are the same in
 every session that uses the positioner, and
 [Move devices by hand](../how-to/move-devices-by-hand.md) lists them as well.
+Because the presenter and the view were written for each other, one line,
+`yield from links_between(self.positioner_view, self.positioner)`, makes the
+same links; [How to offer a pairing](../how-to/offer-a-pairing.md) explains
+how.
 
 ## 4. Change the session file
 

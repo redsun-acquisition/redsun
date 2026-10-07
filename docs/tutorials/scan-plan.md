@@ -107,11 +107,11 @@ Choose `fast_stage` in the list of stages, set `points` to `3`, and press
 You built a scan that moves the stage you choose and takes a frame at each
 position, and the camera writes one file for each run.
 
-You put it together from parts that don't name each other. The stage and the
+You put it together from pieces that don't name each other. The stage and the
 camera reach the plan through two protocols. The plan reaches the presenter
 that runs it, and the view that shows its plan widget, because its presenter
 offers plans. The frames reach the presenter that shows them through the
-documents of the run. So you can replace any part, or take it to another
+documents of the run. So you can replace any piece, or take it to another
 session, without editing the others.
 
 ## Next steps
