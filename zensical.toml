@@ -123,6 +123,7 @@ nav = [
                 "explanation/decisions/0023-pairing-two-components.md",
                 "explanation/decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return.md",
                 "explanation/decisions/0025-a-views-placement-chosen-per-declaration.md",
+                "explanation/decisions/0026-parameter-limits-from-annotated-types.md",
         ]},
     ]},
     { "Reference" = [

@@ -88,6 +88,10 @@ Step 5 accepts an annotation an input can show:
 satisfies, such as `deque[T]` or `OrderedDict[K, V]`: the plan would receive
 a `list` or a `dict`, not the class it names.
 
+`annotated-types` limits in the metadata are kept in
+`ParamDescription.annotated` and checked by `ParamDescription.problems`; see
+[Limit the values a parameter takes](../../how-to/choose-plan-inputs.md#limit-the-values-a-parameter-takes).
+
 | Parameter | Outcome |
 | --- | --- |
 | an input can show it | an input, starting from the default |
