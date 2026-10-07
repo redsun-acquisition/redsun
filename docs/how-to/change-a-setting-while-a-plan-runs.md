@@ -4,8 +4,9 @@ icon: lucide/sliders-horizontal
 
 # How to change a device setting while a plan runs
 
-This guide shows how to apply a device setting a user changes from a view
-while the engine runs a plan. A camera's region of interest is the usual case.
+A user may change a device setting from a view while the engine runs a plan,
+and the change has to be applied without corrupting what the plan records. A
+camera's region of interest is the usual case.
 If it changes halfway through a point, one event stream carries frames of two
 shapes, and the store the service writes no longer matches the
 [`StreamResource`](../explanation/glossary.md#streamresource) describing it.
@@ -73,10 +74,11 @@ boundary, and while none runs, it is applied straight away. Several changes
 asked for during one message are applied together, in the order asked. A change
 that raises is logged under `redsun`, and the ones after it still run.
 
-!!! warning "Don't block a coroutine on the future"
+!!! warning "A coroutine that blocks on the future stalls its loop"
 
-    A thread may wait on the future, but a coroutine must not block on it.
-    Await it from a coroutine instead.
+    A thread may wait on the future, but a coroutine must not block on it,
+    because that stops the coroutine's event loop while it waits. From a
+    coroutine, await `asyncio.wrap_future(future)` instead.
 
 ## What a plan sees
 

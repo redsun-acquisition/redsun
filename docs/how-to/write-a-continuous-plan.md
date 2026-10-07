@@ -4,9 +4,9 @@ icon: lucide/repeat
 
 # How to write a plan that runs until stopped
 
-This guide shows how to write a [plan](../explanation/glossary.md#plan) that
-loops until the user stops it, declare actions the user can trigger while it
-runs, and start, pause and stop it from its plan widget.
+Here you write a [plan](../explanation/glossary.md#plan) that loops until the
+user stops it, declare actions the user can trigger while it runs, and start,
+pause and stop it from its plan widget.
 [Continuous plans](../explanation/plans.md#continuous-plans) explains how
 actions are offered and taken.
 

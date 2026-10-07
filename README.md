@@ -118,7 +118,7 @@ Session.from_config("session.yaml").run()
 
 Each `redsun` session is a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/session/) (DVP) application. DVP resembles the Model-View-Presenter (MVP) architecture, except that the bottom layer of the application is the *Device layer*, which uses [`ophyd-async`](https://github.com/bluesky/ophyd-async) to talk to the hardware.
 
-The name makes a clear point: `redsun` is first of all about device control, and tries to do it well.
+This design makes a clear point: `redsun` is first of all about device control, and tries to do it well.
 
 ## Documentation
 

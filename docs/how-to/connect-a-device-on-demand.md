@@ -4,9 +4,10 @@ icon: lucide/plug
 
 # How to connect a device on demand
 
-This guide shows how to build a device without connecting it, and connect it
-from a component when the user asks. [Connecting](../explanation/components.md#connecting) explains
-what the build does with the other devices.
+You don't have to connect a device when the session builds it. You can build
+it unconnected and have a component connect it when the user asks.
+[Connecting](../explanation/components.md#connecting) explains what the build
+does with the other devices.
 
 ## Prerequisites
 
@@ -70,8 +71,8 @@ component connected the device.
 
 !!! warning "`shutdown` can run on a device that never connected"
 
-    A `shutdown` that writes to the hardware fails on such a device. Make it
-    check that the device connected first.
+    A `shutdown` that writes to the hardware has to cope with a device that
+    never connected. Make it check that the device connected first.
 
 ## The example in full
 

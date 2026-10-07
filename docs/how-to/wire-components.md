@@ -115,7 +115,8 @@ The examples below connect this presenter to the view above, and to a
 
     Each attribute has the type it was declared with, so a misspelled signal is a
     type error before the program runs. If `wire` is an ordinary method with no
-    `yield`, it returns `None` and raises [`WiringError`][redsun.WiringError].
+    `yield`, it returns `None` and the session raises
+    [`WiringError`][redsun.WiringError].
 
 === "Session file"
 
@@ -151,7 +152,7 @@ A session may use both, and `wire` runs first, then the `wiring` section. You
 can wire the [path provider](../explanation/glossary.md#path-provider) too, as
 `path_provider`.
 
-!!! warning "Calling and connecting the same action"
+!!! warning "Calling and connecting the same action runs it twice"
 
     A component can reach another in two ways: it can ask for it in `setup`
     and call its methods, or it can send a signal that the session connects

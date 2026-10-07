@@ -4,9 +4,9 @@ icon: lucide/mouse-pointer-click
 
 # How to follow a plan action from a view
 
-This guide shows how to show a button for each action of a plan, ask for the
-action when the button is pressed, and set the button from what the plan
-answers.
+Each action of a plan can have its own button in a view. Pressing the button
+asks the plan for the action, and the view then sets the button from what the
+plan answers.
 [How presenters run plans](../explanation/plans.md#following-an-action-from-a-view)
 explains the states an action goes through.
 

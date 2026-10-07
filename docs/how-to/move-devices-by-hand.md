@@ -4,9 +4,9 @@ icon: lucide/move
 
 # How to move devices by hand
 
-This guide shows how to add the built-in positioner to a session. It has a
-presenter that moves the axes of your
-[devices](../explanation/glossary.md#device), and a view with a row per axis,
+`redsun` comes with a built-in positioner that you can add to a session to
+move your [devices](../explanation/glossary.md#device) by hand. Its presenter
+moves their axes, and its view has a row per axis,
 where you step the axis, send it to a position, stop it and change its
 settings.
 [ADR 20](../explanation/decisions/0020-a-built-in-positioner.md) explains the

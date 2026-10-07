@@ -39,12 +39,8 @@ Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 
 You can also give a `placement` in the declaration. The session then uses it
 instead of the class's, and checks it the same way before anything is built.
-
-!!! warning "A placement set from a property is checked late"
-
-    A view that sets `placement` from a property is checked only once the view
-    exists, since only the object can answer. That form is deprecated, so set
-    `placement` as a plain class attribute or in the declaration instead.
+A view that sets `placement` from a property is checked only once the view
+exists, since only the object can answer. That form is deprecated.
 
 A frontend also reads the `placement` words of a session file, with
 `read_placement`. Qt, for example, turns `left` into a dock on the left and

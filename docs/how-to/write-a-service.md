@@ -4,11 +4,11 @@ icon: lucide/server
 
 # How to write a service
 
-This guide shows how to write a [service](../explanation/glossary.md#service)
-for a session to launch, declare it, and point a device at it. The tabs show a
-`caproto` [IOC](../explanation/glossary.md#ioc) served over
+To have a session launch a [service](../explanation/glossary.md#service) of
+your own, you write the service, declare it and point a device at it. The tabs
+show a `caproto` [IOC](../explanation/glossary.md#ioc) served over
 [Channel Access](../explanation/glossary.md#channel-access) and a `fastcs`
-controller served over [PVAccess](../explanation/glossary.md#pvaccess). The
+controller served over [PVAccess](../explanation/glossary.md#pvaccess), and the
 rest of the page holds for both. [Services](../explanation/services.md)
 explains what a service is and how a session handles it.
 

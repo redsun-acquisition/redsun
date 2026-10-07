@@ -4,9 +4,9 @@ icon: lucide/loader
 
 # How to show a plan's progress
 
-This guide shows how to report from a plan how far it has got, and show it on
-the plan's page. A plan opens a progress scope for each thing it counts, and
-the page shows a bar for every scope while the plan runs.
+A plan can report how far it has got, so that the user sees it on the plan's
+page. The plan opens a progress scope for each thing it counts, and the page
+shows a bar for every scope while the plan runs.
 
 ## Prerequisites
 
@@ -75,12 +75,8 @@ almost as soon as it appears. A real shutter or motor keeps the bar on the page
 for as long as it moves.
 
 The plan still waits on the status itself. A status that fails closes its
-scope, and the failure reaches the plan through its `wait`.
-
-!!! warning "The status owns its scope"
-
-    The scope belongs to the status, so don't update or finish it with
-    `update_progress` from the plan.
+scope, and the failure reaches the plan through its `wait`. The scope belongs
+to the status, so the plan doesn't update or finish it with `update_progress`.
 
 ## What a bar shows
 

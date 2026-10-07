@@ -16,10 +16,11 @@ A derived product isn't part of the documents a run emits, so `redsun` handles
 the two separately. [`bluesky`](glossary.md#bluesky) carries acquisition data
 as [documents](glossary.md#document), and `suitcase`, its family of exporters,
 writes a run to a file by reading them: every exporter is a `DocumentRouter`
-that serializes what the documents carry. A derived product has the same
-shape and a different job. The documents say where the acquisition went and
-what its arrays look like, but a component computes the product after the
-fact, and no document carries it.
+that serializes what the documents carry. Writing a derived product looks
+like an exporter's job, since both put arrays in a file, but the data comes
+from somewhere else. The documents say where the acquisition went and what its
+arrays look like, but a component computes the product after the fact, and no
+document carries it.
 
 So [`Writer`][redsun.writers.Writer] keeps the two apart. The documents go in
 through `__call__`, as with any callback, and tell the writer the layout and

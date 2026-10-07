@@ -283,7 +283,7 @@ a class attribute without an annotation. A value that `setup` assigns
 shouldn't be a field: use `field(init=False)` on a dataclass, or a private
 attribute on a model.
 
-!!! warning "A class with `__slots__` and a signal is left out without `__weakref__`"
+!!! warning "A class with `__slots__` and a signal is left out"
 
     `psygnal` refers to the component weakly, so a class with `__slots__`
     that owns a signal needs `__weakref__` among its slots, or the component

@@ -4,10 +4,11 @@ icon: lucide/lightbulb
 
 # How to switch and dim lights
 
-This guide shows how to add the built-in light stack to a session. It has a
-presenter that switches your light sources on and off and sets their intensity,
-and a view with a group per light. [ADR 21](../explanation/decisions/0021-a-built-in-light-stack.md)
-explains the design.
+The built-in light stack switches your light sources on and off and sets their
+intensity. When you add it to a session, its presenter does that work, and its
+view has a group per light.
+[ADR 21](../explanation/decisions/0021-a-built-in-light-stack.md) explains the
+design.
 
 ## Prerequisites
 

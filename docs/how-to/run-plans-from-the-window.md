@@ -4,9 +4,10 @@ icon: lucide/play
 
 # How to run plans from the window
 
-This guide shows how to add the built-in acquisition stack to a session. It has
-a presenter that runs the plans your components offer, one at a time, and a
-view where you choose a plan, fill its parameters, and run, pause and stop it.
+Add the built-in acquisition stack to a session, and you can run plans from
+the window. Its presenter runs the plans your components offer, one at a time,
+and its view is where you choose a plan, fill its parameters, and run, pause
+and stop it.
 [ADR 22](../explanation/decisions/0022-a-built-in-acquisition-stack.md)
 explains the design.
 

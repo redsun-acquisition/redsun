@@ -4,8 +4,8 @@ icon: lucide/gauge
 
 # How to profile a session
 
-This guide shows where a session spends its time, as a chart of its slowest
-calls.
+Profiling a session shows you where it spends its time, as a chart of its
+slowest calls.
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ MyApp(profile="run").run()
 The profile ends when the session shuts down, so it also holds what the
 session did while you used it.
 
-!!! warning "Profiled times are slower than real ones"
+!!! note "Profiled times are slower than real ones"
 
     Profiling slows the profiled thread a little, and the times it shows are
     slower by the same amount. Compare parts of one profile with each other, not

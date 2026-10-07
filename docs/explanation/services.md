@@ -4,7 +4,7 @@ icon: lucide/server-cog
 
 # How a session runs and talks to services
 
-A service is a program that sits between your devices and the hardware, such
+A service is a server your devices talk to, such
 as an [EPICS](glossary.md#epics) [IOC](glossary.md#ioc), a camera server or a
 motion controller's gateway. Your [`ophyd-async`](glossary.md#ophyd-async)
 devices talk to it over [Channel Access](glossary.md#channel-access) or
@@ -208,7 +208,7 @@ over another can't change it. Only one transport is allowed because the
 variables both protocols read hold one setting for the whole process, so with
 two transports in one session, no variable could say which service it is for.
 
-Each Channel Access service gets its own port because of Windows. On Linux,
+Each launched Channel Access service gets its own port because of Windows. On Linux,
 two IOCs on the default port both answer, but on Windows the second one is
 never found. The cause is libca, the Channel Access client library, which reads
 its list of server addresses only once per process. So each service keeps its

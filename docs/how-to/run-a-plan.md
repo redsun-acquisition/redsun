@@ -4,10 +4,10 @@ icon: lucide/play
 
 # How to run a plan from a presenter
 
-This guide shows how to offer a [plan](../explanation/glossary.md#plan) from a
-component, run it on a [`RunEngine`](../explanation/glossary.md#runengine) in a
-presenter, and show its [plan widget](../explanation/glossary.md#plan-widget)
-in a view.
+Running a [plan](../explanation/glossary.md#plan) takes three components: one
+offers the plan, a presenter runs it on a
+[`RunEngine`](../explanation/glossary.md#runengine), and a view shows its
+[plan widget](../explanation/glossary.md#plan-widget).
 [How presenters run plans](../explanation/plans.md) explains how the three
 components work together.
 

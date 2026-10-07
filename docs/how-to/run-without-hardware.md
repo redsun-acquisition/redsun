@@ -4,11 +4,11 @@ icon: lucide/flask-conical
 
 # How to run a session without hardware
 
-This guide shows how to run a session as a
-[mocked session](../explanation/glossary.md#mocked-session), so you can work
-without hardware. Its [devices](../explanation/glossary.md#device) connect to
-simulated backends that `ophyd-async` provides, and no
-[service](../explanation/glossary.md#service) is launched.
+With no hardware at hand, you can still work on a session by running it as a
+[mocked session](../explanation/glossary.md#mocked-session). Its
+[devices](../explanation/glossary.md#device) connect to simulated backends that
+`ophyd-async` provides, and the session launches no
+[service](../explanation/glossary.md#service).
 [Components](../explanation/components.md#connecting) explains how a session
 connects its devices.
 

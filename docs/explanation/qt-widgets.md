@@ -43,7 +43,7 @@ the inputs a few signatures get, and the
 
 ### Document callbacks
 
-A plan may require document callbacks of its own, the functions that receive
+A plan may require document callbacks of its own, the objects that receive
 the [documents](glossary.md#document) of a run, and may let the user attach
 more. `create_plan_widget` lists both in a *Callbacks* group. You pass it the
 plan's own callbacks, whether the plan is extendable, and the callbacks the

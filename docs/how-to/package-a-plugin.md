@@ -155,7 +155,7 @@ manifest. See [Write a service](write-a-service.md#declare-it).
 ## Read a failure
 
 The session leaves out a manifest that doesn't validate, and the log names the
-file and each problem. It leaves out an entry that doesn't resolve on its own,
+file and each problem. An entry that doesn't resolve is left out on its own,
 and the build summary lists it under `Not built`:
 
 ```text

@@ -55,7 +55,8 @@ Give each value its own type.
 
 ## How must I import a lookup type?
 
-Import a type the session looks up normally, not under `if TYPE_CHECKING:`.
+Import a type the session looks up with a normal import, not under
+`if TYPE_CHECKING:`.
 The session reads a constructor's annotations while the program runs, to know
 what to pass it, and a type imported only under `if TYPE_CHECKING:`, a block
 that only type checkers read, isn't there when the session looks:

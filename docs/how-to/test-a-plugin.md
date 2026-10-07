@@ -43,7 +43,7 @@ queued for another thread. A session whose configuration names its own
 asks for it, so these fixtures never reach a project that only installs
 `redsun`.
 
-!!! warning "Sessions built in wider fixtures"
+!!! warning "A session built in a wider fixture isn't covered"
 
     The fixtures run for each test, so they don't cover a session built in a
     fixture scoped to a module or the whole run. Build the session in a
