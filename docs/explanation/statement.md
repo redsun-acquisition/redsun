@@ -77,8 +77,8 @@ although the pieces are divided differently. These are the closest matches:
 
 ## What redsun leaves to you
 
-`redsun` gives you the framework, and the parts specific to your instrument
-come from you or from a plugin:
+`redsun` gives you the framework, and everything specific to your instrument
+comes from you or from a plugin:
 
 | Not included | Where it comes from |
 | --- | --- |
@@ -86,10 +86,11 @@ come from you or from a plugin:
 | an image viewer | a [view](glossary.md#view) you write |
 | a writer for acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
 
-A panel that runs your plans is built in, as
-[How to run plans from the window](../how-to/run-plans-from-the-window.md)
-shows, and `redsun` builds the [plan widget](glossary.md#plan-widget) of each
-plan for a panel of your own; see [Qt widgets](qt-widgets.md).
+For common tasks, `redsun` ships
+[built-in components](plugins.md#built-in-components) you can use instead of
+writing your own. When you do write a panel of your own for your plans,
+`redsun` still builds the [plan widget](glossary.md#plan-widget) of each one;
+see [Qt widgets](qt-widgets.md).
 
 `redsun` also doesn't restart a service that crashes, and a program can run
 only one [frontend](glossary.md#frontend). [Limitations](limits.md) explains
