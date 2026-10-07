@@ -131,7 +131,8 @@ plan started from code gets the same protection:
 | `MinLen`, a text too long | a problem |
 
 The limits work inside other types too: `list[Annotated[float, Ge(0)]]`
-limits every item. A number with no limit can take any value.
+limits every item. A `float` with no limit can take any value, and an `int`
+any value a 32-bit integer can hold.
 
 A plan whose default breaks its own limits is left out when the session
 builds, and the log says which limit it breaks.
