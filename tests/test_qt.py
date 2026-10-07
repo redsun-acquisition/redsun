@@ -1009,6 +1009,42 @@ def test_a_dock_on_an_unknown_edge_is_refused() -> None:
         Dock("bottm")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("value", "placement"),
+    [
+        ("left", Dock("left")),
+        ("bottom", Dock("bottom")),
+        ("central", Central()),
+        ({"dock": "top"}, Dock("top")),
+        ({"dock": "right", "group": "tools"}, Dock("right", group="tools")),
+        ({"menu": "Acquire"}, MenuItem("Acquire")),
+        ({"toolbar": "Acquisition"}, ToolBarItem("Acquisition")),
+    ],
+)
+def test_qt_reads_each_placement_a_session_file_writes(
+    value: object, placement: Placement
+) -> None:
+    """Read each word and mapping a session file uses for a Qt placement."""
+    assert Qt.read_placement(value) == placement
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "middle",
+        {"dock": "middle"},
+        {"dok": "left"},
+        {"menu": "A", "toolbar": "B"},
+        {"dock": "left", "group": "g", "extra": "x"},
+        3,
+    ],
+)
+def test_qt_refuses_a_placement_it_cannot_read(value: object) -> None:
+    """Refuse a value naming no Qt placement, listing the forms Qt reads."""
+    with pytest.raises(ValueError, match="left, right, top, bottom, central"):
+        Qt.read_placement(value)
+
+
 def test_a_failed_view_leaves_its_reason_where_it_would_have_been(
     qapp: QApplication, build: BuildSession
 ) -> None:

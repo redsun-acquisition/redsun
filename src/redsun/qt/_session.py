@@ -140,6 +140,9 @@ AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
 EDGES: Final = {area: edge for edge, area in AREAS.items()}
 """The edge each Qt dock area stands for."""
 
+EDGE_NAMES: Final = frozenset(get_args(Area))
+"""The words for an edge of the window."""
+
 
 @dataclass(frozen=True)
 class Dock(Placement):
@@ -247,6 +250,41 @@ class Qt(Frontend):
             f"{where} is declared as a view, but {view.__name__}'s constructor "
             "does not start with '(name: str, parent: QWidget)', which the Qt "
             "session passes to every view; neither may sit after a '/' or a '*'"
+        )
+
+    @classmethod
+    def read_placement(cls, value: object) -> Placement:
+        """Return the Qt placement a session file's *value* names.
+
+        `left`, `right`, `top` or `bottom` is a dock against that edge and
+        `central` the main area; `{dock: <edge>, group: <name>}` a dock tabbed
+        with its group, `{menu: <name>}` an entry in that menu and
+        `{toolbar: <name>}` an entry in that toolbar.
+
+        Raises
+        ------
+        ValueError
+            If *value* is none of these.
+        """
+        match value:
+            case "central":
+                return Central()
+            case str(edge) if edge in EDGE_NAMES:
+                return Dock(cast("Area", edge))
+            case {"dock": str(edge), "group": str(group), **rest} if (
+                not rest and edge in EDGE_NAMES
+            ):
+                return Dock(cast("Area", edge), group=group)
+            case {"dock": str(edge), **rest} if not rest and edge in EDGE_NAMES:
+                return Dock(cast("Area", edge))
+            case {"menu": str(menu), **rest} if not rest:
+                return MenuItem(menu)
+            case {"toolbar": str(toolbar), **rest} if not rest:
+                return ToolBarItem(toolbar)
+        raise ValueError(
+            f"placement {value!r} names nothing Qt attaches; give one of "
+            "left, right, top, bottom, central, {dock: <edge>, group: <name>}, "
+            "{menu: <name>} or {toolbar: <name>}"
         )
 
     @classmethod

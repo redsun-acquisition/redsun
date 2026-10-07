@@ -1273,6 +1273,12 @@ def test_a_frontend_refuses_what_it_cannot_attach(
         Toy.check_placement(view, placement, "somewhere")
 
 
+def test_a_frontend_reads_no_placement_by_default() -> None:
+    """Refuse a session file's placement under a frontend that names no words for one."""
+    with pytest.raises(ValueError, match="reads no placement"):
+        Frontend.read_placement("left")
+
+
 @pytest.mark.parametrize(
     ("app", "protocol"),
     [(NamelessApp, "NamedComponent"), (NamelessViewApp, "AttachableComponent")],
