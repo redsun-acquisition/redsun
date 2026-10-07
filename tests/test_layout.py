@@ -36,6 +36,23 @@ class LayoutApp(QtSession):
     charts: AsView[Charts]
 
 
+class Grouped(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("left", group="tools")
+
+
+class GroupedRight(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("right", group="tools")
+
+
+class GroupedApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "grouped-session"}
+
+    first: AsView[Grouped]
+    second: AsView[Grouped]
+    alone: AsView[Panel]
+    other_edge: AsView[GroupedRight]
+
+
 def _dock(app: QtSession, name: str) -> QDockWidget:
     """Return the dock holding the view called *name*."""
     found = app.main_window.findChild(QDockWidget, name)
@@ -113,3 +130,15 @@ def test_a_session_that_was_never_shown_writes_nothing(
     build(LayoutApp).shutdown()
 
     assert not (config_home / "layout-session.json").exists()
+
+
+def test_docks_of_one_edge_and_group_open_as_tabs(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Tab the docks of one edge and group together, and stack the rest beside them."""
+    app = build(GroupedApp)
+    window = app.main_window
+
+    assert window.tabifiedDockWidgets(_dock(app, "first")) == [_dock(app, "second")]
+    assert window.tabifiedDockWidgets(_dock(app, "alone")) == []
+    assert window.tabifiedDockWidgets(_dock(app, "other_edge")) == []

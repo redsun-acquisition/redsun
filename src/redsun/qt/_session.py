@@ -143,7 +143,7 @@ EDGES: Final = {area: edge for edge, area in AREAS.items()}
 
 @dataclass(frozen=True)
 class Dock(Placement):
-    """A panel against one edge of the window.
+    """A panel against one edge of the window, tabbed with the docks of its group.
 
     Raises
     ------
@@ -153,6 +153,9 @@ class Dock(Placement):
 
     area: Area
     """Edge the panel sits against."""
+
+    group: str | None = None
+    """Name of the docks it is tabbed with on the same edge; `None` for none."""
 
     def __post_init__(self) -> None:
         if self.area not in get_args(Area):
@@ -775,6 +778,8 @@ def application() -> QApplication:
 def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> None:
     """Attach every view of *views* to *window* where it asks to be.
 
+    Docks of one edge and group are tabbed together, in the order of *views*.
+
     Raises
     ------
     TypeError
@@ -782,6 +787,7 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
         toolkit type that placement demands.
     """
     central: dict[str, QWidget] = {}
+    groups: dict[tuple[Area, str], QDockWidget] = {}
     for name, view in views.items():
         placement = view.placement
         Qt.check_placement(view, placement, f"view {name!r}")
@@ -789,7 +795,11 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
             case Central():
                 central[name] = named(name, view, QWidget)
             case Dock():
-                add_dock(window, name, named(name, view, QWidget), placement)
+                dock = add_dock(window, name, named(name, view, QWidget), placement)
+                if placement.group is not None:
+                    first = groups.setdefault((placement.area, placement.group), dock)
+                    if first is not dock:
+                        window.tabifyDockWidget(first, dock)
             case MenuItem():
                 add_menu_item(window, named(name, view, QAction), placement)
             case ToolBarItem():
@@ -809,14 +819,17 @@ def named(name: str, view: object, required: type[T]) -> T:
     return widget
 
 
-def add_dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
-    """Put *widget* in a dock of *window*, in the area *placement* names."""
+def add_dock(
+    window: QMainWindow, name: str, widget: QWidget, placement: Dock
+) -> QDockWidget:
+    """Put *widget* in a dock of *window*, in the area *placement* names, and return it."""
     # Qt matches a dock to its saved place by object name, and drops one that
     # has none, so the component's declared name is what carries the layout
     dock = QDockWidget(name, window)
     dock.setObjectName(name)
     dock.setWidget(widget)
     window.addDockWidget(AREAS[placement.area], dock)
+    return dock
 
 
 def add_menu_item(window: QMainWindow, action: QAction, placement: MenuItem) -> None:
