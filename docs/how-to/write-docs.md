@@ -16,7 +16,12 @@ Write as if you were explaining it to them in person.
 
 - Talk to the reader as "you". Name who does what: "you declare the device",
   "the session starts the service".
-- Start a section with what the reader gets out of it, then explain how.
+- Open each section and each paragraph with its point, said as what the
+  reader gets out of it. The rest of the paragraph explains how.
+- Start a sentence from something the reader already knows, such as the idea
+  that ended the sentence before, and end it on the new part. Keep one subject
+  while a paragraph is about it, and start a new paragraph when the subject
+  changes.
 - Keep most sentences short, but vary their length. Join ideas that belong
   together with "so", "because" or "which means", rather than splitting them
   into a list of short statements.
@@ -30,6 +35,10 @@ Write as if you were explaining it to them in person.
 | A view's class names where it attaches by default. | Each view class has a default place in the window. You can pick another when you declare the view. |
 | There is no way to hand the session a new value later. | You can't hand the session a new value after it starts. |
 | `redsun` is a library you build an acquisition program with. | `redsun` is a toolkit for building your own acquisition software. |
+
+Joseph M. Williams, *Style: Lessons in Clarity and Grace*, and George Gopen
+and Judith Swan, "The Science of Scientific Writing" (*American Scientist*,
+1990), explain these ideas in more depth.
 
 ## Name a section by its topic
 
@@ -75,7 +84,7 @@ since it underlines every place the word appears.
 
 ## Say the thing itself
 
-Write the claim, not a figure of speech for it. "Load-bearing", "footgun",
+Write the claim, not a field's jargon for it. "Load-bearing", "footgun",
 "first-class" and "plumbing" only make sense to people who already know the
 jargon. Write what they stand for: "cannot change without breaking X", "easy
 to misuse", "fully supported", "the code that connects X to Y".
