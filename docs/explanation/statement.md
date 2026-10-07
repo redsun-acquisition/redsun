@@ -54,13 +54,18 @@ and the application that runs them.
 
 ## Why not use Bluesky directly?
 
-`bluesky` was designed for interactive use, where you drive the
-[`RunEngine`](glossary.md#runengine) from a command line or `IPython`. That
-fits the places it was developed for: large facilities with many devices
-behind a central control system such as [EPICS] or [Tango].
+`bluesky` runs acquisitions, but it leaves the application around them to
+you: you drive the [`RunEngine`](glossary.md#runengine) from a command line or
+`IPython`, and the rest is expected to exist already. That fits the large
+facilities it was developed at, where a control system such as [EPICS] or
+[Tango] runs the hardware, staff keep it running, and separate programs show
+the instrument to the people using it.
 
-`redsun` brings `bluesky` to a setup on a bench: one instrument, driven by one
-person through a window, as with [Micro-Manager].
+A setup on a bench has none of that around it: one instrument, driven by one
+person through a window, as with [Micro-Manager]. `redsun` brings `bluesky`
+there. It still speaks EPICS, through the services your devices talk to, but
+it starts and stops those services itself, builds the window, and decides
+where the data goes, instead of relying on a facility to provide them.
 
 ## Coming from Micro-Manager
 
