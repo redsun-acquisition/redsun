@@ -58,7 +58,7 @@ class MyApp(QtSession):
 
 ## Presenters
 
-A presenter no longer starts with `(name, devices)` and inherits nothing. The
+A presenter no longer starts with `(name, devices)`, and it inherits nothing. The
 session calls it with every argument by keyword and fills each parameter by
 type:
 

@@ -53,22 +53,24 @@ A shared type identifies one value; give them distinct types.
 
 Give each value its own type.
 
-## How must I import a lookup type?
+## Can I import parameter types under `if TYPE_CHECKING:`?
 
-Import a type the session looks up with a normal import, not under
-`if TYPE_CHECKING:`.
-The session reads a constructor's annotations while the program runs, to know
-what to pass it, and a type imported only under `if TYPE_CHECKING:`, a block
-that only type checkers read, isn't there when the session looks:
+No, not the types the session reads to decide what to pass. It reads those
+annotations while the program runs, and a type imported only under
+`if TYPE_CHECKING:`, a block that only type checkers read, isn't there when
+the session looks.
+
+What happens then depends on where the type is used. In the constructor or
+`setup` of a component, the session leaves that component out and logs why:
 
 ```text
 TypeError: cannot read the constructor of MotorPresenter: 'Calibration' is not
 available at runtime.
 ```
 
-This applies to the constructor and `setup` of a component, the return type
-of a `provides` method, and the session class body. Everywhere else,
-`TYPE_CHECKING` imports work as usual.
+In the return type of a `provides` method or in the session class body, the
+build stops with a `NameError`. Either way, import those types with a normal
+import. Everywhere else, `TYPE_CHECKING` imports work as usual.
 
 ## Can I run two frontends?
 

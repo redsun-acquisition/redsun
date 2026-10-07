@@ -32,8 +32,8 @@ Open `first_session.py`, and add a presenter below `ImageView`:
 from `start` to `stop`, and reads the camera at each one.
 
 The plan asks for a stage and a camera through the two protocols you wrote,
-`HasPosition` and `Camera`. So it names no device, and the presenter holds
-none.
+`HasPosition` and `Camera`, so it names no device. The presenter holds none
+either.
 
 ## 2. Add it to the session
 
@@ -87,7 +87,7 @@ uv run python -c "import h5py, sys; print(h5py.File(sys.argv[1])['entry/data/dat
 ```
 
 The file holds the frames but not the positions. The positions are in the
-documents of the run, and nothing in this session keeps them yet;
+documents of the run, and nothing in this session keeps them;
 [How to keep a catalog of runs](../how-to/keep-a-catalog.md) shows how.
 
 ## 5. Scan the other stage
@@ -105,7 +105,7 @@ Choose `fast_stage` in the list of stages, set `points` to `3`, and press
 ## What you built
 
 You built a scan that moves the stage you choose and takes a frame at each
-position, and saves one file for each run.
+position, and the camera writes one file for each run.
 
 You put it together from parts that don't name each other. The stage and the
 camera reach the plan through two protocols. The plan reaches the presenter

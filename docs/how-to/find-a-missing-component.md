@@ -8,7 +8,7 @@ When the session can't build, set up or connect a
 [component](../explanation/glossary.md#component), it logs the failure, leaves
 the component out and opens the window without it. You can find the reason in
 the log, or make the session stop on it instead.
-[Sessions](../explanation/session.md#failed-components) explains why a session
+[Sessions](../explanation/session.md#components-that-fail-to-build) explains why a session
 carries on without the component.
 
 ## Prerequisites

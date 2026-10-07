@@ -26,8 +26,8 @@ actions:
 - `menus` lists the menus the command appears in, by menu id.
 
 The session reads the section while it builds, and registers every action on
-the app-model `Application` it owns. Reading the section imports nothing, so
-the callback is imported the first time someone runs the command.
+the app-model `Application` it owns. Reading the section imports nothing: the
+callback is imported the first time someone runs the command.
 
 ## Write the callback
 

@@ -12,7 +12,7 @@ The core of `redsun` knows nothing about windows. It builds components and
 connects them, and a frontend adds two things on top:
 
 - a session class for you to subclass, such as
-  [`QtSession`][redsun.qt.QtSession], which knows how to start the toolkit and
+  [`QtSession`][redsun.qt.QtSession], which knows how to start the [toolkit](glossary.md#toolkit) and
   put views on screen. It lives in the frontend's own package, `redsun.qt`,
   because importing it imports the toolkit, and a session without a window
   doesn't install the toolkit;
@@ -39,8 +39,10 @@ Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 
 You can also give a `placement` in the declaration. The session then uses it
 instead of the class's, and checks it the same way before anything is built.
-A view that sets `placement` from a property is checked only once the view
-exists, since only the object can answer. That form is deprecated.
+A view that sets `placement` from a property is checked only after the view
+is built, since only the object can answer, so a placement the frontend can't
+show fails that view only then. That form is deprecated and is removed in
+0.16: set `placement` as a class attribute or in the declaration instead.
 
 A frontend also reads the `placement` words of a session file, with
 `read_placement`. Qt, for example, turns `left` into a dock on the left and

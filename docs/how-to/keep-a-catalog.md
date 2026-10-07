@@ -103,7 +103,7 @@ client = from_uri(address.uri)
 image = client[run_uid]["primary"]["det"].read()
 ```
 
-You can put a derived product into the catalog with
+You can put a [derived product](../explanation/glossary.md#derived-product) into the catalog with
 `client[run_uid].write_array(...)`, or into the acquisition's store
 ([Write a derived product](write-a-derived-product.md)). For what a client can
 do to a registered file, see [The session catalog](../explanation/catalog.md).

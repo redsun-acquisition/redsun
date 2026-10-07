@@ -9,7 +9,7 @@ such as a median over a scan or a filtered copy of each frame, writes the result
 against the store the device wrote. The acquisition belongs to the service and
 its device
 ([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md)),
-so a derived product is the one thing `redsun` writes.
+so a [derived product](../explanation/glossary.md#derived-product) is the one thing `redsun` writes.
 [Derived products](../explanation/derived-products.md) says why a product is
 handed over rather than carried by a
 [document](../explanation/glossary.md#document).

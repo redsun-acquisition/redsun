@@ -66,9 +66,9 @@ Layered files merge `wiring` by signal: a later file naming a new signal adds
 it, and naming one already wired replaces its slots. `pairs` adds the
 pairings of every file.
 
-A later source can't change what kind of session this is, so `schema_version`,
-`frontend` and `services.transport` must be the same in every source that sets
-them. A later source also replaces a component's entry whole: a later file
+To stop a later source from changing what kind of session this is,
+`schema_version`, `frontend` and `services.transport` must be the same in every
+source that sets them. A later source also replaces a component's entry whole: a later file
 naming `motor_ctrl` gives all of its settings.
 
 A file that only makes sense layered over another, such as one holding a

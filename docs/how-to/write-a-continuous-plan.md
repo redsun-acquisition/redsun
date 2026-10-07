@@ -100,8 +100,8 @@ update the plan widget when they are pressed and when the plan ends:
 --8<-- "docs/examples/continuous_plan.py:view-controls"
 ```
 
-While the plan runs, `PlanWidget.toggle` sets the label of the toggle, enables
-the action buttons and the pause button, and locks the inputs of the
+`PlanWidget.toggle` sets the label of the toggle, enables the action buttons
+and the pause button while the plan runs, and locks the inputs of the
 parameters. `on_finished` calls `toggle(False)` so that a plan that fails or
 ends by itself shows as stopped. Disabling the combo box keeps the user from
 starting a second plan meanwhile.

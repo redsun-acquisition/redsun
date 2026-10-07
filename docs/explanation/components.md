@@ -20,7 +20,7 @@ argument by keyword. It fills each parameter from one of these places:
   session holds before any component exists. These are `SessionConfig`,
   `Settings`, `DeviceMapping`, `DevicesOf[P]`, the path provider, the catalog
   address, and the [shared values](glossary.md#shared-value) of the session's
-  providers. A provider is a class the session makes before any component,
+  [providers](glossary.md#provider). A provider is a class the session makes before any component,
   only to share values. You list providers on the session class, or a plugin
   adds them through the session file, as
   [Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)
@@ -40,11 +40,15 @@ class MotorPresenter:
 If the file gives `step`, the presenter gets that value, and otherwise it gets
 `1.0`. You never write code to choose between the two.
 
-!!! warning "A type imported only for type checking can't be looked up"
+!!! warning "The session can't see types imported under `if TYPE_CHECKING:`"
 
-    The session reads a parameter's annotation while the program runs, so it
-    can't see a type you import only under `if TYPE_CHECKING:`. Import every
-    type the session looks a parameter up by in the normal way.
+    The session reads each parameter's annotation while the program runs, to
+    decide what to pass. A type you import only under `if TYPE_CHECKING:`
+    doesn't exist at that point, so the session leaves the component out and
+    logs a `TypeError`. Import
+    the types of these parameters with a normal import;
+    [Limitations](limits.md#can-i-import-parameter-types-under-if-type_checking) lists where this
+    applies.
 
 ### What arrives in `setup`
 
@@ -151,7 +155,7 @@ to ten seconds for each. A device that doesn't connect is left out, just like
 one that failed to build, and the summary lists it as `camera (device, not
 connected)`.
 
-If you declare a device with `autoconnect=False`, the session leaves it
+If you declare a device with [`autoconnect=False`](glossary.md#autoconnect), the session leaves it
 unconnected, so your session's code can connect it when it chooses. The build
 then can't leave the device out because its hardware is missing, so a
 component has to decide what to do when the connection fails. See
@@ -189,7 +193,7 @@ another command.
 
 ## Presenters
 
-A [presenter](glossary.md#presenter) holds the session's behaviour. It may run
+A [presenter](glossary.md#presenter) holds the session's application logic. It may run
 [`bluesky`](glossary.md#bluesky) [plans](plans.md), react to the
 [documents](glossary.md#document) a run produces, move a device directly, or
 talk to another program. Because it never touches a widget, it works without a

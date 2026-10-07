@@ -84,7 +84,7 @@ app = Session.from_config("session.yaml").build()
 
 When you layer several files, leave `frontend` out of every one of them. If
 one file names it and another doesn't, they disagree about what kind of session
-this is, and [Sessions](../explanation/session.md#the-configuration) says that
+this is, and [Sessions](../explanation/session.md#merging-the-sources) says that
 isn't allowed.
 
 ## Naming a frontend without its packages

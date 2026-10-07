@@ -75,7 +75,7 @@ the details, and compares its parts with those of Micro-Manager.
 
 The documentation follows the [Diataxis](https://diataxis.fr) format and is
 split into the four sections below. The [glossary](explanation/glossary.md)
-defines every technical term it uses.
+defines the technical terms it uses.
 
 <div class="grid cards" markdown>
 

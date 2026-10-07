@@ -83,8 +83,8 @@ that raises is logged under `redsun`, and the ones after it still run.
 ## What a plan sees
 
 The plan sees nothing. `Deferrals` is a preprocessor on the engine, and it runs
-each queued change as a `wait_for` inserted before the plan's next message, so
-no message runs twice. A [`bluesky`](../explanation/glossary.md#bluesky)
+each queued change as a `wait_for` inserted before the plan's next message.
+No message runs twice. A [`bluesky`](../explanation/glossary.md#bluesky)
 suspension would rewind to the last
 [checkpoint](../explanation/glossary.md#checkpoint) and replay what came after
 it, which is why `Deferrals` doesn't use one. A change waits as long as the

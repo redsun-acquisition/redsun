@@ -16,7 +16,7 @@ below are parts of one script; the whole script is at the end.
 
 ## Declare the device unconnected
 
-Give the declaration `autoconnect=False`:
+Give the declaration [`autoconnect=False`](../explanation/glossary.md#autoconnect):
 
 ```{.python}
 --8<-- "docs/examples/connect_on_demand.py:declare"

@@ -59,11 +59,12 @@ git push origin v0.14.1
 The tag publishes the package to PyPI and the docs, and creates the GitHub
 release, whose notes are the changelog section.
 
-!!! warning "A tag without a changelog section"
+!!! warning "A final-release tag without a changelog section"
 
     If the tag's version has no section, the package build fails with a
     message naming the `prepare` command, and neither PyPI nor the GitHub
-    release gets anything. Run step 1 before you tag.
+    release gets anything. Merge the changelog pull request (steps 1 and 2)
+    before you tag.
 
 ## Release candidates
 

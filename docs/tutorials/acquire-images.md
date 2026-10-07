@@ -136,7 +136,7 @@ Add the highlighted lines. You already added the first two in step 3:
 --8<-- "docs/tutorials/acquire_images.py:session"
 ```
 
-The first two links reach the
+The first two new links reach the
 [path provider](../explanation/glossary.md#path-provider) of the session,
 [`self.path_provider`][redsun.Session.path_provider], which tells the camera
 where to write.
@@ -164,7 +164,7 @@ concentric rings](images/acquire-images.png)
 
 ## 7. Find the files
 
-The frames are in the folder `redsun` keeps for you, sorted by the name of
+The frames are in the folder `redsun` keeps for you, in folders named after
 the session and the date:
 
 ```text
@@ -182,7 +182,7 @@ redsun/
 | Linux | `~/.local/share/redsun` |
 
 Open the folder, then press **Run** again: `snap_00001.h5` appears beside the
-first, since the files are named after the plan. The file from step 3 is
+first. The files are named after the plan. The file from step 3 is
 there too, as `unknown_00000.h5`, because nothing had told the path provider
 the name of the plan yet.
 

@@ -134,7 +134,7 @@ does, calls `stop_on_request`. A service built on `asyncio` awaits
     If the session crashes, nobody reads the service's output any more, and
     printing raises. Clean up before you print, or don't print.
 
-Under `channel-access`, a launched service listens on a port the session
+Under `channel-access`, a [launched service](../explanation/glossary.md#launched-service) listens on a port the session
 chooses when its process starts, and no other program is told which one. A
 Channel Access client run from another terminal, such as `caget`, doesn't find
 it. Under `pv-access`, another program on the machine reaches it with
@@ -224,7 +224,8 @@ prefix. The `fastcs` service needs no prefix in `args`, because it reads the
 prefix with [`identity`][redsun.services.identity].
 
 `args` is a list, or a mapping of options. In a mapping, `--` goes before each
-name, `True` passes the option alone, `False` leaves it out, and a list passes
+name, `True` passes the option alone, `False` leaves it out (`true` and
+`false` in a session file), and a list passes
 each item after the option. For example,
 `args={"prefix": "CAM:", "simulate": True, "debug": False}` starts the module
 with `--prefix CAM: --simulate`. The

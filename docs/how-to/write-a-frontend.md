@@ -12,7 +12,7 @@ explains what a frontend is responsible for.
 
 ## Prerequisites
 
-The toolkit the frontend shows views with. The example below prints one line
+The [toolkit](../explanation/glossary.md#toolkit) the frontend shows views with. The example below prints one line
 of text for each view to the terminal, so it needs nothing beyond `redsun`.
 The blocks below are parts of one script, and the whole script is at the end.
 
@@ -20,7 +20,7 @@ The blocks below are parts of one script, and the whole script is at the end.
 
 A placement is a frozen dataclass subclassing
 [`Placement`][redsun.Placement]. Define one for each place your toolkit can
-put a view, plus a base class that the views of that place must inherit:
+put a view, plus a base class that the views of that place must be a subclass of:
 
 ```{.python}
 --8<-- "docs/examples/console_frontend.py:placement"

@@ -152,7 +152,7 @@ A session may use both, and `wire` runs first, then the `wiring` section. You
 can wire the [path provider](../explanation/glossary.md#path-provider) too, as
 `path_provider`.
 
-!!! warning "Calling and connecting the same action runs it twice"
+!!! warning "Calling and connecting for one action can run it twice"
 
     A component can reach another in two ways: it can ask for it in `setup`
     and call its methods, or it can send a signal that the session connects
@@ -213,7 +213,7 @@ for instance from a stop button, use `cancel_task(task)` from `redsun.aio`.
 Called from another thread, it waits for the task to pause rather than
 cancelling it while it runs.
 
-Every session installs the async backend `psygnal` needs for coroutine slots
+Every session installs the async backend [`psygnal`](../explanation/glossary.md#psygnal) needs for coroutine slots
 when it is built, and removes it at shutdown.
 
 ## Address a signal group

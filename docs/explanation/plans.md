@@ -6,7 +6,7 @@ icon: lucide/route
 
 A [plan](glossary.md#plan) is a recipe for an acquisition: a Python generator
 that says, one step at a time, what to move, what to read and when. Plans come
-from [`bluesky`](glossary.md#bluesky), and everything its
+from [`bluesky`](glossary.md#bluesky), and most of what its
 [documentation on plans](https://blueskyproject.io/bluesky/main/plans.html)
 says applies here too.
 
@@ -23,7 +23,7 @@ components that offer plans; it asks the session which ones do.
   window, that's the main thread, so the window freezes. The `redsun` one
   hands the plan to a background thread and returns at once.
 - **`PlanSpec`**, a description of a plan's parameters. It's read from the
-  plan's signature and type hints, and names no toolkit, so a component offers
+  plan's signature and type hints, and names no [toolkit](glossary.md#toolkit), so a component offers
   a plan once and a view in any toolkit builds its controls from the same
   description. For Qt, those controls are a
   [plan widget](glossary.md#plan-widget).
@@ -50,7 +50,7 @@ the plan works with any device that has what it reads and sets.
 A component offers its plans through a `plan_map` method, which returns each
 plan under its name as a [`PlanEntry`][redsun.PlanEntry]. A component with
 that method satisfies the [`HasPlans`][redsun.HasPlans] protocol. An entry
-may also list the document callbacks the plan needs, under `callbacks`, and
+may also list the [document callbacks](glossary.md#callback) the plan needs, under `callbacks`, and
 say under `extendable` whether the user may attach more.
 
 The plans stay with the component they belong to: a component that holds a

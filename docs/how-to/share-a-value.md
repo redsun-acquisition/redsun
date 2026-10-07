@@ -72,7 +72,7 @@ you get `None`.
 ## Share a value no component owns
 
 A value that belongs to no component, such as a calibration loaded from a
-file, comes from a provider. A provider is an ordinary class whose `provides`
+file, comes from a [provider](../explanation/glossary.md#provider). A provider is an ordinary class whose `provides`
 methods share values before any component is made.
 
 ```python

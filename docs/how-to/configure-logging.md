@@ -49,8 +49,8 @@ changed it.
 
 ## Set the level anywhere else
 
-Outside a session, such as in a script or notebook,
-[`set_level`][redsun.log.set_level] sets the logger's level directly:
+[`set_level`][redsun.log.set_level] sets the logger's level directly, for
+example in a script or notebook without a session:
 
 ```python
 from redsun.log import set_level

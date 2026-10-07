@@ -62,8 +62,8 @@ in memory.
 
 With `StandardReadable` alone, the stage would only be a value you can read
 and write. [`StandardMovable`][ophyd_async.core.StandardMovable] turns it into
-something that moves. Its `movable_logic` names two signals: the setpoint,
-which you write to move the stage, and the readback, which says where the
+something that moves. Its `movable_logic` names two signals: the [setpoint](../explanation/glossary.md#setpoint),
+which you write to move the stage, and the [readback](../explanation/glossary.md#readback), which says where the
 stage is. This stage uses one signal for both. In return, the stage answers
 the same methods as every motor in `ophyd-async`:
 

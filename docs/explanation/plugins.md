@@ -31,7 +31,7 @@ doesn't use them.
 
 Besides the three [layers](glossary.md#layer), a manifest has two more groups.
 `providers` lists classes that share values with every component without being
-components themselves. Each method a provider marks with
+components themselves. Each method a [provider](glossary.md#provider) marks with
 [`provides`][redsun.provides] shares a [value](glossary.md#shared-value), and
 the provider's constructor receives shared values only, never the keys of a
 session file. `services` lists the [services](services.md) a session can

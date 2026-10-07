@@ -155,8 +155,8 @@ row for each of its axes x and y](images/positioner.png)
   axis that checks its own targets, as an `ophyd-async` `StandardMovable`
   does, also refuses a target outside its current limits when it moves.
 - `Stop` appears for a device that can be stopped, and stops the device and
-  each of its axes at once. A device that fails to stop is reported, and the
-  others still stop.
+  each of its axes at once. If one of them fails to stop, it is reported and
+  the rest still stop.
 - "moving" and "failed" show the state of each device, with the error after
   "failed".
 - `Save` keeps where a device stands, under a name you can edit, in the
@@ -164,7 +164,7 @@ row for each of its axes x and y](images/positioner.png)
   after the same checks as a typed target. A saved position also keeps the
   configuration values in the units of the axis' position, such as an offset.
   If one has changed since, the first `Go` names it and the second moves.
-  `x` removes an entry, and `Undo` brings it back for a few seconds.
+  `x` removes an entry, and for a few seconds after, `Undo` brings it back.
 - The Configuration tab shows each axis' configuration, such as `velocity`,
   and writes the entries that can be written. A value changed on the device
   by anything else is shown as it changes.
@@ -207,7 +207,7 @@ Override `check`, the slots `move`, `move_to`, `stop`, `configure` and
 `set_locked`, and the properties `axes` and `configuration`, calling `super()`.
 Methods with a leading underscore may change.
 
-!!! warning "An overridden slot can't be wired"
+!!! warning "An overridden slot needs `slot` again"
 
     A slot you override loses its marking. Mark it with [`slot`][redsun.slot]
     again.

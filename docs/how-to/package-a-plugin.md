@@ -4,7 +4,7 @@ icon: lucide/package
 
 # How to package components as a plugin
 
-Ship devices, presenters and views in an installable package, and a
+Ship devices, presenters and views in an installable package, so a
 [session file](../explanation/glossary.md#session-file) can name them without
 any Python. [How plugins provide components](../explanation/plugins.md)
 explains what a [plugin](../explanation/glossary.md#plugin) is and how a

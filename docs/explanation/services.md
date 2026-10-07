@@ -99,7 +99,7 @@ leave the other alone:
 - A service can lend its hardware to another program while every device stays
   connected, and take it back later. For now your application does this
   itself; see [Standby](components.md#standby).
-- An attached service runs wherever the hardware is plugged in, even on
+- An [attached service](glossary.md#attached-service) runs wherever the hardware is plugged in, even on
   another machine, because the devices only need its prefix.
 
 A device that needs no hardware at all, such as the soft stage in the
@@ -141,8 +141,8 @@ while every connection stays up.
 
 ## Launched and attached
 
-A service is either launched by the session or attached to it. When you
-declare a service with `Launch`, the session runs it as `python -m <module>`
+A service is either [launched](glossary.md#launched-service) by the session or
+attached to it. When you declare a service with `Launch`, the session runs it as `python -m <module>`
 while it builds, and stops it at shutdown. When you declare it with `Attach`,
 it is already running, in a container or on another host, and the session
 only passes its prefix on to the devices. You can declare either kind on the

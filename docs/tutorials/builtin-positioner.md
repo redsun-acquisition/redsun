@@ -7,8 +7,8 @@ icon: lucide/move
 Sometimes you don't need to write a presenter or a view yourself, because
 `redsun` already offers one. In this tutorial you replace the nudge presenter
 and view of your session with the positioner `redsun` ships. It's a
-[stack](../explanation/glossary.md#stack), a presenter and a view written to
-work together, that steps, moves and stops any stage, and saves positions to
+[stack](../explanation/glossary.md#stack) (a presenter and a view written to
+work together) that steps, moves and stops any stage, and saves positions to
 go back to. It continues from
 [Putting a device behind a service](device-service.md).
 

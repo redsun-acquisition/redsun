@@ -11,14 +11,15 @@ continues from [Arranging the window](window-layout.md).
 So far your stages have kept their position in memory. Real hardware is
 reached through a [service](../explanation/glossary.md#service), a separate
 program that owns the hardware and offers its values over the network.
-Nothing you wrote before changes: the new stage gets a row in the view
-of the stages, and an entry in the plan widgets of `walk` and `scan`.
+Apart from one new link, nothing you wrote before changes. The new stage
+gets a row in the view of the stages, and an entry in the plan widgets of
+`walk` and `scan`.
 
 !!! warning "Devices without a service"
 
     A device can also reach its hardware on its own, but for now a service is
     the preferred way, and [Services](../explanation/services.md) explains
-    why. Put your devices behind a service, as this tutorial does.
+    why. This tutorial uses one.
 
 ## Before you start
 
@@ -97,7 +98,7 @@ On Windows, the service may print a few lines that end with
 
 ## 2. Write the device
 
-In `first_session.py`, add a device below `FastStage`, whose position is the
+In `first_session.py`, add a device below `FastStage`. Its position is the
 process variable of the service:
 
 ```{.python}
