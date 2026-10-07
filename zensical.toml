@@ -122,6 +122,7 @@ nav = [
                 "explanation/decisions/0022-a-built-in-acquisition-stack.md",
                 "explanation/decisions/0023-pairing-two-components.md",
                 "explanation/decisions/0024-a-plan-widget-for-every-parameter-type-it-can-return.md",
+                "explanation/decisions/0025-a-views-placement-chosen-per-declaration.md",
         ]},
     ]},
     { "Reference" = [

@@ -33,3 +33,4 @@ never edited; a later one replaces it.
 - [22. A built-in acquisition stack](0022-a-built-in-acquisition-stack.md)
 - [23. Pairing two components](0023-pairing-two-components.md)
 - [24. A plan widget for every parameter type it can return](0024-a-plan-widget-for-every-parameter-type-it-can-return.md)
+- [25. A view's placement chosen per declaration](0025-a-views-placement-chosen-per-declaration.md)

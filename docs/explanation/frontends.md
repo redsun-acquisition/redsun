@@ -35,8 +35,15 @@ Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
 Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 ```
 
-A view that sets `placement` from a property is checked as soon as it is
-made, since only the object can answer.
+A declaration can give its own `placement`. The session then uses it
+instead of the class's, and checks it the same way, before anything is built.
+A view that sets `placement` from a property is checked only once it is made,
+since only the object can answer. That form is deprecated.
+
+A frontend also reads the `placement` words of a session file, with
+`read_placement`. For example, Qt turns `left` into a dock on the left and
+`central` into the central area. The core of `redsun` knows none of these
+words.
 
 ## The Qt frontend
 
