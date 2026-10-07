@@ -145,7 +145,9 @@ class PlanView(QWidget):
         layout.addWidget(self.pages)
         self.widgets: dict[str, PlanWidget] = {}
 
-    def setup(self, plan_sources: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
+    def setup(
+        self, plan_sources: Mapping[str, HasPlans], devices: DeviceMapping
+    ) -> None:
         for component in plan_sources.values():
             for entry in component.plan_map().values():
                 try:
