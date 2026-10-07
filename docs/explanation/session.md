@@ -145,6 +145,32 @@ malformed `wiring` section, still stops the build.
 [ADR 11](decisions/0011-tolerating-a-component-that-fails-to-build.md) records
 why.
 
+For example, here the camera's constructor can't find the serial port it
+talks through:
+
+```python
+class MyCamera(StandardReadable):
+    def __init__(self, name: str = "", *, port: str = "COM3") -> None:
+        raise OSError(f"serial port {port} not found")
+
+
+class MyApp(Session):
+    stage: AsDevice[MyStage]
+    camera: AsDevice[MyCamera]
+    stage_ctrl: AsPresenter[StagePresenter]
+```
+
+The session logs the error, leaves the camera out and builds everything else.
+The summary then counts one device fewer than you declared, and names the one
+that's missing:
+
+```bash
+$ uv run python my_session.py
+[07-10-26|22:15:21][ERROR]: Failed to build device 'camera': serial port COM3 not found (_base.py:1581)
+[07-10-26|22:15:21][WARNING]: Session built: 1/2 devices, 1/1 presenters, 0/0 views
+Not built: camera (device) (_base.py:878)
+```
+
 A [strict](glossary.md#strict-session) session stops instead, whenever
 something is missing.
 [How to find out why a component is missing](../how-to/find-a-missing-component.md)
