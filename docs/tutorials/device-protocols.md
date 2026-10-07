@@ -10,8 +10,8 @@ you change how the presenter asks for its devices, and nothing in the view.
 It continues from [Writing your first session](first-session.md).
 
 You start by checking the types of the script. Then you write a
-[protocol](../explanation/glossary.md#protocol), which describes the
-attributes and methods a device must have, ask the session for the devices that satisfy
+[protocol](../explanation/glossary.md#protocol), which describes the attributes
+and methods a device must have, ask the session for the devices that satisfy
 it, and add the stage.
 
 ## Before you start

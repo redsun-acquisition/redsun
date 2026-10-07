@@ -45,7 +45,7 @@ from redsun.qt import Dock, QtSession
 
 ## 1. The device
 
-A [device](../explanation/glossary.md#device) describes one part of your
+A [device](../explanation/glossary.md#device) describes one piece of your
 setup, which here is a stage with a position. Since you have no hardware,
 this stage keeps its position in memory. Add it below the imports:
 
@@ -60,12 +60,13 @@ uses for devices. `soft_signal_rw` makes a
 [device signal](../explanation/glossary.md#device-signal) that keeps its value
 in memory.
 
-With `StandardReadable` alone, the stage would only be a value you can read
-and write. [`StandardMovable`][ophyd_async.core.StandardMovable] turns it into
-something that moves. Its `movable_logic` names two signals: the [setpoint](../explanation/glossary.md#setpoint),
-which you write to move the stage, and the [readback](../explanation/glossary.md#readback), which says where the
-stage is. This stage uses one signal for both. In return, the stage answers
-the same methods as every motor in `ophyd-async`:
+With `StandardReadable` alone, the stage would only be a value you can read and
+write. [`StandardMovable`][ophyd_async.core.StandardMovable] turns it into
+something that moves. Its `movable_logic` names two signals: the
+[setpoint](../explanation/glossary.md#setpoint), which you write to move the
+stage, and the [readback](../explanation/glossary.md#readback), which says
+where the stage is. This stage uses one signal for both. In return, the stage
+answers the same methods as every motor in `ophyd-async`:
 
 - `set` moves it, and finishes when the move does;
 - `locate` says where it was sent and where it is;
@@ -82,8 +83,8 @@ A movable device reports its readback under its own name. When you read
 
 ## 2. The view
 
-A [view](../explanation/glossary.md#view) is the part of the application the
-user sees. Add this one below the class `MyStage`. For each stage it hears
+A [view](../explanation/glossary.md#view) is what the user of the
+application sees and touches. Add this one below the class `MyStage`. For each stage it hears
 from, it draws a row with a button and a label:
 
 ```{.python}
@@ -155,8 +156,8 @@ button: nothing happens yet, since nothing listens to it. Close the window.
 
 ## 4. The presenter
 
-A [presenter](../explanation/glossary.md#presenter) holds what the
-application does. Add this one between the classes `MyStage` and
+A [presenter](../explanation/glossary.md#presenter) holds the application
+logic: what the application does, and when. Add this one between the classes `MyStage` and
 `StageView`. It moves a stage by one step:
 
 ```{.python}
@@ -189,8 +190,9 @@ the link that sends each press of a button to it:
 
 The view knows nothing about the presenter, and the presenter knows nothing
 about the view, so it's the session that joins them. A presenter and a view
-written to be joined this way are called a
-[stack](../explanation/glossary.md#stack).
+written to work together like this are called a
+[stack](../explanation/glossary.md#stack), and the last tutorial swaps this
+one for a stack `redsun` ships.
 
 Run the script again:
 

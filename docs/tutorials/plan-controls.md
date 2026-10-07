@@ -76,7 +76,7 @@ to run the plans the session holds:
 ```
 
 `setup` runs once every component exists, and the session fills in its
-parameters. `providers` asks for every component that satisfies `HasPlans`,
+parameters. `plan_sources` asks for every component that satisfies `HasPlans`,
 so `PlanPresenter` receives `StagePlans` without naming it. `callbacks` asks
 for the components that follow a plan while it runs, and the next tutorial
 adds one. [`create_plan_spec`][redsun.presenter.plan_spec.create_plan_spec]
@@ -105,8 +105,10 @@ plan widget from the description of the plan. The view disables itself while
 a plan runs, and enables itself again when the presenter says the plan has
 finished.
 
-`redsun` doesn't ship these two components, because each application decides
-how its plans are run and shown. You write them once.
+`redsun` also ships a presenter and a view that run any plan, the
+[acquisition stack](../how-to/run-plans-from-the-window.md). You write your
+own here to see how such components work, and because an application may want
+to run and show its plans its own way.
 
 ## 4. Add them to the session
 
@@ -186,5 +188,5 @@ the presenter or the view you wrote here.
   session what it holds.
 - [How presenters run plans](../explanation/plans.md) covers plans that run
   until they are stopped, and actions the user takes while they run.
-- [How the Qt widgets of redsun work](../explanation/qt-widgets.md) lists what a
+- [How the Qt widgets work](../explanation/qt-widgets.md) lists what a
   plan widget can hold.
