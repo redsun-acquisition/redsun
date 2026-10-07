@@ -15,13 +15,20 @@ Picture a reader around 15 years old who knows some Python and nothing about
 Write as if you were explaining it to them in person.
 
 - Talk to the reader as "you". Name who does what: "you declare the device",
-  "the session starts the service".
+  "the session starts the service". When the project itself is the one
+  acting, such as in a promise of future work, write "we": "We will provide
+  tutorials on this in the future", not "Guidance will follow".
 - Open each section and each paragraph with its point, said as what the
   reader gets out of it. The rest of the paragraph explains how.
 - Start a sentence from something the reader already knows, such as the idea
   that ended the sentence before, and end it on the new part. Keep one subject
   while a paragraph is about it, and start a new paragraph when the subject
   changes.
+- Say each point once. A paragraph doesn't repeat what the first sentence of
+  its section already said, and it doesn't open with a label such as "The
+  devices are the model" before saying what devices do.
+- Put a catch the reader can run into in a `!!! warning` box. Its title names
+  what goes wrong, and its last sentence says what to do about it.
 - Keep most sentences short, but vary their length. Join ideas that belong
   together with "so", "because" or "which means", rather than splitting them
   into a list of short statements.
