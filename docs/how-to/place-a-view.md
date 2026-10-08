@@ -5,8 +5,8 @@ icon: lucide/layout-dashboard
 # How to place a view in the window
 
 This page shows how to choose where a view of a Qt session appears: in a dock,
-in the centre, in a menu or in a toolbar. Step through the parts of the main
-window, and point at one to read what goes there:
+in the centre, in a menu or in a toolbar. Point at a part of the main window to
+read what goes there:
 
 ```d2 title="Where each placement puts a view"
 ...@diagrams/style
@@ -46,17 +46,6 @@ window: "main window" {
     class: step
     width: 520
   }
-}
-scenarios: {
-  menu: {window.menu.class: current}
-  toolbar: {window.toolbar.class: current}
-  docks: {
-    window.top_dock.class: current
-    window.middle.left_dock.class: current
-    window.middle.right_dock.class: current
-    window.bottom_dock.class: current
-  }
-  central: {window.middle.central.class: current}
 }
 ```
 

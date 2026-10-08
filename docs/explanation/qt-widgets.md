@@ -16,11 +16,11 @@ device's settings.
 `PlanSpec`: an input per parameter and a Run button, plus, for a continuous
 plan, a toggle, a pause button and a button per action. It returns a
 `PlanWidget`, a frozen dataclass owning the widget tree, whose `group_box`
-your view adds to its layout. The widget runs nothing itself; step through
-what happens when the user presses Run:
+your view adds to its layout:
 
 ```d2 title="A plan widget, its view and the presenter"
 ...@diagrams/style
+label: "A plan widget runs nothing itself. Step through what happens when the user presses Run."
 direction: down
 widget: "plan widget" {class: step}
 view: {class: step}
@@ -31,10 +31,12 @@ presenter -> view: "started, paused,\nended" {class: hidden}
 view -> widget: "toggle, pause" {class: hidden}
 steps: {
   1: {
+    label: "The plan widget calls the view back."
     widget.class: current
     (widget -> view)[0].style.opacity: 1
   }
   2: {
+    label: "The view sends the plan's name and PlanWidget.parameters to the presenter, which runs the plan."
     widget.class: step
     presenter: {
       class: current
@@ -43,11 +45,13 @@ steps: {
     (view -> presenter)[0].style.opacity: 1
   }
   3: {
+    label: "The presenter reports back that the plan started, paused or ended."
     presenter.class: step
     view.class: current
     (presenter -> view)[0].style.opacity: 1
   }
   4: {
+    label: "The view follows it on the widget, with toggle and pause."
     view.class: step
     widget.class: current
     (view -> widget)[0].style.opacity: 1
@@ -100,10 +104,11 @@ choice; the presenter subscribes the callbacks to the
 
 `create_param_widget` turns each parameter's `ParamDescription` into a widget
 from `magicgui`, a package that builds widgets from Python types, by asking
-fixed questions in order. Pick an example parameter to follow it through:
+fixed questions in order:
 
 ```d2 title="How create_param_widget picks a widget"
 ...@diagrams/style
+label: "create_param_widget asks these questions in order and builds the widget of the first one answered yes. Step through four parameters."
 grid-rows: 6
 grid-columns: 2
 grid-gap: 40
@@ -143,6 +148,7 @@ choices -> literal: yes
 other -> value
 scenarios: {
   device-list: {
+    label: "detectors: Sequence[MyCamera] is a sequence of devices, so it gets a list of checkboxes, one per matching device."
     param.label: "detectors: Sequence[MyCamera]"
     placeholder.style.opacity: 0.3
     one.style.opacity: 0.3
@@ -154,6 +160,7 @@ scenarios: {
     checks.style.stroke-width: 4
   }
   device: {
+    label: "camera: MyCamera is one device, so it gets a combo box of the session's matching devices."
     param.label: "camera: MyCamera"
     placeholder.style.opacity: 0.3
     checks.style.opacity: 0.3
@@ -164,6 +171,7 @@ scenarios: {
     devices.style.stroke-width: 4
   }
   literal: {
+    label: "mode: Literal[\"fast\", \"slow\"] gets a combo box of its choices."
     param.label: "mode: Literal[\"fast\", \"slow\"]"
     placeholder.style.opacity: 0.3
     checks.style.opacity: 0.3
@@ -173,6 +181,7 @@ scenarios: {
     literal.style.stroke-width: 4
   }
   other: {
+    label: "positions: list[float] is none of these, so it gets an input built from its type: a list of float inputs."
     param.label: "positions: list[float]"
     placeholder.style.opacity: 0.3
     checks.style.opacity: 0.3

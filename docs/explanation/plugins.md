@@ -17,39 +17,51 @@ presenters:
 ```
 
 `plugin_name` and `plugin_id` say which class to make, and every other key is
-an argument to its constructor. Step through the diagram to follow this entry
-to the presenter it makes:
+an argument to its constructor. Step through an entry becoming a presenter:
 
 ```d2 title="From a session file entry to a component"
 ...@diagrams/style
+label: "A session file names a component by its plugin and its id."
 direction: down
-entry: "session file entry\nplugin_name: my-plugin\nplugin_id: motor" {class: file; width: 280}
-point: "entry point my-plugin\nin the group redsun.plugins" {class: hidden; width: 280}
-manifest: "manifest of my_plugin\nmotor: my_plugin.presenters:MotorPresenter" {class: hidden; width: 380}
-make: "import MotorPresenter, then\nMotorPresenter(name=motor_ctrl, step=2.0)" {class: hidden; width: 380}
+entry: |yaml
+  # session.yaml
+  presenters:
+    motor_ctrl:
+      plugin_name: mylab
+      plugin_id: motor
+      step: 2.0
+| {class: step}
+point: |toml
+  # pyproject.toml of the mylab package
+  [project.entry-points."redsun.plugins"]
+  mylab = "redsun.yaml"
+| {class: hidden}
+manifest: |yaml
+  # redsun.yaml inside the mylab package
+  presenters:
+    motor: mylab.presenters:MotorPresenter
+| {class: hidden}
+make: |python
+  from mylab.presenters import MotorPresenter
+  motor_ctrl = MotorPresenter(name="motor_ctrl", step=2.0)
+| {class: hidden}
 entry -> point: "plugin_name" {style.opacity: 0}
-point -> manifest {style.opacity: 0}
+point -> manifest: "the manifest it names" {style.opacity: 0}
 manifest -> make: "plugin_id" {style.opacity: 0}
 steps: {
   1: {
-    point: {
-      class: step
-      tooltip: "The entry point names the manifest file inside the package whose import name is the entry point's name, with each - read as _."
-    }
+    label: "plugin_name is the name of an entry point in the redsun.plugins group, which names the manifest inside the installed package."
+    point.class: step
     (entry -> point)[0].style.opacity: 1
   }
   2: {
-    manifest: {
-      class: file
-      tooltip: "A YAML file inside the package, mapping each id to a class as module:ClassName."
-    }
+    label: "The manifest maps each id to a class, written as module:ClassName."
+    manifest.class: step
     (point -> manifest)[0].style.opacity: 1
   }
   3: {
-    make: {
-      class: current
-      tooltip: "The session imports the class only now, because a session names it. Every other key of the entry is passed to the constructor."
-    }
+    label: "The session imports the class only now, because a session names it, and passes every other key of the entry to the constructor."
+    make.class: current
     (manifest -> make)[0].style.opacity: 1
   }
 }
@@ -102,9 +114,24 @@ class MyApp(QtSession):
 
 ```d2 title="A session built from a class and a file"
 ...@diagrams/style
+label: "The class and the file both contribute to one session."
 direction: right
-app: "class MyApp\nmotor_ctrl: AsPresenter[...]" {class: step; width: 260}
-file: "session.yaml\nmotor_ctrl: step 2.0\nlogs: plugin redsun, id logs" {class: file; width: 260}
+app: |python
+  class MyApp(QtSession):
+      config = "session.yaml"
+
+      motor_ctrl: AsPresenter[MotorPresenter]
+| {class: step}
+file: |yaml
+  # session.yaml
+  presenters:
+    motor_ctrl:
+      step: 2.0
+  views:
+    logs:
+      plugin_name: redsun
+      plugin_id: logs
+| {class: step}
 session: "the session" {
   motor_ctrl: {class: hidden; width: 160}
   logs: {class: hidden; width: 160}
@@ -114,14 +141,17 @@ file -> session.motor_ctrl: "configures" {style.opacity: 0}
 file -> session.logs: "adds" {style.opacity: 0}
 steps: {
   1: {
+    label: "The class declares motor_ctrl and the class it is made from."
     session.motor_ctrl.class: step
     (app -> session.motor_ctrl)[0].style.opacity: 1
   }
   2: {
+    label: "The file's entry of the same name configures it, with no plugin_name needed."
     session.motor_ctrl.class: current
     (file -> session.motor_ctrl)[0].style.opacity: 1
   }
   3: {
+    label: "An entry the class doesn't declare adds a component, naming its plugin with both plugin_name and plugin_id."
     session.motor_ctrl.class: step
     session.logs.class: current
     (file -> session.logs)[0].style.opacity: 1

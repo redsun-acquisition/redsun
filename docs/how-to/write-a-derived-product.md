@@ -18,6 +18,7 @@ Step through what the component, its writer and the store do during one run:
 
 ```d2 title="A derived product through one run"
 ...@diagrams/style
+label: "The component declares the product in its constructor, then forwards each document of the run to its writer."
 shape: sequence_diagram
 component: "your component" {class: step}
 writer: Writer {class: step}
@@ -35,12 +36,12 @@ writer -> store: "first append or write: open a stream\nwith every product of th
 component -> writer: "stop: write(product, data)" {style.opacity: 0}
 writer -> store: "stop of the run: close the stream,\nwrite the metadata" {style.opacity: 0}
 steps: {
-  1: {(component -> writer)[1].style.opacity: 1}
-  2: {(component -> writer)[2].style.opacity: 1}
-  3: {(component -> writer)[3].style.opacity: 1}
-  4: {(writer -> store)[0].style.opacity: 1}
-  5: {(component -> writer)[4].style.opacity: 1}
-  6: {(writer -> store)[1].style.opacity: 1}
+  1: {label: "The descriptor of the source gives the writer the frame's shape and dtype."; (component -> writer)[1].style.opacity: 1}
+  2: {label: "The stream_resource of the source gives it the store the device writes to."; (component -> writer)[2].style.opacity: 1}
+  3: {label: "A product computed frame by frame goes in with append, at each event."; (component -> writer)[3].style.opacity: 1}
+  4: {label: "The first append or write opens a stream on the store, with every product of that store known by then."; (writer -> store)[0].style.opacity: 1}
+  5: {label: "A product computed whole goes in with write, when the component handles the run's stop document."; (component -> writer)[4].style.opacity: 1}
+  6: {label: "Then the writer sees the stop document, closes the stream and writes the metadata."; (writer -> store)[1].style.opacity: 1}
 }
 ```
 

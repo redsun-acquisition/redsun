@@ -24,12 +24,11 @@ devices.
 ## Devices and services
 
 A session splits your setup into devices and services, which know as little as
-possible about each other. Step through the diagram, and point at a shape to
-read what it does:
+possible about each other. Point at a shape to read what it does:
 
 ```d2 title="Devices meet services at the prefix"
 ...@diagrams/style
-direction: down
+direction: right
 model: "the setup, as devices" {
   stage: "stage\nx, y" {
     class: step
@@ -41,37 +40,21 @@ model: "the setup, as devices" {
   }
 }
 impl: "the hardware, as services" {
-  class: hidden
-  stage_ioc: "stage service" {class: [process; hidden]}
-  camera_ioc: "camera service" {class: [process; hidden]}
-}
-motors: "motor controller" {class: [hardware; hidden]}
-sensor: "camera" {class: [hardware; hidden]}
-model.stage -> impl.stage_ioc: "prefix ST:" {class: hidden}
-model.camera -> impl.camera_ioc: "prefix CAM:" {class: hidden}
-impl.stage_ioc -> motors: {class: hidden}
-impl.camera_ioc -> sensor: {class: hidden}
-steps: {
-  1: {
-    impl.class: step
-    impl.stage_ioc: {
-      class: process
-      tooltip: A service opens the serial port or the camera, speaks the vendor's protocol or runs the vendor's library, and offers the result as process variables. It knows nothing about the setup around it.
-    }
-    impl.camera_ioc: {
-      class: process
-      tooltip: A service opens the serial port or the camera, speaks the vendor's protocol or runs the vendor's library, and offers the result as process variables. It knows nothing about the setup around it.
-    }
-    (model.stage -> impl.stage_ioc)[0].style.opacity: 1
-    (model.camera -> impl.camera_ioc)[0].style.opacity: 1
+  stage_ioc: "stage service" {
+    class: process
+    tooltip: A service opens the serial port or the camera, speaks the vendor's protocol or runs the vendor's library, and offers the result as process variables. It knows nothing about the setup around it.
   }
-  2: {
-    motors.class: hardware
-    sensor.class: hardware
-    (impl.stage_ioc -> motors)[0].style.opacity: 1
-    (impl.camera_ioc -> sensor)[0].style.opacity: 1
+  camera_ioc: "camera service" {
+    class: process
+    tooltip: A service opens the serial port or the camera, speaks the vendor's protocol or runs the vendor's library, and offers the result as process variables. It knows nothing about the setup around it.
   }
 }
+motors: "motor controller" {class: hardware}
+sensor: "camera" {class: hardware}
+model.stage -> impl.stage_ioc: "prefix ST:"
+model.camera -> impl.camera_ioc: "prefix CAM:"
+impl.stage_ioc -> motors
+impl.camera_ioc -> sensor
 ```
 
 The devices model your setup the way its users think of it, as an
@@ -137,6 +120,7 @@ A device reaches its hardware in two steps, and each step connects on its own:
 
 ```d2 title="The two connection levels"
 ...@diagrams/style
+label: "A device reaches its hardware in two levels, and each one connects on its own."
 grid-columns: 2
 horizontal-gap: 160
 app: "session process" {
@@ -154,6 +138,7 @@ svc: "service process\nor container" {
 app.device -> svc.ioc: "1. connect()" {class: hidden}
 steps: {
   1: {
+    label: "Level 1: the build calls connect() on every device declared with autoconnect, all at once. A device that hasn't connected after 10 seconds is left out."
     svc.class: step
     svc.ioc.class: process
     app.device: {
@@ -163,6 +148,7 @@ steps: {
     (app.device -> svc.ioc)[0].style.opacity: 1
   }
   2: {
+    label: "Level 2: the service opens the hardware its process variables name, such as a serial port or a camera, on the machine it runs on."
     app.device.class: step
     svc.hw.class: hardware
     svc.ioc: {
@@ -229,6 +215,7 @@ for the service to exit:
 
 ```d2 title="How the session stops a service"
 ...@diagrams/style
+label: "The session asks a service to stop more and more firmly, waiting stop_timeout seconds, 10 unless the declaration says otherwise, after each request."
 direction: right
 stdin: "close its\nstandard input" {class: step}
 sigint: "send SIGINT" {class: step}
@@ -238,6 +225,7 @@ sigint -> kill: "still running"
 stdin -> kill: "still running,\non Windows"
 scenarios: {
   stdin: {
+    label: "First it closes the service's standard input. A service that watches its input cleans up and exits, on every platform."
     stdin: {
       class: current
       tooltip: A service watching its standard input cleans up and exits.
@@ -246,6 +234,7 @@ scenarios: {
     kill.style.opacity: 0.3
   }
   sigint: {
+    label: "On POSIX, a service still running then gets SIGINT."
     sigint: {
       class: current
       tooltip: Only on POSIX. On Windows, the session kills a service still running after the first step.
@@ -254,6 +243,7 @@ scenarios: {
     kill.style.opacity: 0.3
   }
   kill: {
+    label: "A service still running after that, or on Windows after the first request, is killed, and may leave work such as a large file unfinished."
     kill: {
       class: current
       tooltip: A killed service may leave work unfinished, typically a large file it was writing.
@@ -291,6 +281,7 @@ sets up the launched services:
 
 ```d2 title="What the transport sets up"
 ...@diagrams/style
+label: "The transport, named once in the services section, decides how the session sets up each launched service."
 direction: right
 session: "session process" {class: step}
 camera: "camera_ioc" {class: process}
@@ -299,11 +290,13 @@ session -> camera: "looks at\n127.0.0.1:5101"
 session -> stage: "looks at\n127.0.0.1:5102"
 scenarios: {
   channel-access: {
+    label: "Channel Access: each launched service gets a server port of its own, and the session adds each port to its own process's address list."
     camera.label: "camera_ioc\nown port 5101"
     stage.label: "stage_ioc\nown port 5102"
     session.tooltip: The session gives each launched service a server port of its own, and adds each port to the address list of its own process.
   }
   pv-access: {
+    label: "PVAccess: each launched service binds 127.0.0.1 on any free port, and the session tells its own process to search 127.0.0.1."
     camera.label: "camera_ioc\n127.0.0.1, free port"
     stage.label: "stage_ioc\n127.0.0.1, free port"
     (session -> camera)[0].label: "looks at\n127.0.0.1"
@@ -355,6 +348,7 @@ happens instead:
 
 ```d2 title="A launched service exits on its own"
 ...@diagrams/style
+label: "camera_ioc runs, and the camera's devices read and write through it."
 direction: down
 devices: "camera devices\nanswer" {
   class: step
@@ -372,9 +366,11 @@ signal -> view: {class: hidden}
 signal -> presenter: {class: hidden}
 steps: {
   1: {
+    label: "camera_ioc exits on its own, after it was ready and without the session asking it to stop."
     service: "camera_ioc\nexited" {class: failed}
   }
   2: {
+    label: "The session logs the exit code with the last 20 lines the service printed, and emits sig_exited with the service's name and code."
     log: {
       class: current
       tooltip: The session logs the exit code and the last 20 lines the service printed.
@@ -384,6 +380,7 @@ steps: {
     (service -> signal)[0].style.opacity: 1
   }
   3: {
+    label: "Connected slots run: a view's on the main thread in a Qt session, a presenter's on the thread that read the service's output unless it names another."
     log.class: step
     signal.class: step
     view: {
@@ -398,6 +395,7 @@ steps: {
     (signal -> presenter)[0].style.opacity: 1
   }
   4: {
+    label: "Nothing restarts the service, so every read or write of its devices times out after 10 seconds."
     view.class: step
     presenter.class: step
     devices: {
@@ -406,6 +404,7 @@ steps: {
     }
   }
   5: {
+    label: "Once you start the service again, its devices answer again: both protocols reconnect on their own."
     service: "camera_ioc\nstarted again" {class: process}
     devices: {
       class: step

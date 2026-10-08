@@ -54,6 +54,7 @@ adds such a component adds its plans too, with no change to the presenter
 
 ```d2 title="From a plan to its widget"
 ...@diagrams/style
+label: "A component offers its plans through plan_map, which returns each one under its name as a PlanEntry."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 80
@@ -69,16 +70,19 @@ presenter -> spec: "create_plan_spec" {style.opacity: 0}
 spec -> widget: "controls" {style.opacity: 0}
 steps: {
   1: {
+    label: "In setup, the presenter asks the session for every component that satisfies HasPlans, and keeps the plans they offer."
     presenter.class: step
     presenter.tooltip: In setup, the presenter asks the session for every component that satisfies HasPlans, and keeps the plans they offer.
     (component -> presenter)[0].style.opacity: 1
   }
   2: {
+    label: "create_plan_spec reads each plan's signature and type hints into a PlanSpec, a description of every parameter."
     spec.class: step
     spec.tooltip: create_plan_spec reads the plan's signature and type hints into a description of each parameter.
     (presenter -> spec)[0].style.opacity: 1
   }
   3: {
+    label: "A view builds a plan widget from each PlanSpec: one control per parameter, and a list of devices for each device parameter."
     widget.class: step
     widget.tooltip: The view builds one control per parameter, and a list of devices for each device parameter.
     (spec -> widget)[0].style.opacity: 1
@@ -130,16 +134,16 @@ can inspect a plan before any application object exists.
 
 ### Plans that are refused
 
-A plan is never shown with a control nobody can fill in. Step through three
-parameters:
+A plan is never shown with a control nobody can fill in:
 
 ```d2 title="How create_plan_spec treats a parameter"
 ...@diagrams/style
+label: "create_plan_spec asks two questions of every parameter. Step through three examples."
 direction: down
 param: "a parameter\nof the plan" {class: step}
-shown: "can a control\nshow its type?" {shape: diamond}
+shown: "can a control\nshow its type?" {shape: diamond; class: step}
 control: "a control in\nthe plan widget" {class: step}
-default: "does it have\na default?" {shape: diamond}
+default: "does it have\na default?" {shape: diamond; class: step}
 hidden: "hidden: the plan\nkeeps its default" {
   class: step
   tooltip: The view leaves the parameter out. This is how the md parameter of most bluesky plans is treated.
@@ -155,6 +159,7 @@ default -> hidden: "yes"
 default -> refused: "no"
 scenarios: {
   int: {
+    label: "steps: int = 5 gets a control, since a control can show an int."
     param: "steps: int = 5" {style.stroke-width: 4}
     shown.style.stroke-width: 4
     control.style.stroke-width: 4
@@ -163,6 +168,7 @@ scenarios: {
     refused.style.opacity: 0.3
   }
   md: {
+    label: "md: dict[str, Any] | None = None can't be shown, but it has a default, so it is hidden and the plan keeps the default."
     param: "md: dict[str, Any]\n| None = None" {style.stroke-width: 4}
     shown.style.stroke-width: 4
     default.style.stroke-width: 4
@@ -171,6 +177,7 @@ scenarios: {
     refused.style.opacity: 0.3
   }
   anything: {
+    label: "value: Any can't be shown and has no default, so create_plan_spec raises UnresolvableAnnotationError."
     param: "value: Any" {style.stroke-width: 4}
     shown.style.stroke-width: 4
     default.style.stroke-width: 4
@@ -210,6 +217,7 @@ makes its button. Step through a live view that records a frame on request:
 
 ```d2 title="A continuous plan with one action"
 ...@diagrams/style
+label: "The view launches the plan. The plan waits for its action, and the ActionManager offers it to the view."
 shape: sequence_diagram
 view: "view"
 plan: "plan\non the engine's thread"
@@ -225,18 +233,22 @@ plan -> actions: "done('snap'), then wait again" {style.opacity: 0}
 view -> plan: "toggle off: stop" {style.opacity: 0}
 steps: {
   1: {
+    label: "The user presses the button: the view sends the request, and the presenter passes it to the ActionManager of the component that offers the plan."
     (view -> actions)[0].style.opacity: 1
     (view -> actions)[0].tooltip: The view emits the request, and the presenter running the plan passes it to the ActionManager of the component that offers the plan.
   }
   2: {
+    label: "wait returns 'snap' to the plan, and the view learns that snap is running."
     (actions -> plan)[0].style.opacity: 1
     (actions -> view)[1].style.opacity: 1
   }
   3: {
+    label: "The plan records a frame, calls done('snap'), and waits again."
     (plan -> plan)[0].style.opacity: 1
     (plan -> actions)[1].style.opacity: 1
   }
   4: {
+    label: "The user toggles the plan off: the presenter stops the RunEngine, which closes the run with the exit status success."
     (view -> plan)[1].style.opacity: 1
     (view -> plan)[1].tooltip: The presenter stops the RunEngine, which closes the run with the exit status success.
   }
@@ -274,7 +286,8 @@ for with `wait_released`.
 ### Following an action from a view
 
 `ActionManager.sig_changed` reports each action's new `ActionState`, and a
-connected view sets its buttons from it. Step through the three states:
+connected view sets its buttons from it. An action is always in one of three
+states:
 
 ```d2 title="The states of an action"
 ...@diagrams/style
@@ -286,23 +299,6 @@ idle -> offered: "wait"
 offered -> running: "asked for"
 offered -> idle: "another was taken,\nor the plan stopped"
 running -> idle: "done"
-scenarios: {
-  idle: {
-    idle.style.stroke-width: 4
-    offered.style.opacity: 0.3
-    running.style.opacity: 0.3
-  }
-  offered: {
-    offered.style.stroke-width: 4
-    idle.style.opacity: 0.3
-    running.style.opacity: 0.3
-  }
-  running: {
-    running.style.stroke-width: 4
-    idle.style.opacity: 0.3
-    offered.style.opacity: 0.3
-  }
-}
 ```
 
 Only the plan changes a state, so the changes arrive in the order they

@@ -58,6 +58,7 @@ who comes close:
 
 ```d2 title="Which components answer Mapping[str, Resettable]"
 ...@diagrams/style
+label: "SessionPresenter.setup asks for every component with a reset() it can call."
 direction: right
 plot: "plot\nno reset" {class: step; width: 190; height: 70}
 loose: "loose\nreset(hard)" {class: step; width: 190; height: 70}
@@ -70,6 +71,7 @@ detector -> asker: {style.opacity: 0}
 motor -> asker: {style.opacity: 0}
 steps: {
   1: {
+    label: "motor and detector answer. detector's reset takes an extra parameter, but it has a default, so reset() still works."
     motor.class: current
     detector: {
       class: current
@@ -79,6 +81,7 @@ steps: {
     (detector -> asker)[0].style.opacity: 1
   }
   2: {
+    label: "loose's reset needs a hard argument, so reset() fails on it and Session.rejected lists it with that reason. plot has no reset at all, so Session.rejected leaves it out."
     loose: {
       class: failed
       tooltip: "A renamed parameter, or an extra one without a default, doesn't match. Session.rejected lists it with the reason."

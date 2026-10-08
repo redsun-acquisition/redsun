@@ -65,7 +65,7 @@ the type is used:
 ...@diagrams/style
 direction: down
 type: "a type imported\nunder if TYPE_CHECKING" {class: step}
-where: "where is it used?" {shape: diamond}
+where: "where is it used?" {shape: diamond; class: step}
 component: "component left out,\nerror logged" {
   class: failed
   tooltip: The session logs a TypeError naming the type, and builds the rest.

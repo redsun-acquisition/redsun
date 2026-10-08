@@ -19,8 +19,7 @@ toolkit, which a session without a window doesn't install.
 
 A view says where it wants to be shown, and the frontend decides whether it
 can. The core defines only the `Placement` base class; the Qt frontend defines
-docks and menus. Pick a placement to see where it puts a view, and point at it
-to read what it needs:
+docks and menus. Point at a placement to read what it needs:
 
 ```d2 title="Where Qt puts a view"
 ...@diagrams/style
@@ -64,44 +63,6 @@ window: "main window" {
     tooltip: ${dock}
   }
 }
-scenarios: {
-  dock: {
-    window.dock_top.style.stroke-width: 4
-    window.middle.dock_left.style.stroke-width: 4
-    window.middle.dock_right.style.stroke-width: 4
-    window.dock_bottom.style.stroke-width: 4
-    window.menu.style.opacity: 0.3
-    window.toolbar.style.opacity: 0.3
-    window.middle.central.style.opacity: 0.3
-  }
-  central: {
-    window.middle.central.style.stroke-width: 4
-    window.menu.style.opacity: 0.3
-    window.toolbar.style.opacity: 0.3
-    window.dock_top.style.opacity: 0.3
-    window.middle.dock_left.style.opacity: 0.3
-    window.middle.dock_right.style.opacity: 0.3
-    window.dock_bottom.style.opacity: 0.3
-  }
-  menu: {
-    window.menu.style.stroke-width: 4
-    window.toolbar.style.opacity: 0.3
-    window.dock_top.style.opacity: 0.3
-    window.middle.dock_left.style.opacity: 0.3
-    window.middle.central.style.opacity: 0.3
-    window.middle.dock_right.style.opacity: 0.3
-    window.dock_bottom.style.opacity: 0.3
-  }
-  toolbar: {
-    window.toolbar.style.stroke-width: 4
-    window.menu.style.opacity: 0.3
-    window.dock_top.style.opacity: 0.3
-    window.middle.dock_left.style.opacity: 0.3
-    window.middle.central.style.opacity: 0.3
-    window.middle.dock_right.style.opacity: 0.3
-    window.dock_bottom.style.opacity: 0.3
-  }
-}
 ```
 
 In `Frontend.requires`, a frontend lists what each placement must hold: Qt asks
@@ -110,63 +71,33 @@ toolbar.
 
 ### Checks before a build
 
-The session checks every view before it builds anything. Step through the
-checks:
+The session checks every view before it builds anything; point at a check to
+read what it asks:
 
 ```d2 title="What the session checks of a view"
 ...@diagrams/style
 grid-rows: 2
 grid-columns: 3
 grid-gap: 60
-placement: "which placement?" {class: step}
-listed: "does the frontend\nshow it?" {class: step}
-type: "is the view the\ntype it needs?" {class: step}
-gap: {class: gap}
-built: "build the view" {class: step}
-constructor: "does the constructor\nstart right?" {class: step}
-placement -> listed -> type -> constructor -> built
-scenarios: {
-  placement: {
-    placement: {
-      class: current
-      tooltip: The placement given in the declaration, else the class's. A view class that names no placement is refused, since a component that is shown nowhere is a presenter.
-    }
-    listed.style.opacity: 0.3
-    type.style.opacity: 0.3
-    constructor.style.opacity: 0.3
-    built.style.opacity: 0.3
-  }
-  listed: {
-    listed: {
-      class: current
-      tooltip: The placement must be one the frontend lists in Frontend.requires. Qt lists Central, Dock, MenuItem and ToolBarItem.
-    }
-    placement.style.opacity: 0.3
-    type.style.opacity: 0.3
-    constructor.style.opacity: 0.3
-    built.style.opacity: 0.3
-  }
-  type: {
-    type: {
-      class: current
-      tooltip: Qt needs a QWidget in a dock or in the centre, and a QAction in a menu or a toolbar.
-    }
-    placement.style.opacity: 0.3
-    listed.style.opacity: 0.3
-    constructor.style.opacity: 0.3
-    built.style.opacity: 0.3
-  }
-  constructor: {
-    constructor: {
-      class: current
-      tooltip: "Frontend.check_view runs here. Qt asks for a constructor that starts with (name: str, parent: QWidget)."
-    }
-    placement.style.opacity: 0.3
-    listed.style.opacity: 0.3
-    type.style.opacity: 0.3
-    built.style.opacity: 0.3
-  }
+placement: "which placement?" {
+  class: step
+  tooltip: The placement given in the declaration, else the class's. A view class that names no placement is refused, since a component that is shown nowhere is a presenter.
 }
+listed: "does the frontend\nshow it?" {
+  class: step
+  tooltip: The placement must be one the frontend lists in Frontend.requires. Qt lists Central, Dock, MenuItem and ToolBarItem.
+}
+type: "is the view the\ntype it needs?" {
+  class: step
+  tooltip: Qt needs a QWidget in a dock or in the centre, and a QAction in a menu or a toolbar.
+}
+gap: {class: gap}
+built: "build the view" {class: current}
+constructor: "does the constructor\nstart right?" {
+  class: step
+  tooltip: "Frontend.check_view runs here. Qt asks for a constructor that starts with (name: str, parent: QWidget)."
+}
+placement -> listed -> type -> constructor -> built
 ```
 
 A view that fails a check is left out before anything is built, with a message
@@ -205,9 +136,9 @@ The [Qt binding](glossary.md#qt-binding) is chosen with `QT_API`, read by
 ### Hook points
 
 A [hook](glossary.md#hook) acts at a fixed moment of a Qt session's life
-without changing what the session builds. Pick one of the five
-[hook points](glossary.md#hook-point) to see when it runs, and point at it to
-read what it receives:
+without changing what the session builds. The five
+[hook points](glossary.md#hook-point) run in this order; point at one to read
+what it receives:
 
 ```d2 title="The hook points of a Qt session"
 ...@diagrams/style
@@ -236,43 +167,6 @@ main: "configure_main_view\nchange the window\nbefore it is shown" {
   tooltip: Called with the main window, in the presentation step, once the views are in place.
 }
 create -> configure -> during -> main -> shown -> close
-scenarios: {
-  create_application: {
-    create.class: current
-    configure.style.opacity: 0.3
-    during.style.opacity: 0.3
-    main.style.opacity: 0.3
-    close.style.opacity: 0.3
-  }
-  configure_application: {
-    configure.class: current
-    create.style.opacity: 0.3
-    during.style.opacity: 0.3
-    main.style.opacity: 0.3
-    close.style.opacity: 0.3
-  }
-  during_build: {
-    during.class: current
-    create.style.opacity: 0.3
-    configure.style.opacity: 0.3
-    main.style.opacity: 0.3
-    close.style.opacity: 0.3
-  }
-  configure_main_view: {
-    main.class: current
-    create.style.opacity: 0.3
-    configure.style.opacity: 0.3
-    during.style.opacity: 0.3
-    close.style.opacity: 0.3
-  }
-  confirm_close: {
-    close.class: current
-    create.style.opacity: 0.3
-    configure.style.opacity: 0.3
-    during.style.opacity: 0.3
-    main.style.opacity: 0.3
-  }
-}
 ```
 
 [Install hooks](../how-to/install-hooks.md) shows how. A session with no
@@ -322,6 +216,7 @@ Step through such a call:
 
 ```d2 title="A presenter calls a view from another thread"
 ...@diagrams/style
+label: "A presenter working on a worker thread emits a signal connected to a view's slot."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 60
@@ -334,6 +229,7 @@ queue -> loop: {class: hidden}
 loop -> slot: {class: hidden}
 steps: {
   1: {
+    label: "The slot names no thread and neither does its class, so the session asks Frontend.thread_of, which answers the main thread for a QWidget. The call waits in a queue."
     queue: {
       class: current
       tooltip: The slot names no thread and neither does its class, so the session asks Frontend.thread_of, which answers the main thread for a QWidget.
@@ -341,6 +237,7 @@ steps: {
     (emit -> queue)[0].style.opacity: 1
   }
   2: {
+    label: "The session calls psygnal.emit_queued from the toolkit's event loop, as often as the views should follow the presenters."
     queue.class: step
     loop: {
       class: current
@@ -349,6 +246,7 @@ steps: {
     (queue -> loop)[0].style.opacity: 1
   }
   3: {
+    label: "The queued call runs, and the view's slot runs on the main thread, where Qt allows it."
     loop.class: step
     slot.class: current
     (loop -> slot)[0].style.opacity: 1

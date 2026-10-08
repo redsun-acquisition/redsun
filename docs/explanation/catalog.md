@@ -21,6 +21,7 @@ see who does what:
 
 ```d2 title="A session with a catalog"
 ...@diagrams/style
+label: "A session whose storage section has a catalog key runs a catalog. Its components decide what goes in."
 grid-rows: 2
 grid-columns: 3
 vertical-gap: 80
@@ -42,6 +43,7 @@ writer -> server: "the run's\ndocuments" {style.opacity: 0}
 server -> store: "reads" {style.opacity: 0}
 steps: {
   1: {
+    label: "The session starts a tiled server on this machine in its first build step, with its database in a catalog folder inside the session's folder. It stops the server at shutdown, after every component and service."
     server.class: step
     server.tooltip: The session starts the server in its first build step and stops it at shutdown, after every component and service. A server that fails to start is logged, and the session carries on without it.
     database.class: file
@@ -50,17 +52,20 @@ steps: {
     (server -> database)[0].style.opacity: 1
   }
   2: {
+    label: "Any component can ask for a CatalogAddress, and opens its own client with tiled's from_uri."
     component.class: step
     component.tooltip: Any component can ask for a CatalogAddress, and opens its own client with tiled's from_uri, which gives it the whole client API.
     (session -> component)[0].style.opacity: 1
   }
   3: {
+    label: "A component that wants runs recorded subscribes a TiledWriter, from bluesky-tiled-plugins, which sends each run's documents to the server."
     writer.class: step
     writer.tooltip: TiledWriter, from bluesky-tiled-plugins, writes a run's documents into the catalog. The component decides whether to subscribe one.
     (component -> writer)[0].style.opacity: 1
     (writer -> server)[0].style.opacity: 1
   }
   4: {
+    label: "The server reads the frames from the camera's store, but only from the session's directory and the directories storage.catalog lists under readable."
     store.class: file
     store.tooltip: The server reads files only from the session's directory and the directories storage.catalog lists under readable. It serves an OME-Zarr image as one array whose dims are its axis names.
     (server -> store)[0].style.opacity: 1
