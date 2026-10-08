@@ -154,8 +154,8 @@ class PlanPresenter(Loggable):
         self.engine.sig_progress.connect(self.sig_progress.emit)
         # --8<-- [end:progress-connect]
 
-    def setup(self, providers: Mapping[str, HasPlans]) -> None:
-        for component in providers.values():
+    def setup(self, plan_sources: Mapping[str, HasPlans]) -> None:
+        for component in plan_sources.values():
             for plan, entry in component.plan_map().items():
                 try:
                     self.specs[plan] = create_plan_spec(entry["plan"], self.devices)
@@ -224,8 +224,10 @@ class PlanView(QWidget):
         layout.addWidget(self.pages)
         self.widgets: dict[str, PlanWidget] = {}
 
-    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
-        for component in providers.values():
+    def setup(
+        self, plan_sources: Mapping[str, HasPlans], devices: DeviceMapping
+    ) -> None:
+        for component in plan_sources.values():
             for entry in component.plan_map().values():
                 try:
                     self.add_plan(create_plan_spec(entry["plan"], devices))

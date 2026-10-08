@@ -173,10 +173,10 @@ class PlanPresenter:
 
     def setup(
         self,
-        providers: Mapping[str, HasPlans],
+        plan_sources: Mapping[str, HasPlans],
         callbacks: Mapping[str, CallbackType],
     ) -> None:
-        for component in providers.values():
+        for component in plan_sources.values():
             self.plans.update(component.plan_map())
         for plan, entry in self.plans.items():
             self.specs[plan] = create_plan_spec(entry["plan"], self.devices)
@@ -207,8 +207,10 @@ class PlanView(QWidget):
         layout.addWidget(self.pages)
         self.widgets: dict[str, PlanWidget] = {}
 
-    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
-        for component in providers.values():
+    def setup(
+        self, plan_sources: Mapping[str, HasPlans], devices: DeviceMapping
+    ) -> None:
+        for component in plan_sources.values():
             for entry in component.plan_map().values():
                 self.add_plan(create_plan_spec(entry["plan"], devices))
 

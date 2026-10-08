@@ -133,12 +133,6 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/add-menu-actions/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/ai-contribution-policy/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
-      </url>
-      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/change-a-setting-while-a-plan-runs/</loc>
       </url>
       <url>
@@ -146,9 +140,6 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/choose-where-files-go/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/commits-and-prs/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/configure-logging/</loc>
@@ -175,9 +166,6 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/keep-a-catalog/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/make-a-release/</loc>
-      </url>
-      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/migrate-from-0.13/</loc>
       </url>
       <url>
@@ -196,19 +184,10 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/profile-a-session/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/record-a-decision/</loc>
-      </url>
-      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-a-plan/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-commit-checks/</loc>
-      </url>
-      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-plans-from-the-window/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-without-a-gui/</loc>
@@ -218,9 +197,6 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/save-a-session/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/set-up-development/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/share-a-value/</loc>
@@ -254,9 +230,6 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-session-file/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-docs/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>

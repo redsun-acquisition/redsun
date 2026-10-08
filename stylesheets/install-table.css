@@ -37,6 +37,13 @@
     color 0.2s;
 }
 
+.install-table .install-choices button small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75em;
+  opacity: 0.85;
+}
+
 .install-table .install-choices button:hover,
 .install-table .install-choices button:focus-visible {
   color: var(--md-primary-bg-color);

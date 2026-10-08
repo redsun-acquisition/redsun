@@ -1,0 +1,61 @@
+# Shared look of every diagram in the docs. A diagram pulls it in with
+# `...@diagrams/style` on its first line and gives shapes these classes.
+classes: {
+  layer: {
+    style: {
+      border-radius: 10
+      font-size: 18
+      bold: true
+    }
+  }
+  step: {
+    style.border-radius: 6
+  }
+  current: {
+    style: {
+      border-radius: 6
+      stroke-width: 4
+      bold: true
+      shadow: true
+    }
+  }
+  done: {
+    style: {
+      border-radius: 6
+      opacity: 0.4
+    }
+  }
+  failed: {
+    style: {
+      border-radius: 6
+      stroke: "#c62828"
+      stroke-dash: 4
+      font-color: "#c62828"
+    }
+  }
+  process: {
+    shape: hexagon
+  }
+  hardware: {
+    shape: cylinder
+  }
+  file: {
+    shape: page
+  }
+  note: {
+    shape: text
+    style: {
+      italic: true
+      font-size: 14
+    }
+  }
+  gap: {
+    label: ""
+    style.opacity: 0
+  }
+  # a shape a later step brings in: declared on the first board so that every
+  # board keeps the same layout, and shown by a step that changes its class
+  hidden: {
+    style.opacity: 0
+  }
+}
