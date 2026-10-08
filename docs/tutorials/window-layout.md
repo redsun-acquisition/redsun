@@ -10,7 +10,7 @@ buttons of the stages below it. It continues from
 
 Each view says where it goes with its
 [placement](../explanation/glossary.md#placement). You change two of them,
-and find out what the window remembers from one run to the next.
+move a dock by hand, and put it back.
 
 ## Before you start
 
@@ -52,43 +52,37 @@ In the class `StageView`, change the placement line to this one:
 placement: Placement = Dock("bottom")
 ```
 
-Run the script again. The stages are still on the left.
-
-Nothing is wrong with the line. When you close the window, it saves where
-its docks are, and the next time it opens it puts them back, so a placement
-only says where a view goes when the window has nothing saved for it. The
-image moved at once in step 1 because a central view isn't a dock, so the
-window had nothing saved for it.
-
-## 3. Forget the saved layout
-
-The window keeps its layout in one file, named after the session. Close the
-window, then delete the file:
-
-| Platform | File |
-| --- | --- |
-| Windows | `%LOCALAPPDATA%\redsun\first-session.json` |
-| macOS | `~/Library/Application Support/redsun/first-session.json` |
-| Linux | `~/.config/redsun/first-session.json` |
-
-Run the script once more:
+Run the script again:
 
 ```bash
 uv run first_session.py
 ```
 
-This time the stages are below the image. Choose `snap` in the list of the
-plans and press **Run**:
+The stages are now below the image. Choose `snap` in the list of the plans
+and press **Run**:
 
 ![The window of the session: an image of concentric rings in the centre, the
 rows of the stages below it and the plan widget of snap on the
 right](images/window-layout.png)
 
-## 4. Move a dock by hand
+## 3. Move a dock by hand
 
 Drag the view of the plans by its title, and drop it on the left edge of the
 window. Close the window and run the script again: the plans are on the
 left, where you left them.
+
+The window saves where its docks are when you close it, and puts them back
+the next time. It does so only while every view asks for the place it asked
+for when the window saved, which is why the stages moved at once in step 2.
+
+## 4. Put the docks back
+
+Open the **Window** menu and choose **Reset layout**. The plans go back to
+the right, where their placement puts them.
+
+The same menu lists every dock. Close the plans with the button on their
+title bar, then choose **plan_view** in the **Window** menu to bring them
+back.
 
 ??? example "The whole script"
 
@@ -99,8 +93,8 @@ left, where you left them.
 ## What you built
 
 You arranged the window with the image in its centre, the stages below it
-and the plans beside it. Each view starts where its placement says, and
-stays where you drag it.
+and the plans beside it. Each view starts where its placement says, stays
+where you drag it, and goes back with **Reset layout**.
 
 ## Next steps
 
@@ -109,4 +103,4 @@ stays where you drag it.
 - [How a frontend shows a session on screen](../explanation/frontends.md)
   lists the placements, along with the menus and toolbars.
 - [How to save a session](../how-to/save-a-session.md) says what else the
-  file from step 3 holds.
+  settings file holds.

@@ -123,7 +123,8 @@ and `QtSession` passes its main window as the parent
 - runs a widget's slots on the main thread unless a slot names another
 - builds the main window from an `app-model` `Application` holding the menus
   and commands
-- restores the docks where the user left them
+- restores the docks where the user left them, until a placement changes,
+  and has a Window menu to show a closed dock or reset the layout
 - asks before closing when a component has unsaved changes
 - logs an exception no slot caught and keeps the window open, where the Qt
   binding would end the process silently

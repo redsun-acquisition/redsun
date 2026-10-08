@@ -93,11 +93,13 @@ A Qt session keeps two keys there itself:
 
 | key | what it holds |
 | --- | --- |
-| `window.geometry`, `window.state` | where the window and its docks were left |
+| `window.geometry`, `window.state`, `window.layout` | where the window and its docks were left, and the placements they were left with |
 | `ask_on_close` | whether the close prompt still appears |
 
 A session started with `run` saves the window layout when it ends and puts it
-back the next time.
+back the next time, unless a view's placement has changed since. **Reset
+layout** in the **Window** menu puts the docks back where their placements
+say.
 
 ## Choose the colour scheme
 
