@@ -156,13 +156,22 @@ scenarios: {
     detail.qapp: "QApplication\nQtSession only" {class: step}
   }
   services: {
-    label: "Every launched service starts at once, and the session waits for each one's ready line. A session whose storage names a catalog starts its tiled server too."
+    label: "The session runs the module of every launched service at once, as its own process, and waits up to 15 seconds for the ready text the declaration names. A session whose storage names a catalog also starts its tiled server."
     build.services.class: current
-    detail.ioc: "camera_ioc\nstarted with python -m" {class: process}
-    detail.session: session {class: step}
-    detail.tiled: "tiled server\nif storage has a catalog" {class: process}
-    detail.session -> detail.ioc
-    detail.session -> detail.tiled
+    detail.code: |python
+      camera_ioc: Annotated[
+          AsService,
+          Launch("mylab.iocs.camera", ready="Server startup complete."),
+      ]
+    | {class: step}
+    detail.ioc: |text
+      $ python -m mylab.iocs.camera
+      ...
+      Server startup complete.
+    | {class: step}
+    detail.grid-rows: 2
+    detail.grid-gap: 24
+    detail.code -> detail.ioc: "starts it, then waits for the ready line"
   }
   devices: {
     label: "Each device is made with its name and its settings, plus its service's prefix and the path provider when its constructor takes them. One that raises is left out."
