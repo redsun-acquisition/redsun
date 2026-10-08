@@ -8,10 +8,10 @@ A service is a server your devices talk to, such as an
 [EPICS](glossary.md#epics) [IOC](glossary.md#ioc), a camera server or a motion
 controller's gateway. Your [`ophyd-async`](glossary.md#ophyd-async) devices
 talk to it over [Channel Access](glossary.md#channel-access) or
-[PVAccess](glossary.md#pvaccess), and `redsun` takes no part in that. `redsun`
-handles everything around it: it starts the service when the session launches
-it, notices when it exits, stops it cleanly, and gives its
-[prefix](glossary.md#prefix) and transport to the devices that use it.
+[PVAccess](glossary.md#pvaccess) without `redsun` taking part. `redsun` does
+the rest: it starts a launched service, notices when it exits, stops it
+cleanly, and hands its [prefix](glossary.md#prefix) and transport to the
+devices.
 
 !!! warning "Devices without a service"
 
@@ -74,13 +74,10 @@ steps: {
 }
 ```
 
-The devices are a model of your whole setup, written the way the people using
-it think about it: a microscope has a stage, the stage has an X and a Y axis,
-and each axis has a position. `ophyd-async` builds devices as a tree for this
-reason, since a device can hold other devices as its children, down to the
-signals. A service describes no setup at all. It only makes some piece of
-hardware reachable, so the same model can sit on top of real hardware or of a
-simulation.
+The devices model your setup the way its users think of it, as an
+`ophyd-async` tree: a microscope has a stage, the stage an X and a Y axis, each
+axis a position. A service describes no setup; it only makes hardware
+reachable, so the same model can sit on real hardware or on a simulation.
 
 !!! note "One device for the whole setup"
 
@@ -90,14 +87,12 @@ simulation.
     declares and not at their children, so declare each piece a plan or a
     view needs, such as the stage and the camera, as a device of its own.
 
-When you declare a device with `service="stage_ioc"`, the session passes it
-that service's prefix as its `prefix` argument, and the prefix is all the
-device knows about the service. Because neither side depends on the other, you
-can change one and leave the other alone:
+A device declared with `service="stage_ioc"` gets that service's prefix as
+its `prefix` argument, and the prefix is all it knows of the service. So you
+can change one side and keep the other:
 
-- You can run the same devices, presenters and views against the real
-  services in the lab and against simulated ones on a laptop. Only the
-  services change:
+- The same components run against the lab's services or simulated ones; only
+  the services change:
 
     ```yaml
     # common.yaml: what the setup is
@@ -126,21 +121,15 @@ can change one and leave the other alone:
         prefix: "ST:"
     ```
 
-    Your session then lists `common.yaml` and one of the other two in its
-    `config`.
+    The session lists `common.yaml` and one of the other two in its `config`.
 
-- If a vendor library crashes, it takes down its service process, not the
-  session. The session logs the exit, and the devices of that service time out
-  until it is back.
-- A service can lend its hardware to another program while every device stays
-  connected, and take it back later. For now your application does this
-  itself; see [Standby](components.md#standby).
-- An [attached service](glossary.md#attached-service) runs wherever the
-  hardware is plugged in, even on another machine, because the devices only
-  need its prefix.
+- A crashing vendor library takes down its service, not the session; the
+  service's devices time out until it is back.
+- An [attached service](glossary.md#attached-service) can run on another
+  machine, since the devices need only its prefix.
 
-A device that needs no hardware at all, such as the soft stage in the
-[tutorial](../tutorials/first-session.md), needs no service either.
+A device that needs no hardware, such as the soft stage in the
+[tutorial](../tutorials/first-session.md), needs no service.
 
 ## Two connection levels
 
@@ -185,17 +174,9 @@ steps: {
 }
 ```
 
-The session connects the first level when it builds: it calls `ophyd-async`'s
-`connect()` on every device declared with `autoconnect`, and skips a device
-that doesn't connect, just like one that fails to build. A
-[mocked session](glossary.md#mocked-session) connects each device to a
-simulated backend and launches no service, so it reaches neither level.
-
-The service connects the second level by opening the hardware its process
-variables name. This works the same for a service on another machine, since
-the list of ports comes from the machine that has them.
-
-Keeping the two levels apart is deliberate: a session can stay connected to a
+A [mocked session](glossary.md#mocked-session) connects each device to a
+simulated backend and launches no service, so it reaches neither level. The
+two levels are kept apart on purpose: a session can stay connected to a
 service that holds no hardware yet, and a service can release its hardware
 while every connection stays up.
 
@@ -213,15 +194,13 @@ class MyApp(QtSession):
     beamline: Annotated[AsService, Attach("BL01:", address="10.0.0.5")]
 ```
 
-An attached service is already running, in a container or on another host, so
-the session only passes its prefix on to the devices. An `address` tells the
-session where to look when the network search wouldn't find it. You can
-declare either kind on the session class or in the `services` section of a
-session file, and any keyword the class leaves out is taken from the file. See
+An attached service already runs, in a container or on another host; the
+session only passes its prefix on, and `address` says where to look when the
+network search wouldn't find it. Either kind can also be declared in a session
+file's `services` section, which fills any keyword the class leaves out; see
 [Write a service](../how-to/write-a-service.md).
 
-The session owns a launched service from start to stop. Starting is the first
-build step, before any device is built:
+A launched service starts in the first build step, before any device:
 
 ```d2 title="Starting a launched service"
 ...@diagrams/style
@@ -235,14 +214,12 @@ session -> devices: "build, each with its\nservice's prefix"
 devices -> service: "connect()"
 ```
 
-The session starts every launched service at once and waits for each ready
-line up to [`STARTUP_TIMEOUT`][redsun.services.STARTUP_TIMEOUT]. A service
-declared without `ready` text counts as ready once its process starts. If a
-service doesn't start, the session logs it and skips every device that names
-it. A [mocked session](glossary.md#mocked-session) starts no service. Stopping
-happens at shutdown, after every component and before the session's log files
-close, so the files record how each service ended. If the build raises, it
-stops the services it already started before the error leaves it.
+All launched services start at once, each waited for up to
+[`STARTUP_TIMEOUT`][redsun.services.STARTUP_TIMEOUT]; one declared without
+`ready` text counts as ready when its process starts. A service that doesn't
+start is logged, and every device naming it is skipped. Services stop at
+shutdown, after every component and before the log files close, so the files
+record how each ended; a build that raises stops the ones it started.
 
 ## Stopping a process
 
@@ -287,15 +264,13 @@ scenarios: {
 }
 ```
 
-Closing standard input comes first because it's the only request that runs a
-service's cleanup on every platform. `Popen.terminate()` skips cleanup on both
-Windows and Linux, and a console control event never reaches a process started
-without a console window. A Qt application has to start its services without
-one, or each service opens its own window. Closing standard input also stops a
-service when the session crashes, because the operating system closes the pipe
-and the service reads the end of its input.
-
-If your service needs longer to close, give it a longer `stop_timeout`.
+Closing standard input comes first because it is the only request that runs a
+service's cleanup on every platform: `Popen.terminate()` skips cleanup on
+Windows and Linux, and a console control event never reaches a process
+started without a console window, as a Qt application starts its services. It
+also stops a service when the session crashes, since the operating system
+closes the pipe. A service that needs longer to close takes a longer
+`stop_timeout`.
 
 ## One transport per session
 
@@ -311,8 +286,8 @@ services:
 ```
 
 A session speaks `channel-access` unless it says otherwise, and a file layered
-over another can't change it. The transport decides how the session sets up
-each launched service. Pick a scenario to compare the two:
+over another can't change it. Pick a scenario to compare how each transport
+sets up the launched services:
 
 ```d2 title="What the transport sets up"
 ...@diagrams/style
@@ -341,21 +316,13 @@ scenarios: {
 The port numbers are examples: the session takes free ones.
 [Environment variables](../reference/environment.md) lists what it sets.
 
-Only one transport is allowed because the variables both protocols read hold
-one setting for the whole process. With two transports in one session, no
-variable could say which service it is for.
-
-Each launched Channel Access service gets its own port because of Windows. On
-Linux, two IOCs on the default port both answer, but on Windows the second one
-is never found. The cause is libca, the Channel Access client library, which
-reads its list of server addresses only once per process. So each service
-keeps its port for as long as the session process runs, and if you build the
-session again in the same process, it finds the service on the same port.
-
-PVAccess needs none of this: servers on one machine share the search port,
-and the session asks each for port `0`, so it takes any free port. The session still
-tells its own process to look at `127.0.0.1`, because a PVAccess client
-doesn't search the loopback address unless it's told to.
+There is one transport because both protocols read variables that hold one
+setting for the whole process. Channel Access services get a port each
+because of Windows, where a second IOC on the default port is never found:
+libca reads its list of server addresses once per process, so each service
+keeps its port for as long as the session process runs. PVAccess servers
+share the search port, and the client is told to look at `127.0.0.1` because
+it doesn't search the loopback address otherwise.
 
 !!! warning "Another program can take the port first"
 
@@ -372,19 +339,14 @@ side; see [Write a service](../how-to/write-a-service.md).
 
 ## What a launched service receives
 
-When the session launches a service, it tells the service its name and
-prefix, the ready text from its declaration, and the level the session logs
-at, on top of the transport's variables. A Python service reads these through
-the functions of `redsun.services`:
-[`identity`][redsun.services.identity],
+A launched service is told its name and prefix, its ready text and the
+session's log level, on top of the transport's variables. A Python service
+reads them with [`identity`][redsun.services.identity],
 [`ready`][redsun.services.ready] and
-[`configure_logging`][redsun.services.configure_logging].
+[`configure_logging`][redsun.services.configure_logging], so one module can
+serve several sessions and name its channels from its identity.
 [Environment variables](../reference/environment.md) lists how they are
 passed.
-
-Because a service learns its name this way, a module that serves several
-sessions names its channels from its identity instead of taking arguments for
-it.
 
 ## Unexpected exits
 
@@ -454,19 +416,13 @@ steps: {
 }
 ```
 
-The service emits [`sig_exited`][redsun.services.Service.sig_exited] only when
-it exits after it was ready and without being asked to stop. It's emitted from
-the thread that reads the service's output, named `service-<name>`, so where a
-[slot](glossary.md#slot) connected to it runs depends on the component that
-owns the slot. A [view](glossary.md#view)'s slots run on the main thread in a
-Qt session. A [presenter](glossary.md#presenter) slot runs on the output
-thread unless you choose another thread for it. That thread has no more output
-to read once the service has exited, so the slot running there gets in nobody's
-way. If your presenter slot touches anything that only the main thread may
-use, such as a Qt widget, declare it with `@slot(thread="main")`.
-
-An attached service has no process for the session to watch, so an outage
-shows up only as timeouts on its devices.
+[`sig_exited`][redsun.services.Service.sig_exited] is emitted only when the
+service exits after it was ready and without being asked to stop, from the
+thread reading its output, `service-<name>`. A
+[presenter](glossary.md#presenter) [slot](glossary.md#slot) that touches what
+only the main thread may use, such as a Qt widget, needs
+`@slot(thread="main")`. An attached service has no process to watch, so an
+outage shows up only as timeouts on its devices.
 
 ## Service output
 
@@ -504,14 +460,13 @@ how a service writes records the session can read.
 
 ## Not supported yet
 
-- **Restarting a crashed service.**
-- **Standby**, a service releasing its hardware while it stays connected. For
-  now your application writes it, in the presenter that owns the devices; see
-  [Standby](components.md#standby). The session will take it over once
-  `ophyd-async` can disconnect a device, and standby will then also be able to
-  drop connections and stop launched services.
-- **Launching a service in a container.** An attached service covers one you
-  start beside the session with `docker compose`.
+- Restarting a crashed service.
+- Standby, a service releasing its hardware while it stays connected. For now
+  the presenter that owns the devices does it, see
+  [Standby](components.md#standby); the session will take it over once
+  `ophyd-async` can disconnect a device.
+- Launching a service in a container. An attached service covers one you start
+  beside the session with `docker compose`.
 
 [ADR 12](decisions/0012-services-and-two-connection-levels.md) records the
 decisions behind this design.
