@@ -27,6 +27,7 @@ MyApp().run()
 from __future__ import annotations
 
 import base64
+import hashlib
 import inspect
 import logging
 import sys
@@ -136,9 +137,6 @@ AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
     "bottom": QtNamespace.DockWidgetArea.BottomDockWidgetArea,
 }
 """The Qt dock area of each edge a `Dock` can name."""
-
-EDGES: Final = {area: edge for edge, area in AREAS.items()}
-"""The edge each Qt dock area stands for."""
 
 EDGE_NAMES: Final = frozenset(get_args(Area))
 """The words for an edge of the window."""
@@ -552,43 +550,44 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Put the window back where this user last left it.
 
         Runs once every dock exists, since Qt places a dock by object name and
-        ignores one it has not seen. A session this user has never run finds
-        nothing saved and keeps the layout its views asked for. Each dock the
-        saved layout keeps away from the edge its placement asks for is logged.
+        ignores one it has not seen. The geometry always comes back. The docks
+        come back only while the views ask for the places they asked for when
+        the layout was saved, so a changed placement shows on the next run; a
+        layout saved without that record is restored.
         """
         geometry = self.settings.get("window.geometry")
         if isinstance(geometry, str):
             self.main_window.restoreGeometry(QByteArray(base64.b64decode(geometry)))
         state = self.settings.get("window.state")
-        if isinstance(state, str):
-            self.main_window.restoreState(QByteArray(base64.b64decode(state)))
-            self._log_moved_docks()
+        if not isinstance(state, str):
+            return
+        saved = self.settings.get("window.layout")
+        if saved is not None and saved != self._layout_fingerprint():
+            logger.info(
+                "The views of %r are placed differently from when %s was saved, "
+                "so the docks start where their placements say",
+                self.name,
+                self.settings.path,
+            )
+            return
+        self.main_window.restoreState(QByteArray(base64.b64decode(state)))
 
-    def _log_moved_docks(self) -> None:
-        """Log each dock that is not on the edge its placement asks for."""
-        declared = self._declared_placements()
-        for name, view in self.views.items():
-            placement = declared.get(name) or view.placement
-            if not isinstance(placement, Dock):
-                continue
-            # pyside6 annotates the result as optional and pyqt6 does not
-            dock: QDockWidget | None = self.main_window.findChild(QDockWidget, name)
-            if dock is None:
-                continue
-            edge = EDGES.get(self.main_window.dockWidgetArea(dock))
-            if edge != placement.area:
-                logger.info(
-                    "Dock %r stays %s, where it was left, not on the %s its "
-                    "placement asks for; remove window.state from %s to use the "
-                    "placement",
-                    name,
-                    f"on the {edge}" if edge else "floating",
-                    placement.area,
-                    self.settings.path,
-                )
+    def _layout_fingerprint(self) -> str:
+        """Return a digest of where every view asks to be, which a saved layout is kept for.
+
+        A view that failed to build counts with the placement its declaration
+        holds, so one failing does not discard the saved layout.
+        """
+        built = self.views
+        placements = [
+            (name, declaration.placement or getattr(built.get(name), "placement", None))
+            for name, declaration in self.declarations.items()
+            if declaration.kind is Layer.VIEW
+        ]
+        return hashlib.sha256(repr(placements).encode()).hexdigest()
 
     def save_layout(self) -> None:
-        """Remember where this user left the window.
+        """Remember where this user left the window, and the placements it was left with.
 
         `run` asks for this as the session ends, so a window that was shown is
         the only one that writes.
@@ -597,6 +596,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             return
         self.settings.set("window.geometry", encoded(self._main_window.saveGeometry()))
         self.settings.set("window.state", encoded(self._main_window.saveState()))
+        self.settings.set("window.layout", self._layout_fingerprint())
 
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.

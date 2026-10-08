@@ -74,6 +74,22 @@ class TakesPlacementApp(QtSession):
     taking: AsView[TakesPlacement]
 
 
+class Fragile(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget, fail: bool = False) -> None:
+        if fail:
+            raise RuntimeError("no detector attached")
+        super().__init__(name, parent)
+
+
+class FragileApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "fragile-session"}
+
+    panel: AsView[Panel]
+    fragile: AsView[Fragile]
+
+
 def builtin_session(
     plugin_id: str, presenter: str | None, placement: str | None
 ) -> QtSession:
@@ -124,21 +140,55 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
 
 
-def test_a_dock_kept_away_from_its_placement_is_logged(
+def test_a_changed_placement_skips_the_saved_layout(
     qapp: QApplication,
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log each dock the saved layout keeps away from the edge its placement asks for."""
+    """Start every dock where its placement says once a placement changed since the layout was saved."""
     first = build(LayoutApp)
     first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
     first.save_layout()
     first.shutdown()
 
-    build(LayoutApp)
+    second = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
 
-    assert "'charts' stays on the left, where it was left" in caplog.text
-    assert "'panel'" not in caplog.text
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is TOP
+    assert "placed differently from when" in caplog.text
+
+
+def test_a_layout_saved_before_placements_were_recorded_is_restored(
+    qapp: QApplication, config_home: Path, build: BuildSession
+) -> None:
+    """Restore a saved layout whose settings file records no placements, as an older release wrote it."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+    path = config_home / "layout-session.json"
+    written = json.loads(path.read_text())
+    del written["window.layout"]
+    path.write_text(json.dumps(written))
+
+    second = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
+
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is LEFT
+
+
+def test_a_view_that_fails_to_build_keeps_the_saved_layout(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Restore the saved layout when a view that built before fails, its placeholder keeping its place."""
+    first = build(FragileApp)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
+    first.save_layout()
+    first.shutdown()
+
+    second = build(FragileApp, {"views": {"fragile": {"fail": True}}})
+
+    assert "fragile" not in second.views
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
@@ -158,7 +208,7 @@ def test_the_layout_goes_to_the_settings_file_as_text(
     build(LayoutApp).save_layout()
 
     written = json.loads((config_home / "layout-session.json").read_text())
-    assert sorted(written) == ["window.geometry", "window.state"]
+    assert sorted(written) == ["window.geometry", "window.layout", "window.state"]
     assert base64.b64decode(written["window.state"])
 
 
@@ -267,17 +317,3 @@ def test_a_view_taking_placement_itself_is_refused(
 
     assert "taking" not in app.views
     assert "reserves for the session" in caplog.text
-
-
-def test_a_moved_dock_is_logged_against_its_declared_edge(
-    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Log a saved layout keeping a dock off the edge its declaration names, not its class's."""
-    first = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
-    first.main_window.addDockWidget(LEFT, _dock(first, "panel"))
-    first.save_layout()
-    first.shutdown()
-
-    build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
-
-    assert "'panel' stays on the left, where it was left, not on the top" in caplog.text
