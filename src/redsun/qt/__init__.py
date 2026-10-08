@@ -7,6 +7,7 @@ from ._color_scheme import ColorSchemeButton, ColorSchemeMode
 from ._session import (
     ASK_ON_CLOSE,
     SAVE_MENU,
+    WINDOW_MENU,
     Area,
     Central,
     Dock,
@@ -21,6 +22,7 @@ from ._session import (
 __all__ = [
     "ASK_ON_CLOSE",
     "SAVE_MENU",
+    "WINDOW_MENU",
     "ActionError",
     "Area",
     "Central",

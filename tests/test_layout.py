@@ -7,12 +7,14 @@ import json
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
+from app_model.backends.qt import QModelMenu
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
+from qtpy.QtGui import QAction
 from qtpy.QtWidgets import QApplication, QDockWidget, QWidget
 
 from redsun import AsView, Declare, Placement
-from redsun.qt import Dock, QtSession
+from redsun.qt import WINDOW_MENU, Dock, QtSession
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -189,6 +191,42 @@ def test_a_view_that_fails_to_build_keeps_the_saved_layout(
 
     assert "fragile" not in second.views
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT
+
+
+def test_reset_layout_returns_the_docks_to_their_placements(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put a restored layout back where the placements say when Reset layout runs."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+    second = build(LayoutApp)
+
+    second.model.commands.execute_command("layout-session.reset_layout")
+
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+
+
+def test_the_window_menu_brings_back_a_closed_dock(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a dock closed with its X button unchecked in the Window menu, and show it again from there."""
+    app = build(LayoutApp)
+    dock = _dock(app, "charts")
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    action = menu.findAction("layout-session.toggle_dock.charts")
+    assert isinstance(action, QAction)
+
+    dock.close()
+    menu.aboutToShow.emit()
+    checked = action.isChecked()
+    action.trigger()
+
+    assert menu.title() == "Window"
+    assert not checked
+    assert not dock.isHidden()
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
