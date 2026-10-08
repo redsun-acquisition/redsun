@@ -94,13 +94,11 @@ written its result.
 
 ## Where a product is stored
 
-A product goes where its source data went, because the device chose the
-format and the store
-([ADR 0013](decisions/0013-acquisition-storage-belongs-to-the-device.md)) and
-the product follows that choice rather than making one of its own.
-`derive("camera_median", source="camera")` says that the median is laid out
-like one camera frame and belongs in the camera's store, and two documents of
-the run fill in the rest:
+A product goes where its source data went, following the device's choice of
+format and store
+([ADR 0013](decisions/0013-acquisition-storage-belongs-to-the-device.md)).
+`derive("camera_median", source="camera")` lays the median out like one camera
+frame in the camera's store, and two documents of the run fill in the rest:
 
 ```d2 title="What derive takes from the run"
 ...@diagrams/style

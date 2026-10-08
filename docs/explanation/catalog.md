@@ -68,14 +68,12 @@ steps: {
 }
 ```
 
-The server reads `application/x-ome-zarr` files with `ome-tiled`, and the
-session also registers `ome-tiled`'s consolidator for `TiledWriter`. A
-consolidator is a class `TiledWriter` uses to turn a
-[`StreamResource`](glossary.md#streamresource) and the
-[`StreamDatum`](glossary.md#streamdatum) documents after it into one catalog
-entry. This one reads the image's shape, chunks and axis names from its store,
-so the writer stores an image with the shape of its store rather than one
-derived from the [documents](glossary.md#document).
+The server reads `application/x-ome-zarr` files with `ome-tiled`, whose
+consolidator the session registers for `TiledWriter`. A consolidator turns a
+[`StreamResource`](glossary.md#streamresource) and its
+[`StreamDatum`](glossary.md#streamdatum) documents into one catalog entry;
+this one reads the image's shape, chunks and axis names from its store rather
+than from the [documents](glossary.md#document).
 
 ## One catalog per session
 
@@ -86,12 +84,10 @@ unit.
 
 ## Writing to registered files
 
-Registering a file records where it is, but it doesn't protect the file.
-`tiled`'s array write routes, `write`, `write_block` and `patch`, reach a
-registered file just as they reach one the catalog created.
-`management=external` only records where a file came from, and forbids
-nothing. `write_block` is the hardest to notice, because it replaces one chunk
-and the rest of the file still reads correctly.
+Registering a file doesn't protect it: `tiled`'s `write`, `write_block` and
+`patch` reach a registered file like any other, and `management=external`
+forbids nothing. `write_block` is the hardest to notice, since it replaces one
+chunk and the file still reads correctly.
 
 !!! warning "A client can overwrite a registered file"
 
