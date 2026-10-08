@@ -17,9 +17,7 @@ together by sending each other signals.
 ## SDK, components and application
 
 `redsun` is both the software development kit (SDK) you write components with
-and the application shell that runs them. Step through the diagram to follow a
-component from your code to the running application, and point at a shape to
-read more:
+and the application shell that runs them. Point at a shape to read more:
 
 ```d2 title="From your components to an application"
 ...@diagrams/style
@@ -28,39 +26,23 @@ sdk: "redsun as SDK" {
   class: layer
   tooltip: The patterns you write components in: devices, presenters and views, and the signals, slots and shared values they exchange, so every package is written the same way.
 }
-components: "your components\nin your code or a plugin" {class: hidden}
-session: "a session\nclass or session file" {class: hidden}
-shell: "redsun as application shell" {class: hidden}
-app: "your application\nwindow, plans, data" {class: hidden}
-sdk -> components: "you write with it" {style.opacity: 0}
-components -> session: "declared in" {style.opacity: 0}
-shell -> session: "builds and connects" {style.opacity: 0}
-session -> app {style.opacity: 0}
-steps: {
-  1: {
-    components: {
-      class: step
-      tooltip: The classes you write, or install from a plugin. Devices describe your hardware, presenters hold the application logic, and views show it on screen.
-    }
-    (sdk -> components)[0].style.opacity: 1
-  }
-  2: {
-    session: {
-      class: step
-      tooltip: A session is one running application. You declare its components in a Python class or list them in a session file.
-    }
-    (components -> session)[0].style.opacity: 1
-  }
-  3: {
-    shell: {
-      class: layer
-      tooltip: Discovers plugins, builds their components into a session, connects them, and launches the application.
-    }
-    app.class: current
-    (shell -> session)[0].style.opacity: 1
-    (session -> app)[0].style.opacity: 1
-  }
+components: "your components\nin your code or a plugin" {
+  class: step
+  tooltip: The classes you write, or install from a plugin. Devices describe your hardware, presenters hold the application logic, and views show it on screen.
 }
+session: "a session\nclass or session file" {
+  class: step
+  tooltip: A session is one running application. You declare its components in a Python class or list them in a session file.
+}
+shell: "redsun as application shell" {
+  class: layer
+  tooltip: Discovers plugins, builds their components into a session, connects them, and launches the application.
+}
+app: "your application\nwindow, plans, data" {class: current}
+sdk -> components: "you write with it"
+components -> session: "declared in"
+shell -> session: "builds and connects"
+session -> app
 ```
 
 A component is a [device, presenter or view](components.md), and a
@@ -87,12 +69,12 @@ Three ideas shape how `redsun` is built:
 
 `bluesky` runs acquisitions, but it leaves the application around them to
 you: you drive the [`RunEngine`](glossary.md#runengine) from a command line or
-`IPython`, and the rest is expected to exist already. Step through the
-diagram to compare where that rest comes from at a large facility and on a
-bench:
+`IPython`, and the rest is expected to exist already. Step through where that
+rest comes from at a large facility and on a bench:
 
 ```d2 title="What surrounds a bluesky acquisition"
 ...@diagrams/style
+label: "The RunEngine runs an acquisition, but it needs hardware control, something that keeps it running, and something to show the user."
 direction: right
 run: "bluesky RunEngine\nruns the acquisition" {
   class: layer
@@ -109,12 +91,14 @@ run -> screen
 run -> data: {style.opacity: 0}
 scenarios: {
   facility: {
+    label: "At a large facility, a control system, its staff and separate display programs are already there around the RunEngine."
     run.label: "bluesky RunEngine\nfrom a command line\nor IPython"
     hardware: "a control system\nsuch as EPICS or Tango" {class: current}
     running: "facility staff" {class: current}
     screen: "separate programs\nshow the instrument" {class: current}
   }
   bench: {
+    label: "On a bench, redsun brings them: services that speak EPICS, starting and stopping those services, the window, and a place for the data."
     run.label: "bluesky RunEngine\nin one application"
     hardware: "services that\nspeak EPICS" {class: current}
     running: "redsun starts and\nstops the services" {
