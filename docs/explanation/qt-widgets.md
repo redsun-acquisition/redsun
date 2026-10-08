@@ -19,11 +19,47 @@ plan also gets a toggle, a pause button and a button for each action.
 `create_plan_widget` returns a `PlanWidget`, a frozen dataclass that owns the
 widget tree, and its `group_box` is the widget your view adds to its layout.
 
-A plan widget runs nothing itself. When a button is pressed, it calls the view
-back, and the view sends the plan's name and `PlanWidget.parameters` to the
-presenter that runs the plan. As the plan starts, pauses and ends, the view
-updates the widget with `toggle` and `pause`. The widget depends on no
-presenter, and the `PlanSpec` it's built from depends on no toolkit.
+A plan widget runs nothing itself. Step through what happens when the user
+presses Run:
+
+```d2 title="A plan widget, its view and the presenter"
+...@diagrams/style
+direction: down
+widget: "plan widget" {class: step}
+view: {class: step}
+presenter: {class: step}
+widget -> view: "calls back" {class: hidden}
+view -> presenter: "plan name and\nPlanWidget.parameters" {class: hidden}
+presenter -> view: "started, paused,\nended" {class: hidden}
+view -> widget: "toggle, pause" {class: hidden}
+steps: {
+  1: {
+    widget.class: current
+    (widget -> view)[0].style.opacity: 1
+  }
+  2: {
+    widget.class: step
+    presenter: {
+      class: current
+      tooltip: The presenter runs the plan.
+    }
+    (view -> presenter)[0].style.opacity: 1
+  }
+  3: {
+    presenter.class: step
+    view.class: current
+    (presenter -> view)[0].style.opacity: 1
+  }
+  4: {
+    view.class: step
+    widget.class: current
+    (view -> widget)[0].style.opacity: 1
+  }
+}
+```
+
+The widget depends on no presenter, and the `PlanSpec` it's built from depends
+on no toolkit.
 
 Each input starts from its parameter's default and returns a value of the
 annotated type. Inputs nest: a list, set, mapping, fixed-length tuple,
@@ -84,9 +120,90 @@ to subscribe the callbacks to the [`RunEngine`](glossary.md#runengine).
 
 `create_param_widget` turns a `ParamDescription` into a widget from `magicgui`,
 a package that builds widgets from Python types, one for each parameter of a
-plan. A `Literal` or a device gets a list to choose from, a sequence of
-devices gets a multiple choice, and everything else gets the `magicgui`
-default.
+plan. It asks a fixed list of questions in order and builds the widget of the
+first one answered yes. Pick an example parameter to follow it through:
+
+```d2 title="How create_param_widget picks a widget"
+...@diagrams/style
+grid-rows: 6
+grid-columns: 2
+grid-gap: 40
+param: "a parameter" {class: note}
+gap: {class: gap}
+hidden: "hidden, or does it\ncarry actions?" {class: step}
+placeholder: "placeholder\nline edit" {
+  class: step
+  tooltip: A plan widget leaves these parameters out, so the placeholder is never shown in one.
+}
+many: "a sequence or set of\ndevices, or *args?" {class: step}
+checks: "a list of\ncheckboxes" {
+  class: step
+  tooltip: One checkbox per device of the session that matches the annotation, in the Devices group of the plan widget.
+}
+one: "a device?" {class: step}
+devices: "a combo box\nof the devices" {
+  class: step
+  tooltip: The devices of the session that match the annotation, in the Devices group of the plan widget.
+}
+choices: "a Literal?" {class: step}
+literal: "a combo box\nof the choices" {class: step}
+other: "anything else" {class: step}
+value: "an input built\nfrom its type" {
+  class: step
+  tooltip: A list, set, mapping, fixed-length tuple, optional value or union gets an input built from the inputs of its parts. Anything else gets the magicgui widget for its type.
+}
+param -> hidden
+hidden -> many: no
+many -> one: no
+one -> choices: no
+choices -> other: no
+hidden -> placeholder: yes
+many -> checks: yes
+one -> devices: yes
+choices -> literal: yes
+other -> value
+scenarios: {
+  device-list: {
+    param.label: "detectors: Sequence[MyCamera]"
+    placeholder.style.opacity: 0.3
+    one.style.opacity: 0.3
+    devices.style.opacity: 0.3
+    choices.style.opacity: 0.3
+    literal.style.opacity: 0.3
+    other.style.opacity: 0.3
+    value.style.opacity: 0.3
+    checks.style.stroke-width: 4
+  }
+  device: {
+    param.label: "camera: MyCamera"
+    placeholder.style.opacity: 0.3
+    checks.style.opacity: 0.3
+    choices.style.opacity: 0.3
+    literal.style.opacity: 0.3
+    other.style.opacity: 0.3
+    value.style.opacity: 0.3
+    devices.style.stroke-width: 4
+  }
+  literal: {
+    param.label: "mode: Literal[\"fast\", \"slow\"]"
+    placeholder.style.opacity: 0.3
+    checks.style.opacity: 0.3
+    devices.style.opacity: 0.3
+    other.style.opacity: 0.3
+    value.style.opacity: 0.3
+    literal.style.stroke-width: 4
+  }
+  other: {
+    param.label: "positions: list[float]"
+    placeholder.style.opacity: 0.3
+    checks.style.opacity: 0.3
+    devices.style.opacity: 0.3
+    literal.style.opacity: 0.3
+    value.style.stroke-width: 4
+  }
+}
+```
+
 [How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read)
 lists every annotation a plan widget can show.
 
@@ -143,6 +260,26 @@ label.
 An edit is only a request. The tree emits `sig_property_changed` and keeps the
 edit pending, showing what was typed, until it's told how the request ended:
 
+```d2 title="An edit in the tree"
+...@diagrams/style
+shape: sequence_diagram
+tree: tree
+view: view
+presenter: presenter
+device: device
+tree -> view: "sig_property_changed,\nthe edit stays pending"
+view -> presenter: "the request"
+presenter -> device: "set the value"
+presenter -> device: "read it back"
+presenter -> view: "announce the value,\nor that the device refused it"
+accepted: "if the device took it" {
+  view -> tree: "set_value"
+}
+refused: "if the device refused it" {
+  view -> tree: "revert"
+}
+```
+
 ```python
 tree.set_value("stage-position", 12.5)  # what the device read back
 tree.revert("stage-position")  # the device refused: show the value before
@@ -150,12 +287,9 @@ tree.revert("stage-position")  # the device refused: show the value before
 
 `set_value` shows the value it's given, which may differ from what was typed
 when the device rounds or clips it. It also shows a value that changed with no
-edit pending. Neither call emits `sig_property_changed`.
-
-After a presenter sets the device, it reads the value back and announces it.
-The view then hands the value to the tree with `set_value`, or calls `revert`
-when the device refused it. Because the tree never writes to a device itself,
-the value it shows is always one the device reported.
+edit pending. Neither call emits `sig_property_changed`. Because the tree
+never writes to a device itself, the value it shows is always one the device
+reported.
 
 ---
 
