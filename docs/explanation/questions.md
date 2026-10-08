@@ -55,16 +55,50 @@ annotation carries the question.
 ## How a component matches
 
 A component matches a protocol when it has every member the protocol lists,
-and each of its methods accepts every call the protocol allows. This is
-[structural subtyping](glossary.md#structural-subtyping): the component
-doesn't have to inherit from the protocol, or even know it exists.
+and each of its methods accepts every call the protocol allows. Step through
+the diagram to see which components answer `SessionPresenter`'s question, and
+which come close:
 
-- An extra parameter **with** a default still matches.
-- A renamed parameter, or an extra one without a default, doesn't.
-- Types aren't compared, since that's a type checker's job.
+```d2 title="Which components answer Mapping[str, Resettable]"
+...@diagrams/style
+direction: right
+plot: "plot\nno reset" {class: step; width: 190; height: 70}
+loose: "loose\nreset(hard)" {class: step; width: 190; height: 70}
+detector: "detector\nreset(force=False)" {class: step; width: 190; height: 70}
+motor: "motor\nreset()" {class: step; width: 190; height: 70}
+asker: "SessionPresenter.setup\nresettable:\nMapping[str, Resettable]" {class: step; width: 240}
+plot -> asker: {style.opacity: 0}
+loose -> asker: {style.opacity: 0}
+detector -> asker: {style.opacity: 0}
+motor -> asker: {style.opacity: 0}
+steps: {
+  1: {
+    motor.class: current
+    detector: {
+      class: current
+      tooltip: "An extra parameter with a default still matches, because reset() can still be called."
+    }
+    (motor -> asker)[0].style.opacity: 1
+    (detector -> asker)[0].style.opacity: 1
+  }
+  2: {
+    loose: {
+      class: failed
+      tooltip: "A renamed parameter, or an extra one without a default, doesn't match. Session.rejected lists it with the reason."
+    }
+    plot: {
+      class: done
+      tooltip: "It has none of the protocol's members, so Session.rejected leaves it out too."
+    }
+  }
+}
+```
 
-The protocol doesn't need `runtime_checkable`, may list attributes as well as
-methods, and may be generic: `Reading[float]` is matched as `Reading`.
+This is [structural subtyping](glossary.md#structural-subtyping): the
+component doesn't have to inherit from the protocol, or even know it exists.
+Types aren't compared, since that's a type checker's job. The protocol doesn't
+need `runtime_checkable`, may list attributes as well as methods, and may be
+generic: `Reading[float]` is matched as `Reading`.
 
 When a component you expected is missing from an answer,
 [`Session.satisfying`][redsun.Session.satisfying] shows the answer the session
@@ -92,20 +126,28 @@ class RoiView(QWidget):
         self.camera = camera
 ```
 
-If nothing matches, or more than one thing does, the session doesn't start,
-and the error names what came close:
-
-```text
-TypeError: 'roi' in its 'camera' parameter asks for the one object satisfying
-'HasCamera', but 2 do, from 'camera', 'spare'. Narrow the protocol, or ask for
-'Mapping[str, HasCamera]'.
-```
-
 Use `P | None = None` when the component can do without:
 
 ```python
 def setup(self, roi: HasRoi | None = None) -> None:
     self.roi = roi
+```
+
+What the component gets depends on how many things match:
+
+| matches | `camera: HasCamera` | `roi: HasRoi \| None = None` |
+| --- | --- | --- |
+| one | that one | that one |
+| none | the build stops, and the error names what came close | `None` |
+| the only match failed to build | the component is reported as not set up, and runs without it | `None` |
+| two or more | the build stops | the build stops |
+
+When two or more match, the error says which:
+
+```text
+TypeError: 'roi' in its 'camera' parameter asks for the one object satisfying
+'HasCamera', but 2 do, from 'camera', 'spare'. Narrow the protocol, or ask for
+'Mapping[str, HasCamera]'.
 ```
 
 A component never answers its own single question, since that would mean
@@ -117,14 +159,25 @@ who asks. When you need to, leave yourself out with one line:
 others = {name: c for name, c in self.resettable.items() if name != self.name}
 ```
 
-If the only match failed to build, the session reports the asking component
-as not set up, and runs without it.
-
 ## Asking about devices
 
-Devices never answer a question in `setup`; only presenters, views and shared
-values do. To ask which devices can do something, use
-[`DevicesOf`][redsun.DevicesOf] in the constructor:
+Devices never answer a question in `setup`. A device is asked about in a
+constructor, with [`DevicesOf`][redsun.DevicesOf]:
+
+```d2 title="Who answers which question, and where"
+...@diagrams/style
+direction: right
+devices: "devices" {class: layer; width: 200}
+components: "presenters\nand views" {class: layer; width: 200}
+shared: "shared values" {class: step; width: 200}
+constructor: "in a constructor\nDevicesOf[P]" {class: step; width: 220}
+every: "in setup\nMapping[str, P]" {class: step; width: 220}
+one: "in setup\nP or P | None" {class: step; width: 220}
+devices -> constructor
+components -> every
+components -> one
+shared -> one
+```
 
 ```python
 class MotorPresenter:
