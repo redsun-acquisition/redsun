@@ -12,7 +12,7 @@ writes, through a [`Writer`][redsun.writers.Writer].
 [Write a derived product](../how-to/write-a-derived-product.md) shows every
 step.
 
-## Documents in, arrays in
+## What a writer receives
 
 A `Writer` takes two kinds of input, from two directions. Step through to see
 them reach it:

@@ -105,7 +105,7 @@ providers:
     plugin_id: calibrations
 ```
 
-## Rules to know
+## Mistakes to avoid
 
 - The type is the key. Two components can't share the same type, so give
   distinct values distinct types.

@@ -252,7 +252,7 @@ sets the folder and the names, and
 [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) records
 why the device writes the data and not `redsun`.
 
-### Standby
+### Letting go of hardware
 
 A service holding hardware, such as a camera, can let go of it and keep
 running if it offers a command for that as a

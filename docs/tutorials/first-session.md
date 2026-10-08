@@ -43,7 +43,7 @@ from redsun import AsDevice, AsPresenter, AsView, DeviceMapping, Link, Placement
 from redsun.qt import Dock, QtSession
 ```
 
-## 1. The device
+## 1. Write the device
 
 A [device](../explanation/glossary.md#device) describes one piece of your
 setup, which here is a stage with a position. Since you have no hardware,
@@ -81,7 +81,7 @@ the stage.
 A movable device reports its readback under its own name. When you read
 `stage`, its position comes back under the key `stage`, not `position`.
 
-## 2. The view
+## 2. Write the view
 
 A [view](../explanation/glossary.md#view) is what the user of the
 application sees and touches. Add this one below the class `MyStage`. For each stage it hears
@@ -104,7 +104,7 @@ you. The session passes every view its `name`, and its `parent`, which is the
 main window. Every component stores the name it receives as `self.name`, as
 `StageView` does.
 
-## 3. The session
+## 3. Write the session
 
 Add a session below the view. For now it holds the stage and the view, and
 sends the position of the stage to the view:
@@ -154,7 +154,7 @@ link, and then every new value. So `show_reading` received the stage's
 position while the session started, and added the row for it. Press the
 button: nothing happens yet, since nothing listens to it. Close the window.
 
-## 4. The presenter
+## 4. Write the presenter
 
 A [presenter](../explanation/glossary.md#presenter) holds the application
 logic: what the application does, and when. Add this one between the classes `MyStage` and

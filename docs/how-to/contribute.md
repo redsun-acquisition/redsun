@@ -448,7 +448,9 @@ others. A wrong API page is fixed in its docstring, not in a `.md` file.
 ### Headings, terms and wording
 
 Give each section a short heading that names its topic, such as "Devices and
-services", so a reader scanning the table of contents finds it. How-to steps
+services", so a reader scanning the table of contents finds it. Name it in
+the reader's words rather than after the class or mechanism behind it: "A
+tree of device settings", not "Descriptor tree view". How-to steps
 and tutorial steps are the exception: they say what the reader does, such as
 "Declare the device".
 

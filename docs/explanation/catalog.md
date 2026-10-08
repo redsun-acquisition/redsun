@@ -9,7 +9,7 @@ A session whose `storage` section has a `catalog` key runs a
 to hold its [catalog](glossary.md#catalog).
 [Keep a catalog of runs](../how-to/keep-a-catalog.md) shows how to use it.
 
-## What `redsun` does
+## What the session sets up
 
 `redsun` starts the server, keeps its database in
 `<base_dir>/<session>/catalog`, and gives its address to any component that
@@ -87,7 +87,7 @@ across sessions you open each catalog. In exchange, everything a session
 produced lives under one directory, which you can archive or delete as a
 unit.
 
-## Writing to registered files
+## Overwriting a registered file
 
 Registering a file doesn't protect it: `tiled`'s `write`, `write_block` and
 `patch` reach a registered file like any other, and `management=external`

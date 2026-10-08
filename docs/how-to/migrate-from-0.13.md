@@ -288,7 +288,7 @@ def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
   time between two checkpoints.
 - `wait_for_actions` raises `ValueError` when `events` is empty.
 - `actions` is an `ActionManager` from `redsun.engine.actions`, made by
-  whoever owns the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
+  whoever owns the plans. See [Actions while a plan runs](../explanation/plans.md#actions-while-a-plan-runs).
 - `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None`
   where it defaulted to `("On", "Off")`.
 - `create_plan_spec` raises `ValueError` for a plan declaring two actions of

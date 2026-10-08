@@ -100,7 +100,7 @@ choice; the presenter subscribes the callbacks to the
 
 ---
 
-## Parameter widget factory
+## A widget for each parameter
 
 `create_param_widget` turns each parameter's `ParamDescription` into a widget
 from `magicgui`, a package that builds widgets from Python types, by asking
@@ -219,7 +219,7 @@ back, see [Following an action from a view](plans.md#following-an-action-from-a-
 
 ---
 
-## Descriptor tree view
+## A tree of device settings
 
 `DescriptorTreeView` shows a device's `describe_configuration` and
 `read_configuration` as an editable two-column tree. It reports edits but

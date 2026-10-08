@@ -245,7 +245,7 @@ raised as [`ConfigurationError`][redsun.ConfigurationError], located as
 | `hook provider 'p' is named twice, at 'a' and at 'b', with the same keys` | two identical entries; anchor one, or change the arguments |
 | `hook point(s) 'x' are named both on MyApp and in the configuration` | the class and the file both name the point; remove one |
 
-## Related
+## See also
 
 - [Frontends](../explanation/frontends.md#hook-points) lists the points.
 - [ADR 10](../explanation/decisions/0010-toolkit-hook-points.md) records why
