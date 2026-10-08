@@ -46,13 +46,23 @@ deleted from the settings file.
 
 ### After
 
-The same change puts the stages at the bottom on the next run. A dock the user
-moved by hand stays where it was left until a placement changes, and
-Window -> Reset layout puts it back at any time.
+```python
+class StageView(QWidget):
+    placement: Placement = Dock("bottom")  # was Dock("left")
+```
+
+The same change, and nothing else, puts the stages at the bottom on the next
+run. A dock the user moved by hand stays where it was left until a placement
+changes, and Window -> Reset layout puts it back at any time.
 
 ## Consequences
 
 - Adding a view to a session discards the arrangement its user saved, once.
+- A view whose class answers `placement` from a property, which is
+  deprecated, has no placement in its declaration. Changing what the property
+  answers keeps the saved layout, and only Reset layout moves the dock.
+- A view placed in a menu named Window joins the session's Window menu
+  rather than showing a second one.
 - The Window menu is added after the `configure_main_view` hook runs, so a
   hook that sets its own menu bar still gets it, at the end. A hook that
   includes `WINDOW_MENU` puts it where it wants instead.

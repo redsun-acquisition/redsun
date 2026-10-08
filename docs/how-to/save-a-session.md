@@ -89,7 +89,7 @@ The session writes a value as soon as it is set. The file appears the first
 time something is set, and deleting it resets the session to its defaults. If
 the file is damaged, the session ignores it and logs a warning.
 
-A Qt session keeps two keys there itself:
+A Qt session keeps these keys there itself:
 
 | key | what it holds |
 | --- | --- |
