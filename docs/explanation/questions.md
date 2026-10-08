@@ -4,13 +4,11 @@ icon: lucide/circle-help
 
 # How a component asks the session what it holds
 
-Most of the time a component asks for one thing by its type: "give me the
-`MotorReadings`". Sometimes it needs an answer instead: "which components in
-this session can be reset?". The answer depends on what the session file puts
-in the session, so no one can write it down in advance.
-
-A component asks such a question in [`setup`](glossary.md#setup), with a
-[protocol](glossary.md#protocol) that describes what it's looking for.
+A component usually asks for one thing by its type. Sometimes it needs an
+answer instead, such as "which components can be reset?", which depends on
+what the session file puts in the session. It asks in
+[`setup`](glossary.md#setup), with a [protocol](glossary.md#protocol)
+describing what it looks for.
 
 ## Asking with an annotation
 
@@ -54,10 +52,9 @@ annotation carries the question.
 
 ## How a component matches
 
-A component matches a protocol when it has every member the protocol lists,
-and each of its methods accepts every call the protocol allows. Step through
-the diagram to see which components answer `SessionPresenter`'s question, and
-which come close:
+A component matches when it has every member the protocol lists and each
+method accepts every call the protocol allows. Step through who answers and
+who comes close:
 
 ```d2 title="Which components answer Mapping[str, Resettable]"
 ...@diagrams/style
@@ -94,16 +91,12 @@ steps: {
 }
 ```
 
-This is [structural subtyping](glossary.md#structural-subtyping): the
-component doesn't have to inherit from the protocol, or even know it exists.
-Types aren't compared, since that's a type checker's job. The protocol doesn't
-need `runtime_checkable`, may list attributes as well as methods, and may be
-generic: `Reading[float]` is matched as `Reading`.
-
-When a component you expected is missing from an answer,
-[`Session.satisfying`][redsun.Session.satisfying] shows the answer the session
-gives, and [`Session.rejected`][redsun.Session.rejected] says why the
-component isn't in it:
+This is [structural subtyping](glossary.md#structural-subtyping): no
+inheritance needed, and types aren't compared, which is a type checker's job.
+The protocol needs no `runtime_checkable`, may list attributes, and may be
+generic (`Reading[float]` is matched as `Reading`). When a component you
+expected is missing, [`Session.satisfying`][redsun.Session.satisfying] shows
+the answer and [`Session.rejected`][redsun.Session.rejected] says why:
 
 ```python
 >>> session.satisfying(Resettable)
@@ -150,10 +143,9 @@ TypeError: 'roi' in its 'camera' parameter asks for the one object satisfying
 'Mapping[str, HasCamera]'.
 ```
 
-A component never answers its own single question, since that would mean
-depending on itself. It does appear in a `Mapping[str, P]` if it matches,
-because that answer describes the whole session and is the same for everyone
-who asks. When you need to, leave yourself out with one line:
+A component never answers its own single question, but it does appear in its
+own `Mapping[str, P]`, which describes the whole session the same way for
+everyone. Leave yourself out with one line:
 
 ```python
 others = {name: c for name, c in self.resettable.items() if name != self.name}
@@ -186,9 +178,9 @@ class MotorPresenter:
         self.motors = motors
 ```
 
-The constructor can ask because devices exist before any presenter.
-`DevicesOf` only works as `Mapping[str, P]` and only in a constructor. To get
-every device, ask for [`DeviceMapping`][redsun.DeviceMapping].
+Devices exist before any presenter, so the constructor can ask. `DevicesOf`
+works only as `Mapping[str, P]` in a constructor; for every device, ask for
+[`DeviceMapping`][redsun.DeviceMapping].
 
 ## When not to ask
 
