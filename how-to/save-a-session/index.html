@@ -3414,6 +3414,8 @@
       
         
       
+        
+      
     
     
     
@@ -4159,6 +4161,33 @@
     
   
   26. Parameter limits from annotated-types, checked by pydantic
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  27. A saved window layout gives way to a changed placement
 
     
   </span>
@@ -5600,7 +5629,7 @@ yourself instead, install a <code>confirm_close</code> <a href="../install-hooks
 <p>The session writes a value as soon as it is set. The file appears the first
 time something is set, and deleting it resets the session to its defaults. If
 the file is damaged, the session ignores it and logs a warning.</p>
-<p>A Qt session keeps two keys there itself:</p>
+<p>A Qt session keeps these keys there itself:</p>
 <table>
 <thead>
 <tr>
@@ -5610,8 +5639,8 @@ the file is damaged, the session ignores it and logs a warning.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>window.geometry</code>, <code>window.state</code></td>
-<td>where the window and its docks were left</td>
+<td><code>window.geometry</code>, <code>window.state</code>, <code>window.layout</code></td>
+<td>where the window and its docks were left, and the placements they were left with</td>
 </tr>
 <tr>
 <td><code>ask_on_close</code></td>
@@ -5620,7 +5649,9 @@ the file is damaged, the session ignores it and logs a warning.</p>
 </tbody>
 </table>
 <p>A session started with <code>run</code> saves the window layout when it ends and puts it
-back the next time.</p>
+back the next time, unless a view's placement has changed since. <strong>Reset
+layout</strong> in the <strong>Window</strong> menu puts the docks back where their placements
+say.</p>
 <h2 id="choose-the-colour-scheme">Choose the colour scheme<a class="headerlink" href="#choose-the-colour-scheme" title="Permanent link">&para;</a></h2>
 <p>A Qt session has a colour scheme button on its toolbar, which cycles through
 system, light and dark. The session file chooses where it starts:</p>

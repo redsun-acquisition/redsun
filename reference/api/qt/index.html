@@ -3279,6 +3279,8 @@
       
         
       
+        
+      
     
     
     
@@ -4024,6 +4026,33 @@
     
   
   26. Parameter limits from annotated-types, checked by pydantic
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  27. A saved window layout gives way to a changed placement
 
     
   </span>
@@ -5395,6 +5424,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.qt.WINDOW_MENU" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;WINDOW_MENU
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.qt.ASK_ON_CLOSE" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6514,6 +6554,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.qt.WINDOW_MENU" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;WINDOW_MENU
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.qt.ASK_ON_CLOSE" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7001,7 +7052,9 @@ be shown with it, so what it left behind is deleted.</p>
 <p>A view that failed to build and asked for a dock or the centre is
 replaced there by a widget naming it and the reason. When any
 component failed to build or to be set up, a button in the status bar
-counts them and lists them with their tracebacks.</p>
+counts them and lists them with their tracebacks. A Window menu,
+added after the main-view hook has run, shows or hides each dock and
+puts every dock back where its placement says.</p>
 
 
     </div>
@@ -7023,9 +7076,10 @@ counts them and lists them with their tracebacks.</p>
 
         <p>Put the window back where this user last left it.</p>
 <p>Runs once every dock exists, since Qt places a dock by object name and
-ignores one it has not seen. A session this user has never run finds
-nothing saved and keeps the layout its views asked for. Each dock the
-saved layout keeps away from the edge its placement asks for is logged.</p>
+ignores one it has not seen. The geometry always comes back. The docks
+come back only while the views ask for the places they asked for when
+the layout was saved, so a changed placement shows on the next run; a
+layout saved without that record is restored.</p>
 
 
     </div>
@@ -7045,7 +7099,7 @@ saved layout keeps away from the edge its placement asks for is logged.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Remember where this user left the window.</p>
+        <p>Remember where this user left the window, and the placements it was left with.</p>
 <p><code>run</code> asks for this as the session ends, so a window that was shown is
 the only one that writes.</p>
 
@@ -8392,6 +8446,31 @@ view asking for a toolbar keeps its own.</p>
     <div class="doc doc-contents first">
 
         <p>The menu a session's own actions join, which a window may show by name.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="redsun.qt.WINDOW_MENU" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">WINDOW_MENU</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#redsun.qt.WINDOW_MENU" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">WINDOW_MENU</span><span class="p">:</span> <span class="n">Final</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'redsun/window'</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>The menu holding a toggle for each dock and "Reset layout", shown by the session's window.</p>
+<p>The session adds it at the end of the menu bar unless the bar already shows it.</p>
 
     </div>
 

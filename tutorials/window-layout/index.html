@@ -854,10 +854,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-forget-the-saved-layout" class="md-nav__link">
+  <a href="#3-move-a-dock-by-hand" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. Forget the saved layout
+        3. Move a dock by hand
       </span>
     </span>
   </a>
@@ -865,10 +865,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-move-a-dock-by-hand" class="md-nav__link">
+  <a href="#4-put-the-docks-back" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        4. Move a dock by hand
+        4. Put the docks back
       </span>
     </span>
   </a>
@@ -3410,6 +3410,8 @@
       
         
       
+        
+      
     
     
     
@@ -4155,6 +4157,33 @@
     
   
   26. Parameter limits from annotated-types, checked by pydantic
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  27. A saved window layout gives way to a changed placement
 
     
   </span>
@@ -5362,10 +5391,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-forget-the-saved-layout" class="md-nav__link">
+  <a href="#3-move-a-dock-by-hand" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. Forget the saved layout
+        3. Move a dock by hand
       </span>
     </span>
   </a>
@@ -5373,10 +5402,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-move-a-dock-by-hand" class="md-nav__link">
+  <a href="#4-put-the-docks-back" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        4. Move a dock by hand
+        4. Put the docks back
       </span>
     </span>
   </a>
@@ -5507,7 +5536,7 @@ buttons of the stages below it. It continues from
 <a href="../scan-plan/">Scanning a stage with the camera</a>.</p>
 <p>Each view says where it goes with its
 <a href="../../explanation/glossary/#placement">placement</a>. You change two of them,
-and find out what the window remembers from one run to the next.</p>
+move a dock by hand, and put it back.</p>
 <h2 id="before-you-start">Before you start<a class="headerlink" href="#before-you-start" title="Permanent link">&para;</a></h2>
 <div class="admonition note">
 <p class="admonition-title">What you need</p>
@@ -5542,49 +5571,27 @@ the plans on its right.</p>
 <p>In the class <code>StageView</code>, change the placement line to this one:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">placement</span><span class="p">:</span> <span class="n">Placement</span> <span class="o">=</span> <span class="n">Dock</span><span class="p">(</span><span class="s2">"bottom"</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Run the script again. The stages are still on the left.</p>
-<p>Nothing is wrong with the line. When you close the window, it saves where
-its docks are, and the next time it opens it puts them back, so a placement
-only says where a view goes when the window has nothing saved for it. The
-image moved at once in step 1 because a central view isn't a dock, so the
-window had nothing saved for it.</p>
-<h2 id="3-forget-the-saved-layout">3. Forget the saved layout<a class="headerlink" href="#3-forget-the-saved-layout" title="Permanent link">&para;</a></h2>
-<p>The window keeps its layout in one file, named after the session. Close the
-window, then delete the file:</p>
-<table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>File</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Windows</td>
-<td><code>%LOCALAPPDATA%\redsun\first-session.json</code></td>
-</tr>
-<tr>
-<td>macOS</td>
-<td><code>~/Library/Application Support/redsun/first-session.json</code></td>
-</tr>
-<tr>
-<td>Linux</td>
-<td><code>~/.config/redsun/first-session.json</code></td>
-</tr>
-</tbody>
-</table>
-<p>Run the script once more:</p>
+<p>Run the script again:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>first_session.py
 </span></code></pre></div>
-<p>This time the stages are below the image. Choose <code>snap</code> in the list of the
-plans and press <strong>Run</strong>:</p>
+<p>The stages are now below the image. Choose <code>snap</code> in the list of the plans
+and press <strong>Run</strong>:</p>
 <p><img alt="The window of the session: an image of concentric rings in the centre, the
 rows of the stages below it and the plan widget of snap on the
 right" src="../images/window-layout.png" /></p>
-<h2 id="4-move-a-dock-by-hand">4. Move a dock by hand<a class="headerlink" href="#4-move-a-dock-by-hand" title="Permanent link">&para;</a></h2>
+<h2 id="3-move-a-dock-by-hand">3. Move a dock by hand<a class="headerlink" href="#3-move-a-dock-by-hand" title="Permanent link">&para;</a></h2>
 <p>Drag the view of the plans by its title, and drop it on the left edge of the
 window. Close the window and run the script again: the plans are on the
 left, where you left them.</p>
+<p>The window saves where its docks are when you close it, and puts them back
+the next time. It does so only while every view asks for the place it asked
+for when the window saved, which is why the stages moved at once in step 2.</p>
+<h2 id="4-put-the-docks-back">4. Put the docks back<a class="headerlink" href="#4-put-the-docks-back" title="Permanent link">&para;</a></h2>
+<p>Open the <strong>Window</strong> menu and choose <strong>Reset layout</strong>. The plans go back to
+the right, where their placement puts them.</p>
+<p>The same menu lists every dock. Close the plans with the button on their
+title bar, then choose <strong>plan_view</strong> in the <strong>Window</strong> menu to bring them
+back.</p>
 <details class="example">
 <summary>The whole script</summary>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="sd">"""The session built in the "Arranging the window" tutorial."""</span>
@@ -5904,8 +5911,8 @@ left, where you left them.</p>
 </details>
 <h2 id="what-you-built">What you built<a class="headerlink" href="#what-you-built" title="Permanent link">&para;</a></h2>
 <p>You arranged the window with the image in its centre, the stages below it
-and the plans beside it. Each view starts where its placement says, and
-stays where you drag it.</p>
+and the plans beside it. Each view starts where its placement says, stays
+where you drag it, and goes back with <strong>Reset layout</strong>.</p>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../device-service/">Putting a device behind a service</a> is the next
@@ -5913,7 +5920,7 @@ stays where you drag it.</p>
 <li><a href="../../explanation/frontends/">How a frontend shows a session on screen</a>
   lists the placements, along with the menus and toolbars.</li>
 <li><a href="../../how-to/save-a-session/">How to save a session</a> says what else the
-  file from step 3 holds.</li>
+  settings file holds.</li>
 </ul>
 
 

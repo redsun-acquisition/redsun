@@ -3445,6 +3445,8 @@
       
         
       
+        
+      
     
     
     
@@ -4193,6 +4195,33 @@
     
   
   26. Parameter limits from annotated-types, checked by pydantic
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  27. A saved window layout gives way to a changed placement
 
     
   </span>
@@ -6359,7 +6388,8 @@ and <code>QtSession</code> passes its main window as the parent
 <li>runs a widget's slots on the main thread unless a slot names another</li>
 <li>builds the main window from an <code>app-model</code> <code>Application</code> holding the menus
   and commands</li>
-<li>restores the docks where the user left them</li>
+<li>restores the docks where the user left them, until a placement changes,
+  and has a Window menu to show a closed dock or reset the layout</li>
 <li>asks before closing when a component has unsaved changes</li>
 <li>logs an exception no slot caught and keeps the window open, where the Qt
   binding would end the process silently</li>

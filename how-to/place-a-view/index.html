@@ -3436,6 +3436,8 @@
       
         
       
+        
+      
     
     
     
@@ -4181,6 +4183,33 @@
     
   
   26. Parameter limits from annotated-types, checked by pydantic
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  27. A saved window layout gives way to a changed placement
 
     
   </span>
@@ -6181,6 +6210,8 @@ view, so this works for any view, including the built-in ones:</p>
 </tr>
 </tbody>
 </table>
+<p>A view placed in the menu <code>Window</code> joins the Window menu the session adds,
+above the entries that show and hide the docks.</p>
 <p>The session checks the placement before it builds anything, so if a view fails
 to build, its error message appears where you placed it. The session refuses a
 view whose constructor has its own <code>placement</code> parameter, because it keeps
@@ -6191,7 +6222,9 @@ that name for itself.</p>
 declaration. This still works, but it is deprecated and will be removed
 in 0.16. The session can read such a placement only after it builds the
 view, so it checks it late, and if the view fails to build, no error
-message appears in the window. Give <code>placement</code> in the declaration
+message appears in the window. A saved window layout also ignores such a
+placement, so changing what the property returns does not move the dock
+until you choose <strong>Reset layout</strong>. Give <code>placement</code> in the declaration
 instead.</p>
 </div>
 <h2 id="tab-docks-together">Tab docks together<a class="headerlink" href="#tab-docks-together" title="Permanent link">&para;</a></h2>
@@ -6213,14 +6246,18 @@ order you declare the views in:</p>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="p">]</span>
 </span></code></pre></div>
 <h2 id="see-a-changed-placement-take-effect">See a changed placement take effect<a class="headerlink" href="#see-a-changed-placement-take-effect" title="Permanent link">&para;</a></h2>
-<p>A session started with <code>run</code> saves where the user left the docks when it
-ends, and puts them back the next time. So a dock that was saved stays where
-the user left it, and a new placement for it doesn't show. Only a view whose
-name wasn't saved before takes its placement. The log says which docks the
-saved layout keeps away from their placement. To start every dock from its
-placement again, close the session and remove the <code>window.state</code> key from its
-settings file. <a href="../save-a-session/#find-the-settings-file">Find the settings file</a>
-says where it is.</p>
+<p>A changed placement shows the next time you start the session. A session
+started with <code>run</code> saves where the user left the docks when it ends, and
+puts them back the next time, but only while every view asks for the place
+it asked for when the layout was saved. So when you change a placement, add
+a view or remove one, every dock starts from its placement, and the log says
+why. A view that fails to build keeps the place its declaration gives it, so
+the saved layout stays.</p>
+<p>To put the docks back where their placements say at any time, choose
+<strong>Reset layout</strong> in the <strong>Window</strong> menu. The same menu lists every dock, so
+you can show a dock again after closing it with the button on its title bar.
+<a href="../save-a-session/#find-the-settings-file">Find the settings file</a> says where
+the saved layout is kept.</p>
 <h2 id="read-a-failure">Read a failure<a class="headerlink" href="#read-a-failure" title="Permanent link">&para;</a></h2>
 <p>The session leaves out a view that asks for a placement Qt doesn't show, or
 that isn't the type its placement needs, and the build summary lists it under
