@@ -21,9 +21,11 @@ the other components read it as it changes.
 ## Can a shared value be optional?
 
 No. The session decides what exists by reading types, before it builds
-anything. A `provides` method returning `Roi | None` shares a value of type
-`Roi | None`, not `Roi`. A component asking for `Roi | None` looks for a
-`Roi`, so it never receives the value:
+anything, and `Roi | None` is a type of its own. A `provides` method returning
+`Roi | None` shares a value under that type, which the session reports as a
+value no component asks for, even when one asks for `Roi | None`. The value
+still reaches a component while it is a `Roi`, but on a run where the method
+returns `None`, a component asking for `Roi` fails its `setup`:
 
 ```python
 @provides
@@ -58,19 +60,35 @@ Give each value its own type.
 No, not the types the session reads to decide what to pass. It reads those
 annotations while the program runs, and a type imported only under
 `if TYPE_CHECKING:`, a block that only type checkers read, isn't there when
-the session looks.
+the session looks. What happens then depends on where the type is used:
 
-What happens then depends on where the type is used. In the constructor or
-`setup` of a component, the session leaves that component out and logs why:
-
-```text
-TypeError: cannot read the constructor of MotorPresenter: 'Calibration' is not
-available at runtime.
+```d2 title="A type imported only for type checkers"
+...@diagrams/style
+direction: down
+type: "a type imported\nunder if TYPE_CHECKING" {class: step}
+where: "where is it used?" {shape: diamond}
+component: "component left out,\nerror logged" {
+  class: failed
+  tooltip: The session logs a TypeError naming the type, and builds the rest.
+}
+stops: "build stops\nwith a NameError" {class: failed}
+works: "works as usual" {class: step}
+type -> where
+where -> component: "constructor or setup\nof a component"
+where -> stops: "return type of a provides\nmethod, or the session\nclass body"
+where -> works: "anywhere else"
 ```
 
-In the return type of a `provides` method or in the session class body, the
-build stops with a `NameError`. Either way, import those types with a normal
-import. Everywhere else, `TYPE_CHECKING` imports work as usual.
+A component left out shows in the log like this:
+
+```text
+Failed to build presenter 'motor_ctrl': cannot read the constructor of
+MotorPresenter: 'Calibration' is not available at runtime. A type a component
+is injected by must be imported outside 'if TYPE_CHECKING', because the graph
+evaluates the annotation.
+```
+
+Either way, import those types with a normal import.
 
 ## Can I run two frontends?
 
@@ -81,4 +99,22 @@ because each registers an application under its own name.
 ## What happens when a service crashes?
 
 The session logs it and emits a signal, but nothing restarts the service, so
-it stays down. See [Services](services.md#unexpected-exits).
+it stays down:
+
+```d2 title="A launched service that stops on its own"
+...@diagrams/style
+direction: right
+exit: "the service\nexits" {class: failed}
+log: "ERROR in the log:\nexit code and\nlast lines of output" {class: step}
+signal: "sig_exited\nname and code" {
+  class: step
+  tooltip: Emitted from the thread that reads the service's output.
+}
+down: "the service\nstays down" {
+  class: step
+  tooltip: Reads and writes on its devices raise TimeoutError after ten seconds, until the service is back.
+}
+exit -> log -> signal -> down
+```
+
+See [Services](services.md#unexpected-exits).
