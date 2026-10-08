@@ -5,7 +5,61 @@ icon: lucide/layout-dashboard
 # How to place a view in the window
 
 This page shows how to choose where a view of a Qt session appears: in a dock,
-in the centre, in a menu or in a toolbar.
+in the centre, in a menu or in a toolbar. Step through the parts of the main
+window, and point at one to read what goes there:
+
+```d2 title="Where each placement puts a view"
+...@diagrams/style
+window: "main window" {
+  grid-rows: 5
+  grid-gap: 10
+  menu: "menu bar: MenuItem(\"Acquire\")" {
+    class: step
+    width: 520
+    tooltip: The session creates the menu the first time a view names it, and adds every later view naming it to the same one.
+  }
+  toolbar: "toolbar: ToolBarItem(\"Acquisition\")" {
+    class: step
+    width: 520
+    tooltip: The session creates the toolbar the first time a view names it, and adds every later view naming it to the same one.
+  }
+  top_dock: "Dock(\"top\")" {
+    class: step
+    width: 520
+  }
+  middle: "" {
+    grid-columns: 3
+    grid-gap: 10
+    style.opacity: 0
+    left_dock: "Dock(\"left\")" {class: step; height: 140}
+    central: "Central()" {
+      class: step
+      width: 240
+      tooltip: When several views ask for Central, the centre shows them as tabs, each titled with its view's name.
+    }
+    right_dock: "Dock(\"right\")" {
+      class: step
+      tooltip: Docks on the same edge with the same group open as tabs.
+    }
+  }
+  bottom_dock: "Dock(\"bottom\")" {
+    class: step
+    width: 520
+  }
+}
+scenarios: {
+  menu: {window.menu.class: current}
+  toolbar: {window.toolbar.class: current}
+  docks: {
+    window.top_dock.class: current
+    window.middle.left_dock.class: current
+    window.middle.right_dock.class: current
+    window.bottom_dock.class: current
+  }
+  central: {window.middle.central.class: current}
+}
+```
+
 [How a frontend shows a session on screen](../explanation/frontends.md)
 explains what a [placement](../explanation/glossary.md#placement) is and how
 a frontend checks it.
