@@ -302,6 +302,9 @@ def test_the_window_menu_brings_back_a_closed_dock(
     checked = action.isChecked()
     action.trigger()
 
+    bar = app.main_window.menuBar()
+    assert bar is not None
+    assert menu.menuAction() in bar.actions()
     assert menu.title() == "Window"
     assert not checked
     assert not dock.isHidden()
