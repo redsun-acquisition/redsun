@@ -58,10 +58,9 @@ steps: {
 ## The manifest
 
 A plugin lists what it offers in a [manifest](glossary.md#manifest), a YAML
-file inside the package. The package registers the manifest in the entry
-point group `redsun.plugins`, and the name of the entry point is the
-`plugin_name` a session file uses. A manifest has five groups; point at one to
-read what it holds:
+file in the package registered in the entry point group `redsun.plugins`
+under the `plugin_name` a session file uses. Point at one of its five groups
+to read what it holds:
 
 ```d2 title="The groups of a manifest"
 ...@diagrams/style
@@ -82,22 +81,12 @@ services: "services\nid -> how to launch it" {
 }
 ```
 
-The three [layers](glossary.md#layer) and `providers` map an id to a class.
-The session imports a class only when a session names it, so a plugin with Qt
-views costs nothing to a session that doesn't use them. Each method a
-[provider](glossary.md#provider) marks with [`provides`][redsun.provides]
-shares a [value](glossary.md#shared-value), and `services` lists the
-[services](services.md) a session can launch.
-
-When a session reads a manifest, it checks it against a schema and leaves out
-the whole manifest when it doesn't validate. An entry of a session file that
-can't be resolved is left out on its own, and the session builds without it.
-[ADR 14](decisions/0014-typed-session-files-and-manifests.md) records why both
-files are typed.
-
+A class is imported only when a session names it, so a plugin's Qt views cost
+nothing to a session that doesn't use them. A manifest that fails its schema
+is left out whole; a session-file entry that can't be resolved is left out on
+its own ([ADR 14](decisions/0014-typed-session-files-and-manifests.md)).
 [How to package components as a plugin](../how-to/package-a-plugin.md) writes
-and registers a manifest, and [Plugin manifest](../reference/plugin-manifest.md)
-lists every key.
+one, and [Plugin manifest](../reference/plugin-manifest.md) lists every key.
 
 ## Components from a file and from a class
 
