@@ -85,6 +85,7 @@ through what each button does to the engine and to the futures kept:
 
 ```d2 title="Start, pause and stop a continuous plan"
 ...@diagrams/style
+label: "A plan starts only from idle, because run refuses a second plan while a Future is kept."
 direction: down
 idle: "idle\nno Future kept" {
   class: step
@@ -102,23 +103,27 @@ running -> finished: "toggle off: stop(),\nor the plan ends or fails" {
 paused -> finished: "toggle off: stop()" {style.opacity: 0}
 steps: {
   1: {
+    label: "Toggle on calls run(). The engine runs the plan and watch keeps the Future it returned."
     running.class: current
     running.tooltip: The engine runs the plan and watch keeps the Future it returned.
     (idle -> running)[0].style.opacity: 1
   }
   2: {
+    label: "Pause calls request_pause(defer=True), and the plan pauses at its next checkpoint. Its Future completes with RunEngineInterrupted, but the engine is paused, so finished sends nothing."
     running.class: step
     paused.class: current
     paused.tooltip: The plan pauses at its next checkpoint. Its Future completes with a RunEngineInterrupted exception, and the engine stays in the state paused, so finished sends nothing.
     (running -> paused)[0].style.opacity: 1
   }
   3: {
+    label: "Resume calls resume(), which returns a new Future for watch to keep. The plan carries on from the checkpoint."
     paused.class: step
     running.class: current
     running.tooltip: resume returns a new Future, which watch keeps. The plan starts again from the checkpoint.
     (paused -> running)[0].style.opacity: 1
   }
   4: {
+    label: "Toggle off calls stop(), from running or paused. finished sends sig_finished once the last Future kept is complete and the engine isn't paused, so once for each plan."
     running.class: step
     finished.class: current
     finished.tooltip: stop returns a Future that completes once the plan has cleaned up. The stop button stays enabled while the plan is paused, so you stop a paused plan the same way. finished sends sig_finished when the last Future kept is complete and the engine is not paused, so once for each plan.

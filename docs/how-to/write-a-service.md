@@ -45,6 +45,7 @@ local machine. Step through what the session and the service tell each other:
 
 ```d2 title="A launched service, from start to stop"
 ...@diagrams/style
+label: "In its first build step, the session starts the service as a process of its own, with python -m and the module the declaration names."
 shape: sequence_diagram
 session: session {
   class: step
@@ -66,11 +67,11 @@ session -> service: "close standard input,\non every platform" {
 }
 service -> service: "clean up and exit" {style.opacity: 0}
 steps: {
-  1: {(service -> session)[0].style.opacity: 1}
-  2: {(session -> device)[0].style.opacity: 1}
-  3: {(device -> service)[0].style.opacity: 1}
-  4: {(session -> service)[1].style.opacity: 1}
-  5: {(service -> service)[0].style.opacity: 1}
+  1: {label: "The session waits until the service prints its ready text."; (service -> session)[0].style.opacity: 1}
+  2: {label: "The session builds the device with the service's prefix, then connects it."; (session -> device)[0].style.opacity: 1}
+  3: {label: "The device reads and writes the process variables under that prefix."; (device -> service)[0].style.opacity: 1}
+  4: {label: "At shutdown, after every component, the session closes the service's standard input. This works the same on every platform."; (session -> service)[1].style.opacity: 1}
+  5: {label: "The service cleans up and exits."; (service -> service)[0].style.opacity: 1}
 }
 ```
 

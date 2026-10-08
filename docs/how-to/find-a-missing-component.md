@@ -90,6 +90,7 @@ shape to read the record it leaves in the log:
 
 ```d2 title="One failure leading to others"
 ...@diagrams/style
+label: "One service fails to start, and the log records each failure it causes, in order."
 direction: right
 stage_ioc: "stage_ioc\nservice" {class: process}
 stage: "stage\ndevice" {class: step}
@@ -98,15 +99,18 @@ stage_ioc -> stage: "prefix"
 stage -> wire: "signal"
 steps: {
   1: {
+    label: "The service exits before it is ready: Failed to start service 'stage_ioc': exited with code 1 before it was ready"
     stage_ioc.class: failed
     stage_ioc.shape: hexagon
     stage_ioc.tooltip: "Failed to start service 'stage_ioc': exited with code 1 before it was ready"
   }
   2: {
+    label: "The device needs that service, so it isn't built: Failed to build device 'stage': service 'stage_ioc' was not started"
     stage.class: failed
     stage.tooltip: "Failed to build device 'stage': service 'stage_ioc' was not started"
   }
   3: {
+    label: "The connection needs that device, so it isn't made: Not connecting stage.readback -> panel.on_position: component 'stage' was not built"
     wire.class: failed
     wire.tooltip: "Not connecting stage.readback -> panel.on_position: component 'stage' was not built"
   }

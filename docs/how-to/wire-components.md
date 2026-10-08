@@ -94,20 +94,8 @@ direction: right
 det_widget: "det_widget\nDetectorView" {class: step}
 det_ctrl: "det_ctrl\nDetectorPresenter" {class: step}
 img_widget: "img_widget\nImageView" {class: step}
-det_widget -> det_ctrl: "sig_property_changed\n-> configure" {
-  style.opacity: 0
-}
-det_ctrl -> img_widget: "sig_new_data\n-> update_layers" {
-  style.opacity: 0
-}
-steps: {
-  1: {
-    (det_ctrl -> img_widget)[0].style.opacity: 1
-  }
-  2: {
-    (det_widget -> det_ctrl)[0].style.opacity: 1
-  }
-}
+det_widget -> det_ctrl: "sig_property_changed\n-> configure"
+det_ctrl -> img_widget: "sig_new_data\n-> update_layers"
 ```
 
 ## Declare the connections
@@ -228,6 +216,7 @@ two cases:
 
 ```d2 title="A plain slot and a coroutine slot"
 ...@diagrams/style
+label: "A plain slot runs on the thread that emitted, and the emitter carries on once it returns."
 direction: right
 emit: "a signal\nis emitted" {class: step}
 plain: "the plain slot runs\non the same thread" {class: step}
@@ -241,6 +230,7 @@ emit -> task: queued {style.opacity: 0}
 task -> error: "if it raises" {style.opacity: 0}
 scenarios: {
   coroutine: {
+    label: "A coroutine slot is queued as a task on redsun's shared event loop, and the emitter carries on at once. If it raises, the error is logged and later emissions are still delivered."
     plain.class: hidden
     (emit -> plain)[0].style.opacity: 0
     (plain -> next)[0].style.opacity: 0
@@ -302,8 +292,8 @@ component owns the signal.
 ## Choose the thread a slot runs on
 
 A slot runs on the thread that emitted, unless something says otherwise. The
-session asks three places in turn and takes the first answer. Step through
-them, and point at one to read what it covers:
+session asks three places in turn and takes the first answer. Point at one
+to read what it covers:
 
 ```d2 title="Where the session looks for a slot's thread"
 ...@diagrams/style
@@ -327,12 +317,6 @@ emitted: "the thread\nthat emitted" {
 method -> cls: "not set"
 cls -> frontend: "not set"
 frontend -> emitted: "no answer"
-scenarios: {
-  method: {method.class: current}
-  cls: {cls.class: current}
-  frontend: {frontend.class: current}
-  emitted: {emitted.class: current}
-}
 ```
 
 The frontend answers through
