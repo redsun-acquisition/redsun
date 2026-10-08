@@ -92,6 +92,25 @@ class FragileApp(QtSession):
     fragile: AsView[Fragile]
 
 
+class FragileByProperty(QWidget):
+    def __init__(self, name: str, parent: QWidget, fail: bool = False) -> None:
+        if fail:
+            raise RuntimeError("no detector attached")
+        super().__init__(parent)
+        self.name = name
+
+    @property
+    def placement(self) -> Placement:
+        return Dock("right")
+
+
+class FragileByPropertyApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "fragile-property-session"}
+
+    panel: AsView[Panel]
+    fragile: AsView[FragileByProperty]
+
+
 class AddsItsOwnDock(Panel):  # type: ignore[misc]
     placement: Placement = Dock("right")
 
@@ -194,16 +213,17 @@ def test_a_layout_saved_before_placements_were_recorded_is_restored(
     assert second.main_window.dockWidgetArea(_dock(second, "charts")) is LEFT
 
 
+@pytest.mark.parametrize("session", [FragileApp, FragileByPropertyApp])
 def test_a_view_that_fails_to_build_keeps_the_saved_layout(
-    qapp: QApplication, build: BuildSession
+    qapp: QApplication, build: BuildSession, session: type[QtSession]
 ) -> None:
-    """Restore the saved layout when a view that built before fails, its placeholder keeping its place."""
-    first = build(FragileApp)
+    """Restore the saved layout when a view that built before fails, its placement declared or answered by a property."""
+    first = build(session)
     first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
     first.save_layout()
     first.shutdown()
 
-    second = build(FragileApp, {"views": {"fragile": {"fail": True}}})
+    second = build(session, {"views": {"fragile": {"fail": True}}})
 
     assert "fragile" not in second.views
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT

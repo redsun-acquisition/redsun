@@ -178,7 +178,9 @@ that name for itself.
     declaration. This still works, but it is deprecated and will be removed
     in 0.16. The session can read such a placement only after it builds the
     view, so it checks it late, and if the view fails to build, no error
-    message appears in the window. Give `placement` in the declaration
+    message appears in the window. A saved window layout also ignores such a
+    placement, so changing what the property returns does not move the dock
+    until you choose **Reset layout**. Give `placement` in the declaration
     instead.
 
 ## Tab docks together

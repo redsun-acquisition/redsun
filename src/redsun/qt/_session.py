@@ -586,12 +586,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _layout_fingerprint(self) -> str:
         """Return a digest of where every view asks to be, which a saved layout is kept for.
 
-        A view that failed to build counts with the placement its declaration
-        holds, so one failing does not discard the saved layout.
+        Each view counts with the placement its declaration holds, so one that
+        fails to build does not discard the saved layout. A view whose class
+        answers `placement` from a property has none there, and changing what
+        the property answers keeps the saved layout.
         """
-        built = self.views
         placements = [
-            (name, declaration.placement or getattr(built.get(name), "placement", None))
+            (name, declaration.placement)
             for name, declaration in self.declarations.items()
             if declaration.kind is Layer.VIEW
         ]
