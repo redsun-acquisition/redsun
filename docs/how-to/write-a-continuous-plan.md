@@ -79,19 +79,57 @@ the toggle and one for the pause button, and stop the plan at shutdown:
 --8<-- "docs/examples/continuous_plan.py:presenter-slots"
 ```
 
-- The engine returns a `Future` for each plan it starts. `watch` keeps it in
-  `self.futures`, an empty set made in `__init__`, until it completes, and
-  `run` refuses a second plan while one is kept.
-- `request_pause(defer=True)` pauses at the next checkpoint of the plan.
-  Pausing completes the `Future` with a `RunEngineInterrupted` exception, and
-  the engine stays in the state `paused`. `resume` returns a new `Future`,
-  which `watch` keeps.
-- `stop` also returns a `Future`, which completes once the plan has cleaned up.
-  The stop button stays enabled while the plan is paused, so you stop a paused
-  plan the same way. `finished` sends `sig_finished` when the last `Future`
-  kept is complete and the engine is not paused, so once for each plan.
-- `request_pause` comes from `bluesky` without type annotations, so
-  `mypy --strict` reports it as `no-untyped-call`.
+The engine returns a `Future` for each plan it starts, and `watch` keeps it in
+`self.futures`, an empty set made in `__init__`, until it completes. Step
+through what each button does to the engine and to the futures kept:
+
+```d2 title="Start, pause and stop a continuous plan"
+...@diagrams/style
+direction: down
+idle: "idle\nno Future kept" {
+  class: step
+  tooltip: run refuses a second plan while a Future is kept, so a plan starts only from here.
+}
+running: "running\nits Future kept" {class: hidden}
+paused: "paused\nno Future kept" {class: hidden}
+finished: "sig_finished\nsent once" {class: hidden}
+idle -> running: "toggle on: run()" {style.opacity: 0}
+running -> paused: "Pause: request_pause(defer=True)" {style.opacity: 0}
+paused -> running: "Resume: resume()" {style.opacity: 0}
+running -> finished: "toggle off: stop(),\nor the plan ends or fails" {
+  style.opacity: 0
+}
+paused -> finished: "toggle off: stop()" {style.opacity: 0}
+steps: {
+  1: {
+    running.class: current
+    running.tooltip: The engine runs the plan and watch keeps the Future it returned.
+    (idle -> running)[0].style.opacity: 1
+  }
+  2: {
+    running.class: step
+    paused.class: current
+    paused.tooltip: The plan pauses at its next checkpoint. Its Future completes with a RunEngineInterrupted exception, and the engine stays in the state paused, so finished sends nothing.
+    (running -> paused)[0].style.opacity: 1
+  }
+  3: {
+    paused.class: step
+    running.class: current
+    running.tooltip: resume returns a new Future, which watch keeps. The plan starts again from the checkpoint.
+    (paused -> running)[0].style.opacity: 1
+  }
+  4: {
+    running.class: step
+    finished.class: current
+    finished.tooltip: stop returns a Future that completes once the plan has cleaned up. The stop button stays enabled while the plan is paused, so you stop a paused plan the same way. finished sends sig_finished when the last Future kept is complete and the engine is not paused, so once for each plan.
+    (running -> finished)[0].style.opacity: 1
+    (paused -> finished)[0].style.opacity: 1
+  }
+}
+```
+
+`request_pause` comes from `bluesky` without type annotations, so
+`mypy --strict` reports it as `no-untyped-call`.
 
 In `PlanView`, pass `create_plan_widget` a callback for each button, and
 update the plan widget when they are pressed and when the plan ends:
