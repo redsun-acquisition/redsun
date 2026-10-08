@@ -4,9 +4,9 @@ icon: lucide/file-code
 
 # How to write a session file
 
-Write a [session file](../explanation/glossary.md#session-file), a YAML file
-with the settings of a session, have an editor check it, and split it over
-several files.
+A [session file](../explanation/glossary.md#session-file) is a YAML file with
+the settings of a session. This page shows how to write one, have an editor
+check it, and split it over several files.
 
 ## Let your editor check it
 
@@ -56,7 +56,7 @@ class Simulation(QtSession):
 ```
 
 A subclass's sources come after its base class's. A source can also be a
-mapping, which is handy for one setting:
+mapping, which is handy for a single setting:
 
 ```python
 app = Simulation({"session": "morning-run"})
@@ -66,13 +66,14 @@ Layered files merge `wiring` by signal: a later file naming a new signal adds
 it, and naming one already wired replaces its slots. `pairs` adds the
 pairings of every file.
 
-Two rules stop a later source from changing what kind of session this is:
+To stop a later source from changing what kind of session this is,
 `schema_version`, `frontend` and `services.transport` must be the same in every
-source that sets them. And a component's entry is replaced whole: a later file
-naming `motor_ctrl` gives all of its settings.
+source that sets them. A later source also replaces a component's entry whole:
+a later file naming `motor_ctrl` gives all of its settings.
 
 A file that only makes sense layered over another, such as one holding a
-`presenters` section alone, is fine: only the merged result is checked.
+`presenters` section alone, is fine, because only the merged result is
+checked.
 
 ## Read a failure
 

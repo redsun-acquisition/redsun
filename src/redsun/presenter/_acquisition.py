@@ -142,12 +142,12 @@ class AcquisitionPresenter(Loggable):
 
     def setup(
         self,
-        providers: Mapping[str, HasPlans],
+        plan_sources: Mapping[str, HasPlans],
         callbacks: Mapping[str, CallbackType],
         paths: SessionPathProvider,
     ) -> None:
         """Gather the plans of every provider, the callbacks, and the path provider."""
-        for component in providers.values():
+        for component in plan_sources.values():
             for plan, entry in component.plan_map().items():
                 try:
                     self._specs[plan] = create_plan_spec(entry["plan"], self.devices)

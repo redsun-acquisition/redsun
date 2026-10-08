@@ -4,8 +4,8 @@ icon: lucide/download
 
 # Installation
 
-In this tutorial you make a project folder and install `redsun` in it. The
-tutorials that follow are written in that folder.
+In this tutorial you make a project folder and install `redsun` in it. You'll
+do all the tutorials that follow in that folder.
 
 ## Before you start
 
@@ -13,8 +13,8 @@ tutorials that follow are written in that folder.
 
     [`uv`](https://docs.astral.sh/uv/), which makes the project, installs the
     packages and runs the scripts. Its documentation shows [how to install
-    it](https://docs.astral.sh/uv/getting-started/installation/). You do not
-    need to install Python: `uv` fetches it.
+    it](https://docs.astral.sh/uv/getting-started/installation/). You don't
+    need to install Python yourself, because `uv` fetches it for you.
 
 ## 1. Make the project
 
@@ -29,10 +29,10 @@ uv init --bare --pin-python --python 3.11 my-microscope
 Initialized project `my-microscope` at `/home/you/my-microscope`
 ```
 
-The folder holds two files. `pyproject.toml` lists what the project needs,
+The new folder holds two files: `pyproject.toml` lists what the project needs,
 and `.python-version` says which Python runs it.
 
-Go into the folder. Every command of the tutorials is run from there:
+Go into the folder, since you run every command of the tutorials from there:
 
 ```bash
 cd my-microscope
@@ -48,7 +48,8 @@ uv add "redsun[pyqt]"
 ```
 
 `uv` makes a virtual environment in the folder, called `.venv`, and installs
-`redsun` in it. You never activate that environment: `uv run` uses it.
+`redsun` in it. You never need to activate that environment, because
+`uv run` uses it for you.
 
 ## 3. Check that it works
 
@@ -56,7 +57,7 @@ uv add "redsun[pyqt]"
 uv run python -c "import redsun; print(redsun.__version__)"
 ```
 
-It prints the version that was installed:
+The command prints the version you installed:
 
 ```text
 0.14.0
@@ -64,12 +65,12 @@ It prints the version that was installed:
 
 ## What you built
 
-A project folder, `my-microscope`, with `redsun` and `pyqt6` installed in an
-environment of its own.
+You made a project folder, `my-microscope`, with `redsun` and `pyqt6`
+installed in an environment of its own.
 
 ## Next steps
 
-- [Writing your first session](first-session.md) is the next tutorial: a
-  window with a button that moves a stage.
+- [Writing your first session](first-session.md) is the next tutorial, where
+  you build a window with a button that moves a stage.
 - [How to install redsun](../how-to/install-redsun.md) covers other tools,
   the other Qt binding, and the extras for storing data.

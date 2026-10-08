@@ -4,8 +4,8 @@ icon: lucide/share-2
 
 # How to share a value between components
 
-One component makes something, and others need it: a viewer model, a
-calibration, the readings of a motor. Share it as a
+When one component makes something that others need, such as a viewer model, a
+calibration or the readings of a motor, you share it as a
 [shared value](../explanation/glossary.md#shared-value), named by its type.
 
 ## Share it
@@ -36,7 +36,8 @@ class ImageView(QWidget):
 
 The session calls the method once, right after it makes the component, and
 gives every component that asks the same object. So return something the
-constructor already made: a value `setup` assigns later does not exist yet.
+constructor already made, because a value `setup` assigns later doesn't exist
+yet.
 
 ## Ask for it
 
@@ -48,13 +49,13 @@ class RoiView(QWidget):
         self._canvas = canvas
 ```
 
-Every component exists when `setup` runs, so it does not matter which one is
-declared first. If nothing shares a `Canvas`, the session does not start
-and names `RoiView` and the type.
+Every component exists when `setup` runs, so it doesn't matter which one is
+declared first. If nothing shares a `Canvas`, the session doesn't start and
+names `RoiView` and the type.
 
-A component may only ask for what its own [layer](../explanation/glossary.md#layer)
-or an earlier one shares. A presenter asking for something only a view shares
-is refused.
+A component can only ask for what its own
+[layer](../explanation/glossary.md#layer) or an earlier one shares, so the
+session refuses a presenter that asks for something only a view shares.
 
 ## Make it optional
 
@@ -70,9 +71,10 @@ you get `None`.
 
 ## Share a value no component owns
 
-A value that belongs to no component, such as a calibration loaded from a
-file, comes from a provider: an ordinary class whose `provides` methods share
-values before any component is made.
+A value that belongs to no component, such as a calibration loaded from a file,
+comes from a [provider](../explanation/glossary.md#provider). A provider is an
+ordinary class whose `provides` methods share values before any component is
+made.
 
 ```python
 from redsun import SessionConfig, provides
@@ -105,9 +107,9 @@ providers:
 
 ## Rules to know
 
-- The type is the key. Two components sharing the same type is an error, so
-  give distinct values distinct types.
-- A `provides` method returning `X | None` does not make an optional `X`. See
-  [Limits](../explanation/limits.md#a-shared-value-cannot-be-optional).
+- The type is the key. Two components can't share the same type, so give
+  distinct values distinct types.
+- A `provides` method returning `X | None` doesn't make an optional `X`. See
+  [Limitations](../explanation/limits.md#can-a-shared-value-be-optional).
 - Import the type normally, not under `if TYPE_CHECKING:`, since the session
   reads it while running.

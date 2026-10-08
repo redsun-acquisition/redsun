@@ -4,25 +4,26 @@ icon: lucide/play
 
 # How to run plans from the window
 
-Add the built-in acquisition stack to a session: a presenter that runs the
-plans your components offer, one at a time, and a view to choose a plan, fill
-its parameters, and run, pause and stop it.
+Add the built-in acquisition stack to a session, and you can run plans from
+the window. Its presenter runs the plans your components offer, one at a time,
+and its view is where you choose a plan, fill its parameters, and run, pause
+and stop it.
 [ADR 22](../explanation/decisions/0022-a-built-in-acquisition-stack.md)
 explains the design.
 
 ## Prerequisites
 
-Components offering plans: anything with a `plan_map` method, which
-[`HasPlans`][redsun.HasPlans] describes. The Python blocks below are parts of
-one script; the whole script is at the end.
+You need components offering plans, which means anything with a `plan_map`
+method, as [`HasPlans`][redsun.HasPlans] describes. The Python blocks below are
+parts of one script, and the whole script is at the end.
 
 ```{.python}
 --8<-- "docs/examples/acquisition.py:plans"
 ```
 
 The presenter gathers the plans of every such component when the session sets
-it up. A plan whose signature no plan widget can show is left out with a
-warning naming it.
+it up. It leaves out, with a warning naming it, a plan whose signature no plan
+widget can show.
 
 ## Declare it in a session file
 
@@ -63,6 +64,8 @@ The pairing makes the twelve links between the two. Written out, they are:
 
 ## Declare it in Python
 
+In a session class, declare both components and pair them in `wire()`:
+
 ```{.python}
 --8<-- "docs/examples/acquisition.py:session"
 ```
@@ -72,28 +75,27 @@ The pairing makes the twelve links between the two. Written out, they are:
 ![The acquisition view of the example session: the walk plan chosen, the base
 directory, the motor to move and the plan's parameters](images/acquisition.png)
 
-- Choose a plan in the list at the top; the button beside it shows the plan's
-  documentation. The plan's parameters, devices and the callbacks to attach
-  follow below.
+- Choose a plan in the list at the top, and the button beside it shows the
+  plan's documentation. The plan's parameters, devices and the callbacks to
+  attach follow below.
 - Run starts the plan. The view shows it running once the presenter reports
   that it started, and Run becomes Stop. A plan marked
-  `@continuous(pausable=True)` also has Pause, which becomes Resume; see
+  `@continuous(pausable=True)` also has Pause, which becomes Resume. See
   [Write a plan that runs until stopped](write-a-continuous-plan.md).
 - Run stays disabled while a list of devices the plan needs is empty.
-- When a plan raises, its page shows "failed:" and the error until it runs
-  again, and the session log holds the full traceback.
+- When a plan raises, its plan widget shows "failed:" and the error until it
+  runs again, and the session log holds the full traceback.
 - Each run's files are named after its plan. "Choose root..." sets the
   directory runs write under, and "Browse root" opens it in the system's file
   browser.
-- The plan chosen last is offered again in the next session, kept in the
-  session's [`Settings`][redsun.Settings] under the view's name.
+- The session's [`Settings`][redsun.Settings] keep the plan you chose last,
+  under the view's name, and the next session offers it again.
 
 ## Share the engine
 
-The presenter owns the session's [`RunEngine`][redsun.engine.RunEngine] and
-its [`Deferrals`][redsun.engine.Deferrals], and shares both: any component
-that asks for a `RunEngine` or `Deferrals` in `setup` receives the
-presenter's own.
+The presenter owns the session's [`RunEngine`][redsun.engine.RunEngine] and its
+[`Deferrals`][redsun.engine.Deferrals], and shares both. Any component that
+asks for a `RunEngine` or `Deferrals` in `setup` receives the presenter's own.
 
 ```python
 class MyController:
@@ -102,11 +104,13 @@ class MyController:
         self.deferrals = deferrals
 ```
 
-A session holds one acquisition presenter: two would both share a
-`RunEngine`, and the session refuses to build.
+!!! warning "A second acquisition presenter stops the session from building"
 
-The presenter also passes on the engine's locks. The light view and the
-light presenter can take them through a pairing each:
+    Two acquisition presenters would both share a `RunEngine`, and the session
+    refuses to build. Declare one.
+
+The presenter also passes on the engine's locks. The light view and the light
+presenter can take them through a pairing each:
 
 ```yaml
 pairs:
@@ -127,7 +131,7 @@ pairs:
 A component whose plans wait for the user, through an
 [`ActionManager`][redsun.engine.actions.ActionManager] held as `actions`, is a
 [`HasActions`][redsun.HasActions]. The presenter passes on the state of every
-such component's actions, so their buttons on the plan's page follow them with
+such component's actions, so their buttons in the plan widget follow them with
 no link of their own, and a press reaches the component of the running plan.
 
 ## The example in full

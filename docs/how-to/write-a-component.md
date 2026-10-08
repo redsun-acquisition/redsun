@@ -93,6 +93,9 @@ class StageView(QWidget):
 
 ## Add them to a session
 
+Declare each component on a session class, and connect the view's button to
+the presenter, and the presenter back to the view, in `wire`:
+
 ```python
 from collections.abc import Iterator
 
@@ -123,7 +126,7 @@ class MyApp(QtSession):
     stage_ctrl: Annotated[AsPresenter[StagePresenter], Declare(step=0.5)]
 ```
 
-`Declare` wins over the file.
+If the file sets the same argument, `Declare` wins.
 
 A component reads its arguments from the file under its own name. To read
 them under another key, use `FromConfig`:
@@ -142,8 +145,8 @@ devices:
     units: um
 ```
 
-The device is still called `stage`. Only the key it is read from changes,
-which helps when the key is not a valid Python name.
+The device is still called `stage`. Only the key its arguments are read from
+changes, which helps when that key isn't a valid Python name.
 
 `Alias` gives the component another name:
 
@@ -155,14 +158,14 @@ class MyApp(QtSession):
     stage_ctrl: Annotated[AsPresenter[StagePresenter], Alias("ctrl")]
 ```
 
-The name is what the component receives, what the session lists it under, and
-what a session file wires it by. The attribute you declared it under still
-holds it, and its arguments are still read from the entry named after that
-attribute, here `stage_ctrl`.
+The alias is the name the component receives, the name the session lists it
+under and the name a session file wires it by. The attribute you declared it
+under still holds it, and its arguments are still read from the entry named
+after that attribute, here `stage_ctrl`.
 
 ## Use another component
 
-A constructor runs before the other components exist, so ask for another
+A constructor runs before the other components exist, so you ask for another
 component, or a value it shares, in `setup`:
 
 ```python
@@ -183,12 +186,13 @@ class RoiPresenter:
 
 `MotorReadings` stands for any class of yours that another component shares.
 
-See [Share a value](share-a-value.md), and [Questions](../explanation/questions.md)
-to ask for "every component that can do X".
+To share a value, see [Share a value](share-a-value.md). To ask for "every
+component that can do X", see [Questions](../explanation/questions.md).
 
 ## Clean up
 
-Define `shutdown`, plain or `async`. The session calls it when it shuts down:
+Define `shutdown`, plain or `async`, and the session calls it when it shuts
+down:
 
 ```python
 class StagePresenter:
@@ -198,7 +202,7 @@ class StagePresenter:
 
 ## Test it
 
-A component takes plain values, so a test makes it directly:
+A component takes plain values, so a test can make it directly:
 
 ```python
 from redsun.aio import run_coro
@@ -214,14 +218,22 @@ def test_nudge_moves_by_one_step() -> None:
     assert run_coro(stage.position.get_value()) == 2.0
 ```
 
-To test it inside a session without a window, build a plain
-[`Session`][redsun.Session]: it makes every component and shows nothing. Give
-it `mock: true` and its devices connect as `connect(mock=True)` does, with no
-service launched:
+To test it inside a session without a window, declare the same components on
+a plain [`Session`][redsun.Session], which makes every component and shows
+nothing. Give it `mock: true`, and its devices connect as
+`connect(mock=True)` does, with no service launched:
 
 ```python
+from redsun import AsDevice, AsPresenter, Session
+
+
+class MyHeadlessApp(Session):
+    stage: AsDevice[MyStage]
+    stage_ctrl: AsPresenter[StagePresenter]
+
+
 def test_the_session_builds_without_hardware() -> None:
-    app = MyApp({"mock": True}).build()
+    app = MyHeadlessApp({"mock": True}).build()
 
     assert set(app.devices) == {"stage"}
     app.shutdown()

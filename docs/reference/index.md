@@ -4,8 +4,9 @@ icon: lucide/book-open
 
 # Reference
 
-Technical reference material: the glossary, the files a session reads, the
-variables it sets, the API and the release notes.
+Look things up here: what a word means, every key of the files a session
+reads, the variables it sets, where it writes its logs, the API and the
+release notes.
 
 ### Glossary
 
@@ -50,7 +51,7 @@ variables it sets, the API and the release notes.
 
 ### API by module
 
-Look up a class or a function by the module it is imported from.
+Find a class or a function by the module you import it from.
 
 - `redsun`: everything a component or a session imports
     - [`redsun.aio`](api/aio.md): run a coroutine on the event loop the

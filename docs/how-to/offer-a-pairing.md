@@ -4,16 +4,16 @@ icon: lucide/link
 
 # How to offer a pairing
 
-A presenter and a view written for each other can be connected with one
-line in a session file, `pairs: - [view, presenter]`, instead of one line
-per link. This page is for the author of the two components.
+A presenter and a view written for each other can connect with one line in a
+session file, `pairs: - [view, presenter]`, instead of one line per link. This
+page is for the author of the two components.
 [ADR 23](../explanation/decisions/0023-pairing-two-components.md) explains
 the design.
 
 ## Name the signal on each slot
 
-Give each slot the attribute name of the signal of the other component
-that should reach it, with `signal` on [`slot`][redsun.slot]:
+Give each slot the attribute name of the signal of the other component that
+should reach it, with `signal` on [`slot`][redsun.slot]:
 
 ```python
 from psygnal import Signal
@@ -37,8 +37,8 @@ class MyView(QWidget):
 ```
 
 A slot reached by several signals takes a tuple,
-`@slot(signal=("sig_moved", "sig_homed"))`. A slot without `signal` is left
-out of a pairing, and is still connected by a link a session lists.
+`@slot(signal=("sig_moved", "sig_homed"))`. A slot without `signal` stays out
+of a pairing, but a link you list in the session still connects it.
 
 ## Pair them in a session
 
@@ -63,7 +63,8 @@ def wire(self) -> Iterator[Link]:
 ```
 
 Each signal of one component reaches each slot of the other naming it, both
-ways. Only `psygnal` signals are matched; link a device signal on its own.
+ways. Only [`psygnal`](../explanation/glossary.md#psygnal) signals are matched,
+so link a device signal on its own.
 
 ## What the session checks
 
@@ -79,8 +80,8 @@ ways. Only `psygnal` signals are matched; link a device signal on its own.
 
 ## Name a signal for what it does
 
-A pairing connects every name that matches, in both directions. A
-component paired with one it was not written for connects whatever happens
-to share a name. Give a signal a name that says what it does
-(`sig_stop_device`, not `sig_stop`, for a signal stopping one device), pair
-components written for each other, and link the rest one by one.
+A pairing connects every name that matches, in both directions, so a component
+paired with one it wasn't written for connects whatever happens to share a
+name. Give a signal a name that says what it does (`sig_stop_device`, not
+`sig_stop`, for a signal stopping one device), pair components written for
+each other, and link the rest one by one.

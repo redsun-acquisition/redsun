@@ -4,10 +4,10 @@ icon: lucide/arrow-right-left
 
 # How to migrate from 0.13
 
-The next release replaces the container layer (`redsun.containers`,
-`redsun.virtual`, `AppContainer`) with the session layer that 0.13 did not
-ship. Nothing of the old layer is kept under its old name. This page lists
-each change and what to write instead.
+Release 0.14 replaced the container layer of 0.13 (`redsun.containers`,
+`redsun.virtual`, `AppContainer`) with sessions. Nothing of the old layer is
+kept under its old name, so this page lists each change and what to write
+instead.
 
 ## Imports
 
@@ -58,8 +58,8 @@ class MyApp(QtSession):
 
 ## Presenters
 
-A presenter no longer starts with `(name, devices)`, and inherits nothing. The
-session calls it with every argument by keyword, and fills each parameter by
+A presenter no longer starts with `(name, devices)`, and it inherits nothing. The
+session calls it with every argument by keyword and fills each parameter by
 type:
 
 ```python
@@ -107,8 +107,8 @@ class MotorView(QWidget):
         self.name = name
 ```
 
-`ViewPosition.CENTER` is `Central()`. A view's slots run on the main thread,
-as `QtView`'s did.
+`ViewPosition.CENTER` is `Central()`. A view's slots still run on the main
+thread, as `QtView`'s did.
 
 ## Sharing values between components
 
@@ -138,7 +138,7 @@ def setup(self, readings: MotorReadings) -> None:
     self.readings = readings
 ```
 
-`try_require(KEY)` is a parameter `x: X | None = None`. See
+`try_require(KEY)` becomes a parameter `x: X | None = None`. See
 [Share a value](share-a-value.md).
 
 The keys `redsun.path_provider.PATH_PROVIDER`, `redsun.catalog.CATALOG` and
@@ -148,10 +148,10 @@ from the component that [shares it](change-a-setting-while-a-plan-runs.md).
 
 ## Wiring
 
-`wire` no longer connects anything itself: it is a generator that yields each
+`wire` no longer connects anything itself. It's a generator that yields each
 link as a signal and the slot it reaches, and the session makes the
-connection. `connect`, `subscribe` and `connect_paths` are gone; a `psygnal`
-signal and an `ophyd-async` device signal are yielded the same way, and the
+connection. `connect`, `subscribe` and `connect_paths` are gone. You yield a
+`psygnal` signal and an `ophyd-async` device signal the same way, and the
 session tells them apart:
 
 ```python
@@ -190,8 +190,8 @@ The virtual container's other members moved too:
 | `register_callbacks` | a component that is a `DocumentRouter` is collected; ask for `Mapping[str, CallbackType]` in `setup` |
 | `register_signals`, `signals`, `find_signals` | removed |
 
-A link to a component that failed to build is skipped and logged, rather than
-raising.
+The session skips and logs a link to a component that failed to build, instead
+of raising.
 
 ## Hooks
 
@@ -239,7 +239,7 @@ class MyApp(Session):
 ```
 
 A service without a module is `Attach("BL01:")`. Services start in the first
-build step; `start_services` can no longer be called before `build`.
+build step, so you can no longer call `start_services` before `build`.
 
 ## Session files
 
@@ -287,10 +287,10 @@ def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
 - `wait_for_actions` never timed out, and still does not: the argument is the
   time between two checkpoints.
 - `wait_for_actions` raises `ValueError` when `events` is empty.
-- `actions` is an `ActionManager` from `redsun.engine.actions`, made by whoever owns
-  the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
-- `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None` where it
-  defaulted to `("On", "Off")`.
+- `actions` is an `ActionManager` from `redsun.engine.actions`, made by
+  whoever owns the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
+- `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None`
+  where it defaulted to `("On", "Off")`.
 - `create_plan_spec` raises `ValueError` for a plan declaring two actions of
   one name.
 

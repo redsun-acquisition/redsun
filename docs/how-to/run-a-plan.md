@@ -4,16 +4,55 @@ icon: lucide/play
 
 # How to run a plan from a presenter
 
-Offer a [plan](../explanation/glossary.md#plan) from a component, run it on a
-[`RunEngine`](../explanation/glossary.md#runengine) in a presenter, and show
-its [plan widget](../explanation/glossary.md#plan-widget) in a view.
+Running a [plan](../explanation/glossary.md#plan) takes three components: one
+offers the plan, a presenter runs it on a
+[`RunEngine`](../explanation/glossary.md#runengine), and a view shows its
+[plan widget](../explanation/glossary.md#plan-widget). Step through what the
+three components of this guide do, from the build to the end of a plan:
+
+```d2 title="From setup to a finished plan"
+...@diagrams/style
+shape: sequence_diagram
+plan_view: "plan_view\nPlanView" {class: step}
+plan_ctrl: "plan_ctrl\nPlanPresenter" {
+  class: step
+  tooltip: Owns the RunEngine.
+}
+ctrl: "ctrl\nMyController" {
+  class: step
+  tooltip: Offers its plans through plan_map.
+}
+motor: "motor\nMyMotor" {class: step}
+plan_ctrl -> ctrl: "setup: plan_map()"
+plan_view -> ctrl: "setup: plan_map(),\nthen a plan widget each" {
+  style.opacity: 0
+}
+plan_view -> plan_ctrl: "Run pressed: the view disables\nitself, sig_run(plan, values)" {
+  style.opacity: 0
+}
+plan_ctrl -> motor: "the RunEngine runs the\nplan, which moves the motor" {
+  style.opacity: 0
+}
+plan_ctrl -> plan_view: "sig_finished, whether the\nplan succeeded or failed" {
+  style.opacity: 0
+}
+plan_view -> plan_view: "enable the view" {style.opacity: 0}
+steps: {
+  1: {(plan_view -> ctrl)[0].style.opacity: 1}
+  2: {(plan_view -> plan_ctrl)[0].style.opacity: 1}
+  3: {(plan_ctrl -> motor)[0].style.opacity: 1}
+  4: {(plan_ctrl -> plan_view)[0].style.opacity: 1}
+  5: {(plan_view -> plan_view)[0].style.opacity: 1}
+}
+```
+
 [How presenters run plans](../explanation/plans.md) explains how the three
 components work together.
 
 ## Prerequisites
 
-A Qt session with a device for the plan to move. Here it is `MyMotor`, a
-device with a `position` signal. The tutorial
+You need a Qt session with a device for the plan to move. Here it is `MyMotor`,
+a device with a `position` signal. The tutorial
 [Building controls for a plan](../tutorials/plan-controls.md) builds the same
 three components one step at a time.
 
@@ -47,12 +86,12 @@ class MyController:
         return {"walk": {"plan": self.walk}}
 ```
 
-Annotate every parameter with a type a plan widget can show; the list is in
+Annotate every parameter with a type a plan widget can show. The list is in
 [How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read),
 and [How to choose the inputs of a plan](choose-plan-inputs.md) shows the
-inputs a few signatures get.
-A device parameter takes a device class or a runtime-checkable protocol, and
-the user chooses among the devices of the session that match it.
+inputs a few signatures get. A device parameter takes a device class or a
+runtime-checkable protocol, and the user chooses among the devices of the
+session that match it.
 
 ## Run them in a presenter
 
@@ -87,8 +126,8 @@ class PlanPresenter(Loggable):
         self.plans: dict[str, PlanEntry] = {}
         self.specs: dict[str, PlanSpec] = {}
 
-    def setup(self, providers: Mapping[str, HasPlans]) -> None:
-        for component in providers.values():
+    def setup(self, plan_sources: Mapping[str, HasPlans]) -> None:
+        for component in plan_sources.values():
             for plan, entry in component.plan_map().items():
                 try:
                     self.specs[plan] = create_plan_spec(entry["plan"], self.devices)
@@ -105,12 +144,11 @@ class PlanPresenter(Loggable):
         future.add_done_callback(lambda _: self.sig_finished.emit())
 ```
 
-- `providers` is answered with every component that satisfies `HasPlans`, by
-  name. See [Questions](../explanation/questions.md).
+- The session answers `plan_sources` with every component that satisfies
+  `HasPlans`, by name. See [Questions](../explanation/questions.md).
 - Catching `UnresolvableAnnotationError` leaves out a plan whose parameters no
-  plan widget can show, and `ValueError` one declaring two actions of one
-  name. The other plans are kept.
-- `sig_finished` is sent when the plan ends, whether it succeeded or failed.
+  plan widget can show, and catching `ValueError` leaves out one declaring two
+  actions of one name. The other plans stay.
 
 To run the plans with document callbacks, ask `setup` for
 `callbacks: Mapping[str, CallbackType]` as well, and pass each one to
@@ -144,8 +182,10 @@ class PlanView(QWidget):
         layout.addWidget(self.pages)
         self.widgets: dict[str, PlanWidget] = {}
 
-    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
-        for component in providers.values():
+    def setup(
+        self, plan_sources: Mapping[str, HasPlans], devices: DeviceMapping
+    ) -> None:
+        for component in plan_sources.values():
             for entry in component.plan_map().values():
                 try:
                     self.add_plan(create_plan_spec(entry["plan"], devices))
@@ -169,12 +209,14 @@ class PlanView(QWidget):
         self.setEnabled(True)
 ```
 
-The combo box chooses which plan widget the stacked widget shows.
-`PlanWidget.parameters` holds the values the user chose, with each device
-given by its name. The view stays disabled until the presenter reports that
-the plan ended.
+The combo box chooses which plan widget the stacked widget shows, and
+`PlanWidget.parameters` holds the values the user chose, with each device given
+by its name.
 
 ## Declare and link them
+
+Declare the four components, and link the view's run request to the presenter
+and the presenter's end-of-plan signal back to the view:
 
 ```python
 from collections.abc import Iterator
@@ -194,10 +236,10 @@ class MyApp(QtSession):
         yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
 ```
 
-No link names `ctrl`: the session hands it to the presenter and the view in
-`setup`. Another component with a `plan_map` adds its plans to both, with no
-change to either.
+No link names `ctrl`, because the session hands it to the presenter and the
+view in `setup`. Another component with a `plan_map` adds its plans to both,
+with no change to either.
 
-A plan that runs until the user stops it needs more from the presenter and
-the view; see
+A plan that runs until the user stops it needs more from the presenter and the
+view. See
 [How to write a plan that runs until stopped](write-a-continuous-plan.md).

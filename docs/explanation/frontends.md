@@ -4,131 +4,311 @@ icon: lucide/monitor
 
 # How a frontend shows a session on screen
 
-A [frontend](glossary.md#frontend) is what shows a session to a
-person: a desktop window, and in the future perhaps a web page. `redsun` ships
-one, for Qt.
+A [frontend](glossary.md#frontend) is what shows your session to a person: a
+desktop window today, and perhaps a web page in the future. `redsun` ships one
+frontend, for Qt.
 
-The core of `redsun` knows nothing about windows. It builds components and
-connects them. A frontend adds two things:
-
-- a session class to subclass, such as [`QtSession`][redsun.qt.QtSession],
-  which knows how to start the toolkit and put views on screen. It lives in
-  the package of the frontend, `redsun.qt`, because importing it imports the
-  toolkit, which a session without a window does not install;
-- a [`Frontend`][redsun.Frontend] class, which lists the
-  [placements](glossary.md#placement) it can show.
+The core of `redsun` knows nothing about windows. A frontend adds a session
+class to subclass, such as [`QtSession`][redsun.qt.QtSession], which starts
+the [toolkit](glossary.md#toolkit) and shows the views, and a
+[`Frontend`][redsun.Frontend] listing the [placements](glossary.md#placement)
+it can show. `QtSession` lives in `redsun.qt` because importing it imports the
+toolkit, which a session without a window doesn't install.
 
 ## Placements
 
-A view says where it wants to be shown, such as `Dock("left")`,
-`Central()` or `MenuItem("File")`, and the frontend decides whether it can.
+A view says where it wants to be shown, and the frontend decides whether it
+can. The core defines only the `Placement` base class; the Qt frontend defines
+docks and menus. Pick a placement to see where it puts a view, and point at it
+to read what it needs:
 
-The core defines only the `Placement` base class. Docks and menus are window
-ideas, so the Qt frontend defines them, next to the code that shows them. A
-frontend lists what each placement must be in `Frontend.requires`: Qt asks for
-a `QWidget` in a dock or in the centre, and a `QAction` in a menu or toolbar.
+```d2 title="Where Qt puts a view"
+...@diagrams/style
+vars: {
+  dock: "Holds a QWidget, in a dock against that edge. Docks given the same group on one edge are tabbed together. In a session file: left, right, top, bottom, or {dock: left, group: name}."
+}
+window: "main window" {
+  grid-rows: 5
+  grid-gap: 12
+  menu: "MenuItem(\"File\")\nan entry in the File menu" {
+    class: step
+    tooltip: "Holds a QAction. The menu is made if the window has none of that name. In a session file: {menu: File}."
+  }
+  toolbar: "ToolBarItem(\"Main\")\nan entry in the Main toolbar" {
+    class: step
+    tooltip: "Holds a QAction. The toolbar is made if the window has none of that name. In a session file: {toolbar: Main}."
+  }
+  dock_top: 'Dock("top")' {
+    class: step
+    tooltip: ${dock}
+  }
+  middle: "" {
+    grid-columns: 3
+    grid-gap: 12
+    style.opacity: 0
+    dock_left: 'Dock("left")' {
+      class: step
+      tooltip: ${dock}
+    }
+    central: "Central()\nthe main area" {
+      class: step
+      tooltip: "Holds a QWidget. When several views ask for it, each gets a tab. In a session file: central."
+    }
+    dock_right: 'Dock("right")' {
+      class: step
+      tooltip: ${dock}
+    }
+  }
+  dock_bottom: 'Dock("bottom")' {
+    class: step
+    tooltip: ${dock}
+  }
+}
+scenarios: {
+  dock: {
+    window.dock_top.style.stroke-width: 4
+    window.middle.dock_left.style.stroke-width: 4
+    window.middle.dock_right.style.stroke-width: 4
+    window.dock_bottom.style.stroke-width: 4
+    window.menu.style.opacity: 0.3
+    window.toolbar.style.opacity: 0.3
+    window.middle.central.style.opacity: 0.3
+  }
+  central: {
+    window.middle.central.style.stroke-width: 4
+    window.menu.style.opacity: 0.3
+    window.toolbar.style.opacity: 0.3
+    window.dock_top.style.opacity: 0.3
+    window.middle.dock_left.style.opacity: 0.3
+    window.middle.dock_right.style.opacity: 0.3
+    window.dock_bottom.style.opacity: 0.3
+  }
+  menu: {
+    window.menu.style.stroke-width: 4
+    window.toolbar.style.opacity: 0.3
+    window.dock_top.style.opacity: 0.3
+    window.middle.dock_left.style.opacity: 0.3
+    window.middle.central.style.opacity: 0.3
+    window.middle.dock_right.style.opacity: 0.3
+    window.dock_bottom.style.opacity: 0.3
+  }
+  toolbar: {
+    window.toolbar.style.stroke-width: 4
+    window.menu.style.opacity: 0.3
+    window.dock_top.style.opacity: 0.3
+    window.middle.dock_left.style.opacity: 0.3
+    window.middle.central.style.opacity: 0.3
+    window.middle.dock_right.style.opacity: 0.3
+    window.dock_bottom.style.opacity: 0.3
+  }
+}
+```
 
-The check happens before anything is built:
+In `Frontend.requires`, a frontend lists what each placement must hold: Qt asks
+for a `QWidget` in a dock or in the centre, and a `QAction` in a menu or
+toolbar.
+
+### Checks before a build
+
+The session checks every view before it builds anything. Step through the
+checks:
+
+```d2 title="What the session checks of a view"
+...@diagrams/style
+grid-rows: 2
+grid-columns: 3
+grid-gap: 60
+placement: "which placement?" {class: step}
+listed: "does the frontend\nshow it?" {class: step}
+type: "is the view the\ntype it needs?" {class: step}
+gap: {class: gap}
+built: "build the view" {class: step}
+constructor: "does the constructor\nstart right?" {class: step}
+placement -> listed -> type -> constructor -> built
+scenarios: {
+  placement: {
+    placement: {
+      class: current
+      tooltip: The placement given in the declaration, else the class's. A view class that names no placement is refused, since a component that is shown nowhere is a presenter.
+    }
+    listed.style.opacity: 0.3
+    type.style.opacity: 0.3
+    constructor.style.opacity: 0.3
+    built.style.opacity: 0.3
+  }
+  listed: {
+    listed: {
+      class: current
+      tooltip: The placement must be one the frontend lists in Frontend.requires. Qt lists Central, Dock, MenuItem and ToolBarItem.
+    }
+    placement.style.opacity: 0.3
+    type.style.opacity: 0.3
+    constructor.style.opacity: 0.3
+    built.style.opacity: 0.3
+  }
+  type: {
+    type: {
+      class: current
+      tooltip: Qt needs a QWidget in a dock or in the centre, and a QAction in a menu or a toolbar.
+    }
+    placement.style.opacity: 0.3
+    listed.style.opacity: 0.3
+    constructor.style.opacity: 0.3
+    built.style.opacity: 0.3
+  }
+  constructor: {
+    constructor: {
+      class: current
+      tooltip: "Frontend.check_view runs here. Qt asks for a constructor that starts with (name: str, parent: QWidget)."
+    }
+    placement.style.opacity: 0.3
+    listed.style.opacity: 0.3
+    type.style.opacity: 0.3
+    built.style.opacity: 0.3
+  }
+}
+```
+
+A view that fails a check is left out before anything is built, with a message
+naming what the frontend shows instead:
 
 ```text
 Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
 Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 ```
 
-A declaration can give its own `placement`. The session then uses it
-instead of the class's, and checks it the same way, before anything is built.
-A view that sets `placement` from a property is checked only once it is made,
-since only the object can answer. That form is deprecated.
-
-A frontend also reads the `placement` words of a session file, with
-`read_placement`. For example, Qt turns `left` into a dock on the left and
-`central` into the central area. The core of `redsun` knows none of these
-words.
+A `placement` set from a property can only be checked after the view is
+built; that form is deprecated and goes in 0.16, so set it as a class
+attribute or in the declaration. A session file's placement words, such as
+`left` or `central`, are read by the frontend's `read_placement`; the core
+knows none of them.
 
 ## The Qt frontend
 
-A Qt view's constructor starts with `(name: str, parent: QWidget)`, written
-exactly like that. `QtSession` passes its main window as the parent, so a view
-is part of the window from the moment it exists. A view whose constructor
-starts differently is left out before anything is built.
-[How to place a view in the window](../how-to/place-a-view.md) shows the
-constructor with each placement.
+A Qt view's constructor starts with exactly `(name: str, parent: QWidget)`,
+and `QtSession` passes its main window as the parent
+([How to place a view](../how-to/place-a-view.md)). `QtSession` also:
 
-`QtSession` also:
+- runs a widget's slots on the main thread unless a slot names another
+- builds the main window from an `app-model` `Application` holding the menus
+  and commands
+- restores the docks where the user left them
+- asks before closing when a component has unsaved changes
+- logs an exception no slot caught and keeps the window open, where the Qt
+  binding would end the process silently
+- closes and deletes every view at shutdown, after delivering waiting
+  signals, so a third-party widget can clean up in its `closeEvent`
 
-- runs every slot of a widget on the main thread, unless the slot names
-  another, since Qt widgets may only be used from there;
-- keeps an app-model `Application` for the session's menus and commands, and
-  a main window built from it;
-- saves where the user left the docks, and puts them back next time;
-- asks before closing when a component has unsaved changes;
-- logs an exception no slot caught, with its traceback, and keeps the window
-  open, where the Qt binding would otherwise end the process without a word;
-- closes and deletes every view at shutdown, delivering any signal still
-  waiting for one first. Closing runs the `closeEvent` of each view, which is
-  the only place a view that is a third-party widget can clean up: it
-  inherits its cleanup from the widget, and has no `shutdown` of its own.
-
-`QT_API` chooses the [Qt binding](glossary.md#qt-binding), as `qtpy` reads it.
-A session file never names one.
+The [Qt binding](glossary.md#qt-binding) is chosen with `QT_API`, read by
+`qtpy`, never by a session file.
 
 ### Hook points
 
-A [hook](glossary.md#hook) lets you act at fixed moments of a
-Qt session's build without changing what it builds. The Qt frontend calls five
-[hook points](glossary.md#hook-point):
+A [hook](glossary.md#hook) acts at a fixed moment of a Qt session's life
+without changing what the session builds. Pick one of the five
+[hook points](glossary.md#hook-point) to see when it runs, and point at it to
+read what it receives:
 
-| point | called with | to |
-| --- | --- | --- |
-| `create_application` | the command-line arguments | make the `QApplication` yourself |
-| `configure_application` | the `QApplication` | set a style or a font |
-| `during_build` | the `QApplication` | show progress while the build runs |
-| `configure_main_view` | the main window | change the window before it is shown |
-| `confirm_close` | nothing | answer whether the window may close |
+```d2 title="The hook points of a Qt session"
+...@diagrams/style
+grid-rows: 2
+grid-columns: 3
+grid-gap: 60
+create: "create_application\nmake the QApplication\nyourself" {
+  class: step
+  tooltip: Called with the command-line arguments, when no QApplication exists yet. It returns the QApplication.
+}
+configure: "configure_application\nset a style or a font" {
+  class: step
+  tooltip: Called with the QApplication, before any view is made.
+}
+during: "during_build\nshow progress while\nthe build runs" {
+  class: step
+  tooltip: Called with the QApplication. It wraps the build steps, from services to report.
+}
+close: "confirm_close\nanswer whether the\nwindow may close" {
+  class: step
+  tooltip: Called with nothing, when the window is asked to close. It answers in place of the question about unsaved changes.
+}
+shown: "the window is shown\nand the event loop runs" {class: note}
+main: "configure_main_view\nchange the window\nbefore it is shown" {
+  class: step
+  tooltip: Called with the main window, in the presentation step, once the views are in place.
+}
+create -> configure -> during -> main -> shown -> close
+scenarios: {
+  create_application: {
+    create.class: current
+    configure.style.opacity: 0.3
+    during.style.opacity: 0.3
+    main.style.opacity: 0.3
+    close.style.opacity: 0.3
+  }
+  configure_application: {
+    configure.class: current
+    create.style.opacity: 0.3
+    during.style.opacity: 0.3
+    main.style.opacity: 0.3
+    close.style.opacity: 0.3
+  }
+  during_build: {
+    during.class: current
+    create.style.opacity: 0.3
+    configure.style.opacity: 0.3
+    main.style.opacity: 0.3
+    close.style.opacity: 0.3
+  }
+  configure_main_view: {
+    main.class: current
+    create.style.opacity: 0.3
+    configure.style.opacity: 0.3
+    during.style.opacity: 0.3
+    close.style.opacity: 0.3
+  }
+  confirm_close: {
+    close.class: current
+    create.style.opacity: 0.3
+    configure.style.opacity: 0.3
+    during.style.opacity: 0.3
+    main.style.opacity: 0.3
+  }
+}
+```
 
 [Install hooks](../how-to/install-hooks.md) shows how. A session with no
-frontend calls no hook points, so a hook declared on one is refused.
+frontend calls no hook points, so it refuses a hook declared on it.
 
 ## Choosing the frontend from a file
 
-A session file names its frontend by a registered name:
+A session file names its frontend by the name the frontend is registered
+under:
 
 ```yaml
 frontend: qt
 ```
 
-`Session.from_config` reads it and builds on the class registered under that
-name. With no `frontend` key, it builds on the class `from_config` was called
-on, which for a plain `Session` has no frontend at all.
-
-Frontends are registered as entry points, in the `redsun.frontends` group.
-`redsun` registers its own:
+`Session.from_config` builds on the class registered under that name, or,
+without a `frontend` key, on the class you called it on. Frontends are
+registered as entry points, the packaging feature through which an installed
+package announces what it offers, in the `redsun.frontends` group:
 
 ```toml
 [project.entry-points."redsun.frontends"]
 qt = "redsun.qt:QtSession"
 ```
 
-A package offering another frontend registers its session class the same
-way, and a session file can name it without `redsun` changing. A component
-asking for [`SessionConfig`][redsun.SessionConfig] reads the frontend's
-registered name from its `frontend` field, or `None` for a session with no
-frontend.
+Another package registers its session class the same way, with no change to
+`redsun`. A component asking for [`SessionConfig`][redsun.SessionConfig]
+finds the registered name in its `frontend` field, or `None`.
 
 ## Writing a frontend
 
-A frontend for something other than a desktop window defines its own
-placements, its own `Frontend` and a session class that shows the views.
-[How to write a frontend](../how-to/write-a-frontend.md) writes one.
-`Frontend.check_view` refuses a view class the frontend cannot build, and
-`Session.view_arguments` adds arguments to every view's constructor. Neither
-does anything unless a frontend overrides it.
+A new frontend defines its placements, its `Frontend` and a session class
+that shows the views ([How to write a frontend](../how-to/write-a-frontend.md)).
+It may override `Frontend.check_view`, to refuse a view class it can't build,
+and `Session.view_arguments`, to add arguments to every view's constructor.
 
 ### What a frontend provides
-
-A view's [slots](glossary.md#slot) are called by presenters
-working on other threads, and most toolkits allow a view to be used from one
-thread only. A frontend settles that in three places:
 
 | what | where | the Qt frontend |
 | --- | --- | --- |
@@ -136,11 +316,46 @@ thread only. A frontend settles that in three places:
 | the thread its views' slots run on | [`Frontend.thread_of`][redsun.Frontend.thread_of] | the main thread, for a `QWidget` |
 | the delivery of the calls held for that thread | the session's `run` | `psygnal.qt.start_emitting_from_queue` |
 
-`thread_of` is asked only when neither the slot nor its class names a
-thread. A call to a slot held for another thread waits in a queue until that
-thread calls `psygnal.emit_queued`, so the session calls it from the
-toolkit's event loop, as often as the views should follow the presenters.
+The thread and the delivery matter because presenters on other threads call a
+view's [slots](glossary.md#slot), while most toolkits allow one thread only.
+Step through such a call:
 
-Coroutine slots need nothing from the frontend: every session sets the
-backend that runs them when it starts its runtime, which is why a frontend's
-`start_runtime` calls the one it overrides.
+```d2 title="A presenter calls a view from another thread"
+...@diagrams/style
+grid-rows: 2
+grid-columns: 2
+grid-gap: 60
+emit: "presenter emits\non a worker thread" {class: step}
+queue: "the call waits\nin a queue" {class: hidden}
+slot: "the view's slot runs\non the main thread" {class: hidden}
+loop: "the event loop calls\npsygnal.emit_queued" {class: hidden}
+emit -> queue: {class: hidden}
+queue -> loop: {class: hidden}
+loop -> slot: {class: hidden}
+steps: {
+  1: {
+    queue: {
+      class: current
+      tooltip: The slot names no thread and neither does its class, so the session asks Frontend.thread_of, which answers the main thread for a QWidget.
+    }
+    (emit -> queue)[0].style.opacity: 1
+  }
+  2: {
+    queue.class: step
+    loop: {
+      class: current
+      tooltip: The session calls it from the toolkit's event loop, as often as the views should follow the presenters.
+    }
+    (queue -> loop)[0].style.opacity: 1
+  }
+  3: {
+    loop.class: step
+    slot.class: current
+    (loop -> slot)[0].style.opacity: 1
+  }
+}
+```
+
+Coroutine slots need nothing from the frontend, because every session sets the
+backend that runs them when it starts its runtime. That's why a frontend's
+`start_runtime` must call the `start_runtime` it overrides.

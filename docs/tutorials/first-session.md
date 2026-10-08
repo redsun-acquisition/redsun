@@ -6,12 +6,13 @@ icon: lucide/play
 
 In this tutorial you build a small application: a simulated motor stage, a
 button that moves it, and a label that shows where it is. It needs no
-hardware, and continues from [Installation](installation.md).
+hardware, and it continues from [Installation](installation.md).
 
-You will show the stage in a window first, then make the button move it. On
-the way you write the three kinds of
+First you show the stage in a window, and then you make the button move it.
+Along the way you write one of each of the three kinds of
 [component](../explanation/glossary.md#component), and the
-[session](../explanation/glossary.md#session) that holds them.
+[session](../explanation/glossary.md#session) that makes them and holds them
+together.
 
 ## Before you start
 
@@ -44,9 +45,9 @@ from redsun.qt import Dock, QtSession
 
 ## 1. The device
 
-A [device](../explanation/glossary.md#device) describes one part of your setup:
-here, a stage with a position. You have no hardware, so this one keeps its
-position in memory. Add it below the imports:
+A [device](../explanation/glossary.md#device) describes one piece of your
+setup, which here is a stage with a position. Since you have no hardware,
+this stage keeps its position in memory. Add it below the imports:
 
 ```{.python}
 --8<-- "docs/tutorials/first_session.py:device"
@@ -54,53 +55,59 @@ position in memory. Add it below the imports:
 
 [`StandardReadable`][ophyd_async.core.StandardReadable] and
 [`soft_signal_rw`][ophyd_async.core.soft_signal_rw] come from
-[`ophyd-async`](../explanation/glossary.md#ophyd-async). The second makes a
+[`ophyd-async`](../explanation/glossary.md#ophyd-async), the library `redsun`
+uses for devices. `soft_signal_rw` makes a
 [device signal](../explanation/glossary.md#device-signal) that keeps its value
 in memory.
 
-With `StandardReadable` alone the stage would be a value you can read and
-write. [`StandardMovable`][ophyd_async.core.StandardMovable] makes it
-something that moves. `movable_logic` names the signal written to move it,
-the setpoint, and the one that says where it is, the readback; this stage has
-one signal for both. In return the stage itself answers what every motor in
-`ophyd-async` answers:
+With `StandardReadable` alone, the stage would only be a value you can read and
+write. [`StandardMovable`][ophyd_async.core.StandardMovable] turns it into
+something that moves. Its `movable_logic` names two signals: the
+[setpoint](../explanation/glossary.md#setpoint), which you write to move the
+stage, and the [readback](../explanation/glossary.md#readback), which says
+where the stage is. This stage uses one signal for both. In return, the stage
+answers the same methods as every motor in `ophyd-async`:
 
 - `set` moves it, and finishes when the move does;
 - `locate` says where it was sent and where it is;
 - `stop` stops it, and `subscribe` follows its position.
 
-Code written for those methods, rather than for an attribute called
-`position`, works with this stage and with any real motor in its place:
-`bluesky` plans that move a device, and the positioner `redsun` offers, which
-[the last tutorial](builtin-positioner.md) uses without changing the stage.
+Code that calls those methods, rather than an attribute called `position`,
+works with this stage and with any real motor you put in its place. That
+includes `bluesky` plans that move a device, and the positioner `redsun`
+offers, which [the last tutorial](builtin-positioner.md) uses without changing
+the stage.
 
-A movable device reads its readback under its own name, so the position of
-`stage` is read as `stage`.
+A movable device reports its readback under its own name. When you read
+`stage`, its position comes back under the key `stage`, not `position`.
 
 ## 2. The view
 
-A [view](../explanation/glossary.md#view) is what the user sees. Add this one
-below `MyStage`. It draws a row for each stage it hears from, with a button
-and a label:
+A [view](../explanation/glossary.md#view) is what the user of the
+application sees and touches. Add this one below the class `MyStage`. For each stage it hears
+from, it draws a row with a button and a label:
 
 ```{.python}
 --8<-- "docs/tutorials/first_session.py:view"
 ```
 
-`placement` says where the view goes: docked on the left of the window.
-`sig_nudge` is a [signal](../explanation/glossary.md#signal), which the view
-sends with the name of a stage when its button is pressed. `show_reading` is a
-[slot](../explanation/glossary.md#slot), which something else can trigger. It
-receives a reading: the value of a device signal, under the name of that
-signal, which for the position of a stage is the name of the stage.
+`placement` says where the view goes, which here is docked on the left of the
+window. `sig_nudge` is a [signal](../explanation/glossary.md#signal): when you
+press a stage's button, the view sends it with the name of that stage.
+`show_reading` is a [slot](../explanation/glossary.md#slot), a method
+something else can trigger. It receives a reading: a dictionary whose key is
+the name a device reports and whose entry holds the `value`. For a stage, the
+key is the stage's own name, as step 1 explained.
 
-You never call the constructor yourself: the session does. It gives every
-view its `name` and its `parent`, and every component keeps its name.
+You never call the constructor yourself, because the session does it for
+you. The session passes every view its `name`, and its `parent`, which is the
+main window. Every component stores the name it receives as `self.name`, as
+`StageView` does.
 
 ## 3. The session
 
 Add a session below the view. For now it holds the stage and the view, and
-sends the position of the first to the second:
+sends the position of the stage to the view:
 
 ```python
 class FirstSession(QtSession):
@@ -115,11 +122,11 @@ if __name__ == "__main__":
     FirstSession().run()
 ```
 
-Each line in the class body is a component: its name on the left, its
-[layer](../explanation/glossary.md#layer) and its class on the right.
+Each line in the class body declares a component, with its name on the left
+and its [layer](../explanation/glossary.md#layer) and class on the right.
 [`wire`][redsun.Session.wire] yields the
-[links](../explanation/glossary.md#link) of the session: what sends, then the
-slot that receives.
+[links](../explanation/glossary.md#link) of the session, each one written as
+what sends, then the slot that receives.
 
 Run the script:
 
@@ -127,62 +134,65 @@ Run the script:
 uv run first_session.py
 ```
 
-The terminal says what the session built:
+The terminal tells you what the session built:
 
 ```text
 Session built: 1/1 devices, 0/0 presenters, 1/1 views
 ```
 
-In your terminal the line starts with the time and the word `INFO`. These
-pages leave both out.
+In your terminal, the line starts with the time and the word `INFO`, which
+these pages leave out.
 
 A window opens with the view docked on the left:
 
 ![The first session's window, with a row for the stage: a Nudge button and
 its position](images/first-session.png)
 
-The view has one row, for `stage`. A link from a device signal sends the
-value the signal has now, then every new one, and that first value made the
-row. Press the button: nothing happens yet, since nobody listens to it.
-Close the window.
+The view has one row, for `stage`, before you've pressed anything. A link
+from a device signal sends the value the signal has when the session makes the
+link, and then every new value. So `show_reading` received the stage's
+position while the session started, and added the row for it. Press the
+button: nothing happens yet, since nothing listens to it. Close the window.
 
 ## 4. The presenter
 
-A [presenter](../explanation/glossary.md#presenter) holds the behaviour. Add
-this one between `MyStage` and `StageView`. It moves a stage by one step:
+A [presenter](../explanation/glossary.md#presenter) holds the application
+logic: what the application does, and when. Add this one between the classes `MyStage` and
+`StageView`. It moves a stage by one step:
 
 ```{.python}
 --8<-- "docs/tutorials/first_session.py:presenter"
 ```
 
-The session finds a value for each parameter of the constructor. `devices`
-is a [`DeviceMapping`][redsun.DeviceMapping], so it receives every device of
-the session, by name. [Components](../explanation/components.md) explains the
-rules.
+The session finds a value for each parameter of the constructor. Because
+`devices` is a [`DeviceMapping`][redsun.DeviceMapping], it receives every
+device of the session, by name. [Components](../explanation/components.md)
+explains the rules the session follows.
 
-`nudge` is a slot that takes the name of a stage. It is `async` because a
+`nudge` is a slot that takes the name of a stage. It's `async` because a
 device takes time to answer.
 
 !!! note
 
     An editor that checks types underlines the two lines of `nudge`.
-    `devices` holds devices of every kind, so the editor cannot tell that
-    this one has a position. The script runs all the same, and
-    [Describing a device with a protocol](device-protocols.md) corrects it.
+    `devices` holds devices of every kind, so the editor can't tell that this
+    one has a position. The script runs all the same, and
+    [Describing a device with a protocol](device-protocols.md) fixes it.
 
 ## 5. Connect them
 
-Add the highlighted lines to the session: the presenter, and the link that
-sends the press of a button to it.
+Add the highlighted lines to the session. They declare the presenter, and add
+the link that sends each press of a button to it:
 
 ```{.python hl_lines="3 7"}
 --8<-- "docs/tutorials/first_session.py:session"
 ```
 
 The view knows nothing about the presenter, and the presenter knows nothing
-about the view. The session is what joins them. A presenter and a view written
-to be joined this way are called a
-[stack](../explanation/glossary.md#stack).
+about the view, so it's the session that joins them. A presenter and a view
+written to work together like this are called a
+[stack](../explanation/glossary.md#stack), and the last tutorial swaps this
+one for a stack `redsun` ships.
 
 Run the script again:
 
@@ -208,22 +218,23 @@ presenters:
     step: 0.5
 ```
 
-The first line gives the session a name. The rest gives a value to the
-parameter `step` of the component `stage_ctrl`.
+The first line gives the session a name, and the rest gives a value to the
+`step` parameter of the `stage_ctrl` component.
 
-Tell the session to read the file. Add this line to the class
-`FirstSession`, as its first:
+To tell the session to read the file, add this line to the class
+`FirstSession`, as its first line:
 
 ```python
 config = "session.yaml"
 ```
 
-Run the script again. Each press now moves the stage by `0.5`: the session
-found `step` in the file and passed it to the constructor of the presenter.
+Run the script again. Each press now moves the stage by `0.5`, because the
+session found `step` in the file and passed it to the presenter's
+constructor.
 
 The session looks for the file in the folder you run the command from, which
-is the project folder. Keep the file and the line: the next tutorials count
-on both.
+is the project folder. Keep both the file and the line, since the next
+tutorials count on them.
 
 ??? example "The whole script"
 
@@ -235,17 +246,18 @@ on both.
 
 ## What you built
 
-A window that shows a simulated stage and moves it, made of a device, a
-presenter and a view that a session built and connected. The step of the
-stage comes from a file you can change without opening the script.
+You built a window that shows a simulated stage and moves it. It's made of a
+device, a presenter and a view, which a session built and connected for you.
+The size of each step comes from a file you can change without opening the
+script.
 
 ## Next steps
 
 - [Describing a device with a protocol](device-protocols.md) is the next
-  tutorial: it adds a second stage, which the same presenter and view
+  tutorial, where you add a second stage that the same presenter and view
   control.
 - [Write a component](../how-to/write-a-component.md) has more detail on each
-  kind.
+  kind of component.
 - [Sessions](../explanation/session.md) explains what happens when a session
   builds.
 - [Write a session file](../how-to/write-a-session-file.md) lists everything

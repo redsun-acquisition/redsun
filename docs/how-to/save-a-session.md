@@ -4,18 +4,18 @@ icon: lucide/save
 
 # How to save a session
 
-A session keeps two kinds of state:
+A session keeps two kinds of state, and each is saved in its own place:
 
-- **What the session is**: its components and their settings. That is the
-  session file, and you can save a changed copy of it.
-- **How one person likes to run it**: where they left the docks, the colour
-  scheme, an answer they gave a prompt. That belongs to their machine, in the
-  session's settings.
+- The components and their settings make up what the session is. They live in
+  the session file, and you can save a changed copy of it.
+- How one person likes to run it, such as where they left the docks, their
+  colour scheme and their answers to prompts, belongs to their machine. It
+  lives in the session's settings.
 
 ## Let a component be saved
 
-A component that the user can change while the session runs says what it
-would be rebuilt with, by defining `serialize`:
+If the user can change a component while the session runs, define `serialize`
+on it to say what it would be rebuilt with:
 
 ```python
 class MotorPresenter:
@@ -27,27 +27,33 @@ class MotorPresenter:
         return {"step": self.step}
 ```
 
-The keys must be parameters of the constructor. A key the constructor does not
-take is reported, and that component keeps the settings it was built with. A
-component without `serialize` also keeps them.
+The keys must be parameters of the constructor. If a key isn't one, the
+session reports it and that component keeps the settings it was built with. A
+component without `serialize` keeps them too.
 
 ## Save the configuration
+
+Write what the session would now be rebuilt with to a new file:
 
 ```python
 path = app.write("my-lab-2026-09.yaml")
 ```
 
 [`write`][redsun.Session.write] saves one flat file, whatever the session was
-built from, so it opens on its own. Comments are not kept. Writing over a file
-the session was built from raises `ConfigurationInUse`, since other sessions
-may read that file too.
+built from, so the file opens on its own. It doesn't keep comments.
+
+!!! warning "Overwriting a session file in use"
+
+    Other sessions may read the same file, so `write` raises
+    `ConfigurationInUse` if you write over a file the session was built from.
+    Write to a new file name instead.
 
 [`serialize`][redsun.Session.serialize] returns the same configuration as a
 mapping, without writing it.
 
 A Qt session also offers `Save configuration as...` in the menu `SAVE_MENU`,
-under the command `<session name>.save_configuration`. See
-[Add menu actions](add-menu-actions.md#show-the-menu) to show that menu.
+under the command `<session name>.save_configuration`. To show that menu, see
+[Add menu actions](add-menu-actions.md#show-the-menu).
 
 ## Unsaved changes
 
@@ -55,13 +61,13 @@ under the command `<session name>.save_configuration`. See
 now save different settings than it had at the end of the build. A value
 changed and changed back counts as unchanged.
 
-When the window is closed with unsaved changes, a Qt session asks whether to
-save, discard, or cancel. The prompt has a "don't ask again" box. To decide
+When you close the window with unsaved changes, a Qt session asks whether to
+save, discard or cancel, and the prompt has a "don't ask again" box. To decide
 yourself instead, install a `confirm_close` [hook](install-hooks.md).
 
 ## The session's settings
 
-[`Settings`][redsun.Settings] is one JSON file per session name:
+[`Settings`][redsun.Settings] is one JSON file for each session name:
 
 | platform | where a session called `my-lab` keeps it |
 | --- | --- |
@@ -79,9 +85,9 @@ def forget_the_answer(settings: Settings) -> None:
     settings.set("ask_on_close", True)
 ```
 
-A value is written as soon as it is set. The file appears the first time
-something is set, and deleting it resets the session to its defaults. A
-damaged file is ignored with a warning.
+The session writes a value as soon as it is set. The file appears the first
+time something is set, and deleting it resets the session to its defaults. If
+the file is damaged, the session ignores it and logs a warning.
 
 A Qt session keeps two keys there itself:
 
@@ -90,13 +96,13 @@ A Qt session keeps two keys there itself:
 | `window.geometry`, `window.state` | where the window and its docks were left |
 | `ask_on_close` | whether the close prompt still appears |
 
-The window layout is saved when a session started with `run` ends, and put
+A session started with `run` saves the window layout when it ends and puts it
 back the next time.
 
 ## The colour scheme
 
-A Qt session has a colour scheme button on its toolbar, cycling system, light
-and dark. The session file chooses where it starts:
+A Qt session has a colour scheme button on its toolbar, which cycles through
+system, light and dark. The session file chooses where it starts:
 
 ```yaml
 color_scheme: dark

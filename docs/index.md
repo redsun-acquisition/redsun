@@ -18,23 +18,17 @@ hide:
 # `redsun`
 
 !!! note "Project status"
-    `redsun` is slowly reaching maturity. It is currently in a usable state, but expect breaking changes.
+    `redsun` is usable today, but it's still maturing, so expect breaking changes.
 
-`redsun` is a [CPython] framework for building modular scientific data acquisition software.
+`redsun` is a [Python] toolkit for building your own modular software for scientific data acquisition. It builds on the [Bluesky] ecosystem and makes no assumptions about your hardware, so each lab can build the control software its experiments need.
 
-It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so each lab can build the control software its experiments need.
-
-To learn `redsun`, start with the [tutorials](tutorials/index.md). They build
-one application step by step, and need no hardware.
+To learn `redsun`, start with the [tutorials](tutorials/index.md), where you
+build one application step by step without any hardware.
 
 ## About redsun
 
-`redsun` is a framework for building your own acquisition software. You
-describe
-your instrument in Python, and `redsun` assembles it into an application with
-a graphical interface.
-
-With `redsun` you can:
+You describe your instrument in Python, and `redsun` assembles it into an
+application with a graphical interface. With `redsun` you can:
 
 - describe an instrument as [devices](explanation/glossary.md#device),
   [presenters](explanation/glossary.md#presenter) and
@@ -48,7 +42,8 @@ With `redsun` you can:
 - run acquisitions as `bluesky` [plans](explanation/glossary.md#plan), each
   with a [plan widget](explanation/glossary.md#plan-widget) built from its
   parameters;
-- use the built-in views, starting with a log window;
+- use the [built-in components](explanation/plugins.md#built-in-components)
+  for common tasks, so you write only what is specific to your instrument;
 - give every acquisition file a place and a name, under one folder per
   session;
 - search past [runs](explanation/glossary.md#run) in a
@@ -59,11 +54,10 @@ The parts specific to your instrument come from you, or from a
 services behind them, the presenters and views, and the plans for your
 acquisitions.
 
-`redsun` is not a ready-made microscope program. It comes with no hardware
-drivers, no acquisition panel and no image viewer, and it leaves writing the
-data to your devices.
+`redsun` isn't a ready-made microscope program. It comes with no hardware
+drivers and no image viewer, and it leaves writing the data to your devices.
 [Why redsun exists](explanation/statement.md#coming-from-micro-manager) has
-the details, and shows how its parts compare with those of Micro-Manager.
+the details, and compares its parts with those of Micro-Manager.
 
 <div style="display: flex; justify-content: center" markdown>
 
@@ -79,8 +73,9 @@ the details, and shows how its parts compare with those of Micro-Manager.
 
 ## How the documentation is structured
 
-The documentation follows the [Diataxis](https://diataxis.fr) format. Reference
-to technical terminology is shown in the [glossary](explanation/glossary.md).
+The documentation follows the [Diataxis](https://diataxis.fr) format and is
+split into the four sections below. The [glossary](explanation/glossary.md)
+defines the technical terms it uses.
 
 <div class="grid cards" markdown>
 
@@ -88,8 +83,8 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Eight tutorials that build one application, step by step. New users
-    start here.
+    If you're new to `redsun`, start here: nine tutorials that build one
+    application step by step.
 
     [:lucide-arrow-right: Tutorials](tutorials/index.md)
 
@@ -97,7 +92,7 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Practical step-by-step guides for one task each.
+    Step-by-step guides, each for one task.
 
     [:lucide-arrow-right: How-to Guides](how-to/index.md)
 
@@ -105,8 +100,7 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Explanations of how `redsun` works and why it works that way, and the
-    glossary.
+    How `redsun` works and why it works that way, plus the glossary.
 
     [:lucide-arrow-right: Explanations](explanation/index.md)
 
@@ -114,11 +108,11 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Technical reference material: the API and the release notes.
+    Facts to look up, such as the API and the release notes.
 
     [:lucide-arrow-right: Reference](reference/index.md)
 
 </div>
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
-[cpython]: https://www.python.org/
+[python]: https://www.python.org/

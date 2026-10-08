@@ -12,8 +12,8 @@ session finds one.
 
 ## Prerequisites
 
-Components that already work when a session class declares them. See
-[Write a component](write-a-component.md).
+You need components that already work when a session class declares them;
+see [Write a component](write-a-component.md).
 
 ## Lay out the package
 
@@ -65,12 +65,12 @@ mylab = "redsun.yaml"
 The session looks for the manifest in the package whose import name is the
 entry point's name, with each `-` read as `_`. So `mylab` finds `mylab`, and
 `my-lab` would look for a package `my_lab`. The entry point's name is also the
-`plugin_name` a session file uses. Leave the `name` key out of the manifest,
-or give it the entry point's name: a manifest naming itself otherwise is
-skipped.
+`plugin_name` a session file uses. Leave the `name` key out of the manifest, or
+give it the entry point's name, because the session skips a manifest that
+names itself otherwise.
 
 The manifest must be in the built package. `hatchling` includes every file
-under the package folder; other build tools may need it listed as package
+under the package folder, but other build tools may need it listed as package
 data. To check, build a wheel and look for `mylab/redsun.yaml` in it:
 
 ```bash
@@ -154,8 +154,8 @@ manifest. See [Write a service](write-a-service.md#declare-it).
 
 ## Read a failure
 
-A manifest that does not validate is left out whole, and the log names the
-file and each problem. An entry that does not resolve is left out on its own,
+The session leaves out a manifest that doesn't validate, and the log names the
+file and each problem. An entry that doesn't resolve is left out on its own,
 and the build summary lists it under `Not built`:
 
 ```text

@@ -4,15 +4,70 @@ icon: lucide/layout-dashboard
 
 # How to place a view in the window
 
-Choose where a view of a Qt session appears: in a dock, in the centre, in a
-menu or in a toolbar. [How a frontend shows a session on screen](../explanation/frontends.md)
+This page shows how to choose where a view of a Qt session appears: in a dock,
+in the centre, in a menu or in a toolbar. Step through the parts of the main
+window, and point at one to read what goes there:
+
+```d2 title="Where each placement puts a view"
+...@diagrams/style
+window: "main window" {
+  grid-rows: 5
+  grid-gap: 10
+  menu: "menu bar: MenuItem(\"Acquire\")" {
+    class: step
+    width: 520
+    tooltip: The session creates the menu the first time a view names it, and adds every later view naming it to the same one.
+  }
+  toolbar: "toolbar: ToolBarItem(\"Acquisition\")" {
+    class: step
+    width: 520
+    tooltip: The session creates the toolbar the first time a view names it, and adds every later view naming it to the same one.
+  }
+  top_dock: "Dock(\"top\")" {
+    class: step
+    width: 520
+  }
+  middle: "" {
+    grid-columns: 3
+    grid-gap: 10
+    style.opacity: 0
+    left_dock: "Dock(\"left\")" {class: step; height: 140}
+    central: "Central()" {
+      class: step
+      width: 240
+      tooltip: When several views ask for Central, the centre shows them as tabs, each titled with its view's name.
+    }
+    right_dock: "Dock(\"right\")" {
+      class: step
+      tooltip: Docks on the same edge with the same group open as tabs.
+    }
+  }
+  bottom_dock: "Dock(\"bottom\")" {
+    class: step
+    width: 520
+  }
+}
+scenarios: {
+  menu: {window.menu.class: current}
+  toolbar: {window.toolbar.class: current}
+  docks: {
+    window.top_dock.class: current
+    window.middle.left_dock.class: current
+    window.middle.right_dock.class: current
+    window.bottom_dock.class: current
+  }
+  central: {window.middle.central.class: current}
+}
+```
+
+[How a frontend shows a session on screen](../explanation/frontends.md)
 explains what a [placement](../explanation/glossary.md#placement) is and how
 a frontend checks it.
 
 ## Prerequisites
 
-A session built on [`QtSession`][redsun.qt.QtSession], and a view whose
-constructor starts with `(name: str, parent: QWidget)`. See
+You need a session built on [`QtSession`][redsun.qt.QtSession], and a view
+whose constructor starts with `(name: str, parent: QWidget)`. See
 [Write a component](write-a-component.md).
 
 ## Put a widget in a dock or in the centre
@@ -50,8 +105,8 @@ each titled with its view's name.
 ## Put an action in a menu or a toolbar
 
 A view placed as a [`MenuItem`][redsun.qt.MenuItem] or a
-[`ToolBarItem`][redsun.qt.ToolBarItem] is a `QAction`, with the same
-constructor as any Qt view:
+[`ToolBarItem`][redsun.qt.ToolBarItem] is a `QAction`, and it takes the same
+constructor arguments as any Qt view:
 
 ```python
 from qtpy.QtGui import QAction
@@ -82,15 +137,15 @@ class StopAction(QAction):
 class built on it.
 
 The session creates the menu or toolbar the first time a view names it, and
-adds every later view naming it to the same one. For a command that needs no
-view of its own, see [Add menu actions](add-menu-actions.md).
+adds every later view naming it to the same one. If the command needs no view
+of its own, see [Add menu actions](add-menu-actions.md).
 
 ## Override a view's default placement
 
 Every view class has a default place in the window, its `placement`. To put
-a view somewhere else, give `placement` when you declare it. The session uses
-your value instead of the default. It does not pass `placement` to the view,
-so this works for any view, including the built-in ones:
+a view somewhere else, give `placement` when you declare it, and the session
+uses your value instead of the default. It doesn't pass `placement` to the
+view, so this works for any view, including the built-in ones:
 
 ```python
 from typing import Annotated
@@ -123,17 +178,17 @@ views:
 | `{menu: Acquire}` | an entry in the menu `Acquire` |
 | `{toolbar: Acquisition}` | an entry in the toolbar `Acquisition` |
 
-The session checks the placement before it builds anything. If a view fails
-to build, its error message appears where you placed it. A view whose
-constructor has its own `placement` parameter is refused, because the session
-keeps that name for itself.
+The session checks the placement before it builds anything, so if a view fails
+to build, its error message appears where you placed it. The session refuses a
+view whose constructor has its own `placement` parameter, because it keeps
+that name for itself.
 
 !!! warning "Deprecated: a `placement` property"
 
     Some views return `placement` from a property, to choose it per
     declaration. This still works, but it is deprecated and will be removed
     in 0.16. The session can read such a placement only after it builds the
-    view. So it checks it late, and if the view fails to build, no error
+    view, so it checks it late, and if the view fails to build, no error
     message appears in the window. Give `placement` in the declaration
     instead.
 
@@ -162,18 +217,18 @@ class MyApp(QtSession):
 ## See a changed placement take effect
 
 A session started with `run` saves where the user left the docks when it
-ends, and puts them back the next time. A dock that was saved keeps its
-saved place, so a new placement for it does not show; a view under a name
-not saved before takes its placement. The log says which docks the saved layout
-keeps away from their placement. To start every dock from its placement
-again, close the session and remove the `window.state` key from its settings
-file, listed in
-[The session's settings](save-a-session.md#the-sessions-settings).
+ends, and puts them back the next time. So a dock that was saved stays where
+the user left it, and a new placement for it doesn't show. Only a view whose
+name wasn't saved before takes its placement. The log says which docks the
+saved layout keeps away from their placement. To start every dock from its
+placement again, close the session and remove the `window.state` key from its
+settings file, as
+[The session's settings](save-a-session.md#the-sessions-settings) describes.
 
 ## Read a failure
 
-A view that asks for a placement Qt does not show, or is not the type its
-placement needs, is left out, and the build summary lists it under
+The session leaves out a view that asks for a placement Qt doesn't show, or
+that isn't the type its placement needs, and the build summary lists it under
 `Not built`. Here `MyView`, a `QWidget`, asks for a `MenuItem`; the real
 lines end with the file and line they were logged from:
 

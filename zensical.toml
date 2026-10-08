@@ -39,14 +39,18 @@ nav = [
             "how-to/package-a-plugin.md",
             "how-to/test-a-plugin.md",
             "how-to/connect-a-device-on-demand.md",
+        ]},
+        { "Write plans" = [
             "how-to/run-a-plan.md",
             "how-to/choose-plan-inputs.md",
-            "how-to/run-plans-from-the-window.md",
-            "how-to/move-devices-by-hand.md",
-            "how-to/switch-and-dim-lights.md",
             "how-to/write-a-continuous-plan.md",
             "how-to/follow-a-plan-action.md",
             "how-to/show-plan-progress.md",
+        ]},
+        { "Use the built-in components" = [
+            "how-to/run-plans-from-the-window.md",
+            "how-to/move-devices-by-hand.md",
+            "how-to/switch-and-dim-lights.md",
         ]},
         { "Extend the window" = [
             "how-to/place-a-view.md",
@@ -161,19 +165,6 @@ nav = [
     ]},
     { "Contributing" = [
         "how-to/contribute.md",
-        "how-to/ai-contribution-policy.md",
-        { "Change the code" = [
-            "how-to/set-up-development.md",
-            "how-to/run-tests.md",
-            "how-to/run-commit-checks.md",
-            "how-to/commits-and-prs.md",
-            "how-to/record-a-decision.md",
-            "how-to/make-a-release.md",
-        ]},
-        { "Change the documentation" = [
-            "how-to/write-docs.md",
-            "how-to/build-docs.md",
-        ]},
     ]},
 ]
 
@@ -204,27 +195,30 @@ logo = "lucide/sunrise"
 repo = "fontawesome/brands/github"
 
 [[project.theme.palette]]
-media = "(prefers-color-scheme)"
-toggle = { icon = "lucide/sun-moon", name = "Switch to light mode" }
+scheme = "slate"
+primary = "red"
+accent = "red"
+toggle = { icon = "lucide/moon", name = "Switch to light mode" }
 
 [[project.theme.palette]]
-media = "(prefers-color-scheme: light)"
 scheme = "default"
 primary = "red"
 accent = "red"
 toggle = { icon = "lucide/sun", name = "Switch to dark mode" }
 
-[[project.theme.palette]]
-media = "(prefers-color-scheme: dark)"
-scheme = "slate"
-primary = "red"
-accent = "red"
-toggle = { icon = "lucide/moon", name = "Switch to system preference" }
-
 [project.plugins.search]
 
 [project.plugins.redirects.redirect_maps]
 "how-to/write-a-service-with-fastcs.md" = "how-to/write-a-service.md"
+"how-to/set-up-development.md" = "how-to/contribute.md#setting-up-your-copy"
+"how-to/run-tests.md" = "how-to/contribute.md#running-the-tests"
+"how-to/run-commit-checks.md" = "how-to/contribute.md#checks-before-each-commit"
+"how-to/build-docs.md" = "how-to/contribute.md#building-the-docs"
+"how-to/commits-and-prs.md" = "how-to/contribute.md#commit-messages-and-pull-requests"
+"how-to/write-docs.md" = "how-to/contribute.md#writing-documentation"
+"how-to/record-a-decision.md" = "how-to/contribute.md#recording-a-design-decision"
+"how-to/make-a-release.md" = "how-to/contribute.md#making-a-release"
+"how-to/ai-contribution-policy.md" = "how-to/contribute.md#using-ai-tools"
 
 [project.plugins.autorefs]
 [project.plugins.mkdocstrings]
@@ -302,7 +296,7 @@ dedent_subsections = true
 
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
-    { name = "mermaid", class = "mermaid" }
+    { name = "d2", class = "d2", format = { object = "markdown_d2.formatter", kwds = { root = "docs", transition = "morph" } }, validator = "markdown_d2.validator" },
 ]
 
 [project.markdown_extensions.pymdownx.tabbed]

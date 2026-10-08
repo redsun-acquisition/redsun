@@ -4,20 +4,21 @@ icon: lucide/flask-conical
 
 # How to run a session without hardware
 
-Run a session as a [mocked session](../explanation/glossary.md#mocked-session):
-its [devices](../explanation/glossary.md#device) connect to simulated
-backends that `ophyd-async` provides, and no
-[service](../explanation/glossary.md#service) is launched.
+With no hardware at hand, you can still work on a session by running it as a
+[mocked session](../explanation/glossary.md#mocked-session). Its
+[devices](../explanation/glossary.md#device) connect to simulated backends that
+`ophyd-async` provides, and the session launches no
+[service](../explanation/glossary.md#service).
 [Components](../explanation/components.md#connecting) explains how a session
 connects its devices.
 
 ## Prerequisites
 
-A session that builds with its hardware present, such as `MyApp` below. It
-launches a service and points a device at it.
+You need a session that builds with its hardware present, such as `MyApp`
+below, which launches a service and points a device at it.
 
-A mocked device still needs the package of its protocol installed: for the
-signals below, `ophyd-async[ca]`:
+A mocked device still needs the package of its protocol, which for the signals
+below is `ophyd-async[ca]`:
 
 ```bash
 uv add "ophyd-async[ca]"
@@ -59,9 +60,9 @@ Pass `mock` in the configuration the session is made with:
 MyApp({"mock": True}).run()
 ```
 
-The mapping is layered over the configuration the class already has, so every
-other key keeps its value. A session loaded from a file takes it the same way,
-as the last of its sources:
+The mapping goes on top of the configuration the class already has, so every
+other key keeps its value. A session loaded from a file takes `mock` the same
+way, as the last of its sources:
 
 ```python
 from redsun import Session
@@ -69,7 +70,7 @@ from redsun import Session
 app = Session.from_config(["session.yaml", {"mock": True}]).build()
 ```
 
-To mock every run of a session instead, write the key in its
+To mock every run of a session, write the key in its
 [session file](../explanation/glossary.md#session-file):
 
 ```yaml
@@ -78,7 +79,7 @@ mock: true
 
 ## Check the log
 
-The build logs one line in place of starting the services, then the usual
+The build logs one line where it would start the services, then the usual
 summary:
 
 ```text
@@ -86,24 +87,26 @@ summary:
 [29-09-26|08:43:21][INFO]: Session built: 1/1 devices, 0/0 presenters, 0/0 views
 ```
 
-Every device the build connects is on a simulated backend, including one
-declared with `service=`: it still gets the service's prefix, but nothing
-answers on it. A signal of a mocked device keeps the last value written to
-it, and starts at the default of its type, `0.0` for a `float`.
+Every device the build connects uses a simulated backend, including one
+declared with `service=`. That device still gets the service's prefix, but
+nothing answers on it. A signal of a mocked device starts at the default of its
+type, `0.0` for a `float`, and keeps the last value written to it.
 
-A session keeping a [catalog](keep-a-catalog.md) starts it as usual, since
+A session keeping a [catalog](keep-a-catalog.md) starts it as usual, because
 the catalog reaches no hardware, and records the runs of the mocked devices.
 
-A device declared with `autoconnect=False` is not connected by the build; see
+The build doesn't connect a device declared with `autoconnect=False`; see
 [How to connect a device on demand](connect-a-device-on-demand.md).
 
 ## Give a mocked device its values
 
-Set its signals from a component that only a mocked session declares, with
-[`set_mock_value`][ophyd_async.core.set_mock_value]. It works on signals the
-device only reads, such as a readback, and
-[`callback_on_mock_put`][ophyd_async.core.callback_on_mock_put] has the
-readback follow each value written to the setpoint:
+To give a mocked device its values, set its signals from a component that only
+a mocked session declares. [`set_mock_value`][ophyd_async.core.set_mock_value]
+works on signals the device only reads, such as a
+[readback](../explanation/glossary.md#readback), and
+[`callback_on_mock_put`][ophyd_async.core.callback_on_mock_put] makes the
+readback follow each value written to the
+[setpoint](../explanation/glossary.md#setpoint):
 
 ```python
 from typing import Any, ClassVar
@@ -129,13 +132,17 @@ class MySimulation(MyApp):
     simulation: AsPresenter[SimulatedStage]
 ```
 
-Run `MySimulation().run()` to open the window: a view of `MyApp` that shows
-the stage reads those values. Presenters
-are built after the devices connect, so the values are in place before any
-view shows them. Both functions raise on a device not connected with
-`mock=True`, so keep `SimulatedStage` out of `MyApp`.
+Run `MySimulation().run()` to open the window, where a view of `MyApp` that
+shows the stage reads those values. The session builds presenters after the
+devices connect, so the values are in place before any view shows them.
+
+!!! warning "Both functions raise on a device that isn't mocked"
+
+    `set_mock_value` and `callback_on_mock_put` raise on a device not connected
+    with `mock=True`. Keep `SimulatedStage` out of `MyApp`, which can run
+    against hardware.
 
 ## Go back to the hardware
 
-Remove `mock` from the configuration, or set it to `false`. The next build
+Remove `mock` from the configuration, or set it to `false`, and the next build
 starts the services and connects the devices to them.
