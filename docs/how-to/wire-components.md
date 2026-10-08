@@ -85,8 +85,30 @@ class DetectorPresenter:
     def configure(self, settings: dict[str, Any]) -> None: ...
 ```
 
-The examples below connect this presenter to the view above, and to a
-`DetectorView` that sends `sig_property_changed`.
+The examples below make two links between this presenter, the view above and
+a `DetectorView` that sends `sig_property_changed`:
+
+```d2 title="The links the examples make"
+...@diagrams/style
+direction: right
+det_widget: "det_widget\nDetectorView" {class: step}
+det_ctrl: "det_ctrl\nDetectorPresenter" {class: step}
+img_widget: "img_widget\nImageView" {class: step}
+det_widget -> det_ctrl: "sig_property_changed\n-> configure" {
+  style.opacity: 0
+}
+det_ctrl -> img_widget: "sig_new_data\n-> update_layers" {
+  style.opacity: 0
+}
+steps: {
+  1: {
+    (det_ctrl -> img_widget)[0].style.opacity: 1
+  }
+  2: {
+    (det_widget -> det_ctrl)[0].style.opacity: 1
+  }
+}
+```
 
 ## Declare the connections
 
@@ -201,11 +223,35 @@ class MotorPresenter:
         await self.devices[motor].set(position)
 ```
 
-The session delivers it differently from a plain method:
+The session delivers it differently from a plain method. Step through the
+two cases:
 
-- it runs on `redsun`'s shared event loop, not on the thread that emitted;
-- the emitter does not wait for it to finish;
-- an error inside it is logged, and later emissions are still delivered.
+```d2 title="A plain slot and a coroutine slot"
+...@diagrams/style
+direction: right
+emit: "a signal\nis emitted" {class: step}
+plain: "the plain slot runs\non the same thread" {class: step}
+next: "the emitter\ncarries on" {class: step}
+task: "the coroutine runs\nas a task on redsun's\nshared event loop" {class: hidden}
+error: "an error is logged,\nlater emissions\nare still delivered" {class: hidden}
+emit -> plain: calls
+plain -> next: "once it returns"
+emit -> next: "at once" {style.opacity: 0}
+emit -> task: queued {style.opacity: 0}
+task -> error: "if it raises" {style.opacity: 0}
+scenarios: {
+  coroutine: {
+    plain.class: hidden
+    (emit -> plain)[0].style.opacity: 0
+    (plain -> next)[0].style.opacity: 0
+    (emit -> next)[0].style.opacity: 1
+    task.class: current
+    error.class: note
+    (emit -> task)[0].style.opacity: 1
+    (task -> error)[0].style.opacity: 1
+  }
+}
+```
 
 If you need the emitter to wait, connect a plain method that calls
 `run_coro(...)` from `redsun.aio` instead. To stop a task such a slot started,
@@ -256,17 +302,42 @@ component owns the signal.
 ## Choose the thread a slot runs on
 
 A slot runs on the thread that emitted, unless something says otherwise. The
-session looks for the thread in this order:
+session asks three places in turn and takes the first answer. Step through
+them, and point at one to read what it covers:
 
-1. `@slot(thread=...)`, for one method;
-2. `__redsun_slot_thread__` on the class, for every slot of it;
-3. the session's frontend, through
-   [`Frontend.thread_of`][redsun.Frontend.thread_of]: the Qt frontend runs a
-   widget's slots on the main thread, since a widget may only be used from
-   there.
+```d2 title="Where the session looks for a slot's thread"
+...@diagrams/style
+direction: right
+method: "@slot(thread=...)" {
+  class: step
+  tooltip: Set on one method, for that slot only.
+}
+cls: "__redsun_slot_thread__\non the class" {
+  class: step
+  tooltip: Set on a component's class, for every slot of it.
+}
+frontend: "the frontend" {
+  class: step
+  tooltip: Frontend.thread_of answers for the component. The Qt frontend runs a widget's slots on the main thread, since a widget may only be used from there. A session with no frontend has no answer here.
+}
+emitted: "the thread\nthat emitted" {
+  class: step
+  tooltip: Used when none of the three answers.
+}
+method -> cls: "not set"
+cls -> frontend: "not set"
+frontend -> emitted: "no answer"
+scenarios: {
+  method: {method.class: current}
+  cls: {cls.class: current}
+  frontend: {frontend.class: current}
+  emitted: {emitted.class: current}
+}
+```
 
-A session with no frontend skips the third step. A slot that is a
-coroutine function runs on the session's event loop whatever the frontend.
+The frontend answers through
+[`Frontend.thread_of`][redsun.Frontend.thread_of]. A slot that is a coroutine
+function runs on the session's event loop whatever the frontend.
 
 ## Observe a device signal
 
