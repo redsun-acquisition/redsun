@@ -7,7 +7,45 @@ icon: lucide/play
 Running a [plan](../explanation/glossary.md#plan) takes three components: one
 offers the plan, a presenter runs it on a
 [`RunEngine`](../explanation/glossary.md#runengine), and a view shows its
-[plan widget](../explanation/glossary.md#plan-widget).
+[plan widget](../explanation/glossary.md#plan-widget). Step through what the
+three components of this guide do, from the build to the end of a plan:
+
+```d2 title="From setup to a finished plan"
+...@diagrams/style
+shape: sequence_diagram
+plan_view: "plan_view\nPlanView" {class: step}
+plan_ctrl: "plan_ctrl\nPlanPresenter" {
+  class: step
+  tooltip: Owns the RunEngine.
+}
+ctrl: "ctrl\nMyController" {
+  class: step
+  tooltip: Offers its plans through plan_map.
+}
+motor: "motor\nMyMotor" {class: step}
+plan_ctrl -> ctrl: "setup: plan_map()"
+plan_view -> ctrl: "setup: plan_map(),\nthen a plan widget each" {
+  style.opacity: 0
+}
+plan_view -> plan_ctrl: "Run pressed: the view disables\nitself, sig_run(plan, values)" {
+  style.opacity: 0
+}
+plan_ctrl -> motor: "the RunEngine runs the\nplan, which moves the motor" {
+  style.opacity: 0
+}
+plan_ctrl -> plan_view: "sig_finished, whether the\nplan succeeded or failed" {
+  style.opacity: 0
+}
+plan_view -> plan_view: "enable the view" {style.opacity: 0}
+steps: {
+  1: {(plan_view -> ctrl)[0].style.opacity: 1}
+  2: {(plan_view -> plan_ctrl)[0].style.opacity: 1}
+  3: {(plan_ctrl -> motor)[0].style.opacity: 1}
+  4: {(plan_ctrl -> plan_view)[0].style.opacity: 1}
+  5: {(plan_view -> plan_view)[0].style.opacity: 1}
+}
+```
+
 [How presenters run plans](../explanation/plans.md) explains how the three
 components work together.
 
@@ -111,7 +149,6 @@ class PlanPresenter(Loggable):
 - Catching `UnresolvableAnnotationError` leaves out a plan whose parameters no
   plan widget can show, and catching `ValueError` leaves out one declaring two
   actions of one name. The other plans stay.
-- `sig_finished` is sent when the plan ends, whether it succeeded or failed.
 
 To run the plans with document callbacks, ask `setup` for
 `callbacks: Mapping[str, CallbackType]` as well, and pass each one to
@@ -174,8 +211,7 @@ class PlanView(QWidget):
 
 The combo box chooses which plan widget the stacked widget shows, and
 `PlanWidget.parameters` holds the values the user chose, with each device given
-by its name. The view stays disabled until the presenter reports that the plan
-ended.
+by its name.
 
 ## Declare and link them
 
