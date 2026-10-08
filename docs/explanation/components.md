@@ -64,29 +64,26 @@ steps: {
 }
 ```
 
-A [session file](glossary.md#session-file) or an inline `Declare(...)` that
-gives `step` wins, and otherwise `step` keeps its default of `1.0`. You never
-write code to choose between the two. The values the session holds by type
-include the [shared values](glossary.md#shared-value) of its
-[providers](glossary.md#provider), classes made only to share values;
-[Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)
-shows how to add one. A Qt view also gets the main window as its `parent`,
-which the frontend passes in; see [Frontends](frontends.md#the-qt-frontend).
+No code of yours chooses between a [session file](glossary.md#session-file)
+and the default. What the session holds by type includes the
+[shared values](glossary.md#shared-value) of its
+[providers](glossary.md#provider), classes made only to share values
+([Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)),
+and a Qt view also gets the main window as its `parent`
+([Frontends](frontends.md#the-qt-frontend)).
 
 !!! warning "The session can't see types imported under `if TYPE_CHECKING:`"
 
-    The session reads each parameter's annotation while the program runs, to decide
-    what to pass. A type you import only under `if TYPE_CHECKING:` doesn't
-    exist at that point, so the session leaves the component out and logs a
-    `TypeError`. Import the types of these parameters with a normal import;
+    The session reads the annotations while the program runs, when a type
+    imported only under `if TYPE_CHECKING:` doesn't exist, so it leaves the
+    component out and logs a `TypeError`. Import those types normally;
     [Limitations](limits.md#can-i-import-parameter-types-under-if-type_checking)
     lists where this applies.
 
 ### What arrives in `setup`
 
-A constructor runs before the other components exist, so it can't receive one
-of them. When a component needs another component, or a value another
-component shares, it asks for it in an optional `setup` method:
+A constructor runs before the other components exist, so a component that
+needs another, or a value another shares, asks for it in an optional `setup`:
 
 ```python
 class MotorReadings:
@@ -104,15 +101,12 @@ class RoiPresenter:
         self.readings = readings
 ```
 
-The session calls every `setup` once all the presenters and views exist, and
-fills its parameters by type in the same way, so a component can ask for one
-declared after it. The calls run in declaration order, though, so a `setup`
-that reads what another component's `setup` assigns sees it only when that
-component is declared first. `setup` must be an ordinary method: the session
-leaves out a component whose `setup` is `async def`.
-
-What happens when `setup` can't get what it asks for depends on whose mistake
-it is:
+Every `setup` runs once all presenters and views exist, filled by type, so a
+component can ask for one declared after it. The calls run in declaration
+order, though: a `setup` reading what another `setup` assigns sees it only if
+that component is declared first. An `async def setup` gets the component left
+out. When `setup` can't get what it asks for, the outcome depends on whose
+mistake it is:
 
 ```d2 title="When setup can't get what it asks for"
 ...@diagrams/style
@@ -186,22 +180,17 @@ steps: {
 }
 ```
 
-The session calls the method right after it makes the component, so the
-method returns what the constructor built. A type names one value, so when two
-components share values of the same type, the build stops with a `TypeError`.
-[Share a value](../how-to/share-a-value.md) shows the details, including
-optional values.
+A type names one value, so two components sharing the same type stop the
+build with a `TypeError`. [Share a value](../how-to/share-a-value.md) covers
+optional values too.
 
 ### Using a protocol without importing redsun
 
-A [plugin](glossary.md#plugin) can satisfy a `redsun`
-[protocol](glossary.md#protocol) without importing `redsun`. The session
-checks a component only by its members, meaning their names and, for methods,
-their signatures, and never asks which module the protocol came from. A plugin
-can also copy the protocol's definition into its own code, so that its type
-checker sees it, without depending on `redsun` for that.
-
-Whether a copy is enough depends on the types its members name:
+The session checks a component only by its members' names and signatures,
+never by where a [protocol](glossary.md#protocol) came from. So a
+[plugin](glossary.md#plugin) can satisfy a `redsun` protocol, or copy its
+definition for its own type checker, without importing `redsun`. A copy works
+alone only when the types its members name do:
 
 | protocol | names | a copy works alone |
 | --- | --- | --- |
@@ -211,26 +200,20 @@ Whether a copy is enough depends on the types its members name:
 | `HasActions` | `ActionManager` | no |
 | `DescribesPlans` | `PlanSpec` and `CallbackType` | no |
 
-A component using the last four works with those `redsun` types. A shared
-value is found by its exact type, so asking for the `RunEngine`, or for
-[`Deferrals`][redsun.engine.Deferrals], which applies a setting change during
-a plan without corrupting what the plan records, needs `redsun`'s own classes.
+A shared value is found by its exact type too, so asking for the `RunEngine`
+or for [`Deferrals`][redsun.engine.Deferrals], which applies a setting change
+during a plan without corrupting what the plan records, needs `redsun`'s own
+classes.
 
 ## Devices
 
 A [device](glossary.md#device) is an [`ophyd-async`](glossary.md#ophyd-async)
-device, meaning a subclass of `ophyd_async.core.Device`. `redsun` adds nothing
-to the device [layer](glossary.md#layer), so for signals, detectors and the
-base classes, see the `ophyd-async` documentation.
-
-Your devices are a model of your whole setup: what it contains and what can
-be controlled, as a tree of devices and their signals. Reaching the hardware
-is best left to a [service](glossary.md#service), and
-[Devices and services](services.md#devices-and-services) explains why the two
-are kept apart.
-
-The session makes and connects every device the same way. Step through the
-cases to see which devices end up in the session:
+device, a subclass of `ophyd_async.core.Device`; `redsun` adds nothing to the
+device [layer](glossary.md#layer), so the `ophyd-async` documentation covers
+signals and detectors. Your devices model your whole setup as a tree, and
+reaching the hardware is best left to a [service](glossary.md#service), as
+[Devices and services](services.md#devices-and-services) explains. Step
+through the cases to see which devices end up in the session:
 
 ```d2 title="How the session makes and connects a device"
 ...@diagrams/style
@@ -272,35 +255,31 @@ scenarios: {
 }
 ```
 
-The session makes a device as `cls(name=<name>, **kwargs)`, so every
-`ophyd-async` device works, including one whose first parameter is `prefix`.
-The one exception is a device that takes `name` only by position (after a
-`/`): the session can't make it, and leaves it out.
+Making a device as `cls(name=<name>, **kwargs)` works for every `ophyd-async`
+device, including one whose first parameter is `prefix`, except one that takes
+`name` only by position (after a `/`), which is left out.
 
 ### Connecting
 
-A device that doesn't connect is left out, just like one that failed to build.
-If you declare a device with [`autoconnect=False`](glossary.md#autoconnect),
-the session leaves it unconnected, so your session's code can connect it when
-it chooses. The build then can't leave the device out because its hardware is
-missing, so a component has to decide what to do when the connection fails.
-See [How to connect a device on demand](../how-to/connect-a-device-on-demand.md).
+A device declared with [`autoconnect=False`](glossary.md#autoconnect) stays
+unconnected for your code to connect when it chooses, so the build can't leave
+it out for missing hardware: a component decides what to do when the
+connection fails. See
+[How to connect a device on demand](../how-to/connect-a-device-on-demand.md).
 
 ### Talking to a service
 
-When you declare a device with `service="stage_ioc"`, the device gets that
-[service's](services.md) [prefix](glossary.md#prefix) as its `prefix`
-argument. If the service isn't declared, didn't start, or has no prefix, the
-session leaves the device out.
+A device declared with `service="stage_ioc"` gets that
+[service's](services.md) [prefix](glossary.md#prefix) as its `prefix`, and is
+left out when the service isn't declared, didn't start or has no prefix.
 
 ### Where a device writes
 
 A device writes its own data files, in the format it or its service chooses.
-If its constructor takes `path_provider`, the device gets the session's
-[path provider](glossary.md#path-provider), which puts every file of a
-session under one folder, named after the session, the day, the
-[data key](glossary.md#data-key) and the plan. That way you find all the files
-of a session in one place, whatever wrote them.
+A constructor that takes `path_provider` gets the session's
+[path provider](glossary.md#path-provider), which puts every file of a session
+in one folder, named after the session, the day, the
+[data key](glossary.md#data-key) and the plan.
 [How to choose where acquisition files go](../how-to/choose-where-files-go.md)
 sets the folder and the names, and
 [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) records
@@ -308,13 +287,11 @@ why the device writes the data and not `redsun`.
 
 ### Standby
 
-A service that holds hardware, such as a camera, can let go of it and keep
-running, as long as it offers a command for that as a
-[process variable](glossary.md#process-variable). A device exposes the
-command as a signal, and when the user asks, your presenter triggers it on
-every device of the service; the session has no standby step of its own. The
-devices stay connected throughout. The service decides what letting go means,
-and takes the hardware back when it gets another command.
+A service holding hardware, such as a camera, can let go of it and keep
+running if it offers a command for that as a
+[process variable](glossary.md#process-variable). When the user asks, your
+presenter triggers that command through the service's devices, which stay
+connected; the session has no standby step of its own.
 
 ## Presenters
 
@@ -333,12 +310,11 @@ it can't be an `ophyd-async` device.
 A [view](glossary.md#view) holds the widgets, and says where it wants to be
 shown with a [placement](glossary.md#placement), such as `Dock("left")`.
 
-The placement is what makes a class a view: a view has one and a presenter
-doesn't. Before anything is built, the [frontend](glossary.md#frontend)
-checks that it can show the placement and that the view is the right kind of
-object for it. [Frontends](frontends.md) covers placements and the Qt rules,
-and [How to place a view in the window](../how-to/place-a-view.md) shows how
-to set one.
+The placement is what makes a class a view. Before the build, the
+[frontend](glossary.md#frontend) checks that it can show the placement and
+that the view is the right kind of object for it; [Frontends](frontends.md)
+covers the Qt rules, and [How to place a view](../how-to/place-a-view.md)
+shows how to set one.
 
 ## Signals and slots
 
@@ -372,18 +348,13 @@ refresh: "MotorView.refresh\nmarked with @slot" {
 sig_moved -> refresh: "the session connects them,\nin wire or the wiring section"
 ```
 
-By convention, signal names start with `sig_`. A slot must be marked with
-`slot`, and since other code connects to it by name, it's part of the
-component's public interface. A slot may be `async def`.
-
-The session makes the connections, either in [`wire`][redsun.Session.wire] or
-from the file's `wiring` section; the components never connect themselves.
-[Wire components together](../how-to/wire-components.md) shows both ways.
-
-When you write a presenter and a view for each other, each slot can say which
-signal of the other one reaches it. The session then connects the two with one
-[pairing](glossary.md#pairing), as
-[Offer a pairing](../how-to/offer-a-pairing.md) shows.
+Signal names start with `sig_` by convention. A slot is marked with `slot`,
+may be `async def`, and is part of the component's public interface, since
+other code connects to it by name. Components never connect themselves;
+[Wire components together](../how-to/wire-components.md) shows `wire` and the
+`wiring` section. A presenter and a view written for each other can name the
+signals that reach their slots, and the session connects them with one
+[pairing](glossary.md#pairing) ([Offer a pairing](../how-to/offer-a-pairing.md)).
 
 ## Cleaning up
 
