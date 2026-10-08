@@ -11,22 +11,8 @@ things it needs.
 ## Where each argument comes from
 
 The session makes each component by calling its constructor and passing every
-argument by keyword. It fills each parameter from one of these places:
-
-- `name` is always the component's name.
-- If the [session file](glossary.md#session-file) or an inline `Declare(...)`
-  gives a value for the parameter, the parameter takes that value.
-- Any other parameter is looked up **by its type**, among what the session
-  holds before any component exists: its settings (`SessionConfig`,
-  `Settings`), the devices (`DeviceMapping`, `DevicesOf[P]`), the path
-  provider, the catalog address, and the
-  [shared values](glossary.md#shared-value) of its
-  [providers](glossary.md#provider), classes made only to share values.
-  [Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)
-  shows how to add one.
-- A Qt view's `parent` is the main window, which the frontend passes in; see
-  [Frontends](frontends.md#the-qt-frontend).
-- A parameter with a default keeps its default when nothing else fills it.
+argument by keyword. Step through the diagram to see where each parameter of
+this presenter gets its value:
 
 ```python
 class MotorPresenter:
@@ -36,8 +22,56 @@ class MotorPresenter:
         self.step = step
 ```
 
-If the file gives `step`, the presenter gets that value, and otherwise it gets
-`1.0`. You never write code to choose between the two.
+```d2 title="Where the arguments of MotorPresenter come from"
+...@diagrams/style
+direction: right
+declared: "the declared name\nmotor_ctrl" {class: hidden}
+held: "what the session holds,\nlooked up by type" {class: hidden}
+default: "the default\n1.0" {class: hidden}
+file: "session file\nor Declare(...)" {class: hidden}
+ctor: "MotorPresenter(...)" {
+  name: "name" {class: step; width: 220}
+  devices: "devices: DeviceMapping" {class: step; width: 220}
+  step: "step: float = 1.0" {class: step; width: 220}
+}
+declared -> ctor.name {style.opacity: 0}
+held -> ctor.devices: "by its type" {style.opacity: 0}
+default -> ctor.step: "otherwise" {style.opacity: 0}
+file -> ctor.step: "if it gives step" {style.opacity: 0}
+steps: {
+  1: {
+    declared.class: current
+    (declared -> ctor.name)[0].style.opacity: 1
+  }
+  2: {
+    declared.class: step
+    held: {
+      class: current
+      tooltip: "What exists before any component does. The settings (SessionConfig, Settings), the devices (DeviceMapping, DevicesOf[P]), the path provider, the catalog address, and the values the session's providers share."
+    }
+    (held -> ctor.devices)[0].style.opacity: 1
+  }
+  3: {
+    held.class: step
+    file.class: current
+    (file -> ctor.step)[0].style.opacity: 1
+  }
+  4: {
+    file.class: step
+    default.class: current
+    (default -> ctor.step)[0].style.opacity: 1
+  }
+}
+```
+
+A [session file](glossary.md#session-file) or an inline `Declare(...)` that
+gives `step` wins, and otherwise `step` keeps its default of `1.0`. You never
+write code to choose between the two. The values the session holds by type
+include the [shared values](glossary.md#shared-value) of its
+[providers](glossary.md#provider), classes made only to share values;
+[Share a value no component owns](../how-to/share-a-value.md#share-a-value-no-component-owns)
+shows how to add one. A Qt view also gets the main window as its `parent`,
+which the frontend passes in; see [Frontends](frontends.md#the-qt-frontend).
 
 !!! warning "The session can't see types imported under `if TYPE_CHECKING:`"
 
@@ -72,20 +106,37 @@ class RoiPresenter:
 
 The session calls every `setup` once all the presenters and views exist, and
 fills its parameters by type in the same way, so the order you declare
-components in doesn't matter. `setup` must be an ordinary method, not
-`async def`.
+components in doesn't matter. `setup` must be an ordinary method: the session
+leaves out a component whose `setup` is `async def`.
 
-If a constructor asks for another component, the session refuses it before
-anything is built, and the error tells you to move the parameter to `setup`.
+What happens when `setup` can't get what it asks for depends on whose mistake
+it is:
 
-If `setup` raises, the session logs the error and keeps the component, but
-without whatever `setup` was going to give it. The build summary lists the
-component under `Not set up`. The same happens when `setup` asks for a
-component that was declared but failed to build.
+```d2 title="When setup can't get what it asks for"
+...@diagrams/style
+direction: right
+raises: "setup raises" {class: step}
+failed: "asks for a component\nthat failed to build" {class: step}
+missing: "asks for something\nnothing declares" {class: step}
+later: "asks for a component\nof a later layer" {class: step}
+early: "the constructor asks\nfor a component" {class: step}
+kept: "component kept,\nlisted under Not set up" {
+  class: current
+  tooltip: "The session logs the error and runs the component without what setup was going to give it."
+}
+stops: "the build stops\nwith TypeError" {
+  class: failed
+  tooltip: "No component failed. The mistake is in how the session is written, so you fix the session. The error says what to change, such as moving a constructor parameter to setup."
+}
+raises -> kept
+failed -> kept
+missing -> stops
+later -> stops
+early -> stops
+```
 
-The build stops with `TypeError` only when `setup` asks for something that
-nothing in the session declares. No component failed in that case. The
-mistake is in how the session is written, so you fix the session.
+The build checks a constructor that asks for a component, and a `setup` that
+asks for one of a later [layer](glossary.md#layer), before anything is built.
 
 ### Sharing a value
 
@@ -104,9 +155,38 @@ class MotorPresenter:
         return self._readings
 ```
 
-The session calls the method once, right after it makes the component, so the
-method returns what the constructor built. Since a type names one value, two
-components can't share values of the same type.
+```d2 title="How a shared value reaches another component"
+...@diagrams/style
+direction: down
+motor: "make MotorPresenter" {class: current}
+call: "call readings()\nonce" {class: hidden}
+value: "the MotorReadings\nit returns" {class: hidden}
+roi: "RoiPresenter.setup(readings)" {class: hidden}
+motor -> call: "right after" {style.opacity: 0}
+call -> value {style.opacity: 0}
+value -> roi: "by its type" {style.opacity: 0}
+steps: {
+  1: {
+    motor.class: done
+    call.class: current
+    (motor -> call)[0].style.opacity: 1
+  }
+  2: {
+    call.class: done
+    value.class: current
+    (call -> value)[0].style.opacity: 1
+  }
+  3: {
+    value.class: done
+    roi.class: current
+    (value -> roi)[0].style.opacity: 1
+  }
+}
+```
+
+The session calls the method right after it makes the component, so the
+method returns what the constructor built. A type names one value, so when two
+components share values of the same type, the build stops with a `TypeError`.
 [Share a value](../how-to/share-a-value.md) shows the details, including
 optional values.
 
@@ -119,15 +199,20 @@ their signatures, and never asks which module the protocol came from. A plugin
 can also copy the protocol's definition into its own code, so that its type
 checker sees it, without depending on `redsun` for that.
 
-Whether a copy is enough depends on the types its members name. `Axis`,
-`Light`, `DescribesAxes` and `DescribesLights` name only `ophyd-async`,
-`bluesky` or built-in types, so you can copy them whole. `HasPlans` names
-`PlanEntry`, `HasActions` names `ActionManager` and `DescribesPlans` names
-`PlanSpec`, so a component using those protocols works with those `redsun`
-types. A shared value is found by its exact type, so asking for the
-`RunEngine`, or for [`Deferrals`][redsun.engine.Deferrals], which applies a
-setting change during a plan without corrupting what the plan records, needs
-`redsun`'s own classes.
+Whether a copy is enough depends on the types its members name:
+
+| protocol | names | a copy works alone |
+| --- | --- | --- |
+| `Axis`, `Light` | `ophyd-async` and `bluesky` types only | yes |
+| `DescribesAxes`, `DescribesLights` | `AxisInfo` or `LightInfo`, and `Configuration`, from `redsun.utils.devices` | no |
+| `HasPlans` | `PlanEntry` | no |
+| `HasActions` | `ActionManager` | no |
+| `DescribesPlans` | `PlanSpec` and `CallbackType` | no |
+
+A component using the last four works with those `redsun` types. A shared
+value is found by its exact type, so asking for the `RunEngine`, or for
+[`Deferrals`][redsun.engine.Deferrals], which applies a setting change during
+a plan without corrupting what the plan records, needs `redsun`'s own classes.
 
 ## Devices
 
@@ -142,6 +227,49 @@ is best left to a [service](glossary.md#service), and
 [Devices and services](services.md#devices-and-services) explains why the two
 are kept apart.
 
+The session makes and connects every device the same way. Step through the
+cases to see which devices end up in the session:
+
+```d2 title="How the session makes and connects a device"
+...@diagrams/style
+direction: down
+declaration: "declaration\nAsDevice[MyCamera]" {class: step; width: 260; height: 70}
+make: "make\ncls(name=..., **kwargs)" {
+  class: step
+  width: 260
+  height: 70
+  tooltip: "The arguments come from the session file or Declare(...), plus the prefix of the device's service and the path provider when the constructor takes them."
+}
+connect: "connect\nall at once, up to 10 s each" {class: step; width: 260; height: 70}
+kept: "in the session" {class: step; width: 260; height: 70}
+out: "left out" {class: step; width: 300; height: 70}
+declaration -> make
+make -> connect
+connect -> kept
+make -> out: "constructor raised,\nor no service prefix"
+connect -> out: "didn't connect"
+make -> kept: "autoconnect=False"
+scenarios: {
+  connects: {
+    make.class: current
+    connect.class: current
+    kept.class: current
+  }
+  raised: {
+    make: "make\nconstructor raised" {class: failed}
+    out: "left out\nFailed to build device" {class: failed}
+  }
+  "not connected": {
+    connect: "connect\nno answer in 10 s" {class: failed}
+    out: "left out\ncamera (device, not connected)" {class: failed}
+  }
+  "autoconnect=False": {
+    connect.class: done
+    kept: "in the session\nnot connected" {class: current}
+  }
+}
+```
+
 The session makes a device as `cls(name=<name>, **kwargs)`, so every
 `ophyd-async` device works, including one whose first parameter is `prefix`.
 The one exception is a device that takes `name` only by position (after a
@@ -149,17 +277,12 @@ The one exception is a device that takes `name` only by position (after a
 
 ### Connecting
 
-Once the devices are made, the session connects them all at once and waits up
-to ten seconds for each. A device that doesn't connect is left out, just like
-one that failed to build, and the summary lists it as `camera (device, not
-connected)`.
-
+A device that doesn't connect is left out, just like one that failed to build.
 If you declare a device with [`autoconnect=False`](glossary.md#autoconnect),
 the session leaves it unconnected, so your session's code can connect it when
-it chooses. The build
-then can't leave the device out because its hardware is missing, so a
-component has to decide what to do when the connection fails. See
-[How to connect a device on demand](../how-to/connect-a-device-on-demand.md).
+it chooses. The build then can't leave the device out because its hardware is
+missing, so a component has to decide what to do when the connection fails.
+See [How to connect a device on demand](../how-to/connect-a-device-on-demand.md).
 
 ### Talking to a service
 
@@ -186,10 +309,10 @@ why the device writes the data and not `redsun`.
 A service that holds hardware, such as a camera, can let go of it and keep
 running, as long as it offers a command for that as a
 [process variable](glossary.md#process-variable). A device exposes the
-command as a signal, and when the user asks, a presenter triggers it on every
-device of the service. The devices stay connected throughout. The service
-decides what letting go means, and takes the hardware back when it gets
-another command.
+command as a signal, and when the user asks, your presenter triggers it on
+every device of the service; the session has no standby step of its own. The
+devices stay connected throughout. The service decides what letting go means,
+and takes the hardware back when it gets another command.
 
 ## Presenters
 
@@ -200,7 +323,8 @@ talk to another program. Because it never touches a widget, it works without a
 screen.
 
 Any class can be a presenter if its constructor takes `name` as a keyword and
-its instances keep that `name`. It doesn't inherit anything from `redsun`.
+its instances keep that `name`. It doesn't inherit anything from `redsun`, and
+it can't be an `ophyd-async` device.
 
 ## Views
 
@@ -235,15 +359,24 @@ class MotorView(QWidget):
     def refresh(self, motor: str, position: float) -> None: ...
 ```
 
+```d2 title="A signal connected to a slot"
+...@diagrams/style
+direction: down
+sig_moved: "MotorPresenter.sig_moved\nSignal(str, float)" {class: step}
+refresh: "MotorView.refresh\nmarked with @slot" {
+  class: step
+  tooltip: "Runs on the main thread, because a Qt widget may only be used from there. @slot(thread=...) picks another thread."
+}
+sig_moved -> refresh: "the session connects them,\nin wire or the wiring section"
+```
+
 By convention, signal names start with `sig_`. A slot must be marked with
 `slot`, and since other code connects to it by name, it's part of the
 component's public interface. A slot may be `async def`.
 
 The session makes the connections, either in [`wire`][redsun.Session.wire] or
 from the file's `wiring` section; the components never connect themselves.
-[Wire components together](../how-to/wire-components.md) shows both ways. A
-slot on a Qt widget runs on the main thread, since a widget may only be used
-from there. A slot can choose another thread with `@slot(thread=...)`.
+[Wire components together](../how-to/wire-components.md) shows both ways.
 
 When you write a presenter and a view for each other, each slot can say which
 signal of the other one reaches it. The session then connects the two with one
@@ -253,10 +386,8 @@ signal of the other one reaches it. The session then connects the two with one
 ## Cleaning up
 
 If a component needs to clean up, give it a `shutdown` method, plain or
-`async`. The session calls it when the session shuts down, newest component
-first, and nothing else is needed.
-
-A device can define one too, to leave its hardware in a safe state:
+`async`, and the session calls it when the session shuts down. A device can
+define one too, to leave its hardware in a safe state:
 
 ```python
 class MyLaser(StandardReadable):
@@ -264,14 +395,32 @@ class MyLaser(StandardReadable):
         await self.intensity.set(0)
 ```
 
-The session shuts the devices down after every presenter and view, which may
-still use them in their own `shutdown`, and before the services stop, so each
-device can still reach its service.
+```d2 title="The order components shut down in"
+...@diagrams/style
+direction: right
+components: "presenters and views\nnewest first" {class: step}
+devices: "devices" {
+  class: step
+  tooltip: "Every device that connected, and every device declared with autoconnect=False, since a component may have connected it. A device that didn't connect is left out of the session and never shut down, since it would write to hardware that never answered."
+}
+services: "services stop" {class: step}
+components -> devices -> services
+steps: {
+  1: {components.class: current}
+  2: {
+    components.class: done
+    devices.class: current
+  }
+  3: {
+    devices.class: done
+    services.class: current
+  }
+}
+```
 
-A device that didn't connect is left out of the session, and its `shutdown`
-isn't called, since it would write to hardware that never answered. A device
-declared with `autoconnect=False` is shut down, because a component may have
-connected it.
+The devices go after every presenter and view, which may still use them in
+their own `shutdown`, and before the services stop, so each device can still
+reach its service.
 
 ## Dataclasses and pydantic models
 
