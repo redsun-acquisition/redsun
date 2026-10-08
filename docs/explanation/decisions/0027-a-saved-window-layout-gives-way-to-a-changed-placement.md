@@ -53,7 +53,8 @@ Window -> Reset layout puts it back at any time.
 ## Consequences
 
 - Adding a view to a session discards the arrangement its user saved, once.
-- A `configure_main_view` hook that sets its own menu bar includes
-  `WINDOW_MENU` to keep the Window menu.
+- The Window menu is added after the `configure_main_view` hook runs, so a
+  hook that sets its own menu bar still gets it, at the end. A hook that
+  includes `WINDOW_MENU` puts it where it wants instead.
 - A window layout the session declares can build on this digest and on Reset
   layout.

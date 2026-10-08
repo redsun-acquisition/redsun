@@ -7,13 +7,13 @@ import json
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
-from app_model.backends.qt import QModelMenu
+from app_model.backends.qt import QModelMainWindow, QModelMenu
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
-from redsun import AsView, Declare, Placement
+from redsun import AsHook, AsView, Declare, Placement
 from redsun.qt import WINDOW_MENU, Dock, QtSession
 
 if TYPE_CHECKING:
@@ -125,6 +125,32 @@ class OwnDocksApp(QtSession):
 
     first: AsView[AddsItsOwnDock]
     second: AsView[AddsItsOwnDock]
+
+
+class AddsNotes:
+    def configure_main_view(self, view: QMainWindow) -> None:
+        notes = QDockWidget("notes", view)
+        notes.setObjectName("notes")
+        view.addDockWidget(LEFT, notes)
+
+
+class HookDockApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "hook-dock-session"}
+
+    panel: AsView[Panel]
+    configure_main_view: AsHook[AddsNotes]
+
+
+class SetsItsOwnMenuBar:
+    def configure_main_view(self, view: QModelMainWindow) -> None:
+        view.setModelMenuBar({WINDOW_MENU: "Window"})
+
+
+class HookMenuBarApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "hook-menu-bar-session"}
+
+    panel: AsView[Panel]
+    configure_main_view: AsHook[SetsItsOwnMenuBar]
 
 
 def builtin_session(
@@ -277,6 +303,37 @@ def test_a_dock_a_view_adds_itself_gets_no_toggle(
     toggles = [action.text() for action in menu.actions() if action.isCheckable()]
 
     assert toggles == ["first", "second"]
+
+
+def test_the_window_menu_brings_back_a_dock_the_hook_added(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show again from the Window menu a dock the main-view hook added and the user closed."""
+    app = build(HookDockApp)
+    notes = app.main_window.findChild(QDockWidget, "notes")
+    assert isinstance(notes, QDockWidget)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+
+    notes.close()
+    action = menu.findAction("hook-dock-session.toggle_dock.notes")
+    assert isinstance(action, QAction)
+    action.trigger()
+
+    assert not notes.isHidden()
+
+
+def test_a_hook_menu_bar_with_the_window_menu_shows_it_once(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show one Window menu when the main-view hook sets a menu bar that includes it."""
+    app = build(HookMenuBarApp)
+    bar = app.main_window.menuBar()
+    assert bar is not None
+
+    titles = [action.text() for action in bar.actions()]
+
+    assert titles.count("Window") == 1
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(

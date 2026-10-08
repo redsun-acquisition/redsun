@@ -72,8 +72,8 @@ The keys are menu ids, and the values are the titles shown.
 `Save configuration as...`. Include it to offer them.
 
 `WINDOW_MENU` holds a toggle for each dock and **Reset layout**. The session
-shows it in its own menu bar, and `setModelMenuBar` replaces that bar, so
-include it to keep the menu.
+adds it at the end of the menu bar after your hook has run, so leave it out
+unless you want it somewhere else in the bar.
 
 ## Read a failure
 

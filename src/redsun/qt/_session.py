@@ -113,7 +113,10 @@ SAVE_MENU: Final[str] = "redsun/file"
 """The menu a session's own actions join, which a window may show by name."""
 
 WINDOW_MENU: Final[str] = "redsun/window"
-"""The menu holding a toggle for each dock and "Reset layout", shown by the session's own window."""
+"""The menu holding a toggle for each dock and "Reset layout", shown by the session's window.
+
+The session adds it at the end of the menu bar unless the bar already shows it.
+"""
 
 __all__ = [
     "WINDOW_MENU",
@@ -144,6 +147,9 @@ AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
 
 EDGE_NAMES: Final = frozenset(get_args(Area))
 """The words for an edge of the window."""
+
+DIRECT_CHILDREN: Final = QtNamespace.FindChildOption.FindDirectChildrenOnly
+"""Find a widget's own children, not theirs."""
 
 
 @dataclass(frozen=True)
@@ -493,11 +499,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             widget.deleteLater()
 
     def _direct_widgets(self) -> set[QWidget]:
-        return set(
-            self.main_window.findChildren(
-                QWidget, options=QtNamespace.FindChildOption.FindDirectChildrenOnly
-            )
-        )
+        return set(self.main_window.findChildren(QWidget, options=DIRECT_CHILDREN))
 
     def present(self) -> None:
         """Put every view where it asks to be in the window, and ready the window to show.
@@ -505,9 +507,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         A view that failed to build and asked for a dock or the centre is
         replaced there by a widget naming it and the reason. When any
         component failed to build or to be set up, a button in the status bar
-        counts them and lists them with their tracebacks. The window's last
-        menu, Window, shows or hides each dock and puts every dock back where
-        its placement says.
+        counts them and lists them with their tracebacks. A Window menu,
+        added after the main-view hook has run, shows or hides each dock and
+        puts every dock back where its placement says.
         """
         window = self.main_window
         # the guard outlives the window only if something holds it, and the
@@ -519,7 +521,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         views = self._with_placeholders()
         attach(window, views, self._declared_placements())
-        self._register_window_actions(views)
+        earlier = set(window.findChildren(QDockWidget, options=DIRECT_CHILDREN))
         failures = {**self._failed, **self._not_set_up}
         bar = window.statusBar()
         if failures and bar is not None:
@@ -527,6 +529,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
+        self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()
 
@@ -611,30 +614,29 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.settings.set("window.layout", self._layout_fingerprint())
 
     def _register_window_actions(
-        self, views: Mapping[str, AttachableComponent]
+        self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
     ) -> None:
-        """Register a toggle for each view's dock and "Reset layout", and show them as the Window menu.
+        """Register a toggle for each dock and "Reset layout", and show them as the Window menu.
 
-        They join `WINDOW_MENU`, which the window this session made shows as
-        its last menu. A dock a view adds by itself gets no toggle, and a
-        session with no dock of its own shows no such menu.
+        The docks are those of *views*, and those added since *earlier* was
+        taken that have an object name no other dock has. A dock a view adds
+        by itself gets no toggle, and a session with no dock shows no such
+        menu. A menu bar that already shows `WINDOW_MENU` gets no second one.
         """
         window = self.main_window
-        docks = [
-            dock
+        docks = {
+            name: dock
             for name in views
-            if (
-                dock := window.findChild(
-                    QDockWidget,
-                    name,
-                    QtNamespace.FindChildOption.FindDirectChildrenOnly,
-                )
-            )
+            if (dock := window.findChild(QDockWidget, name, DIRECT_CHILDREN))
             is not None
-        ]
+        }
+        for dock in window.findChildren(QDockWidget, options=DIRECT_CHILDREN):
+            name = dock.objectName()
+            if dock not in earlier and name and name not in docks:
+                docks[name] = dock
         if not docks:
             return
-        actions = [dock_toggle(self.name, dock) for dock in docks]
+        actions = [dock_toggle(self.name, dock) for dock in docks.values()]
         actions.append(
             Action(
                 id=f"{self.name}.reset_layout",
@@ -645,7 +647,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         self.on_release(self.model.register_actions(actions))
         bar = window.menuBar()
-        if bar is not None:
+        if bar is not None and window.findChild(QModelMenu, WINDOW_MENU) is None:
             bar.addMenu(QModelMenu(WINDOW_MENU, self.model, "Window", window))
 
     def _reset_layout(self) -> None:
