@@ -167,6 +167,9 @@ views:
 | `{menu: Acquire}` | an entry in the menu `Acquire` |
 | `{toolbar: Acquisition}` | an entry in the toolbar `Acquisition` |
 
+A view placed in the menu `Window` joins the Window menu the session adds,
+above the entries that show and hide the docks.
+
 The session checks the placement before it builds anything, so if a view fails
 to build, its error message appears where you placed it. The session refuses a
 view whose constructor has its own `placement` parameter, because it keeps
@@ -178,7 +181,9 @@ that name for itself.
     declaration. This still works, but it is deprecated and will be removed
     in 0.16. The session can read such a placement only after it builds the
     view, so it checks it late, and if the view fails to build, no error
-    message appears in the window. Give `placement` in the declaration
+    message appears in the window. A saved window layout also ignores such a
+    placement, so changing what the property returns does not move the dock
+    until you choose **Reset layout**. Give `placement` in the declaration
     instead.
 
 ## Tab docks together
@@ -205,14 +210,19 @@ class MyApp(QtSession):
 
 ## See a changed placement take effect
 
-A session started with `run` saves where the user left the docks when it
-ends, and puts them back the next time. So a dock that was saved stays where
-the user left it, and a new placement for it doesn't show. Only a view whose
-name wasn't saved before takes its placement. The log says which docks the
-saved layout keeps away from their placement. To start every dock from its
-placement again, close the session and remove the `window.state` key from its
-settings file. [Find the settings file](save-a-session.md#find-the-settings-file)
-says where it is.
+A changed placement shows the next time you start the session. A session
+started with `run` saves where the user left the docks when it ends, and
+puts them back the next time, but only while every view asks for the place
+it asked for when the layout was saved. So when you change a placement, add
+a view or remove one, every dock starts from its placement, and the log says
+why. A view that fails to build keeps the place its declaration gives it, so
+the saved layout stays.
+
+To put the docks back where their placements say at any time, choose
+**Reset layout** in the **Window** menu. The same menu lists every dock, so
+you can show a dock again after closing it with the button on its title bar.
+[Find the settings file](save-a-session.md#find-the-settings-file) says where
+the saved layout is kept.
 
 ## Read a failure
 

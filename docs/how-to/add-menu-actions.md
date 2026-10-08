@@ -56,18 +56,24 @@ main window:
 ```python
 from app_model.backends.qt import QModelMainWindow
 
-from redsun.qt import SAVE_MENU
+from redsun.qt import SAVE_MENU, WINDOW_MENU
 
 
 class Menus:
     def configure_main_view(self, view: QModelMainWindow) -> None:
-        view.setModelMenuBar({SAVE_MENU: "File", "myapp/settings": "Settings"})
+        view.setModelMenuBar(
+            {SAVE_MENU: "File", "myapp/settings": "Settings", WINDOW_MENU: "Window"}
+        )
 ```
 
 The keys are menu ids, and the values are the titles shown.
 
 `SAVE_MENU` is the menu `redsun` puts its own commands in, such as
 `Save configuration as...`. Include it to offer them.
+
+`WINDOW_MENU` holds a toggle for each dock and **Reset layout**. The session
+adds it at the end of the menu bar after your hook has run, so leave it out
+unless you want it somewhere else in the bar.
 
 ## Read a failure
 

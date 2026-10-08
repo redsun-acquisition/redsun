@@ -64,6 +64,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.qt.WINDOW_MENU
+    options:
+      show_root_heading: true
+
 ::: redsun.qt.ASK_ON_CLOSE
     options:
       show_root_heading: true

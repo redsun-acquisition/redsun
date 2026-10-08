@@ -27,6 +27,7 @@ MyApp().run()
 from __future__ import annotations
 
 import base64
+import hashlib
 import inspect
 import logging
 import sys
@@ -47,8 +48,8 @@ from typing import (
 )
 
 from app_model import Action, Application
-from app_model.backends.qt import QModelMainWindow
-from app_model.types import MenuRule
+from app_model.backends.qt import QModelMainWindow, QModelMenu
+from app_model.types import MenuRule, ToggleRule
 from platformdirs import user_documents_dir
 from psygnal import emit_queued
 from psygnal.qt import start_emitting_from_queue
@@ -111,7 +112,14 @@ ASK_ON_CLOSE: Final[str] = "ask_on_close"
 SAVE_MENU: Final[str] = "redsun/file"
 """The menu a session's own actions join, which a window may show by name."""
 
+WINDOW_MENU: Final[str] = "redsun/window"
+"""The menu holding a toggle for each dock and "Reset layout", shown by the session's window.
+
+The session adds it at the end of the menu bar unless the bar already shows it.
+"""
+
 __all__ = [
+    "WINDOW_MENU",
     "Area",
     "Central",
     "Dock",
@@ -137,11 +145,11 @@ AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
 }
 """The Qt dock area of each edge a `Dock` can name."""
 
-EDGES: Final = {area: edge for edge, area in AREAS.items()}
-"""The edge each Qt dock area stands for."""
-
 EDGE_NAMES: Final = frozenset(get_args(Area))
 """The words for an edge of the window."""
+
+DIRECT_CHILDREN: Final = QtNamespace.FindChildOption.FindDirectChildrenOnly
+"""Find a widget's own children, not theirs."""
 
 
 @dataclass(frozen=True)
@@ -315,6 +323,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     __slots__ = (
         "_close_guard",
+        "_default_state",
         "_main_window",
         "_model",
         "_qt_app",
@@ -346,6 +355,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             config, log_level=log_level, profile=profile, profile_dir=profile_dir
         )
         self._close_guard: CloseGuard | None = None
+        self._default_state: QByteArray | None = None
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -489,11 +499,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             widget.deleteLater()
 
     def _direct_widgets(self) -> set[QWidget]:
-        return set(
-            self.main_window.findChildren(
-                QWidget, options=QtNamespace.FindChildOption.FindDirectChildrenOnly
-            )
-        )
+        return set(self.main_window.findChildren(QWidget, options=DIRECT_CHILDREN))
 
     def present(self) -> None:
         """Put every view where it asks to be in the window, and ready the window to show.
@@ -501,7 +507,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         A view that failed to build and asked for a dock or the centre is
         replaced there by a widget naming it and the reason. When any
         component failed to build or to be set up, a button in the status bar
-        counts them and lists them with their tracebacks.
+        counts them and lists them with their tracebacks. A Window menu,
+        added after the main-view hook has run, shows or hides each dock and
+        puts every dock back where its placement says.
         """
         window = self.main_window
         # the guard outlives the window only if something holds it, and the
@@ -511,7 +519,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration().color_scheme)
         )
-        attach(window, self._with_placeholders(), self._declared_placements())
+        views = self._with_placeholders()
+        attach(window, views, self._declared_placements())
+        earlier = set(window.findChildren(QDockWidget, options=DIRECT_CHILDREN))
         failures = {**self._failed, **self._not_set_up}
         bar = window.statusBar()
         if failures and bar is not None:
@@ -519,6 +529,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
+        self._register_window_actions(views, earlier)
+        self._default_state = window.saveState()
         self.restore_layout()
 
     def _with_placeholders(self) -> dict[str, AttachableComponent]:
@@ -552,43 +564,45 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Put the window back where this user last left it.
 
         Runs once every dock exists, since Qt places a dock by object name and
-        ignores one it has not seen. A session this user has never run finds
-        nothing saved and keeps the layout its views asked for. Each dock the
-        saved layout keeps away from the edge its placement asks for is logged.
+        ignores one it has not seen. The geometry always comes back. The docks
+        come back only while the views ask for the places they asked for when
+        the layout was saved, so a changed placement shows on the next run; a
+        layout saved without that record is restored.
         """
         geometry = self.settings.get("window.geometry")
         if isinstance(geometry, str):
             self.main_window.restoreGeometry(QByteArray(base64.b64decode(geometry)))
         state = self.settings.get("window.state")
-        if isinstance(state, str):
-            self.main_window.restoreState(QByteArray(base64.b64decode(state)))
-            self._log_moved_docks()
+        if not isinstance(state, str):
+            return
+        saved = self.settings.get("window.layout")
+        if saved is not None and saved != self._layout_fingerprint():
+            logger.info(
+                "The views of %r are placed differently from when %s was saved, "
+                "so the docks start where their placements say",
+                self.name,
+                self.settings.path,
+            )
+            return
+        self.main_window.restoreState(QByteArray(base64.b64decode(state)))
 
-    def _log_moved_docks(self) -> None:
-        """Log each dock that is not on the edge its placement asks for."""
-        declared = self._declared_placements()
-        for name, view in self.views.items():
-            placement = declared.get(name) or view.placement
-            if not isinstance(placement, Dock):
-                continue
-            # pyside6 annotates the result as optional and pyqt6 does not
-            dock: QDockWidget | None = self.main_window.findChild(QDockWidget, name)
-            if dock is None:
-                continue
-            edge = EDGES.get(self.main_window.dockWidgetArea(dock))
-            if edge != placement.area:
-                logger.info(
-                    "Dock %r stays %s, where it was left, not on the %s its "
-                    "placement asks for; remove window.state from %s to use the "
-                    "placement",
-                    name,
-                    f"on the {edge}" if edge else "floating",
-                    placement.area,
-                    self.settings.path,
-                )
+    def _layout_fingerprint(self) -> str:
+        """Return a digest of where every view asks to be, which a saved layout is kept for.
+
+        Each view counts with the placement its declaration holds, so one that
+        fails to build does not discard the saved layout. A view whose class
+        answers `placement` from a property has none there, and changing what
+        the property answers keeps the saved layout.
+        """
+        placements = [
+            (name, declaration.placement)
+            for name, declaration in self.declarations.items()
+            if declaration.kind is Layer.VIEW
+        ]
+        return hashlib.sha256(repr(placements).encode()).hexdigest()
 
     def save_layout(self) -> None:
-        """Remember where this user left the window.
+        """Remember where this user left the window, and the placements it was left with.
 
         `run` asks for this as the session ends, so a window that was shown is
         the only one that writes.
@@ -597,6 +611,71 @@ class QtSession(DesktopSession[QMainWindow], Session):
             return
         self.settings.set("window.geometry", encoded(self._main_window.saveGeometry()))
         self.settings.set("window.state", encoded(self._main_window.saveState()))
+        self.settings.set("window.layout", self._layout_fingerprint())
+
+    def _register_window_actions(
+        self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
+    ) -> None:
+        """Register a toggle for each dock and "Reset layout", and show them as the Window menu.
+
+        The docks are those of *views*, and those added since *earlier* was
+        taken that have an object name no other dock has. A dock a view adds
+        by itself gets no toggle, and a session with no dock shows no such
+        menu. A menu bar that already shows `WINDOW_MENU` gets no second one.
+        The views placed in a menu named Window move into this one, above the
+        toggles.
+        """
+        window = self.main_window
+        docks = {
+            name: dock
+            for name in views
+            if (dock := window.findChild(QDockWidget, name, DIRECT_CHILDREN))
+            is not None
+        }
+        for dock in window.findChildren(QDockWidget, options=DIRECT_CHILDREN):
+            name = dock.objectName()
+            if dock not in earlier and name and name not in docks:
+                docks[name] = dock
+        if not docks:
+            return
+        actions = [dock_toggle(self.name, dock) for dock in docks.values()]
+        actions.append(
+            Action(
+                id=f"{self.name}.reset_layout",
+                title="Reset layout",
+                callback=self._reset_layout,
+                menus=[MenuRule(id=WINDOW_MENU, group="2_layout")],
+            )
+        )
+        self.on_release(self.model.register_actions(actions))
+        bar = window.menuBar()
+        if bar is None or window.findChild(QModelMenu, WINDOW_MENU) is not None:
+            return
+        menu = QModelMenu(WINDOW_MENU, self.model, "Window", window)
+        bar.addMenu(menu)
+        # findChildren, since pyqt6 types findChild as never returning None
+        placed = window.findChildren(QMenu, "Window", options=DIRECT_CHILDREN)
+        if not placed:
+            return
+        bar.removeAction(placed[0].menuAction())
+        items = placed[0].actions()
+
+        # connected after the menu's own handler, which empties the menu
+        # before refilling it from the registry
+        def keep_items(changed: set[str]) -> None:
+            if WINDOW_MENU in changed:
+                first = menu.actions()[0]
+                menu.insertActions(first, items)
+                menu.insertSeparator(first)
+
+        keep_items({WINDOW_MENU})
+        self.model.menus.menus_changed.connect(keep_items)
+        self.on_release(lambda: self.model.menus.menus_changed.disconnect(keep_items))
+
+    def _reset_layout(self) -> None:
+        """Put every dock back where it was before a saved layout was restored."""
+        if self._default_state is not None:
+            self.main_window.restoreState(self._default_state)
 
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.
@@ -815,6 +894,27 @@ class CloseGuard(QObject):
 def encoded(state: QByteArray) -> str:
     """Return *state* as text, the settings file holding JSON rather than bytes."""
     return base64.b64encode(state.data()).decode("ascii")
+
+
+def dock_toggle(session: str, dock: QDockWidget) -> Action[[], None]:
+    """Return the action showing *dock* while it is hidden and hiding it while it is shown.
+
+    It is checked while the dock is shown, which a menu reads as it opens.
+    """
+
+    def toggle() -> None:
+        dock.setVisible(dock.isHidden())
+
+    def shown() -> bool:
+        return not dock.isHidden()
+
+    return Action(
+        id=f"{session}.toggle_dock.{dock.objectName()}",
+        title=dock.windowTitle(),
+        callback=toggle,
+        toggled=ToggleRule(get_current=shown),
+        menus=[MenuRule(id=WINDOW_MENU, group="1_docks")],
+    )
 
 
 def application() -> QApplication:

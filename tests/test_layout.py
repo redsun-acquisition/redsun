@@ -7,12 +7,15 @@ import json
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
+from app_model.backends.qt import QModelMainWindow, QModelMenu
+from app_model.types import Action, MenuRule
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtWidgets import QApplication, QDockWidget, QWidget
+from qtpy.QtGui import QAction
+from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
-from redsun import AsView, Declare, Placement
-from redsun.qt import Dock, QtSession
+from redsun import AsHook, AsView, Declare, Placement
+from redsun.qt import WINDOW_MENU, Dock, MenuItem, QtSession
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -74,6 +77,98 @@ class TakesPlacementApp(QtSession):
     taking: AsView[TakesPlacement]
 
 
+class Fragile(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget, fail: bool = False) -> None:
+        if fail:
+            raise RuntimeError("no detector attached")
+        super().__init__(name, parent)
+
+
+class FragileApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "fragile-session"}
+
+    panel: AsView[Panel]
+    fragile: AsView[Fragile]
+
+
+class FragileByProperty(QWidget):
+    def __init__(self, name: str, parent: QWidget, fail: bool = False) -> None:
+        if fail:
+            raise RuntimeError("no detector attached")
+        super().__init__(parent)
+        self.name = name
+
+    @property
+    def placement(self) -> Placement:
+        return Dock("right")
+
+
+class FragileByPropertyApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "fragile-property-session"}
+
+    panel: AsView[Panel]
+    fragile: AsView[FragileByProperty]
+
+
+class AddsItsOwnDock(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        if isinstance(parent, QMainWindow):
+            parent.addDockWidget(RIGHT, QDockWidget("extra", parent))
+
+
+class OwnDocksApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "own-docks-session"}
+
+    first: AsView[AddsItsOwnDock]
+    second: AsView[AddsItsOwnDock]
+
+
+class AddsNotes:
+    def configure_main_view(self, view: QMainWindow) -> None:
+        notes = QDockWidget("notes", view)
+        notes.setObjectName("notes")
+        view.addDockWidget(LEFT, notes)
+
+
+class HookDockApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "hook-dock-session"}
+
+    panel: AsView[Panel]
+    configure_main_view: AsHook[AddsNotes]
+
+
+class SetsItsOwnMenuBar:
+    def configure_main_view(self, view: QModelMainWindow) -> None:
+        view.setModelMenuBar({WINDOW_MENU: "Window"})
+
+
+class HookMenuBarApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "hook-menu-bar-session"}
+
+    panel: AsView[Panel]
+    configure_main_view: AsHook[SetsItsOwnMenuBar]
+
+
+class OpensLog(QAction):
+    placement: Placement = MenuItem("Window")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        self.name = name
+
+
+class WindowItemApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "window-item-session"}
+
+    panel: AsView[Panel]
+    log: AsView[OpensLog]
+
+
 def builtin_session(
     plugin_id: str, presenter: str | None, placement: str | None
 ) -> QtSession:
@@ -124,21 +219,166 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
 
 
-def test_a_dock_kept_away_from_its_placement_is_logged(
+def test_a_changed_placement_skips_the_saved_layout(
     qapp: QApplication,
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log each dock the saved layout keeps away from the edge its placement asks for."""
+    """Start every dock where its placement says once a placement changed since the layout was saved."""
     first = build(LayoutApp)
     first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
     first.save_layout()
     first.shutdown()
 
-    build(LayoutApp)
+    second = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
 
-    assert "'charts' stays on the left, where it was left" in caplog.text
-    assert "'panel'" not in caplog.text
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is TOP
+    assert "placed differently from when" in caplog.text
+
+
+def test_a_layout_saved_before_placements_were_recorded_is_restored(
+    qapp: QApplication, config_home: Path, build: BuildSession
+) -> None:
+    """Restore a saved layout whose settings file records no placements, as an older release wrote it."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+    path = config_home / "layout-session.json"
+    written = json.loads(path.read_text())
+    del written["window.layout"]
+    path.write_text(json.dumps(written))
+
+    second = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
+
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is LEFT
+
+
+@pytest.mark.parametrize("session", [FragileApp, FragileByPropertyApp])
+def test_a_view_that_fails_to_build_keeps_the_saved_layout(
+    qapp: QApplication, build: BuildSession, session: type[QtSession]
+) -> None:
+    """Restore the saved layout when a view that built before fails, its placement declared or answered by a property."""
+    first = build(session)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
+    first.save_layout()
+    first.shutdown()
+
+    second = build(session, {"views": {"fragile": {"fail": True}}})
+
+    assert "fragile" not in second.views
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT
+
+
+def test_reset_layout_returns_the_docks_to_their_placements(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put a restored layout back where the placements say when Reset layout runs."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+    second = build(LayoutApp)
+
+    second.model.commands.execute_command("layout-session.reset_layout")
+
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+
+
+def test_the_window_menu_brings_back_a_closed_dock(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a dock closed with its X button unchecked in the Window menu, and show it again from there."""
+    app = build(LayoutApp)
+    dock = _dock(app, "charts")
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    action = menu.findAction("layout-session.toggle_dock.charts")
+    assert isinstance(action, QAction)
+
+    dock.close()
+    menu.aboutToShow.emit()
+    checked = action.isChecked()
+    action.trigger()
+
+    bar = app.main_window.menuBar()
+    assert bar is not None
+    assert menu.menuAction() in bar.actions()
+    assert menu.title() == "Window"
+    assert not checked
+    assert not dock.isHidden()
+
+
+def test_a_dock_a_view_adds_itself_gets_no_toggle(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Build a session whose views add unnamed docks of their own, with a toggle for each view's dock alone."""
+    app = build(OwnDocksApp)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    menu.aboutToShow.emit()
+
+    toggles = [action.text() for action in menu.actions() if action.isCheckable()]
+
+    assert toggles == ["first", "second"]
+
+
+def test_the_window_menu_brings_back_a_dock_the_hook_added(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show again from the Window menu a dock the main-view hook added and the user closed."""
+    app = build(HookDockApp)
+    notes = app.main_window.findChild(QDockWidget, "notes")
+    assert isinstance(notes, QDockWidget)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+
+    notes.close()
+    action = menu.findAction("hook-dock-session.toggle_dock.notes")
+    assert isinstance(action, QAction)
+    action.trigger()
+
+    assert not notes.isHidden()
+
+
+def test_a_hook_menu_bar_with_the_window_menu_shows_it_once(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show one Window menu when the main-view hook sets a menu bar that includes it."""
+    app = build(HookMenuBarApp)
+    bar = app.main_window.menuBar()
+    assert bar is not None
+
+    titles = [action.text() for action in bar.actions()]
+
+    assert titles.count("Window") == 1
+
+
+def test_a_view_placed_in_a_window_menu_joins_the_session_one(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a view placed in a menu named Window in the one Window menu, there still after the menu changes."""
+    app = build(WindowItemApp)
+    bar = app.main_window.menuBar()
+    assert bar is not None
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    added = Action(
+        id="window-item-session.extra",
+        title="Extra",
+        callback=lambda: None,
+        menus=[MenuRule(id=WINDOW_MENU)],
+    )
+
+    dispose = app.model.register_action(added)
+    titles = [action.text() for action in bar.actions()]
+    items = [action.text() for action in menu.actions()]
+    dispose()
+
+    assert titles.count("Window") == 1
+    assert "log" in items
+    assert "Extra" in items
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
@@ -158,7 +398,7 @@ def test_the_layout_goes_to_the_settings_file_as_text(
     build(LayoutApp).save_layout()
 
     written = json.loads((config_home / "layout-session.json").read_text())
-    assert sorted(written) == ["window.geometry", "window.state"]
+    assert sorted(written) == ["window.geometry", "window.layout", "window.state"]
     assert base64.b64decode(written["window.state"])
 
 
@@ -267,17 +507,3 @@ def test_a_view_taking_placement_itself_is_refused(
 
     assert "taking" not in app.views
     assert "reserves for the session" in caplog.text
-
-
-def test_a_moved_dock_is_logged_against_its_declared_edge(
-    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Log a saved layout keeping a dock off the edge its declaration names, not its class's."""
-    first = build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
-    first.main_window.addDockWidget(LEFT, _dock(first, "panel"))
-    first.save_layout()
-    first.shutdown()
-
-    build(LayoutApp, {"views": {"panel": {"placement": "top"}}})
-
-    assert "'panel' stays on the left, where it was left, not on the top" in caplog.text
