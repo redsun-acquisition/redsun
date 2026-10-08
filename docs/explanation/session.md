@@ -42,43 +42,46 @@ it made, and your editor and `mypy` see it as one.
 
 A session has three layers of components, the [DVP](glossary.md#dvp) pattern,
 and the [services](services.md) below them reach the hardware. Step through
-the diagram to see the layers stack up, and point at one to read what it
-holds:
+the diagram to highlight one layer at a time, or point at a layer to read
+what it holds:
 
 ```d2 title="The layers of a session"
 ...@diagrams/style
-direction: down
+grid-columns: 1
+grid-gap: 24
 app: session process {
+  grid-columns: 1
+  grid-gap: 0
+  views: "views\nwhat the user sees and touches" {
+    class: layer
+    width: 420
+    tooltip: A view holds the widgets. It shows what devices and presenters report, and turns what the user does into a signal a presenter acts on. It may hold presenters and devices.
+  }
+  presenters: "presenters\ndecide what happens and when" {
+    class: layer
+    width: 420
+    tooltip: A presenter runs plans, computes results from the documents a run produces, moves devices when asked, and keeps the state the application needs. It may hold devices, never a view.
+  }
   devices: "devices\nthe signals of your setup" {
     class: layer
+    width: 420
     tooltip: Each device is an ophyd-async device, a set of signals such as a position or an exposure time. It knows what can be controlled, not when or why.
   }
 }
-steps: {
-  1: {
-    app.presenters: "presenters\ndecide what happens and when" {
-      class: layer
-      tooltip: A presenter runs plans, computes results from the documents a run produces, moves devices when asked, and keeps the state the application needs.
-    }
-    app.presenters -> app.devices: uses
-  }
-  2: {
-    app.views: "views\nwhat the user sees and touches" {
-      class: layer
-      tooltip: A view holds the widgets. It shows what devices and presenters report and turns what the user does into a signal a presenter acts on.
-    }
-    app.views -> app.presenters: uses
-    app.views -> app.devices: uses
-  }
-  3: {
-    services: "services\ntheir own programs" {
-      class: process
-      tooltip: A service talks to the hardware and offers it to the devices under a prefix. A device that needs no hardware, such as a simulated stage, needs no service.
-    }
-    hardware: {class: hardware}
-    app.devices -> services: "prefix, over Channel Access or PVAccess"
-    services -> hardware
-  }
+services: "services\ntheir own programs, reached by prefix\nover Channel Access or PVAccess" {
+  class: process
+  width: 420
+  tooltip: A service talks to the hardware and offers it to the devices under a prefix. The session starts the ones it launches before anything else and stops them after every component. A device that needs no hardware, such as a simulated stage, needs no service.
+}
+hardware: {
+  class: hardware
+  width: 420
+}
+scenarios: {
+  views: {app.views.style.stroke-width: 4; app.presenters.style.opacity: 0.3; app.devices.style.opacity: 0.3; services.style.opacity: 0.3; hardware.style.opacity: 0.3}
+  presenters: {app.presenters.style.stroke-width: 4; app.views.style.opacity: 0.3; app.devices.style.opacity: 0.3; services.style.opacity: 0.3; hardware.style.opacity: 0.3}
+  devices: {app.devices.style.stroke-width: 4; app.views.style.opacity: 0.3; app.presenters.style.opacity: 0.3; services.style.opacity: 0.3; hardware.style.opacity: 0.3}
+  services: {services.style.stroke-width: 4; app.views.style.opacity: 0.3; app.presenters.style.opacity: 0.3; app.devices.style.opacity: 0.3; hardware.style.opacity: 0.3}
 }
 ```
 

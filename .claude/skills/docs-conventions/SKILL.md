@@ -102,6 +102,10 @@ what a picture cannot say: why, the exceptions, and links. Diagrams are D2 in
   the `current` class. The site moves shared shapes between boards with a
   morph; set `transition="fade"` on a block where moving shapes would not
   help.
+- To highlight one shape of a fixed picture, set a thicker outline on it and
+  `style.opacity: 0.3` on the others in that scenario, the same spotlight the
+  page gives a shape under the pointer. A class given in a scenario replaces
+  the shape's own class instead of adding to it.
 - Keep every board the same size: declare all shapes on the first board, give
   the ones a later step brings the `hidden` class, and show them by changing
   their class in that step. A board that grows wider than the content column
