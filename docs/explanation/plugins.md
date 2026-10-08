@@ -30,7 +30,7 @@ entry: |yaml
       plugin_name: mylab
       plugin_id: motor
       step: 2.0
-| {class: file}
+| {class: step}
 point: |toml
   # pyproject.toml of the mylab package
   [project.entry-points."redsun.plugins"]
@@ -51,12 +51,12 @@ manifest -> make: "plugin_id" {style.opacity: 0}
 steps: {
   1: {
     label: "plugin_name is the name of an entry point in the redsun.plugins group, which names the manifest inside the installed package."
-    point.class: file
+    point.class: step
     (entry -> point)[0].style.opacity: 1
   }
   2: {
     label: "The manifest maps each id to a class, written as module:ClassName."
-    manifest.class: file
+    manifest.class: step
     (point -> manifest)[0].style.opacity: 1
   }
   3: {
@@ -131,7 +131,7 @@ file: |yaml
     logs:
       plugin_name: redsun
       plugin_id: logs
-| {class: file}
+| {class: step}
 session: "the session" {
   motor_ctrl: {class: hidden; width: 160}
   logs: {class: hidden; width: 160}

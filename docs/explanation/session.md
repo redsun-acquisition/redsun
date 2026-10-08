@@ -140,13 +140,13 @@ scenarios: {
       presenters:
         motor_ctrl:
           step: 2.0
-    | {class: file}
+    | {class: step}
     detail.sim: |yaml
       # simulation.yaml
       session: my-lab
-    | {class: file}
+    | {class: step}
     detail.checked: "merged and checked" {class: step}
-    detail.common -> detail.checked
+    detail.common -> detail.sim: "then"
     detail.sim -> detail.checked
   }
   runtime: {
@@ -442,7 +442,7 @@ common: |yaml
     motor_ctrl:
       step: 2.0
       speed: 1.0
-| {class: file}
+| {class: step}
 simulation: |yaml
   # simulation.yaml
   presenters:
@@ -460,12 +460,12 @@ merged: |yaml
 steps: {
   1: {
     label: "simulation.yaml is read after it and names motor_ctrl again."
-    simulation.class: file
+    simulation.class: step
     common -> simulation: then
   }
   2: {
     label: "A component's entry is replaced whole, so motor_ctrl keeps the later step and loses speed."
-    merged.class: file
+    merged.class: step
     simulation -> merged: "motor_ctrl replaced\nwhole: speed is gone"
   }
   3: {
