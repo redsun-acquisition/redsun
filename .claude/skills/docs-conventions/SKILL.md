@@ -71,8 +71,11 @@ Headings name the topic in a few words ("Devices and services", "Unexpected
 exits"); a question works on a page of limits ("Can I add a value after
 startup?"). The claim goes in the section's first sentence. Use the real name
 of the thing, never "part", "role" or "aspect"; no sentences, no "cannot" or
-"must", no "while ..." clauses. How-to and tutorial steps say what the reader
-does ("Declare the device").
+"must", no "while ..." clauses. Name the topic in the reader's words, not
+after the class or mechanism behind it ("A tree of device settings", not
+"Descriptor tree view"). How-to and tutorial steps say what the reader does
+("Declare the device"), including a tutorial's numbered steps ("1. Write the
+device", not "1. The device").
 
 Each technical word has one definition, in `docs/explanation/glossary.md`; link
 it on its first use on a page. A few words in passing next to the link are
@@ -93,7 +96,7 @@ what a picture cannot say: why, the exceptions, and links. Diagrams are D2 in
   `layer`, `step`, `current`, `done`, `failed`, `process`, `hardware`, `file`,
   `note`, `gap`, `hidden`. Pick no colours of your own; the themes colour
   every diagram in light and dark mode.
-- Every diagram has a `title`: it is the caption under the picture and the
+- Every diagram has a `title`: it is the caption above the picture and the
   name screen readers announce.
 - A label names the thing in a few words. A longer description goes in a
   `tooltip`, which the reader opens by pointing at the shape.

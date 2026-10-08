@@ -90,7 +90,7 @@ session is built on that frontend;
 [Merging the sources](../explanation/session.md#merging-the-sources) explains
 how files combine.
 
-## Naming a frontend without its packages
+## Read a failure
 
 A session file that names `frontend: qt` builds on `redsun.qt.QtSession`, so
 it needs a Qt binding installed. Without one you get this error:

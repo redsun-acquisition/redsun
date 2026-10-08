@@ -166,7 +166,7 @@ two levels are kept apart on purpose: a session can stay connected to a
 service that holds no hardware yet, and a service can release its hardware
 while every connection stays up.
 
-## Launched and attached
+## Launched and attached services
 
 A service is either [launched](glossary.md#launched-service) by the session or
 attached to it. You declare a launched one with `Launch`, naming the module
@@ -462,8 +462,8 @@ how a service writes records the session can read.
 - Restarting a crashed service.
 - Standby, a service releasing its hardware while it stays connected. For now
   the presenter that owns the devices does it, see
-  [Standby](components.md#standby); the session will take it over once
-  `ophyd-async` can disconnect a device.
+  [Letting go of hardware](components.md#letting-go-of-hardware); the session
+  will take it over once `ophyd-async` can disconnect a device.
 - Launching a service in a container. An attached service covers one you start
   beside the session with `docker compose`.
 

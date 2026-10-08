@@ -38,7 +38,7 @@ the left becomes the component's name, and `AsDevice`, `AsPresenter` or
 make. Once the session is built, `self.motor_ctrl` holds the `MotorPresenter`
 it made, and your editor and `mypy` see it as one.
 
-## Devices, presenters, views
+## The layers of a session
 
 A session has three layers of components, the [DVP](glossary.md#dvp) pattern,
 and the [services](services.md) below them reach the hardware. Point at a

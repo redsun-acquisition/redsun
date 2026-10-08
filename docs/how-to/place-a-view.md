@@ -211,8 +211,8 @@ the user left it, and a new placement for it doesn't show. Only a view whose
 name wasn't saved before takes its placement. The log says which docks the
 saved layout keeps away from their placement. To start every dock from its
 placement again, close the session and remove the `window.state` key from its
-settings file, as
-[The session's settings](save-a-session.md#the-sessions-settings) describes.
+settings file. [Find the settings file](save-a-session.md#find-the-settings-file)
+says where it is.
 
 ## Read a failure
 

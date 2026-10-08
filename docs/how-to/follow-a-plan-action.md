@@ -14,7 +14,7 @@ explains the states an action goes through.
 
 You need a component that offers a plan declaring actions, and owns the
 `ActionManager` the plan waits on. See
-[In-flight actions](../explanation/plans.md#in-flight-actions).
+[Actions while a plan runs](../explanation/plans.md#actions-while-a-plan-runs).
 
 ## Ask, and follow the answer
 

@@ -14,7 +14,7 @@ hard work.
 software out of small, separate [components](glossary.md#component) that work
 together by sending each other signals.
 
-## SDK, components and application
+## What `redsun` is made of
 
 `redsun` is both the software development kit (SDK) you write components with
 and the application shell that runs them. Point at a shape to read more:

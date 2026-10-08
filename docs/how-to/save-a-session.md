@@ -55,7 +55,7 @@ A Qt session also offers `Save configuration as...` in the menu `SAVE_MENU`,
 under the command `<session name>.save_configuration`. To show that menu, see
 [Add menu actions](add-menu-actions.md#show-the-menu).
 
-## Unsaved changes
+## Decide what happens to unsaved changes
 
 [`has_changes`][redsun.Session.has_changes] is true when any component would
 now save different settings than it had at the end of the build. A value
@@ -65,7 +65,7 @@ When you close the window with unsaved changes, a Qt session asks whether to
 save, discard or cancel, and the prompt has a "don't ask again" box. To decide
 yourself instead, install a `confirm_close` [hook](install-hooks.md).
 
-## The session's settings
+## Find the settings file
 
 [`Settings`][redsun.Settings] is one JSON file for each session name:
 
@@ -99,7 +99,7 @@ A Qt session keeps two keys there itself:
 A session started with `run` saves the window layout when it ends and puts it
 back the next time.
 
-## The colour scheme
+## Choose the colour scheme
 
 A Qt session has a colour scheme button on its toolbar, which cycles through
 system, light and dark. The session file chooses where it starts:

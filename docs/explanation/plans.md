@@ -206,7 +206,7 @@ builds a start/stop toggle and, with `pausable=True`, a pause button. Stopping
 is the normal end, so the `RunEngine` closes the stopped plan's
 [run](glossary.md#run) with exit status `success`.
 
-### In-flight actions
+### Actions while a plan runs
 
 An action is something the user triggers while the plan runs. `PlanAction`
 declares it (name, description, button labels; a frozen dataclass with no
