@@ -8,24 +8,19 @@ A [frontend](glossary.md#frontend) is what shows your session to a person: a
 desktop window today, and perhaps a web page in the future. `redsun` ships one
 frontend, for Qt.
 
-The core of `redsun` knows nothing about windows. It builds components and
-connects them, and a frontend adds two things on top:
-
-- a session class for you to subclass, such as
-  [`QtSession`][redsun.qt.QtSession], which knows how to start the
-  [toolkit](glossary.md#toolkit) and put views on screen. It lives in the
-  frontend's own package, `redsun.qt`, because importing it imports the
-  toolkit, and a session without a window doesn't install the toolkit;
-- a [`Frontend`][redsun.Frontend] class, which lists the
-  [placements](glossary.md#placement) it can show.
+The core of `redsun` knows nothing about windows. A frontend adds a session
+class to subclass, such as [`QtSession`][redsun.qt.QtSession], which starts
+the [toolkit](glossary.md#toolkit) and shows the views, and a
+[`Frontend`][redsun.Frontend] listing the [placements](glossary.md#placement)
+it can show. `QtSession` lives in `redsun.qt` because importing it imports the
+toolkit, which a session without a window doesn't install.
 
 ## Placements
 
-A view says where it wants to be shown, and the frontend decides whether it can
-show it there. The core defines only the `Placement` base class. Docks and
-menus belong to windows, so the Qt frontend defines them, next to the code that
-shows them. Pick a placement to see where it puts a view, and point at it to
-read what it needs:
+A view says where it wants to be shown, and the frontend decides whether it
+can. The core defines only the `Placement` base class; the Qt frontend defines
+docks and menus. Pick a placement to see where it puts a view, and point at it
+to read what it needs:
 
 ```d2 title="Where Qt puts a view"
 ...@diagrams/style
@@ -182,50 +177,37 @@ Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
 Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 ```
 
-A view that sets `placement` from a property is checked only after the view
-is built, since only the object can answer, so a placement the frontend can't
-show fails that view only then. That form is deprecated and is removed in
-0.16: set `placement` as a class attribute or in the declaration instead.
-
-A frontend also reads the `placement` words of a session file, with
-`read_placement`. Qt, for example, turns `left` into a dock on the left and
-`central` into the central area. The core of `redsun` knows none of these
-words.
+A `placement` set from a property can only be checked after the view is
+built; that form is deprecated and goes in 0.16, so set it as a class
+attribute or in the declaration. A session file's placement words, such as
+`left` or `central`, are read by the frontend's `read_placement`; the core
+knows none of them.
 
 ## The Qt frontend
 
-A Qt view's constructor starts with `(name: str, parent: QWidget)`, written
-exactly like that. `QtSession` passes its main window as the parent, so the
-view is part of the window from the moment it exists.
-[How to place a view in the window](../how-to/place-a-view.md) shows the
-constructor with each placement.
+A Qt view's constructor starts with exactly `(name: str, parent: QWidget)`,
+and `QtSession` passes its main window as the parent
+([How to place a view](../how-to/place-a-view.md)). `QtSession` also:
 
-`QtSession` also:
+- runs a widget's slots on the main thread unless a slot names another
+- builds the main window from an `app-model` `Application` holding the menus
+  and commands
+- restores the docks where the user left them
+- asks before closing when a component has unsaved changes
+- logs an exception no slot caught and keeps the window open, where the Qt
+  binding would end the process silently
+- closes and deletes every view at shutdown, after delivering waiting
+  signals, so a third-party widget can clean up in its `closeEvent`
 
-- runs every slot of a widget on the main thread, unless the slot names
-  another thread, because Qt widgets may only be used from there;
-- keeps an `Application` from the `app-model` package for the session's menus
-  and commands, and builds the main window from it;
-- saves where the user left the docks, and puts them back the next time;
-- asks before closing when a component has unsaved changes;
-- logs any exception that no slot caught, with its traceback, and keeps the
-  window open, where the Qt binding would otherwise end the process without a
-  word;
-- closes and deletes every view at shutdown, after delivering any signal still
-  waiting for one. Closing runs each view's `closeEvent`, which is the only
-  place a view that is a third-party widget can clean up, because it inherits
-  its cleanup from the widget and has no `shutdown` of its own.
-
-You choose the [Qt binding](glossary.md#qt-binding) with `QT_API`, which
-`qtpy` reads. A session file never names one.
+The [Qt binding](glossary.md#qt-binding) is chosen with `QT_API`, read by
+`qtpy`, never by a session file.
 
 ### Hook points
 
-A [hook](glossary.md#hook) lets you act at fixed moments of a Qt session's
-life, from making the application to closing the window, without changing
-what the session builds. The Qt frontend calls five
-[hook points](glossary.md#hook-point), the named moments where a hook runs.
-Pick one to see when it runs, and point at it to read what it receives:
+A [hook](glossary.md#hook) acts at a fixed moment of a Qt session's life
+without changing what the session builds. Pick one of the five
+[hook points](glossary.md#hook-point) to see when it runs, and point at it to
+read what it receives:
 
 ```d2 title="The hook points of a Qt session"
 ...@diagrams/style
@@ -305,40 +287,28 @@ under:
 frontend: qt
 ```
 
-`Session.from_config` reads that name and builds on the class registered under
-it. Without a `frontend` key, it builds on the class you called `from_config`
-on, which for a plain `Session` means no frontend at all.
-
-Frontends are registered as entry points, the packaging feature that lets an
-installed package announce what it offers, in the `redsun.frontends` group.
-`redsun` registers its own there:
+`Session.from_config` builds on the class registered under that name, or,
+without a `frontend` key, on the class you called it on. Frontends are
+registered as entry points, the packaging feature through which an installed
+package announces what it offers, in the `redsun.frontends` group:
 
 ```toml
 [project.entry-points."redsun.frontends"]
 qt = "redsun.qt:QtSession"
 ```
 
-A package that offers another frontend registers its session class the same
-way, and a session file can then name it with no change to `redsun`. A
-component that asks for [`SessionConfig`][redsun.SessionConfig] finds the
-frontend's registered name in its `frontend` field, or `None` when the session
-has no frontend.
+Another package registers its session class the same way, with no change to
+`redsun`. A component asking for [`SessionConfig`][redsun.SessionConfig]
+finds the registered name in its `frontend` field, or `None`.
 
 ## Writing a frontend
 
-To show a session somewhere other than a desktop window, a frontend defines
-its own placements, its own `Frontend` and a session class that shows the
-views. [How to write a frontend](../how-to/write-a-frontend.md) writes one.
-Two more methods let a frontend shape its views: `Frontend.check_view` refuses
-a view class the frontend can't build, and `Session.view_arguments` adds
-arguments to every view's constructor. Neither does anything unless a frontend
-overrides it.
+A new frontend defines its placements, its `Frontend` and a session class
+that shows the views ([How to write a frontend](../how-to/write-a-frontend.md)).
+It may override `Frontend.check_view`, to refuse a view class it can't build,
+and `Session.view_arguments`, to add arguments to every view's constructor.
 
 ### What a frontend provides
-
-A frontend provides three things: the placements it shows, the thread its
-views' [slots](glossary.md#slot) run on, and the delivery of calls held for
-that thread:
 
 | what | where | the Qt frontend |
 | --- | --- | --- |
@@ -346,9 +316,9 @@ that thread:
 | the thread its views' slots run on | [`Frontend.thread_of`][redsun.Frontend.thread_of] | the main thread, for a `QWidget` |
 | the delivery of the calls held for that thread | the session's `run` | `psygnal.qt.start_emitting_from_queue` |
 
-The last two matter because presenters working on other threads call a view's
-slots, while most toolkits let a view be used from one thread only. Step
-through a call from a presenter to a view:
+The thread and the delivery matter because presenters on other threads call a
+view's [slots](glossary.md#slot), while most toolkits allow one thread only.
+Step through such a call:
 
 ```d2 title="A presenter calls a view from another thread"
 ...@diagrams/style
