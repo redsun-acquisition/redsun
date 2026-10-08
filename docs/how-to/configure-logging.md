@@ -9,10 +9,63 @@ services it starts, and anything that goes wrong. This page shows how to
 choose how much of that you see, where it goes, and how to log from your own
 code.
 
-All of these messages go through one Python logger, named `redsun`. Out of
-the box it shows messages at level `INFO` and above, and prints them to the
-console (`sys.stdout`). Each line starts with the time, the level, and the
-class and name of the component that wrote it:
+All of these messages go through one Python logger, named `redsun`, which
+passes each one on to several places. Step through where a record can go,
+and point at a shape to read more:
+
+```d2 title="Where a log record goes"
+...@diagrams/style
+direction: right
+component: "your component\nself.logger" {class: step}
+service: "launched service\nredsun.service.<name>" {class: hidden}
+redsun: "redsun logger\nINFO and above" {
+  class: step
+  tooltip: The level of this logger decides which records exist. INFO unless you set another.
+}
+console: "console\nsys.stdout" {class: step}
+view: "LogView" {class: hidden}
+app_file: "session log file" {class: hidden}
+service_file: "service log file" {class: hidden}
+yours: "handlers you add" {class: hidden}
+root: "root logger" {class: hidden}
+component -> redsun
+redsun -> console
+redsun -> view {style.opacity: 0}
+redsun -> app_file: "application\nrecords" {style.opacity: 0}
+service -> service_file {style.opacity: 0}
+service -> redsun: "propagates" {style.opacity: 0}
+redsun -> yours: add_handler {style.opacity: 0}
+redsun -> root: "propagates" {style.opacity: 0}
+steps: {
+  1: {
+    view.class: step
+    view.tooltip: A built-in Qt view. It reads a buffer that keeps the latest records, so it shows those of the build too.
+    (redsun -> view)[0].style.opacity: 1
+  }
+  2: {
+    app_file.class: file
+    app_file.tooltip: Opened by the session when the build reads the configuration, closed in shutdown. It takes no service records.
+    (redsun -> app_file)[0].style.opacity: 1
+  }
+  3: {
+    service.class: process
+    service_file.class: file
+    service.tooltip: The session logs each line the service prints under this logger. A line that is a JSON log record keeps its level, time and traceback. Any other line is logged at DEBUG.
+    (service -> service_file)[0].style.opacity: 1
+    (service -> redsun)[0].style.opacity: 1
+  }
+  4: {
+    yours.class: step
+    root.class: step
+    root.tooltip: The redsun logger propagates, so a handler on the root logger receives its records too.
+    (redsun -> yours)[0].style.opacity: 1
+    (redsun -> root)[0].style.opacity: 1
+  }
+}
+```
+
+Each line on the console starts with the time, the level, and the class and
+name of the component that wrote it:
 
 ```text
 [29-08-26|14:02:46][INFO][MyMotor -> stage]: Connected
