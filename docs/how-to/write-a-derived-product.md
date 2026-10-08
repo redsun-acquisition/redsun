@@ -14,6 +14,36 @@ thing `redsun` writes. [Derived products](../explanation/derived-products.md)
 says why a product is handed over rather than carried by a
 [document](../explanation/glossary.md#document).
 
+Step through what the component, its writer and the store do during one run:
+
+```d2 title="A derived product through one run"
+...@diagrams/style
+shape: sequence_diagram
+component: "your component" {class: step}
+writer: Writer {class: step}
+store: "the device's store" {
+  class: file
+  tooltip: The store the stream_resource document names, written by the device during the run. Beside an OME-Zarr image, the product gets a store of its own instead.
+}
+component -> writer: "constructor: derive(product, source=...)"
+component -> writer: "descriptor of source:\nframe shape and dtype" {style.opacity: 0}
+component -> writer: "stream_resource of source:\nthe store" {style.opacity: 0}
+component -> writer: "event: append(product, frames)" {style.opacity: 0}
+writer -> store: "first append or write: open a stream\nwith every product of the store" {
+  style.opacity: 0
+}
+component -> writer: "stop: write(product, data)" {style.opacity: 0}
+writer -> store: "stop of the run: close the stream,\nwrite the metadata" {style.opacity: 0}
+steps: {
+  1: {(component -> writer)[1].style.opacity: 1}
+  2: {(component -> writer)[2].style.opacity: 1}
+  3: {(component -> writer)[3].style.opacity: 1}
+  4: {(writer -> store)[0].style.opacity: 1}
+  5: {(component -> writer)[4].style.opacity: 1}
+  6: {(writer -> store)[1].style.opacity: 1}
+}
+```
+
 ## Install the extra
 
 The `zarr` extra brings `acquire-zarr`, which every product needs. The
@@ -58,9 +88,7 @@ class MedianPresenter(DocumentRouter):
 from, and it comes from the session file like any other argument of a
 component.
 
-`derive` takes the layout and the store from the run. The `descriptor` naming
-`source` gives the frame shape and dtype, and the `stream_resource` naming it
-gives the store. A key described as `external: STREAM:` leads its shape with
+`derive` takes the layout and the store from the run's documents. A key described as `external: STREAM:` leads its shape with
 the frames per event, which `derive` drops. For a product the run says nothing
 about, `declare` gives both up front:
 
@@ -104,9 +132,8 @@ def shutdown(self) -> None:
     self._writer.shutdown()
 ```
 
-The store's stream opens on the first `append` or `write` against it, with
-every product of that store known by then, and closes at the `stop` of the run
-that named the store. A run nested inside another sees what the outer run
+The store's stream closes at the `stop` of the run that named the store. A
+run nested inside another sees what the outer run
 declared, so a product computed at the nested run's stop can go to the outer
 run's store.
 
