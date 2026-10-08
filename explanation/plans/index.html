@@ -3076,10 +3076,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#in-flight-actions" class="md-nav__link">
+  <a href="#actions-while-a-plan-runs" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        In-flight actions
+        Actions while a plan runs
       </span>
     </span>
   </a>
@@ -5445,10 +5445,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#in-flight-actions" class="md-nav__link">
+  <a href="#actions-while-a-plan-runs" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        In-flight actions
+        Actions while a plan runs
       </span>
     </span>
   </a>
@@ -7214,7 +7214,7 @@ it into <code>PlanSpec.continuous</code> and <code>PlanSpec.pausable</code>, fro
 builds a start/stop toggle and, with <code>pausable=True</code>, a pause button. Stopping
 is the normal end, so the <code>RunEngine</code> closes the stopped plan's
 <a href="../glossary/#run">run</a> with exit status <code>success</code>.</p>
-<h3 id="in-flight-actions">In-flight actions<a class="headerlink" href="#in-flight-actions" title="Permanent link">&para;</a></h3>
+<h3 id="actions-while-a-plan-runs">Actions while a plan runs<a class="headerlink" href="#actions-while-a-plan-runs" title="Permanent link">&para;</a></h3>
 <p>An action is something the user triggers while the plan runs. <code>PlanAction</code>
 declares it (name, description, button labels; a frozen dataclass with no
 state), and an <code>ActionManager</code>, owned by the component offering the plans,

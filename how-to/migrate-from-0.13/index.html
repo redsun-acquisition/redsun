@@ -6039,7 +6039,7 @@ build step, so you can no longer call <code>start_services</code> before <code>b
   time between two checkpoints.</li>
 <li><code>wait_for_actions</code> raises <code>ValueError</code> when <code>events</code> is empty.</li>
 <li><code>actions</code> is an <code>ActionManager</code> from <code>redsun.engine.actions</code>, made by
-  whoever owns the plans. See <a href="../../explanation/plans/#in-flight-actions">In-flight actions</a>.</li>
+  whoever owns the plans. See <a href="../../explanation/plans/#actions-while-a-plan-runs">Actions while a plan runs</a>.</li>
 <li><code>PlanAction</code> is frozen, and <code>PlanAction.toggle_states</code> defaults to <code>None</code>
   where it defaulted to <code>("On", "Off")</code>.</li>
 <li><code>create_plan_spec</code> raises <code>ValueError</code> for a plan declaring two actions of

@@ -3239,10 +3239,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-redsun-does" class="md-nav__link">
+  <a href="#what-the-session-sets-up" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        What <code>redsun</code> does
+        What the session sets up
       </span>
     </span>
   </a>
@@ -3261,10 +3261,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#writing-to-registered-files" class="md-nav__link">
+  <a href="#overwriting-a-registered-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Writing to registered files
+        Overwriting a registered file
       </span>
     </span>
   </a>
@@ -5305,10 +5305,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-redsun-does" class="md-nav__link">
+  <a href="#what-the-session-sets-up" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        What <code>redsun</code> does
+        What the session sets up
       </span>
     </span>
   </a>
@@ -5327,10 +5327,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#writing-to-registered-files" class="md-nav__link">
+  <a href="#overwriting-a-registered-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Writing to registered files
+        Overwriting a registered file
       </span>
     </span>
   </a>
@@ -5460,7 +5460,7 @@
 <a href="../glossary/#tiled"><code>tiled</code></a> server on this machine, from build to shutdown,
 to hold its <a href="../glossary/#catalog">catalog</a>.
 <a href="../../how-to/keep-a-catalog/">Keep a catalog of runs</a> shows how to use it.</p>
-<h2 id="what-redsun-does">What <code>redsun</code> does<a class="headerlink" href="#what-redsun-does" title="Permanent link">&para;</a></h2>
+<h2 id="what-the-session-sets-up">What the session sets up<a class="headerlink" href="#what-the-session-sets-up" title="Permanent link">&para;</a></h2>
 <p><code>redsun</code> starts the server, keeps its database in
 <code>&lt;base_dir&gt;/&lt;session&gt;/catalog</code>, and gives its address to any component that
 asks for a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;CatalogAddress&lt;/span&gt;
@@ -6715,7 +6715,7 @@ than from the <a href="../glossary/#document">documents</a>.</p>
 across sessions you open each catalog. In exchange, everything a session
 produced lives under one directory, which you can archive or delete as a
 unit.</p>
-<h2 id="writing-to-registered-files">Writing to registered files<a class="headerlink" href="#writing-to-registered-files" title="Permanent link">&para;</a></h2>
+<h2 id="overwriting-a-registered-file">Overwriting a registered file<a class="headerlink" href="#overwriting-a-registered-file" title="Permanent link">&para;</a></h2>
 <p>Registering a file doesn't protect it: <code>tiled</code>'s <code>write</code>, <code>write_block</code> and
 <code>patch</code> reach a registered file like any other, and <code>management=external</code>
 forbids nothing. <code>write_block</code> is the hardest to notice, since it replaces one

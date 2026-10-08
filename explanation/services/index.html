@@ -3007,10 +3007,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#launched-and-attached" class="md-nav__link">
+  <a href="#launched-and-attached-services" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Launched and attached
+        Launched and attached services
       </span>
     </span>
   </a>
@@ -5393,10 +5393,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#launched-and-attached" class="md-nav__link">
+  <a href="#launched-and-attached-services" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Launched and attached
+        Launched and attached services
       </span>
     </span>
   </a>
@@ -6557,7 +6557,7 @@ simulated backend and launches no service, so it reaches neither level. The
 two levels are kept apart on purpose: a session can stay connected to a
 service that holds no hardware yet, and a service can release its hardware
 while every connection stays up.</p>
-<h2 id="launched-and-attached">Launched and attached<a class="headerlink" href="#launched-and-attached" title="Permanent link">&para;</a></h2>
+<h2 id="launched-and-attached-services">Launched and attached services<a class="headerlink" href="#launched-and-attached-services" title="Permanent link">&para;</a></h2>
 <p>A service is either <a href="../glossary/#launched-service">launched</a> by the session or
 attached to it. You declare a launched one with <code>Launch</code>, naming the module
 the session runs, and an attached one with <code>Attach</code>, naming only its prefix:</p>
@@ -8407,8 +8407,8 @@ how a service writes records the session can read.</p>
 <li>Restarting a crashed service.</li>
 <li>Standby, a service releasing its hardware while it stays connected. For now
   the presenter that owns the devices does it, see
-  <a href="../components/#standby">Standby</a>; the session will take it over once
-  <code>ophyd-async</code> can disconnect a device.</li>
+  <a href="../components/#letting-go-of-hardware">Letting go of hardware</a>; the session
+  will take it over once <code>ophyd-async</code> can disconnect a device.</li>
 <li>Launching a service in a container. An attached service covers one you start
   beside the session with <code>docker compose</code>.</li>
 </ul>

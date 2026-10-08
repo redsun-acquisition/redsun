@@ -687,10 +687,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-the-device" class="md-nav__link">
+  <a href="#1-write-the-device" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        1. The device
+        1. Write the device
       </span>
     </span>
   </a>
@@ -698,10 +698,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-the-view" class="md-nav__link">
+  <a href="#2-write-the-view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        2. The view
+        2. Write the view
       </span>
     </span>
   </a>
@@ -709,10 +709,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-the-session" class="md-nav__link">
+  <a href="#3-write-the-session" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. The session
+        3. Write the session
       </span>
     </span>
   </a>
@@ -720,10 +720,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-the-presenter" class="md-nav__link">
+  <a href="#4-write-the-presenter" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        4. The presenter
+        4. Write the presenter
       </span>
     </span>
   </a>
@@ -5362,10 +5362,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-the-device" class="md-nav__link">
+  <a href="#1-write-the-device" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        1. The device
+        1. Write the device
       </span>
     </span>
   </a>
@@ -5373,10 +5373,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-the-view" class="md-nav__link">
+  <a href="#2-write-the-view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        2. The view
+        2. Write the view
       </span>
     </span>
   </a>
@@ -5384,10 +5384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-the-session" class="md-nav__link">
+  <a href="#3-write-the-session" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. The session
+        3. Write the session
       </span>
     </span>
   </a>
@@ -5395,10 +5395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-the-presenter" class="md-nav__link">
+  <a href="#4-write-the-presenter" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        4. The presenter
+        4. Write the presenter
       </span>
     </span>
   </a>
@@ -5579,7 +5579,7 @@ with these imports:</p>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsDevice</span><span class="p">,</span> <span class="n">AsPresenter</span><span class="p">,</span> <span class="n">AsView</span><span class="p">,</span> <span class="n">DeviceMapping</span><span class="p">,</span> <span class="n">Link</span><span class="p">,</span> <span class="n">Placement</span><span class="p">,</span> <span class="n">slot</span>
 </span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dock</span><span class="p">,</span> <span class="n">QtSession</span>
 </span></code></pre></div>
-<h2 id="1-the-device">1. The device<a class="headerlink" href="#1-the-device" title="Permanent link">&para;</a></h2>
+<h2 id="1-write-the-device">1. Write the device<a class="headerlink" href="#1-write-the-device" title="Permanent link">&para;</a></h2>
 <p>A <a href="../../explanation/glossary/#device">device</a> describes one piece of your
 setup, which here is a stage with a position. Since you have no hardware,
 this stage keeps its position in memory. Add it below the imports:</p>
@@ -5618,7 +5618,7 @@ offers, which <a href="../builtin-positioner/">the last tutorial</a> uses withou
 the stage.</p>
 <p>A movable device reports its readback under its own name. When you read
 <code>stage</code>, its position comes back under the key <code>stage</code>, not <code>position</code>.</p>
-<h2 id="2-the-view">2. The view<a class="headerlink" href="#2-the-view" title="Permanent link">&para;</a></h2>
+<h2 id="2-write-the-view">2. Write the view<a class="headerlink" href="#2-write-the-view" title="Permanent link">&para;</a></h2>
 <p>A <a href="../../explanation/glossary/#view">view</a> is what the user of the
 application sees and touches. Add this one below the class <code>MyStage</code>. For each stage it hears
 from, it draws a row with a button and a label:</p>
@@ -5656,7 +5656,7 @@ key is the stage's own name, as step 1 explained.</p>
 you. The session passes every view its <code>name</code>, and its <code>parent</code>, which is the
 main window. Every component stores the name it receives as <code>self.name</code>, as
 <code>StageView</code> does.</p>
-<h2 id="3-the-session">3. The session<a class="headerlink" href="#3-the-session" title="Permanent link">&para;</a></h2>
+<h2 id="3-write-the-session">3. Write the session<a class="headerlink" href="#3-write-the-session" title="Permanent link">&para;</a></h2>
 <p>Add a session below the view. For now it holds the stage and the view, and
 sends the position of the stage to the view:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">FirstSession</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
@@ -5691,7 +5691,7 @@ from a device signal sends the value the signal has when the session makes the
 link, and then every new value. So <code>show_reading</code> received the stage's
 position while the session started, and added the row for it. Press the
 button: nothing happens yet, since nothing listens to it. Close the window.</p>
-<h2 id="4-the-presenter">4. The presenter<a class="headerlink" href="#4-the-presenter" title="Permanent link">&para;</a></h2>
+<h2 id="4-write-the-presenter">4. Write the presenter<a class="headerlink" href="#4-write-the-presenter" title="Permanent link">&para;</a></h2>
 <p>A <a href="../../explanation/glossary/#presenter">presenter</a> holds the application
 logic: what the application does, and when. Add this one between the classes <code>MyStage</code> and
 <code>StageView</code>. It moves a stage by one step:</p>

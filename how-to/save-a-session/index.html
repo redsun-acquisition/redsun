@@ -2275,10 +2275,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#unsaved-changes" class="md-nav__link">
+  <a href="#decide-what-happens-to-unsaved-changes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Unsaved changes
+        Decide what happens to unsaved changes
       </span>
     </span>
   </a>
@@ -2286,10 +2286,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-sessions-settings" class="md-nav__link">
+  <a href="#find-the-settings-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The session's settings
+        Find the settings file
       </span>
     </span>
   </a>
@@ -2297,10 +2297,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-colour-scheme" class="md-nav__link">
+  <a href="#choose-the-colour-scheme" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The colour scheme
+        Choose the colour scheme
       </span>
     </span>
   </a>
@@ -5355,10 +5355,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#unsaved-changes" class="md-nav__link">
+  <a href="#decide-what-happens-to-unsaved-changes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Unsaved changes
+        Decide what happens to unsaved changes
       </span>
     </span>
   </a>
@@ -5366,10 +5366,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-sessions-settings" class="md-nav__link">
+  <a href="#find-the-settings-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The session's settings
+        Find the settings file
       </span>
     </span>
   </a>
@@ -5377,10 +5377,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-colour-scheme" class="md-nav__link">
+  <a href="#choose-the-colour-scheme" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The colour scheme
+        Choose the colour scheme
       </span>
     </span>
   </a>
@@ -5559,14 +5559,14 @@ mapping, without writing it.</p>
 <p>A Qt session also offers <code>Save configuration as...</code> in the menu <code>SAVE_MENU</code>,
 under the command <code>&lt;session name&gt;.save_configuration</code>. To show that menu, see
 <a href="../add-menu-actions/#show-the-menu">Add menu actions</a>.</p>
-<h2 id="unsaved-changes">Unsaved changes<a class="headerlink" href="#unsaved-changes" title="Permanent link">&para;</a></h2>
+<h2 id="decide-what-happens-to-unsaved-changes">Decide what happens to unsaved changes<a class="headerlink" href="#decide-what-happens-to-unsaved-changes" title="Permanent link">&para;</a></h2>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;has_changes&lt;/span&gt;" href="../../reference/api/session/#redsun.Session.has_changes"><code>has_changes</code></a> is true when any component would
 now save different settings than it had at the end of the build. A value
 changed and changed back counts as unchanged.</p>
 <p>When you close the window with unsaved changes, a Qt session asks whether to
 save, discard or cancel, and the prompt has a "don't ask again" box. To decide
 yourself instead, install a <code>confirm_close</code> <a href="../install-hooks/">hook</a>.</p>
-<h2 id="the-sessions-settings">The session's settings<a class="headerlink" href="#the-sessions-settings" title="Permanent link">&para;</a></h2>
+<h2 id="find-the-settings-file">Find the settings file<a class="headerlink" href="#find-the-settings-file" title="Permanent link">&para;</a></h2>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Settings&lt;/span&gt;" href="../../reference/api/session/#redsun.Settings"><code>Settings</code></a> is one JSON file for each session name:</p>
 <table>
 <thead>
@@ -5621,7 +5621,7 @@ the file is damaged, the session ignores it and logs a warning.</p>
 </table>
 <p>A session started with <code>run</code> saves the window layout when it ends and puts it
 back the next time.</p>
-<h2 id="the-colour-scheme">The colour scheme<a class="headerlink" href="#the-colour-scheme" title="Permanent link">&para;</a></h2>
+<h2 id="choose-the-colour-scheme">Choose the colour scheme<a class="headerlink" href="#choose-the-colour-scheme" title="Permanent link">&para;</a></h2>
 <p>A Qt session has a colour scheme button on its toolbar, which cycles through
 system, light and dark. The session file chooses where it starts:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">color_scheme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dark</span>
