@@ -19,6 +19,7 @@ them reach it:
 
 ```d2 title="What reaches a writer"
 ...@diagrams/style
+label: "The camera and its service write the frames. The writer gets the documents and the product from a component."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 120
@@ -38,20 +39,24 @@ component -> writer: "documents" {style.opacity: 0}
 writer -> store: "the product" {style.opacity: 0}
 steps: {
   1: {
+    label: "The component receives the run's documents like any document callback, and computes its product from the frames as they arrive."
     component.class: step
     component.tooltip: The component receives the run's documents like any callback, and computes its product from the frames as they arrive.
     (run -> component)[0].style.opacity: 1
   }
   2: {
+    label: "It forwards each document to the writer, which learns where the frames went and what shape they have."
     writer.class: step
     writer.tooltip: The documents tell the writer where the frames went and what shape they have, which is everything it needs to lay out the product.
     (component -> writer)[0].style.opacity: 1
   }
   3: {
+    label: "The documents can't carry the product, so the component hands the data over too, with write, or with append frame by frame."
     (component -> writer)[0].label: "documents,\nthen the product"
     component.tooltip: The documents can't carry the product, because the component computes it after the frames arrive. So the component hands the data over itself, with write, or with append frame by frame.
   }
   4: {
+    label: "The writer puts the product next to the frames, in the store the device chose."
     (writer -> store)[0].style.opacity: 1
     writer.tooltip: The writer puts the product next to the frames, in the store the device chose.
   }
@@ -102,6 +107,7 @@ frame in the camera's store, and two documents of the run fill in the rest:
 
 ```d2 title="What derive takes from the run"
 ...@diagrams/style
+label: "derive names only the product and its source. Two documents of the run fill in the rest."
 direction: right
 product: "camera_median\nderive(source=\"camera\")" {class: step}
 descriptor: "descriptor\nnaming camera" {
@@ -120,12 +126,14 @@ layout -> product {style.opacity: 0}
 store -> product {style.opacity: 0}
 steps: {
   1: {
+    label: "The descriptor gives the shape and dtype of the camera's key. derive drops its leading frames-per-event dimension, so the product is laid out like one frame."
     layout.class: step
     layout.tooltip: A key the camera streams leads its shape with the frames per event, which derive drops.
     (descriptor -> layout)[0].style.opacity: 1
     (layout -> product)[0].style.opacity: 1
   }
   2: {
+    label: "The stream_resource gives the store's URI and format. The writer knows plain Zarr and OME-Zarr, and skips the product for any other format, logging it once."
     store.class: step
     store.tooltip: The format is the document's mimetype. The writer knows plain Zarr and OME-Zarr, and skips the product for a run whose store has another, logging it once.
     (resource -> store)[0].style.opacity: 1
@@ -149,6 +157,7 @@ each part happens:
 
 ```d2 title="A product over one run"
 ...@diagrams/style
+label: "derive and declare go in the constructor, before the run starts."
 shape: sequence_diagram
 component: "component"
 writer: "Writer"
@@ -162,17 +171,21 @@ component -> writer: "documents: stop" {style.opacity: 0}
 writer -> store: "close the stream,\nwrite the metadata" {style.opacity: 0}
 steps: {
   1: {
+    label: "The component forwards the run's first documents. The writer learns each product's layout and store, but opens nothing yet."
     (component -> writer)[1].style.opacity: 1
   }
   2: {
+    label: "The first append or write opens the store's stream with every product known by then. acquire-zarr sizes the arrays once, at this moment, and ome-writers allocates every frame of an image."
     (component -> writer)[2].style.opacity: 1
     (writer -> store)[0].style.opacity: 1
     (writer -> store)[0].tooltip: The stream opens with every product of that store known by then. acquire-zarr sizes a store's arrays once, at this moment, and ome-writers allocates every frame of an image.
   }
   3: {
+    label: "A product declared after the stream opened can't join it, so append raises WriterError."
     (component -> writer)[3].style.opacity: 1
   }
   4: {
+    label: "At the run's stop document, the writer closes the stream and writes the metadata: the mapping given to write, and one naming the run, the source, the store and the time."
     (component -> writer)[4].style.opacity: 1
     (writer -> store)[1].style.opacity: 1
     (writer -> store)[1].tooltip: The metadata is the mapping given to write, and a redsun mapping naming the run, the source, the store and the time.
