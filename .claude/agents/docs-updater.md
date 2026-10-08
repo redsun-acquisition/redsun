@@ -12,7 +12,7 @@ Rules:
   reference/api=generated facts.
 - `docs/reference/api/*.md` is mkdocstrings-generated - fix the *docstring* in
   source, never hand-edit generated reference content.
-- Material admonitions (`!!! note`), mermaid fences for diagrams.
+- Material admonitions (`!!! note`), `d2` fences for diagrams (the `docs-conventions` skill).
 - numpy docstring convention (ruff pydocstyle).
 - One authoritative source per fact; cross-link rather than restate.
 
