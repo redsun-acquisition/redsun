@@ -105,8 +105,10 @@ class RoiPresenter:
 ```
 
 The session calls every `setup` once all the presenters and views exist, and
-fills its parameters by type in the same way, so the order you declare
-components in doesn't matter. `setup` must be an ordinary method: the session
+fills its parameters by type in the same way, so a component can ask for one
+declared after it. The calls run in declaration order, though, so a `setup`
+that reads what another component's `setup` assigns sees it only when that
+component is declared first. `setup` must be an ordinary method: the session
 leaves out a component whose `setup` is `async def`.
 
 What happens when `setup` can't get what it asks for depends on whose mistake
