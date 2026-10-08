@@ -11,8 +11,8 @@ things it needs.
 ## Where each argument comes from
 
 The session makes each component by calling its constructor and passing every
-argument by keyword. Step through the diagram to see where each parameter of
-this presenter gets its value:
+argument by keyword. Here is where each parameter of this presenter gets its
+value:
 
 ```python
 class MotorPresenter:
@@ -25,43 +25,22 @@ class MotorPresenter:
 ```d2 title="Where the arguments of MotorPresenter come from"
 ...@diagrams/style
 direction: right
-declared: "the declared name\nmotor_ctrl" {class: hidden}
-held: "what the session holds,\nlooked up by type" {class: hidden}
-default: "the default\n1.0" {class: hidden}
-file: "session file\nor Declare(...)" {class: hidden}
+declared: "the declared name\nmotor_ctrl" {class: step}
+held: "what the session holds,\nlooked up by type" {
+  class: step
+  tooltip: "What exists before any component does. The settings (SessionConfig, Settings), the devices (DeviceMapping, DevicesOf[P]), the path provider, the catalog address, and the values the session's providers share."
+}
+file: "session file\nor Declare(...)" {class: step}
+default: "the default\n1.0" {class: step}
 ctor: "MotorPresenter(...)" {
   name: "name" {class: step; width: 220}
   devices: "devices: DeviceMapping" {class: step; width: 220}
   step: "step: float = 1.0" {class: step; width: 220}
 }
-declared -> ctor.name {style.opacity: 0}
-held -> ctor.devices: "by its type" {style.opacity: 0}
-default -> ctor.step: "otherwise" {style.opacity: 0}
-file -> ctor.step: "if it gives step" {style.opacity: 0}
-steps: {
-  1: {
-    declared.class: current
-    (declared -> ctor.name)[0].style.opacity: 1
-  }
-  2: {
-    declared.class: step
-    held: {
-      class: current
-      tooltip: "What exists before any component does. The settings (SessionConfig, Settings), the devices (DeviceMapping, DevicesOf[P]), the path provider, the catalog address, and the values the session's providers share."
-    }
-    (held -> ctor.devices)[0].style.opacity: 1
-  }
-  3: {
-    held.class: step
-    file.class: current
-    (file -> ctor.step)[0].style.opacity: 1
-  }
-  4: {
-    file.class: step
-    default.class: current
-    (default -> ctor.step)[0].style.opacity: 1
-  }
-}
+declared -> ctor.name
+held -> ctor.devices: "by its type"
+file -> ctor.step: "if it gives step"
+default -> ctor.step: "otherwise"
 ```
 
 No code of yours chooses between a [session file](glossary.md#session-file)
@@ -153,31 +132,14 @@ class MotorPresenter:
 
 ```d2 title="How a shared value reaches another component"
 ...@diagrams/style
-direction: down
-motor: "make MotorPresenter" {class: current}
-call: "call readings()\nonce" {class: hidden}
-value: "the MotorReadings\nit returns" {class: hidden}
-roi: "RoiPresenter.setup(readings)" {class: hidden}
-motor -> call: "right after" {style.opacity: 0}
-call -> value {style.opacity: 0}
-value -> roi: "by its type" {style.opacity: 0}
-steps: {
-  1: {
-    motor.class: done
-    call.class: current
-    (motor -> call)[0].style.opacity: 1
-  }
-  2: {
-    call.class: done
-    value.class: current
-    (call -> value)[0].style.opacity: 1
-  }
-  3: {
-    value.class: done
-    roi.class: current
-    (value -> roi)[0].style.opacity: 1
-  }
-}
+direction: right
+motor: "make MotorPresenter" {class: step}
+call: "call readings()\nonce" {class: step}
+value: "the MotorReadings\nit returns" {class: current}
+roi: "RoiPresenter.setup(readings)" {class: step}
+motor -> call: "right after"
+call -> value
+value -> roi: "by its type"
 ```
 
 A type names one value, so two components sharing the same type stop the
@@ -217,6 +179,7 @@ through the cases to see which devices end up in the session:
 
 ```d2 title="How the session makes and connects a device"
 ...@diagrams/style
+label: "Every device is made from its declaration, then connected. Step through what can happen to it."
 direction: down
 declaration: "declaration\nAsDevice[MyCamera]" {class: step; width: 260; height: 70}
 make: "make\ncls(name=..., **kwargs)" {
@@ -236,19 +199,23 @@ connect -> out: "didn't connect"
 make -> kept: "autoconnect=False"
 scenarios: {
   connects: {
+    label: "The usual case: the device is made, connects within 10 seconds, and takes its place in the session."
     make.class: current
     connect.class: current
     kept.class: current
   }
   raised: {
+    label: "Its constructor raises, or it names a service with no prefix: the session logs it as Failed to build device and leaves it out."
     make: "make\nconstructor raised" {class: failed}
     out: "left out\nFailed to build device" {class: failed}
   }
   "not connected": {
+    label: "It doesn't answer within 10 seconds: it is left out, and the summary lists it as not connected."
     connect: "connect\nno answer in 10 s" {class: failed}
     out: "left out\ncamera (device, not connected)" {class: failed}
   }
   "autoconnect=False": {
+    label: "Declared with autoconnect=False, it skips the connection and stays in the session for your code to connect."
     connect.class: done
     kept: "in the session\nnot connected" {class: current}
   }
@@ -378,17 +345,6 @@ devices: "devices" {
 }
 services: "services stop" {class: step}
 components -> devices -> services
-steps: {
-  1: {components.class: current}
-  2: {
-    components.class: done
-    devices.class: current
-  }
-  3: {
-    devices.class: done
-    services.class: current
-  }
-}
 ```
 
 The devices go after every presenter and view, which may still use them in
