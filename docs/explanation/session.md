@@ -278,6 +278,7 @@ it; the session carries on with the rest:
 
 ```d2 title="A device that fails to build"
 ...@diagrams/style
+label: "The stage and its presenter build. The camera's view takes the camera's presenter, which takes the camera."
 direction: right
 stage: {class: step}
 camera: {class: step}
@@ -288,9 +289,10 @@ stage_ctrl -> stage: takes
 camera_ctrl -> camera: takes
 camera_view -> camera_ctrl: takes
 steps: {
-  1: {camera: "camera\nconstructor raised" {class: failed}}
-  2: {camera_ctrl: "camera_ctrl\nleft out" {class: failed}}
+  1: {label: "The camera's constructor raises, so the session logs the error and leaves the camera out."; camera: "camera\nconstructor raised" {class: failed}}
+  2: {label: "camera_ctrl takes the camera, so it is left out too."; camera_ctrl: "camera_ctrl\nleft out" {class: failed}}
   3: {
+    label: "So is camera_view, which takes camera_ctrl. The stage and its presenter run as usual."
     camera_view: "camera_view\nleft out" {class: failed}
   }
 }
@@ -340,6 +342,7 @@ These [releases](glossary.md#release) run in reverse order when you call
 
 ```d2 title="What shutdown undoes, in order"
 ...@diagrams/style
+label: "Shutdown runs the releases the build registered, newest first."
 direction: right
 connections: {class: step}
 components: "components\nnewest first" {class: step}
@@ -348,11 +351,11 @@ services: {class: step}
 logs: "log files" {class: step}
 connections -> components -> devices -> services -> logs
 steps: {
-  1: {connections.class: done}
-  2: {components.class: done}
-  3: {devices.class: done}
-  4: {services.class: done}
-  5: {logs.class: done}
+  1: {label: "The connections go first, so no signal reaches a slot of a component that is shutting down."; connections.class: done}
+  2: {label: "Then each presenter and view, newest first, through its shutdown method."; components.class: done}
+  3: {label: "Then the devices, which the presenters and views may still have used in their own shutdown."; devices.class: done}
+  4: {label: "Then the launched services stop, now that no device needs them."; services.class: done}
+  5: {label: "The log files close last, so they record how everything ended."; logs.class: done}
 }
 ```
 
@@ -428,6 +431,7 @@ source replaces whole:
 
 ```d2 title="Two files merged"
 ...@diagrams/style
+label: "common.yaml, the first source, gives motor_ctrl a step and a speed."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 60
@@ -455,14 +459,17 @@ merged: |yaml
 | {class: hidden}
 steps: {
   1: {
+    label: "simulation.yaml is read after it and names motor_ctrl again."
     simulation.class: file
     common -> simulation: then
   }
   2: {
+    label: "A component's entry is replaced whole, so motor_ctrl keeps the later step and loses speed."
     merged.class: file
     simulation -> merged: "motor_ctrl replaced\nwhole: speed is gone"
   }
   3: {
+    label: "The merged result is checked once, before anything is built."
     check.class: current
     merged -> check
   }
