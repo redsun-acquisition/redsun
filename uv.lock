@@ -2857,16 +2857,16 @@ wheels = [
 
 [[package]]
 name = "markdown-d2"
-version = "0.4.1"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown" },
     { name = "nodejs-wheel-binaries" },
     { name = "pymdown-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/42/0afea2285ef1adc990b629666e625ae265bec24888df65655db4ce6cef94/markdown_d2-0.4.1.tar.gz", hash = "sha256:b1ee7fc6536d46d5a928105764bc5581a44338efa051bf7df9129db28542d0ba", size = 124302, upload-time = "2026-10-08T07:02:00.781Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/f0/1435c32ff280722fb39b9bb9bcc79e0e3173a13e134ab48075a3d8d3aff1/markdown_d2-0.4.2.tar.gz", hash = "sha256:9ca8000513e613218cf129258b2c50d4a6dcb22dcb2778107aecbb30b38a5178", size = 124403, upload-time = "2026-10-08T07:34:31.088Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/0e/fdebef1985e990b05c6b2fb0ec1069cc69db09185c892d0adef5510e19d6/markdown_d2-0.4.1-py3-none-any.whl", hash = "sha256:5a19f3cc51374d1fcd09b776a218d5d6cbd7163cb2caa8fa9171aad1a1676a2f", size = 11651022, upload-time = "2026-10-08T07:01:58.737Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/f4/534f19459bb6d7c824e09371d9e9a501ba672d411e647c935864bbb12abb/markdown_d2-0.4.2-py3-none-any.whl", hash = "sha256:a7d1fee7ea34f828c59ee446797db786ce334edcd6ddbdcc681ed51e3a1650d9", size = 11651047, upload-time = "2026-10-08T07:34:28.509Z" },
 ]
 
 [[package]]
@@ -5593,7 +5593,7 @@ dev = [
     { name = "zarr", specifier = ">=3.1.6" },
 ]
 docs = [
-    { name = "markdown-d2", specifier = ">=0.4.1" },
+    { name = "markdown-d2", specifier = ">=0.4.2" },
     { name = "mkdocstrings-python", specifier = ">=2.0.9" },
     { name = "zensical", specifier = ">=0.0.66" },
 ]
