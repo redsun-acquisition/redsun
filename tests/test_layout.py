@@ -11,7 +11,7 @@ from app_model.backends.qt import QModelMenu
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
-from qtpy.QtWidgets import QApplication, QDockWidget, QWidget
+from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
 from redsun import AsView, Declare, Placement
 from redsun.qt import WINDOW_MENU, Dock, QtSession
@@ -90,6 +90,22 @@ class FragileApp(QtSession):
 
     panel: AsView[Panel]
     fragile: AsView[Fragile]
+
+
+class AddsItsOwnDock(Panel):  # type: ignore[misc]
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        if isinstance(parent, QMainWindow):
+            parent.addDockWidget(RIGHT, QDockWidget("extra", parent))
+
+
+class OwnDocksApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "own-docks-session"}
+
+    first: AsView[AddsItsOwnDock]
+    second: AsView[AddsItsOwnDock]
 
 
 def builtin_session(
@@ -227,6 +243,20 @@ def test_the_window_menu_brings_back_a_closed_dock(
     assert menu.title() == "Window"
     assert not checked
     assert not dock.isHidden()
+
+
+def test_a_dock_a_view_adds_itself_gets_no_toggle(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Build a session whose views add unnamed docks of their own, with a toggle for each view's dock alone."""
+    app = build(OwnDocksApp)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    menu.aboutToShow.emit()
+
+    toggles = [action.text() for action in menu.actions() if action.isCheckable()]
+
+    assert toggles == ["first", "second"]
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(

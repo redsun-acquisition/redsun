@@ -517,8 +517,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration().color_scheme)
         )
-        attach(window, self._with_placeholders(), self._declared_placements())
-        self._register_window_actions()
+        views = self._with_placeholders()
+        attach(window, views, self._declared_placements())
+        self._register_window_actions(views)
         failures = {**self._failed, **self._not_set_up}
         bar = window.statusBar()
         if failures and bar is not None:
@@ -608,16 +609,28 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.settings.set("window.state", encoded(self._main_window.saveState()))
         self.settings.set("window.layout", self._layout_fingerprint())
 
-    def _register_window_actions(self) -> None:
-        """Register a toggle for each dock and "Reset layout", and show them as the Window menu.
+    def _register_window_actions(
+        self, views: Mapping[str, AttachableComponent]
+    ) -> None:
+        """Register a toggle for each view's dock and "Reset layout", and show them as the Window menu.
 
         They join `WINDOW_MENU`, which the window this session made shows as
-        its last menu. A session with no dock shows no such menu.
+        its last menu. A dock a view adds by itself gets no toggle, and a
+        session with no dock of its own shows no such menu.
         """
         window = self.main_window
-        docks = window.findChildren(
-            QDockWidget, options=QtNamespace.FindChildOption.FindDirectChildrenOnly
-        )
+        docks = [
+            dock
+            for name in views
+            if (
+                dock := window.findChild(
+                    QDockWidget,
+                    name,
+                    QtNamespace.FindChildOption.FindDirectChildrenOnly,
+                )
+            )
+            is not None
+        ]
         if not docks:
             return
         actions = [dock_toggle(self.name, dock) for dock in docks]
