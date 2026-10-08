@@ -61,7 +61,7 @@ dev = [
     "zarr>=3.1.6",
 ]
 docs = [
-    "markdown-d2>=0.3.0",
+    "markdown-d2>=0.4.0",
     "mkdocstrings-python>=2.0.9",
     "zensical>=0.0.66",
 ]
