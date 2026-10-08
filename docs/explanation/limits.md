@@ -20,12 +20,11 @@ the other components read it as it changes.
 
 ## Can a shared value be optional?
 
-No. The session decides what exists by reading types, before it builds
-anything, and `Roi | None` is a type of its own. A `provides` method returning
-`Roi | None` shares a value under that type, which the session reports as a
-value no component asks for, even when one asks for `Roi | None`. The value
-still reaches a component while it is a `Roi`, but on a run where the method
-returns `None`, a component asking for `Roi` fails its `setup`:
+No. The session decides what exists by reading types before it builds, and
+`Roi | None` is a type of its own: the session reports it as a value no
+component asks for, even when one asks for `Roi | None`. The value still
+arrives while it is a `Roi`, but when the method returns `None`, a component
+asking for `Roi` fails its `setup`:
 
 ```python
 @provides
@@ -57,10 +56,10 @@ Give each value its own type.
 
 ## Can I import parameter types under `if TYPE_CHECKING:`?
 
-No, not the types the session reads to decide what to pass. It reads those
-annotations while the program runs, and a type imported only under
-`if TYPE_CHECKING:`, a block that only type checkers read, isn't there when
-the session looks. What happens then depends on where the type is used:
+Not the types the session reads to decide what to pass: it reads them while
+the program runs, when a type imported only under `if TYPE_CHECKING:`, a
+block only type checkers read, doesn't exist. What happens depends on where
+the type is used:
 
 ```d2 title="A type imported only for type checkers"
 ...@diagrams/style

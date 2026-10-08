@@ -128,13 +128,11 @@ scenarios: {
 }
 ```
 
-That fits the large facilities `bluesky` was developed at, where a control
-system such as [EPICS] or [Tango], the staff who keep it running and separate
-programs that show the instrument are already there. A setup on a bench has
-none of that around it: one instrument, driven by one person through a window,
-as with [Micro-Manager]. `redsun` brings `bluesky` there. It still speaks EPICS,
-through the [services](glossary.md#service) your devices talk to, and supplies
-the rest itself.
+At the facilities `bluesky` was developed at, a control system such as
+[EPICS] or [Tango], its staff and the display programs already exist. A bench
+setup, one instrument driven by one person through a window as with
+[Micro-Manager], has none of that, so `redsun` supplies it, still speaking
+EPICS through the [services](glossary.md#service) your devices talk to.
 
 ## Coming from Micro-Manager
 
