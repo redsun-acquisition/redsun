@@ -15,16 +15,13 @@ In `redsun`, any [component](glossary.md#component) can offer plans, and one
 [`RunEngine`](glossary.md#runengine), the object that executes plans. `redsun`
 adds three things to `bluesky`:
 
-- **A `RunEngine` that doesn't block.** The `bluesky` one blocks the thread
-  that calls it until the plan ends, which freezes a window. The `redsun` one
-  runs the plan on a thread of its own and returns at once.
-- **`PlanSpec`**, a description of a plan's parameters read from its
-  signature. It names no [toolkit](glossary.md#toolkit), so a view in any
-  toolkit builds its controls from it. For Qt, those controls are a
-  [plan widget](glossary.md#plan-widget).
-- **Continuous plans**, which run until the user stops them and take actions
-  from the user while they run, such as a live view that records a frame each
-  time the user asks for one.
+- a `RunEngine` that runs the plan on a thread of its own and returns at once,
+  where the `bluesky` one blocks the caller and freezes a window
+- `PlanSpec`, a description of a plan's parameters read from its signature,
+  from which a view in any [toolkit](glossary.md#toolkit) builds its controls,
+  for Qt a [plan widget](glossary.md#plan-widget)
+- continuous plans, which run until stopped and take actions from the user
+  meanwhile, such as recording a frame on request
 
 [How to run a plan from a presenter](../how-to/run-a-plan.md) and
 [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
@@ -34,30 +31,26 @@ show the code this page describes.
 
 ## Plans that end by themselves
 
-The simplest plan does its steps and stops, such as a walk that reads a
-stage's position and moves it forward a few times. It's an ordinary `bluesky`
-plan, with parameters annotated by [protocols](glossary.md#protocol) rather
+The simplest plan does its steps and stops. It's an ordinary `bluesky` plan
+whose parameters are annotated by [protocols](glossary.md#protocol) rather
 than classes, as in
 [Describing a device with a protocol](../tutorials/device-protocols.md), so it
 works with any device that has what it reads and sets.
 
-A component offers its plans through a `plan_map` method, which returns each
-plan under its name as a [`PlanEntry`][redsun.PlanEntry]. A component with that
-method satisfies the [`HasPlans`][redsun.HasPlans] protocol. An entry may also
-list the [document callbacks](glossary.md#callback) the plan needs, under
-`callbacks`, and say under `extendable` whether the user may attach more. The
-plans stay with the component they belong to: a component that holds a stage
-offers the plans that move it, and no central list names them.
+A component offers its plans through a `plan_map` method returning each under
+its name as a [`PlanEntry`][redsun.PlanEntry], which makes it a
+[`HasPlans`][redsun.HasPlans]. An entry can list the
+[document callbacks](glossary.md#callback) the plan needs and say, with
+`extendable`, whether the user may attach more. Plans stay with the component
+they belong to; no central list names them.
 
 ---
 
 ## Running a session's plans
 
-The presenter that runs plans doesn't name the components that offer them. It
-asks the session for every component that satisfies `HasPlans`, so a session
-file that adds such a component also adds its plans, without anyone editing
-the presenter. [Questions](questions.md) explains how the session answers.
-Step through to see a plan reach its widget:
+The presenter asks the session for every `HasPlans`, so a session file that
+adds such a component adds its plans too, with no change to the presenter
+([Questions](questions.md)). Step through a plan reaching its widget:
 
 ```d2 title="From a plan to its widget"
 ...@diagrams/style
@@ -93,22 +86,17 @@ steps: {
 }
 ```
 
-A view gets the descriptions in one of two ways. The view in
-[How to run a plan from a presenter](../how-to/run-a-plan.md) asks the session
-the same question as the presenter and describes each plan itself, which is
-why it also asks for the session's devices: a description lists, for each
-device parameter, the devices that can fill it. The built-in
-[`AcquisitionView`][redsun.view.qt.builtins.AcquisitionView] takes the
-presenter in its `setup` instead, as a
-[`DescribesPlans`][redsun.presenter.DescribesPlans], and reads the
-descriptions the presenter made. Neither can receive them as a
-[shared value](glossary.md#shared-value), because the session reads shared
-values when it builds a component, and the presenter only describes its plans
-later, in `setup`.
+The view in [How to run a plan from a presenter](../how-to/run-a-plan.md)
+asks the same question and describes each plan itself, with the session's
+devices to list what can fill each device parameter. The built-in
+[`AcquisitionView`][redsun.view.qt.builtins.AcquisitionView] instead takes the
+presenter in `setup`, as a [`DescribesPlans`][redsun.presenter.DescribesPlans],
+and reads its descriptions. They can't be a
+[shared value](glossary.md#shared-value): the session reads those when it
+builds a component, and the presenter describes its plans later, in `setup`.
 
-Calling the engine doesn't wait for the plan to end. The call returns a
-`Future`, which the presenter uses to tell the view that the plan ended, so the
-view can enable the controls it disabled when the plan started:
+Calling the engine returns a `Future` at once; the presenter uses it to tell
+the view when the plan ended:
 
 ```d2 title="One run of a plan"
 ...@diagrams/style
@@ -136,15 +124,14 @@ user attached to it.
 
 ## From a plan to its widget
 
-A view builds a plan widget from a `PlanSpec`, which
-[`create_plan_spec`][redsun.presenter.plan_spec.create_plan_spec] makes from
-the plan's signature. The check is plain Python and imports no toolkit, so you
+[`create_plan_spec`][redsun.presenter.plan_spec.create_plan_spec] makes a
+`PlanSpec` from the plan's signature in plain Python, with no toolkit, so you
 can inspect a plan before any application object exists.
 
 ### Plans that are refused
 
 A plan is never shown with a control nobody can fill in. Step through three
-parameters to see how `create_plan_spec` treats each:
+parameters:
 
 ```d2 title="How create_plan_spec treats a parameter"
 ...@diagrams/style
@@ -194,44 +181,32 @@ scenarios: {
 }
 ```
 
-`create_plan_spec` also raises `ValueError` for a plan that declares two
-actions with the same name, since the name is what tells a plan's actions
-apart, or a parameter whose default breaks its own limits.
-
-The component that describes the plans decides what happens next. One that
-catches the error for each plan leaves that plan out and keeps the others, as
+It also raises `ValueError` for two actions with the same name, or a default
+that breaks its own limits. A component that catches the error per plan
+leaves that plan out and keeps the others, as
 [`AcquisitionPresenter`][redsun.presenter.AcquisitionPresenter] does with a
-warning, while one that doesn't fails its whole `setup`.
-
-The [reference](../reference/api/presenter.md#plan-specification) covers what
-a description holds, how each annotation is read, and how the values of a plan
-widget become a call.
+warning; one that doesn't fails its whole `setup`. The
+[reference](../reference/api/presenter.md#plan-specification) covers how each
+annotation is read and how a widget's values become a call.
 
 ---
 
 ## Continuous plans
 
-The `@continuous` decorator marks a plan that runs until it's stopped. It
-stores a `Continuous` on the function, which `create_plan_spec` reads into
-`PlanSpec.continuous` and `PlanSpec.pausable`. The view builds the controls
-from those two: a toggle to start and stop the plan, and, with
-`pausable=True`, a button to pause and resume it. Stopping is the normal way
-for a continuous plan to end, so the `RunEngine` closes the
-[run](glossary.md#run) of a stopped plan with the exit status `success`.
+`@continuous` marks a plan that runs until stopped; `create_plan_spec` reads
+it into `PlanSpec.continuous` and `PlanSpec.pausable`, from which the view
+builds a start/stop toggle and, with `pausable=True`, a pause button. Stopping
+is the normal end, so the `RunEngine` closes the stopped plan's
+[run](glossary.md#run) with exit status `success`.
 
 ### In-flight actions
 
-An action is something the user triggers while the plan runs. Two classes
-describe it:
-
-- `PlanAction` declares it: its name, its description and the labels of its
-  button. It's a frozen dataclass and holds no state.
-- `ActionManager` keeps the state of each action while a plan runs. The
-  component that offers the plans owns one, and the plans wait on it.
-
-A plan names an action as the default of a parameter, such as
-`snap: PlanAction = SNAP`, and `create_plan_spec` finds it there to make the
-button. Step through a live view that records a frame each time the user asks:
+An action is something the user triggers while the plan runs. `PlanAction`
+declares it (name, description, button labels; a frozen dataclass with no
+state), and an `ActionManager`, owned by the component offering the plans,
+keeps each action's state for the plans to wait on. A plan names an action as
+a parameter default, such as `snap: PlanAction = SNAP`, and `create_plan_spec`
+makes its button. Step through a live view that records a frame on request:
 
 ```d2 title="A continuous plan with one action"
 ...@diagrams/style
@@ -268,52 +243,38 @@ steps: {
 }
 ```
 
-`wait` offers the actions it's given, waits until one is asked for, and
-returns the name of the one asked for first. That action then runs until the
-plan calls `done`. The others go back to idle, as all of them do if the plan
-is stopped while it waits.
+`wait` returns the first action asked for, which runs until the plan calls
+`done`; the others go back to idle, as all do if the plan is stopped while it
+waits.
 
 !!! warning "A stopped plan leaves its running action running"
 
     An action that is running when the plan is stopped stays running until
     the plan calls `done`. Call `done` in a `finally` block.
 
-Each call to `wait` makes new latches for the actions it offers. A latch is an
-object a plan waits on until another thread sets it; the [engine
-reference](../reference/api/engine.md#waiting-on-a-latch) describes the one
-`redsun` uses. Because the latches are new each time, a request left over from
-an earlier launch of the plan can't start an action of this one. The
-`RunEngine` itself has no code for actions: it receives the latches `wait` made
-and waits on them.
+Each `wait` makes new latches, objects a plan waits on until another thread
+sets them ([engine reference](../reference/api/engine.md#waiting-on-a-latch)),
+so a request left over from an earlier launch can't start this one's action;
+the `RunEngine` has no code for actions and only waits on those latches.
+`wait` doesn't time out: it yields a [checkpoint](glossary.md#checkpoint)
+every `poll_interval` seconds and does nothing else, so a plan that shows
+frames while it waits needs a device that streams on its own.
 
-`wait` doesn't time out. While it waits, it yields a
-[checkpoint](glossary.md#checkpoint) every `poll_interval` seconds, as the
-[stub it uses](../reference/api/engine.md#plan-stubs) does. A plan does
-nothing else while it waits, so a plan that shows frames and records one on
-request needs a device that streams frames on its own.
-
-The user asks for an action through `request`, a [slot](glossary.md#slot)
-that's safe to call from any thread and raises nothing. Asking for an action
-no plan offers changes nothing and is logged as a warning, and so is asking to
-end an action that isn't running.
+The user asks through `request`, a [slot](glossary.md#slot) safe from any
+thread that raises nothing; asking for an action no plan offers, or ending one
+that isn't running, only logs a warning.
 
 ### Toggle actions
 
-An action with `toggle_states` gets a button that stays pressed until it's
-released. The first label shows while the button is released, and the second
-while it's pressed. With `toggle_states=None`, the default, the button is
-clicked instead.
-
-Pressing the button asks for the action, and releasing it asks the action to
-end, with `request(name, on=False)`. The plan waits for the release with
-`wait_released`.
+An action with `toggle_states` gets a button that stays pressed, showing the
+first label released and the second pressed; with the default `None` it's
+clicked. Releasing it sends `request(name, on=False)`, which the plan waits
+for with `wait_released`.
 
 ### Following an action from a view
 
-An action is always in one of three states, and `ActionManager.sig_changed`
-reports each change with the action's name and its new `ActionState`. A view
-connected to it sets each button from the state it reports. Step through the
-states to see what each means and what the view does:
+`ActionManager.sig_changed` reports each action's new `ActionState`, and a
+connected view sets its buttons from it. Step through the three states:
 
 ```d2 title="The states of an action"
 ...@diagrams/style
