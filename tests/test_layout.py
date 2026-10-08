@@ -8,13 +8,14 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
 from app_model.backends.qt import QModelMainWindow, QModelMenu
+from app_model.types import Action, MenuRule
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
 from redsun import AsHook, AsView, Declare, Placement
-from redsun.qt import WINDOW_MENU, Dock, QtSession
+from redsun.qt import WINDOW_MENU, Dock, MenuItem, QtSession
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -151,6 +152,21 @@ class HookMenuBarApp(QtSession):
 
     panel: AsView[Panel]
     configure_main_view: AsHook[SetsItsOwnMenuBar]
+
+
+class OpensLog(QAction):
+    placement: Placement = MenuItem("Window")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        self.name = name
+
+
+class WindowItemApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "window-item-session"}
+
+    panel: AsView[Panel]
+    log: AsView[OpensLog]
 
 
 def builtin_session(
@@ -334,6 +350,32 @@ def test_a_hook_menu_bar_with_the_window_menu_shows_it_once(
     titles = [action.text() for action in bar.actions()]
 
     assert titles.count("Window") == 1
+
+
+def test_a_view_placed_in_a_window_menu_joins_the_session_one(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a view placed in a menu named Window in the one Window menu, there still after the menu changes."""
+    app = build(WindowItemApp)
+    bar = app.main_window.menuBar()
+    assert bar is not None
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    added = Action(
+        id="window-item-session.extra",
+        title="Extra",
+        callback=lambda: None,
+        menus=[MenuRule(id=WINDOW_MENU)],
+    )
+
+    dispose = app.model.register_action(added)
+    titles = [action.text() for action in bar.actions()]
+    items = [action.text() for action in menu.actions()]
+    dispose()
+
+    assert titles.count("Window") == 1
+    assert "log" in items
+    assert "Extra" in items
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(

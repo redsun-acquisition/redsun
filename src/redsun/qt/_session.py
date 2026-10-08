@@ -622,6 +622,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         taken that have an object name no other dock has. A dock a view adds
         by itself gets no toggle, and a session with no dock shows no such
         menu. A menu bar that already shows `WINDOW_MENU` gets no second one.
+        The views placed in a menu named Window move into this one, above the
+        toggles.
         """
         window = self.main_window
         docks = {
@@ -647,8 +649,28 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         self.on_release(self.model.register_actions(actions))
         bar = window.menuBar()
-        if bar is not None and window.findChild(QModelMenu, WINDOW_MENU) is None:
-            bar.addMenu(QModelMenu(WINDOW_MENU, self.model, "Window", window))
+        if bar is None or window.findChild(QModelMenu, WINDOW_MENU) is not None:
+            return
+        menu = QModelMenu(WINDOW_MENU, self.model, "Window", window)
+        bar.addMenu(menu)
+        # findChildren, since pyqt6 types findChild as never returning None
+        placed = window.findChildren(QMenu, "Window", options=DIRECT_CHILDREN)
+        if not placed:
+            return
+        bar.removeAction(placed[0].menuAction())
+        items = placed[0].actions()
+
+        # connected after the menu's own handler, which empties the menu
+        # before refilling it from the registry
+        def keep_items(changed: set[str]) -> None:
+            if WINDOW_MENU in changed:
+                first = menu.actions()[0]
+                menu.insertActions(first, items)
+                menu.insertSeparator(first)
+
+        keep_items({WINDOW_MENU})
+        self.model.menus.menus_changed.connect(keep_items)
+        self.on_release(lambda: self.model.menus.menus_changed.disconnect(keep_items))
 
     def _reset_layout(self) -> None:
         """Put every dock back where it was before a saved layout was restored."""

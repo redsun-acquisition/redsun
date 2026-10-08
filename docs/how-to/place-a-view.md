@@ -167,6 +167,9 @@ views:
 | `{menu: Acquire}` | an entry in the menu `Acquire` |
 | `{toolbar: Acquisition}` | an entry in the toolbar `Acquisition` |
 
+A view placed in the menu `Window` joins the Window menu the session adds,
+above the entries that show and hide the docks.
+
 The session checks the placement before it builds anything, so if a view fails
 to build, its error message appears where you placed it. The session refuses a
 view whose constructor has its own `placement` parameter, because it keeps
