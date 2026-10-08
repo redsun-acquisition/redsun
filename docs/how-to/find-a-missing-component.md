@@ -85,8 +85,35 @@ Failed to build presenter 'odd': 'odd' is declared as a presenter, but does not 
 ## Follow a failure back to its cause
 
 One failure often causes others after it, so start from the first `Failed to`
-record and read down. In this log, the device is missing because its service
-is:
+record and read down. Step through one service that fails, and point at each
+shape to read the record it leaves in the log:
+
+```d2 title="One failure leading to others"
+...@diagrams/style
+direction: right
+stage_ioc: "stage_ioc\nservice" {class: process}
+stage: "stage\ndevice" {class: step}
+wire: "stage.readback\n-> panel.on_position" {class: step}
+stage_ioc -> stage: "prefix"
+stage -> wire: "signal"
+steps: {
+  1: {
+    stage_ioc.class: failed
+    stage_ioc.shape: hexagon
+    stage_ioc.tooltip: "Failed to start service 'stage_ioc': exited with code 1 before it was ready"
+  }
+  2: {
+    stage.class: failed
+    stage.tooltip: "Failed to build device 'stage': service 'stage_ioc' was not started"
+  }
+  3: {
+    wire.class: failed
+    wire.tooltip: "Not connecting stage.readback -> panel.on_position: component 'stage' was not built"
+  }
+}
+```
+
+In this log, the device is missing because its service is:
 
 ```text
 [29-09-26|08:42:57][ERROR]: Failed to start service 'stage_ioc': exited with code 1 before it was ready
