@@ -141,9 +141,9 @@ A plan is never shown with a control nobody can fill in:
 label: "create_plan_spec asks two questions of every parameter. Step through three examples."
 direction: down
 param: "a parameter\nof the plan" {class: step}
-shown: "can a control\nshow its type?" {shape: diamond}
+shown: "can a control\nshow its type?" {shape: diamond; class: step}
 control: "a control in\nthe plan widget" {class: step}
-default: "does it have\na default?" {shape: diamond}
+default: "does it have\na default?" {shape: diamond; class: step}
 hidden: "hidden: the plan\nkeeps its default" {
   class: step
   tooltip: The view leaves the parameter out. This is how the md parameter of most bluesky plans is treated.
