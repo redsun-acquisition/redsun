@@ -28,7 +28,7 @@ possible about each other. Point at a shape to read what it does:
 
 ```d2 title="Devices meet services at the prefix"
 ...@diagrams/style
-direction: down
+direction: right
 model: "the setup, as devices" {
   stage: "stage\nx, y" {
     class: step
