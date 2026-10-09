@@ -76,11 +76,14 @@ qt-common = [
 pyqt = [
     {include-group = "qt-common"},
     "pyqt6>=6.11.0",
+    # the same constraints as the pyqt extra, which says why
+    "pyqt6-qt6!=6.11.0,!=6.11.1",
 ]
 
 pyside = [
     {include-group = "qt-common"},
-    "pyside6>=6.11.2",
+    # the same constraints as the pyside extra, which says why
+    "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
 ]
 
 epics = [
@@ -129,10 +132,19 @@ qt-common = [
 pyqt = [
     "redsun[qt-common]",
     "pyqt6>=6.11.0",
+    # Qt 6.11.0 and 6.11.1 resize dock widgets and layouts wrongly; napari
+    # excludes them for the same reason
+    "pyqt6-qt6!=6.11.0,!=6.11.1",
 ]
 pyside = [
+    # Essentials, not the whole pyside6: redsun uses no add-on module (Charts,
+    # DataVisualization, 3D, WebEngine...), and the add-ons are two thirds of
+    # the download (168-332 MB). A project needing one installs pyside6 itself.
+    # 6.10.2 is the oldest version CI tests (the floor in pyside6.yaml, which
+    # moves with this line); 6.11.0 and 6.11.1 resize dock widgets and layouts
+    # wrongly, which napari excludes too.
+    "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "redsun[qt-common]",
-    "pyside6>=6.11.2",
 ]
 zarr = [
     "acquire-zarr>=0.10.0",
