@@ -43,7 +43,7 @@ def test_a_cycle_is_collected_on_the_gui_thread(
     del cycle
     automatic = gc.isenabled()
     # enough new objects for the first generation to pass its threshold
-    junk = [{} for _ in range(gc.get_threshold()[0] + 1)]
+    junk: list[dict[str, int]] = [{} for _ in range(gc.get_threshold()[0] + 1)]
 
     assert wait_until(lambda: bool(freed))
     assert not automatic
