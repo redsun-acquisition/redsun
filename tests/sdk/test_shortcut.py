@@ -9,6 +9,7 @@ import pytest
 
 from redsun import Shortcut, shortcut, slot
 from redsun.ports import ports
+from redsun.session._shortcuts import Binding, candidates, resolved_shortcuts
 from redsun.view._shortcut import shortcuts
 
 if TYPE_CHECKING:
@@ -31,6 +32,27 @@ class Child(Base):
 
     def plain(self) -> None:
         self.ran.append("plain")
+
+
+class Panel:
+    @shortcut("Ctrl+R", title="Run")
+    def run(self) -> None: ...
+
+    @shortcut("Escape", title="Cancel", scope="view")
+    def cancel(self) -> None: ...
+
+
+class Controller:
+    @shortcut("Ctrl+R", title="Restart")
+    def restart(self) -> None: ...
+
+    @shortcut("F5", title="Refresh", scope="view")
+    def refresh(self) -> None: ...
+
+
+def binding(command: str, *keys: str, view: str | None = None) -> Binding:
+    """Return a binding with no method, for resolution alone."""
+    return Binding(command, command, keys, view, None)
 
 
 def test_a_component_lists_its_shortcuts_base_first() -> None:
@@ -105,3 +127,77 @@ def test_a_slot_can_also_be_a_shortcut() -> None:
 
     assert list(shortcuts(both)) == ["stop", "refresh"]
     assert {"stop", "refresh"} <= set(ports(both).slots)
+
+
+def test_components_become_bindings_in_declaration_order() -> None:
+    """Name each binding after its component and method, a view key with its view."""
+    found, problems = candidates(
+        {"panel": Panel(), "controller": Controller()}, views={"panel"}
+    )
+
+    assert [(b.command, b.keys, b.view) for b in found] == [
+        ("panel.run", ("Ctrl+R",), None),
+        ("panel.cancel", ("Escape",), "panel"),
+        ("controller.restart", ("Ctrl+R",), None),
+    ]
+    assert problems == [
+        (
+            "controller.refresh asks for a key while its view has focus, but "
+            "'controller' is not a view; left out"
+        )
+    ]
+
+
+def test_the_first_window_key_wins_and_both_are_named() -> None:
+    """Keep a window key on the first command asking for it, and name both in the report."""
+    resolved, problems = resolved_shortcuts(
+        [binding("panel.run", "Ctrl+R"), binding("controller.restart", "Ctrl+R")], {}
+    )
+
+    assert [(b.command, b.keys) for b in resolved] == [
+        ("panel.run", ("Ctrl+R",)),
+        ("controller.restart", ()),
+    ]
+    assert problems == ["Ctrl+R: kept on panel.run, taken from controller.restart"]
+
+
+def test_a_view_key_shadowing_a_window_key_is_kept_without_report() -> None:
+    """Keep a view key on the same combination as a window key, and report nothing."""
+    resolved, problems = resolved_shortcuts(
+        [
+            binding("panel.run", "Ctrl+R"),
+            binding("panel.again", "Ctrl+R", view="panel"),
+        ],
+        {},
+    )
+
+    assert [b.keys for b in resolved] == [("Ctrl+R",), ("Ctrl+R",)]
+    assert problems == []
+
+
+def test_two_keys_of_one_view_conflict() -> None:
+    """Treat two keys of one view on one combination as a conflict."""
+    resolved, problems = resolved_shortcuts(
+        [
+            binding("panel.a", "F5", view="panel"),
+            binding("panel.b", "F5", view="panel"),
+        ],
+        {},
+    )
+
+    assert [b.keys for b in resolved] == [("F5",), ()]
+    assert problems == ["F5 in panel: kept on panel.a, taken from panel.b"]
+
+
+def test_overrides_replace_drop_and_report_unknown_commands() -> None:
+    """Replace a command's keys, drop one given no key, and name an override for no command."""
+    resolved, problems = resolved_shortcuts(
+        [binding("panel.run", "Ctrl+R"), binding("panel.stop", "Escape")],
+        {"panel.run": ("Ctrl+Shift+R", "F9"), "panel.stop": (), "ghost.run": ("F1",)},
+    )
+
+    assert [(b.command, b.keys) for b in resolved] == [
+        ("panel.run", ("Ctrl+Shift+R", "F9")),
+        ("panel.stop", ()),
+    ]
+    assert problems == ["ghost.run: no such command; its keys are left out"]
