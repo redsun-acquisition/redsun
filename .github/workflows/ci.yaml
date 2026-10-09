@@ -106,15 +106,15 @@ jobs:
   github-release:
     name: Publish the GitHub release
     needs: publish-to-pypi
-    # the step publishes final tags only: a pre-release's pull requests are
-    # listed in the final release's section
+    # final tags only: a release candidate's entries stay in changelog.d for
+    # the final release's section
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
 
-      - name: Create the release from its changelog section
+      - name: Write the release's notes from its changelog section
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -122,4 +122,10 @@ jobs:
             exit 0
           fi
           python3 scripts/release_notes.py extract "${GITHUB_REF_NAME#v}" > notes.md
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
+          # a release published from the interface already exists; a tag pushed
+          # from a clone has none yet
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
+          fi
