@@ -9,6 +9,8 @@ from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QGuiApplication
 from qtpy.QtWidgets import QSizePolicy, QToolButton, QWidget
 
+from ..view.qt._icons import set_icon
+
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QMainWindow
 
@@ -77,6 +79,13 @@ SCHEMES: dict[ColorSchemeMode, QtNamespace.ColorScheme] = {
     ColorSchemeMode.DARK: QtNamespace.ColorScheme.Dark,
 }
 
+ICONS: dict[ColorSchemeMode, str] = {
+    ColorSchemeMode.SYSTEM: "theme-light-dark",
+    ColorSchemeMode.LIGHT: "white-balance-sunny",
+    ColorSchemeMode.DARK: "weather-night",
+}
+"""The icon the control shows while each mode is asked for."""
+
 GLYPHS: dict[ColorSchemeMode, str] = {
     ColorSchemeMode.SYSTEM: "\u25d0",
     ColorSchemeMode.LIGHT: "\u2600",
@@ -87,7 +96,7 @@ GLYPHS: dict[ColorSchemeMode, str] = {
 class ColorSchemeButton(QToolButton):
     """Cycles the colour scheme, system to light to dark and back.
 
-    The glyph is the mode asked for rather than the scheme in force, so it
+    The icon is the mode asked for rather than the scheme in force, so it
     stays right while `system` follows a user changing their own setting.
     """
 
@@ -103,11 +112,7 @@ class ColorSchemeButton(QToolButton):
         super().__init__(parent)
         self._mode = mode
         self.setAutoRaise(True)
-        self.setToolButtonStyle(QtNamespace.ToolButtonStyle.ToolButtonTextOnly)
         self.setCursor(QtNamespace.CursorShape.PointingHandCursor)
-        font = self.font()
-        font.setPointSize(font.pointSize() + 3)
-        self.setFont(font)
         self.clicked.connect(self.cycle)
         self._show_mode()
 
@@ -148,5 +153,6 @@ class ColorSchemeButton(QToolButton):
         self._show_mode()
 
     def _show_mode(self) -> None:
-        self.setText(self._mode.glyph)
-        self.setToolTip(f"Colour scheme: {self._mode} (click to change)")
+        set_icon(
+            self, ICONS[self._mode], f"Colour scheme: {self._mode} (click to change)"
+        )

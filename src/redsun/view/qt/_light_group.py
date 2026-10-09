@@ -8,6 +8,7 @@ from psygnal import Signal
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
+from ._icons import set_icon
 from ._positioner_group import LIMIT
 
 if TYPE_CHECKING:
@@ -59,7 +60,6 @@ class LightGroup(QtW.QGroupBox):
         self._toggle.setObjectName("toggle")
         self._toggle.setCheckable(True)
         self.set_enabled(info.enabled)
-        self._toggle.setAccessibleName(f"Switch {device}")
         # the button shows the state read back; a click only asks
         self._toggle.clicked.connect(self._ask_toggle)
         layout.addWidget(self._toggle)
@@ -126,9 +126,12 @@ class LightGroup(QtW.QGroupBox):
         self.sig_intensity.connect(self._clear_failure)
 
     def set_enabled(self, on: bool) -> None:
-        """Show whether the light is on, as read back, in the button's text as well."""
+        """Show whether the light is on, as read back, in the button's icon and tooltip as well."""
         self._toggle.setChecked(on)
-        self._toggle.setText("On" if on else "Off")
+        if on:
+            set_icon(self._toggle, "lightbulb-on", f"{self._device} is on")
+        else:
+            set_icon(self._toggle, "lightbulb-outline", f"{self._device} is off")
 
     def set_intensity(self, value: float) -> None:
         """Show the intensity read back, unless the user is dragging or typing."""

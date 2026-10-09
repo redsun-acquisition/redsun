@@ -158,6 +158,22 @@ def rendered(view: LogView) -> str:
     return document.toHtml()
 
 
+def test_each_level_shows_an_icon_beside_its_name(
+    make_view: Callable[[], LogView],
+) -> None:
+    """Show an icon beside each level in the level selector, keeping its name."""
+    combo = make_view().findChild(QComboBox, "level")
+    assert combo is not None
+
+    items = [
+        (combo.itemText(i), combo.itemIcon(i).isNull()) for i in range(combo.count())
+    ]
+
+    assert items == [
+        (name, False) for name in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+    ]
+
+
 def test_records_logged_before_the_view_existed_are_shown(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
