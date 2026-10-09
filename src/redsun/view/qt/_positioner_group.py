@@ -410,7 +410,20 @@ class PositionerGroup(QtW.QGroupBox):
         self._state.setToolTip(message)
 
     def set_locked(self, locked: bool) -> None:
-        """Disable the controls while *locked*; readbacks keep updating."""
+        """Disable the controls while *locked*; readbacks keep updating.
+
+        A control holding the focus gives it to its row, or to the first row
+        for a button above the rows, so the focus stays with the locked device.
+        """
+        focus = QtW.QApplication.focusWidget()
+        if locked and focus in self._controls:
+            # Qt moves the focus off a disabled control to the next one, which
+            # can be another device's row, where a held arrow key steps it
+            rows = list(self._rows.values())
+            row = next(
+                (r for r in rows if focus in r.controls), rows[0] if rows else self
+            )
+            row.setFocus()
         for widget in self._controls:
             widget.setEnabled(not locked)
 
