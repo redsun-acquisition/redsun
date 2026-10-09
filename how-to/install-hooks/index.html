@@ -5863,10 +5863,10 @@ the step starts:</p>
 </span></code></pre></div>
 <p>Check the image in the constructor, because a missing file gives an empty
 <code>QPixmap</code> instead of an error, and a splash that shows nothing.</p>
-<p>The steps reported are those in <code>BUILD_STEPS</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">BUILD_STEPS</span>
+<p>The steps reported are the members of <code>BuildStep</code>, in order:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuildStep</span>
 </span></code></pre></div>
-<p>Size a progress bar from <code>len(BUILD_STEPS)</code> rather than counting by hand, so
+<p>Size a progress bar from <code>len(BuildStep)</code> rather than counting by hand, so
 it stays right when the steps change. Each step is reported when it starts,
 so fill the bar to the end after the <code>yield</code>. The <code>finally</code> closes the splash
 even when the build fails.</p>
