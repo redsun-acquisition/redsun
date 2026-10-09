@@ -28,6 +28,7 @@ Every key is optional.
 | `presenters` | mapping | empty | the [presenters](#components), by name |
 | `views` | mapping | empty | the [views](#components), by name |
 | `layout` | mapping | the layout of the session class | [where the views start](#layout) in the window |
+| `shortcuts` | mapping | empty | [keys](#shortcuts) replacing what the components declare |
 | `providers` | mapping | empty | classes that share values with the components, by name |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
@@ -195,6 +196,27 @@ A region holds a view's name, or one of these mappings:
 
 A view the layout leaves out goes where its placement asks. A name no view
 answers to is logged and left out, and refused when `strict` is set.
+
+## Shortcuts
+
+`shortcuts` gives commands other keys than the components declare. A
+command is named `<component>.<method>`, after the component's name in the
+session and the method its shortcut runs.
+
+```yaml
+shortcuts:
+  acquisition_view.run_selected: Ctrl+Shift+R
+  acquisition.stop: [Ctrl+., Escape]
+  positioner.step_back: null
+```
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `<component>.<method>` | text, a list of two, or `null` | the component's key | the key, two keys, or `null` for none |
+
+A key is written as the frontend reads it; for Qt, `Ctrl` is the Command key
+on macOS. A key two commands ask for in the same place stays with the first,
+and the change is logged, or refused when `strict` is set.
 
 ## Hooks
 

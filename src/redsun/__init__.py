@@ -75,7 +75,7 @@ from redsun.session import (
     Serves,
     Session,
 )
-from redsun.view import Column, Placement, Row, Tabs, WindowLayout
+from redsun.view import Column, Placement, Row, Shortcut, Tabs, WindowLayout, shortcut
 
 from ._hooks import (
     ConfiguresApplication,
@@ -138,6 +138,7 @@ __all__ = [
     "Session",
     "SessionConfig",
     "Settings",
+    "Shortcut",
     "Tabs",
     "WindowLayout",
     "WiringError",
@@ -148,5 +149,6 @@ __all__ = [
     "rejected",
     "satisfies",
     "satisfying",
+    "shortcut",
     "slot",
 ]

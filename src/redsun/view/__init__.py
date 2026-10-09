@@ -4,5 +4,6 @@ from __future__ import annotations
 
 from ._layout import Column, Row, Tabs, WindowLayout
 from ._placement import Placement
+from ._shortcut import Shortcut, shortcut
 
-__all__ = ["Column", "Placement", "Row", "Tabs", "WindowLayout"]
+__all__ = ["Column", "Placement", "Row", "Shortcut", "Tabs", "WindowLayout", "shortcut"]

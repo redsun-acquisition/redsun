@@ -37,3 +37,4 @@ never edited; a later one replaces it.
 - [26. Parameter limits from `annotated-types`, checked by `pydantic`](0026-parameter-limits-from-annotated-types.md)
 - [27. A saved window layout gives way to a changed placement](0027-a-saved-window-layout-gives-way-to-a-changed-placement.md)
 - [28. A session declares its first window layout](0028-a-session-declares-its-first-window-layout.md)
+- [29. Keyboard shortcuts are declared by components](0029-keyboard-shortcuts-are-declared-by-components.md)

@@ -76,6 +76,13 @@ goes where its placement asks, so placements still work in a session that
 declares a layout. [ADR 28](decisions/0028-a-session-declares-its-first-window-layout.md)
 says why the session decides and not the view.
 
+Keyboard shortcuts work the other way round: each component marks the
+methods its keys run, and the session collects them, settles two components
+asking for one key, and lets the session file change them. The frontend
+binds the result, anywhere in its window or only while a view has focus.
+[ADR 29](decisions/0029-keyboard-shortcuts-are-declared-by-components.md)
+says why.
+
 ### Checks before a build
 
 The session checks every view before it builds anything; point at a check to
@@ -217,6 +224,7 @@ and `Session.view_arguments`, to add arguments to every view's constructor.
 | the placements it shows | `Frontend.requires` | `Central`, `Dock`, `MenuItem`, `ToolBarItem` |
 | the regions a window layout fills | `Frontend.regions`, `Frontend.region_of` | `center`, `left`, `right`, `top`, `bottom` |
 | whether a layout may start a view hidden | `Frontend.hides` | yes |
+| which keys it can read, and how it writes them | `Frontend.key_problems`, `Frontend.canonical_key` | `app-model`'s spelling, such as `Ctrl+R` |
 | the thread its views' slots run on | [`Frontend.thread_of`][redsun.Frontend.thread_of] | the main thread, for a `QWidget` |
 | the delivery of the calls held for that thread | the session's `run` | `psygnal.qt.start_emitting_from_queue` |
 
