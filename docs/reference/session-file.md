@@ -27,6 +27,7 @@ Every key is optional.
 | `devices` | mapping | empty | the [devices](#components), by name |
 | `presenters` | mapping | empty | the [presenters](#components), by name |
 | `views` | mapping | empty | the [views](#components), by name |
+| `layout` | mapping | the layout of the session class | [where the views start](#layout) in the window |
 | `providers` | mapping | empty | classes that share values with the components, by name |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
@@ -158,6 +159,42 @@ with a warning.
 pairs:
   - [motor_ctrl, motor_widget]
 ```
+
+## Layout
+
+`layout` sets where the views start in the window. It replaces the layout the
+session class returns from `window_layout()`, and a later file's `layout`
+replaces an earlier one whole.
+
+```yaml
+layout:
+  regions:
+    center: {tabs: [preview, panorama]}
+    left: {tabs: [scan, temporal, lasers], current: scan}
+    right: {column: [micro, {tabs: [trace, fcs]}], sizes: [1, 2]}
+    bottom: log
+  sizes: {left: 0.2, right: 0.3, bottom: 0.15}
+  hidden: [webcam]
+```
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `regions` | mapping | empty | what fills each region of the window; the Qt frontend has `center`, `left`, `right`, `top` and `bottom` |
+| `sizes` | mapping | empty | the share of the window each region takes, between 0 and 1: of its width for `left` and `right`, of its height for `top` and `bottom` |
+| `hidden` | list | empty | the views that start hidden |
+
+A region holds a view's name, or one of these mappings:
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `row` | list | required | views side by side, left to right |
+| `column` | list | required | views stacked, top to bottom |
+| `sizes` | list | equal shares | with `row` or `column`: one positive weight per child |
+| `tabs` | list | required | the names of views sharing one space as tabs |
+| `current` | text | the first tab | with `tabs`: the view shown on top |
+
+A view the layout leaves out goes where its placement asks. A name no view
+answers to is logged and left out, and refused when `strict` is set.
 
 ## Hooks
 

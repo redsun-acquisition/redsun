@@ -25,15 +25,19 @@ from pydantic_core import PydanticCustomError
 
 from redsun.errors import ConfigurationError
 from redsun.services._transports import TRANSPORT_KEY, TRANSPORTS, transport_of
+from redsun.view import Column, Row, Tabs, WindowLayout
 
 from ._hooks import HookGroup, group_hook_entries
 from ._manifest import problem_lines
+from .view._layout import layout_problems, split_problems, tabs_problems
 
 if TYPE_CHECKING:
     from collections.abc import Collection
     from importlib.metadata import EntryPoint
 
     from pydantic_core import InitErrorDetails
+
+    from .view._layout import Node
 
 Source: TypeAlias = str | Path | Mapping[str, Any]
 """One configuration source: a path to a YAML file, or a mapping in hand."""
@@ -64,6 +68,9 @@ __all__ = [
 
 COMPONENT_SECTIONS: Final = frozenset({"services", "devices", "presenters", "views"})
 """The configuration sections whose entries are a component's constructor call."""
+
+REPLACED_WHOLE: Final = frozenset({"layout"})
+"""Sections a later source replaces whole rather than merging into the earlier one."""
 
 SCHEMA_VERSIONS: Final = (1.0,)
 """The session file schema versions this redsun reads."""
@@ -148,12 +155,15 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
 
     A component entry is the exception: under `services`, `devices`,
     `presenters` and `views` the section merges by component name, but a
-    component *named* in *overlay* is taken from it whole.
+    component *named* in *overlay* is taken from it whole. A `layout` section
+    is replaced whole: two layout trees have no single obvious merge.
     """
     merged = dict(base)
     for key, value in overlay.items():
         current = merged.get(key)
-        if not (isinstance(current, dict) and isinstance(value, dict)):
+        if key in REPLACED_WHOLE or not (
+            isinstance(current, dict) and isinstance(value, dict)
+        ):
             merged[key] = value
         elif key in COMPONENT_SECTIONS:
             for shadowed in current.keys() & value.keys():
@@ -393,6 +403,112 @@ class ViewEntry(ComponentEntry):
     """Where the view attaches, as a word or mapping the session's frontend reads."""
 
 
+class RowEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """Views side by side in a layout, as a session file writes them."""
+
+    row: list[NodeEntry]
+    """What shares the space, left to right."""
+
+    sizes: list[float] | None = None
+    """One positive weight per child."""
+
+    @model_validator(mode="after")
+    def fits(self) -> RowEntry:
+        """Refuse sizes that do not give one positive weight per child, and an empty row."""
+        problems = split_problems(len(self.row), self.sizes)
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+
+class ColumnEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """Views stacked in a layout, as a session file writes them."""
+
+    column: list[NodeEntry]
+    """What shares the space, top to bottom."""
+
+    sizes: list[float] | None = None
+    """One positive weight per child."""
+
+    @model_validator(mode="after")
+    def fits(self) -> ColumnEntry:
+        """Refuse sizes that do not give one positive weight per child, and an empty column."""
+        problems = split_problems(len(self.column), self.sizes)
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+
+class TabsEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """Views sharing one space as tabs, as a session file writes them."""
+
+    tabs: list[str]
+    """The views, in the order of their tabs."""
+
+    current: str | None = None
+    """The view shown on top; the first when left out."""
+
+    @model_validator(mode="after")
+    def fits(self) -> TabsEntry:
+        """Refuse empty tabs, and a current tab that is not one of them."""
+        problems = tabs_problems(self.tabs, self.current)
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+
+NodeEntry: TypeAlias = str | RowEntry | ColumnEntry | TabsEntry
+"""A view's name, or views arranged together, as a session file writes them."""
+
+RowEntry.model_rebuild()
+ColumnEntry.model_rebuild()
+
+
+def node_of(entry: NodeEntry) -> Node:
+    """Return the layout node a session file's *entry* writes."""
+    match entry:
+        case str():
+            return entry
+        case RowEntry(row=children, sizes=sizes):
+            return Row(*map(node_of, children), sizes=sizes)
+        case ColumnEntry(column=children, sizes=sizes):
+            return Column(*map(node_of, children), sizes=sizes)
+        case TabsEntry(tabs=names, current=current):
+            return Tabs(*names, current=current)
+
+
+class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """The first layout of the window, as a session file writes it."""
+
+    regions: dict[str, NodeEntry] = {}
+    """What fills each region, by the frontend's region names."""
+
+    sizes: dict[str, float] = {}
+    """The share of the window each region takes, between 0 and 1."""
+
+    hidden: list[str] = []
+    """The views that start hidden."""
+
+    @model_validator(mode="after")
+    def fits(self) -> LayoutEntry:
+        """Refuse a view placed twice and a share outside (0, 1)."""
+        problems = layout_problems(
+            {region: node_of(entry) for region, entry in self.regions.items()},
+            self.sizes,
+        )
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+    def to_layout(self) -> WindowLayout:
+        """Return the layout this entry writes."""
+        return WindowLayout(
+            {region: node_of(entry) for region, entry in self.regions.items()},
+            self.sizes,
+            self.hidden,
+        )
+
+
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
@@ -428,6 +544,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     views: dict[str, ViewEntry] = {}
     """Views by name."""
+
+    layout: LayoutEntry | None = None
+    """The first layout of the window, in place of the one the session class declares."""
 
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""
