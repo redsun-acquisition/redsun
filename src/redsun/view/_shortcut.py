@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, Literal, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, get_args
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -28,8 +28,8 @@ class Shortcut:
     Raises
     ------
     ValueError
-        If the key or the title is empty, or the scope is neither `"window"`
-        nor `"view"`.
+        If the key or the title is empty, the scope is neither `"window"` nor
+        `"view"`, or the condition is not a function.
     """
 
     key: str
@@ -50,6 +50,9 @@ class Shortcut:
     linux: str | None = None
     """The key on Linux, when it differs."""
 
+    when: Callable[[Any], bool] | None = None
+    """A function of the component; while it returns false the key does nothing."""
+
     def __post_init__(self) -> None:
         problems = []
         if not self.key:
@@ -58,6 +61,8 @@ class Shortcut:
             problems.append("its title is empty")
         if self.scope not in get_args(Scope):
             problems.append(f"its scope {self.scope!r} is neither 'window' nor 'view'")
+        if self.when is not None and not callable(self.when):
+            problems.append("its condition is not a function")
         if problems:
             raise ValueError(f"shortcut: {'; '.join(problems)}")
 
@@ -75,6 +80,7 @@ def shortcut(
     mac: str | None = None,
     win: str | None = None,
     linux: str | None = None,
+    when: Callable[[Any], bool] | None = None,
 ) -> Callable[[F], F]:
     """Return a decorator recording that *key* runs the method it decorates.
 
@@ -82,15 +88,24 @@ def shortcut(
     binds the key once the component is built: anywhere in the window, or
     with `scope="view"` only while the component's own view has focus.
 
+    Parameters
+    ----------
+    when
+        A function taking the component, such as a method defined above the
+        decorated one. The key acts only while it returns true; the rest of
+        the time the key press goes to the widget that has focus. A frontend
+        asks again each time the focus moves.
+
     Raises
     ------
     ValueError
-        If the key or the title is empty, or the scope is unknown.
+        If the key or the title is empty, the scope is unknown, or *when* is
+        not a function.
     TypeError
         When applied to a method that needs arguments besides itself, to a
         coroutine method, or to a method that already has a key.
     """
-    record = Shortcut(key, title, scope, mac, win, linux)
+    record = Shortcut(key, title, scope, mac, win, linux, when)
 
     def decorate(method: F) -> F:
         if isinstance(getattr(method, SHORTCUT_ATTR, None), Shortcut):
