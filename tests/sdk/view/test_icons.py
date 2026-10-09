@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+import gc
+import weakref
+
 import pytest
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QColor, QIcon, QPalette
-from qtpy.QtWidgets import QApplication, QComboBox, QPushButton
+from qtpy.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QPushButton,
+    QStyleFactory,
+    QToolButton,
+)
 
 from redsun.view.qt._icons import set_icon, set_item_icon
 
@@ -100,3 +109,96 @@ def test_a_combo_item_gets_an_icon_and_keeps_its_text(qapp: QApplication) -> Non
 
     assert combo.itemText(0) == "WARNING"
     assert not combo.itemIcon(0).isNull()
+
+
+def test_a_button_with_an_icon_is_freed_without_a_collection(
+    qapp: QApplication,
+) -> None:
+    """Free a button given an icon as soon as nothing refers to it, with no collection."""
+    gc.disable()
+    try:
+        button = QPushButton()
+        set_icon(button, "play", "Run the plan")
+        ref = weakref.ref(button)
+        del button
+        freed = ref() is None
+    finally:
+        gc.enable()
+
+    assert freed
+
+
+def test_an_icon_goes_on_its_own_button_not_a_child_with_one(
+    qapp: QApplication,
+) -> None:
+    """Draw an icon on the button asked, even when a child button already has one."""
+    outer = QPushButton()
+    inner = QToolButton(outer)
+    set_icon(inner, "stop", "Stop")
+
+    set_icon(outer, "play", "Run the plan")
+
+    assert not outer.icon().isNull()
+    assert inner.toolTip() == "Stop"
+
+
+@pytest.mark.skipif(
+    QStyleFactory.create("windows11") is None,
+    reason="the windows11 style is only built on Windows",
+)
+@pytest.mark.parametrize(
+    ("accent", "expected"), [("#4cc2ff", "#000000"), ("#0067c0", "#ffffff")]
+)
+def test_a_checked_button_under_windows11_contrasts_with_its_accent(
+    qapp: QApplication, accent: str, expected: str
+) -> None:
+    """Draw a checked button's icon black on a light accent and white on a dark one, under windows11."""
+    button = QPushButton()
+    button.setStyle(QStyleFactory.create("windows11"))
+    shown = button.palette()
+    shown.setColor(QPalette.ColorRole.Accent, QColor(accent))
+    button.setPalette(shown)
+    button.setCheckable(True)
+
+    set_icon(button, "lightbulb-on", "Switch laser")
+
+    image = button.icon().pixmap(QSize(32, 32), QIcon.Mode.Normal, QIcon.State.On)
+    drawn = {
+        image.toImage().pixelColor(x, y).name()
+        for x in range(32)
+        for y in range(32)
+        if image.toImage().pixelColor(x, y).alpha() == 255
+    }
+    assert expected in drawn
+
+
+def test_a_hovered_item_draws_its_icon_in_the_highlighted_text_colour(
+    qapp: QApplication,
+) -> None:
+    """Draw a combo item's icon in the highlighted text colour when it is selected."""
+    combo = QComboBox()
+    shown = combo.palette()
+    shown.setColor(QPalette.ColorRole.HighlightedText, QColor("#ff00ff"))
+    combo.setPalette(shown)
+    combo.addItem("WARNING")
+
+    set_item_icon(combo, 0, "alert")
+
+    assert "#ff00ff" in colours(combo.itemIcon(0), QIcon.Mode.Selected)
+
+
+def test_an_application_palette_change_reaches_a_hidden_button(
+    qapp: QApplication,
+) -> None:
+    """Redraw a hidden button's icon when the application palette changes, as a light/dark switch does."""
+    button = QPushButton()
+    set_icon(button, "play", "Run the plan")
+    before = qapp.palette()
+    try:
+        qapp.setPalette(palette("#123456", "#654321"))
+        QApplication.sendPostedEvents()
+        drawn = colours(button.icon())
+    finally:
+        qapp.setPalette(before)
+
+    assert "#123456" in drawn

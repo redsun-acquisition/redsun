@@ -132,6 +132,8 @@ class LightGroup(QtW.QGroupBox):
             set_icon(self._toggle, "lightbulb-on", f"{self._device} is on")
         else:
             set_icon(self._toggle, "lightbulb-outline", f"{self._device} is off")
+        # a screen reader says the checked state itself; the name says the action
+        self._toggle.setAccessibleName(f"Switch {self._device}")
 
     def set_intensity(self, value: float) -> None:
         """Show the intensity read back, unless the user is dragging or typing."""

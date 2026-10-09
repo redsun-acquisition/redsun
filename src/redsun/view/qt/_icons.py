@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from qtpy.QtCore import QEvent, QObject, QSize
+from qtpy.QtCore import QEvent, QObject, QSize, Qt
 from qtpy.QtGui import QIcon, QPalette
 from qtpy.QtWidgets import QAbstractButton, QComboBox, QWidget
 from superqt import fonticon
@@ -18,28 +18,50 @@ SCALE: Final = 1.4
 """An icon's size as a multiple of its widget's line height."""
 
 
-def icon(name: str, palette: QPalette) -> QIcon:
-    """Return the icon *name* in *palette*'s button text colours, enabled and disabled."""
+def icon(name: str, widget: QWidget) -> QIcon:
+    """Return the icon *name* in *widget*'s colours: enabled, disabled, checked and selected."""
+    palette = widget.palette()
     # superqt keys its cache by the options, so the colours go in as names
     enabled = palette.color(QPalette.ColorRole.ButtonText).name()
     disabled = palette.color(
         QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText
     ).name()
+    selected = palette.color(QPalette.ColorRole.HighlightedText).name()
     return fonticon.icon(
-        f"{PREFIX}.{name}", color=enabled, states={"disabled": {"color": disabled}}
+        f"{PREFIX}.{name}",
+        color=enabled,
+        states={
+            "on": {"color": checked_colour(widget, enabled)},
+            "disabled": {"color": disabled},
+            "selected": {"color": selected},
+        },
     )
 
 
+def checked_colour(widget: QWidget, enabled: str) -> str:
+    """Return the colour of a checked button's icon on *widget*'s style.
+
+    The windows11 style fills a checked button with the accent colour and
+    writes on it in black or white, whichever reads on that accent; no
+    palette role holds that colour. Other styles keep the button text colour.
+    """
+    style = widget.style()
+    if style is None or style.name().lower() != "windows11":
+        return enabled
+    accent = widget.palette().color(QPalette.ColorRole.Accent)
+    return "#000000" if accent.lightnessF() > 0.5 else "#ffffff"
+
+
 class Repaint(QObject):
-    """Sets a widget's icons again when its palette changes.
+    """Sets its parent widget's icons again when the widget's palette changes.
 
     `superqt` draws an icon in the colour it was given and caches it, so a
-    light/dark switch would leave the old colour.
+    light/dark switch would leave the old colour. The widget is read from
+    the parent, not kept, so the two make no reference cycle.
     """
 
     def __init__(self, widget: QWidget) -> None:
         super().__init__(widget)
-        self.widget = widget
         self.button: str | None = None
         self.items: dict[int, str] = {}
         widget.installEventFilter(self)
@@ -54,18 +76,18 @@ class Repaint(QObject):
         return False
 
     def draw(self) -> None:
-        """Set every icon this widget shows, in its current palette."""
-        palette = self.widget.palette()
-        if self.button is not None and isinstance(self.widget, QAbstractButton):
-            self.widget.setIcon(icon(self.button, palette))
-        if isinstance(self.widget, QComboBox):
+        """Set every icon the parent widget shows, in its current palette."""
+        widget = self.parent()
+        if self.button is not None and isinstance(widget, QAbstractButton):
+            widget.setIcon(icon(self.button, widget))
+        if isinstance(widget, QComboBox):
             for index, name in self.items.items():
-                self.widget.setItemIcon(index, icon(name, palette))
+                widget.setItemIcon(index, icon(name, widget))
 
 
 def repaint_for(widget: QWidget) -> Repaint:
     """Return the widget's `Repaint`, made on first use."""
-    found = widget.findChild(Repaint)
+    found = widget.findChild(Repaint, options=Qt.FindChildOption.FindDirectChildrenOnly)
     return found if found is not None else Repaint(widget)
 
 

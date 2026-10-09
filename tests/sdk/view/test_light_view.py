@@ -57,6 +57,7 @@ def test_the_toggle_asks_and_follows_the_readback(
 
     assert asked == [("laser", True)]
     assert before == (False, "laser is off", "")
+    assert toggle.accessibleName() == "Switch laser"
     assert (toggle.isChecked(), toggle.toolTip(), toggle.text()) == (
         True,
         "laser is on",
