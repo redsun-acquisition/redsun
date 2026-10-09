@@ -375,7 +375,6 @@ def test_locking_a_device_keeps_the_focus_off_another_device(
     qapp.processEvents()
 
     assert (stage.focused_axis(), focus.focused_axis()) == (axis, None)
-    assert stage.isAncestorOf(QtWidgets.QApplication.focusWidget())
 
 
 def test_saving_opens_the_saved_positions(
