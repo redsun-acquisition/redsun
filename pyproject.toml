@@ -59,6 +59,7 @@ dev = [
     "jsonschema>=4.26.0",
     "fastcs[epicspva]>=0.14.2",
     "zarr>=3.1.6",
+    "towncrier>=26.9.0",
 ]
 docs = [
     "markdown-d2>=0.4.2",
@@ -297,6 +298,7 @@ commands = [
     ["python", "scripts/screenshots.py"],
     ["zensical", "build"],
     ["python", "scripts/check_xrefs.py"],
+    ["towncrier", "build", "--draft", "--version", "0.0.0"],
 ]
 
 # https://coverage.readthedocs.io/en/latest/config.html
@@ -327,3 +329,39 @@ markers = [
 env = [
     "QT_QPA_PLATFORM=offscreen",
 ]
+
+# https://towncrier.readthedocs.io/en/stable/configuration.html
+[tool.towncrier]
+directory = "changelog.d"
+filename = "docs/reference/changelog.md"
+start_string = "<!-- towncrier release notes start -->\n"
+title_format = "## [{version}](https://github.com/redsun-acquisition/redsun/releases/tag/v{version}) - {project_date}"
+issue_format = "[#{issue}](https://github.com/redsun-acquisition/redsun/pull/{issue})"
+
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Breaking"
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
