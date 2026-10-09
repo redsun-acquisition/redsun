@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pytest
 from app_model.backends.qt import QModelMenu
+from mock_bundle.menu_callbacks import Executed
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction, QKeySequence
 from qtpy.QtTest import QTest
@@ -19,8 +20,15 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from redsun import AsView, Placement, shortcut
-from redsun.qt import WINDOW_MENU, Central, Dock, QtSession
+from redsun import (
+    AsPresenter,
+    AsView,
+    ConfigurationError,
+    Placement,
+    provides,
+    shortcut,
+)
+from redsun.qt import WINDOW_MENU, Central, Dock, MenuItem, QtSession
 from redsun.view.qt._shortcuts_dialog import ShortcutsDialog
 
 if TYPE_CHECKING:
@@ -91,12 +99,38 @@ class Shadow(QWidget):
 
     placement: Placement = Central()
 
-    def __init__(self, name: str, parent: QWidget) -> None:
+    def __init__(
+        self, name: str, parent: QWidget, ran: list[str] | None = None
+    ) -> None:
         super().__init__(parent)
         self.name = name
+        self.ran = ran if ran is not None else []
+        self.edit = QLineEdit(self)
+        QVBoxLayout(self).addWidget(self.edit)
 
     @shortcut("Ctrl+R", title="Run here", scope="view")
-    def run_here(self) -> None: ...
+    def run_here(self) -> None:
+        self.ran.append("here")
+
+
+class MenuThing(QAction):
+    """A view shown as a menu entry, asking for a key of its own view."""
+
+    placement: Placement = MenuItem("Tools")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        self.name = name
+
+    @shortcut("F7", title="Thing", scope="view")
+    def thing(self) -> None: ...
+
+
+class MenuThingApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "menu-thing-session"}
+
+    panel: AsView[Panel]
+    thing: AsView[MenuThing]
 
 
 class ShadowApp(QtSession):
@@ -104,6 +138,32 @@ class ShadowApp(QtSession):
 
     panel: AsView[Panel]
     shadow: AsView[Shadow]
+
+
+class Recorder:
+    """Presenter providing the list the commands record into."""
+
+    def __init__(self, name: str, record: list[str]) -> None:
+        self.name = name
+        self.record = record
+
+    @provides
+    def executed(self) -> Executed:
+        return Executed(self.record)
+
+
+class RecordingApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "recording-session"}
+
+    panel: AsView[Panel]
+    other: AsView[Other]
+    recorder: AsPresenter[Recorder]
+
+
+@pytest.fixture
+def executed() -> list[str]:
+    """Return what the session file's commands ran, in order."""
+    return []
 
 
 class CentralOnlyApp(QtSession):
@@ -267,3 +327,119 @@ def test_a_session_with_shortcuts_and_no_dock_has_the_window_menu(
 
     assert isinstance(menu, QModelMenu)
     assert "Keyboard shortcuts" in [a.text() for a in menu.actions()]
+
+
+def test_a_view_key_wins_inside_its_view_and_the_window_key_elsewhere(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Run the view's command for a shared key inside the view, and the window's outside it."""
+    window_ran: list[str] = []
+    view_ran: list[str] = []
+    app = build(
+        ShadowApp,
+        {"views": {"panel": {"ran": window_ran}, "shadow": {"ran": view_ran}}},
+    )
+    panel, shadow = app.views["panel"], app.views["shadow"]
+    assert isinstance(panel, Panel)
+    assert isinstance(shadow, Shadow)
+
+    press(shadow.edit, QtNamespace.Key.Key_R, CTRL)
+    press(panel.edit, QtNamespace.Key.Key_R, CTRL)
+
+    assert view_ran == ["here"]
+    assert window_ran == ["run"]
+
+
+def test_a_key_qt_binds_as_nothing_is_refused(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Refuse a session file key app-model reads but Qt binds to nothing, naming the command."""
+    with pytest.raises(ConfigurationError, match=r"shortcuts\.panel\.run"):
+        build(KeysApp, {"shortcuts": {"panel.run": "PageUp"}})
+
+
+def test_an_action_keeps_its_key_in_its_menu(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a session file action's settled key beside its menu entry."""
+    action = {
+        "id": "keys.tool",
+        "title": "Tool",
+        "callback": "mock_bundle.menu_callbacks:note",
+        "menus": [{"id": WINDOW_MENU}],
+        "keybindings": [{"primary": "F9"}],
+    }
+    app = build(KeysApp, {"actions": [action]})
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+
+    entry = menu.findAction("keys.tool")
+
+    assert isinstance(entry, QAction)
+    assert entry.shortcut().toString() == "F9"
+
+
+def test_a_disabled_action_does_not_run_from_its_key(
+    qapp: QApplication, build: BuildSession, executed: list[str]
+) -> None:
+    """Leave a disabled session file action idle when its key is pressed."""
+    action = {
+        "id": "keys.idle",
+        "title": "Idle",
+        "callback": "mock_bundle.menu_callbacks:note",
+        "menus": [{"id": WINDOW_MENU}],
+        "enablement": "False",
+        "keybindings": [{"primary": "F9"}],
+    }
+    app = build(
+        RecordingApp,
+        {"actions": [action], "presenters": {"recorder": {"record": executed}}},
+    )
+    other = app.views["other"]
+    assert isinstance(other, Other)
+
+    press(other.edit, QtNamespace.Key.Key_F9)
+
+    assert executed == []
+
+
+def test_the_section_gives_a_key_to_an_action_without_one(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Give a session file action a key from the shortcuts section, though it declares none."""
+    caplog.set_level(logging.WARNING, logger="redsun")
+    action = {
+        "id": "keys.plain",
+        "title": "Plain",
+        "callback": "mock_bundle.menu_callbacks:note",
+    }
+
+    app = build(KeysApp, {"actions": [action], "shortcuts": {"keys.plain": "F8"}})
+
+    assert app.model.keybindings.get_keybinding("keys.plain") is not None
+    assert "no such command" not in caplog.text
+
+
+def test_a_command_id_taken_by_an_action_is_logged(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Keep building when a component's command id is an action's, and name it in the log."""
+    caplog.set_level(logging.WARNING, logger="redsun")
+    action = {
+        "id": "panel.run",
+        "title": "Run",
+        "callback": "mock_bundle.menu_callbacks:note",
+    }
+
+    build(KeysApp, {"actions": [action]})
+
+    assert "panel.run" in caplog.text
+
+
+def test_a_view_key_of_a_menu_entry_is_listed_unbound(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """List a view key a menu-entry view declares as unbound, since it has no view to focus."""
+    dialog = opened(build(MenuThingApp))
+
+    assert rows(dialog, "thing") == [["Thing", "unbound", "", ""]]

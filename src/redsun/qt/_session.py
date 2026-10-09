@@ -36,7 +36,7 @@ import sys
 import weakref
 from collections.abc import Mapping  # noqa: TC003
 from contextlib import nullcontext
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import partial
 from typing import (
@@ -362,10 +362,18 @@ class Qt(Frontend):
             return [f"{key!r} is not a key: {error}"]
         # app-model reads some names it does not know without an error, such
         # as "Ctrl+Period" as "Ctrl+", leaving no key in the combination
-        if any(part.key in NOT_KEYS for part in parsed.parts):
+        if not parsed.parts or any(part.key in NOT_KEYS for part in parsed.parts):
             return [
-                f"{key!r} names no key app-model reads; write it as Qt does, such as 'Ctrl+.'"
+                (
+                    f"{key!r} names no key; write it with app-model's names, such "
+                    "as 'Ctrl+.', 'Escape', 'Delete' or 'Enter'"
+                )
             ]
+        # app-model knows some names Qt's text form does not, such as PageUp,
+        # which would bind to nothing
+        bound = QKeySequence(str(parsed))
+        if not bound.toString():
+            return [f"{key!r} is a key Qt cannot bind from its name"]
         return []
 
     @classmethod
@@ -410,6 +418,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         "_shortcuts_dialog",
         "_shown_layout",
         "_sized",
+        "_view_keys",
+        "_window_actions",
         "_window_widgets",
     )
 
@@ -444,6 +454,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._action_bindings: list[Binding] = []
         self._shortcut_bindings: list[Binding] = []
         self._shortcuts_dialog: ShortcutsDialog | None = None
+        self._window_actions: list[tuple[QAction, tuple[str, ...]]] = []
+        self._view_keys: dict[QWidget, set[str]] = {}
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -595,9 +607,11 @@ class QtSession(DesktopSession[QMainWindow], Session):
         A view that failed to build and asked for a dock or the centre is
         replaced there by a widget naming it and the reason. When any
         component failed to build or to be set up, a button in the status bar
-        counts them and lists them with their tracebacks. A Window menu,
-        added after the main-view hook has run, shows or hides each dock and
-        puts every dock back where its placement says.
+        counts them and lists them with their tracebacks. The keyboard
+        shortcuts are bound before the main-view hook runs, so the menus it
+        builds show them. A Window menu, added after the hook has run, shows or
+        hides each dock, puts every dock back where its placement says, and
+        lists the shortcuts.
         """
         window = self.main_window
         # the guard outlives the window only if something holds it, and the
@@ -615,10 +629,11 @@ class QtSession(DesktopSession[QMainWindow], Session):
         bar = window.statusBar()
         if failures and bar is not None:
             bar.addPermanentWidget(FailuresButton(failures))
+        # before the hook, so the menus it builds show the actions' keys
+        self._shortcut_bindings = self._bind_shortcuts(views)
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
-        self._shortcut_bindings = self._bind_shortcuts(views)
         self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()
@@ -740,42 +755,103 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _bind_shortcuts(
         self, views: Mapping[str, AttachableComponent]
     ) -> list[Binding]:
-        """Bind the settled keys: on the window, or on a view for a view's own keys.
+        """Bind the settled keys, and return the bindings as bound.
 
-        A command the components declare is registered here; a session file
-        action already is, and gets its keys only. Returns the bindings as
-        bound.
+        A component's command is registered here, and its keys bound on the
+        window, or on its view for a view's own keys. A session file action is
+        registered already; its settled keys go to the application's keybinding
+        registry, so the menus showing it show and honour them as they always
+        have. A command id another command has, and a view key on a view that is
+        no widget, leave the keys unbound and are logged.
         """
-        bound = self.resolve_shortcuts(self._action_bindings)
-        commands = [
-            Action(id=binding.command, title=binding.title, callback=binding.run)
-            for binding in bound
-            if binding.run is not None
-        ]
-        if commands:
-            self.on_release(self.model.register_actions(commands))
-        for binding in bound:
-            if not binding.keys:
+        bound: list[Binding] = []
+        hosts: dict[str, QWidget] = {}
+        for binding in self.resolve_shortcuts(self._action_bindings):
+            if binding.run is None:
+                for key in binding.keys:
+                    rule = KeyBindingRule(primary=key)
+                    if (
+                        disposer := self.model.keybindings.register_keybinding_rule(
+                            binding.command, rule
+                        )
+                    ) is not None:
+                        self.on_release(disposer)
+                bound.append(binding)
+                continue
+            try:
+                self.on_release(
+                    self.model.register_action(
+                        Action(
+                            id=binding.command,
+                            title=binding.title,
+                            callback=binding.run,
+                        )
+                    )
+                )
+            except ValueError:
+                logger.warning(
+                    "%s: another command has this id, so its keys stay unbound",
+                    binding.command,
+                )
+                bound.append(replace(binding, keys=()))
                 continue
             host = self.main_window if binding.view is None else views.get(binding.view)
             if not isinstance(host, QWidget):
-                logger.warning(
-                    "%s: view %r is not a widget, so its keys stay unbound",
-                    binding.command,
-                    binding.view,
-                )
+                if binding.keys:
+                    logger.warning(
+                        "%s: view %r is not a widget, so its keys stay unbound",
+                        binding.command,
+                        binding.view,
+                    )
+                bound.append(replace(binding, keys=()))
                 continue
-            action = QAction(binding.title, host)
+            hosts[binding.command] = host
+            bound.append(binding)
+        window_actions: list[tuple[QAction, tuple[str, ...]]] = []
+        view_keys: dict[QWidget, set[str]] = {}
+        for binding in bound:
+            host_widget = hosts.get(binding.command)
+            if host_widget is None or not binding.keys:
+                continue
+            action = QAction(binding.title, host_widget)
             action.setObjectName(binding.command)
             action.triggered.connect(partial(self._run_command, binding.command))
             action.setShortcuts([QKeySequence(key) for key in binding.keys])
-            action.setShortcutContext(
-                QtNamespace.ShortcutContext.WindowShortcut
-                if binding.view is None
-                else QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
-            )
-            host.addAction(action)
+            if binding.view is None:
+                action.setShortcutContext(QtNamespace.ShortcutContext.WindowShortcut)
+                window_actions.append((action, binding.keys))
+            else:
+                action.setShortcutContext(
+                    QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
+                )
+                view_keys.setdefault(host_widget, set()).update(binding.keys)
+            host_widget.addAction(action)
+        self._window_actions = window_actions
+        self._view_keys = view_keys
+        if view_keys and window_actions:
+            self.app.focusChanged.connect(self._yield_shadowed_keys)
+            self.on_release(self._stop_yielding_keys)
         return bound
+
+    def _yield_shadowed_keys(self, _old: QWidget | None, new: QWidget | None) -> None:
+        """Take from the window's keys those the view holding the focus binds itself.
+
+        Qt fires neither of two shortcuts on one key in reach of the focus, so
+        while a view has focus its own key is the only one left.
+        """
+        shadowed: set[str] = set()
+        widget = new
+        while widget is not None:
+            if widget in self._view_keys:
+                shadowed = self._view_keys[widget]
+                break
+            widget = widget.parentWidget()
+        for action, keys in self._window_actions:
+            action.setShortcuts([QKeySequence(k) for k in keys if k not in shadowed])
+
+    def _stop_yielding_keys(self) -> None:
+        """Disconnect from the focus changes of the application."""
+        self.app.focusChanged.disconnect(self._yield_shadowed_keys)
 
     def _run_command(self, command: str) -> None:
         """Run *command*, so a key and a menu entry run it the same way."""
@@ -784,7 +860,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _register_window_actions(
         self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
     ) -> None:
-        """Register a toggle for each dock, "Reset layout" and "Keyboard shortcuts", as the Window menu.
+        """Register the Window menu: a toggle per dock, "Reset layout" and "Keyboard shortcuts".
 
         The docks are those of *views*, and those added since *earlier* was
         taken that have an object name no other dock has. A dock a view adds
@@ -1009,13 +1085,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
                 action.id,
                 action.title,
                 tuple(
-                    k for rule in action.keybindings or () if (k := platform_key(rule))
+                    key
+                    for rule in action.keybindings or ()
+                    if (key := platform_key(rule)) is not None
                 ),
                 None,
                 None,
             )
             for action in actions
-            if action.keybindings
         ]
         self.on_release(
             self.model.register_actions(
@@ -1480,7 +1557,9 @@ def restore_centre(window: QMainWindow, layout: WindowLayout, state: object) -> 
 
 
 def platform_key(rule: KeyBindingRule) -> str | None:
-    """Return the key *rule* gives the platform this runs on, as app-model writes it."""
+    """Return the key *rule* gives the platform this runs on, as written, or app-model's text for a number."""
     here = {"darwin": rule.mac, "win32": rule.win}.get(sys.platform, rule.linux)
     chosen = here if here is not None else rule.primary
-    return None if chosen is None else str(KeyBinding.validate(chosen))
+    if chosen is None or isinstance(chosen, str):
+        return chosen
+    return str(KeyBinding.validate(chosen))
