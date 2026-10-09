@@ -430,6 +430,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
     )
 
     frontend = Qt
+
+    garbage_interval: ClassVar[int] = 100
+    """Milliseconds between two checks of Python's garbage, collected on the GUI thread."""
+
     hook_points: ClassVar[Mapping[str, type]] = {
         QtHook.CREATE_APPLICATION: CreatesApplication,
         QtHook.CONFIGURE_APPLICATION: ConfiguresApplication,
@@ -561,7 +565,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._qt_app = qt_app
         self.on_release(self._forget_application_object)
         # pyside6 aborts when a collection on a background thread frees a widget
-        collector = GarbageCollector(qt_app)
+        collector = GarbageCollector(qt_app, self.garbage_interval)
         collector.start()
         self.on_release(collector.stop)
 

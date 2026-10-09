@@ -7,14 +7,10 @@
 from __future__ import annotations
 
 import gc
-from typing import Final
 
 from qtpy.QtCore import QObject, QTimer
 
 __all__ = ["GarbageCollector"]
-
-INTERVAL: Final = 1000
-"""Milliseconds between two checks of the collection counts."""
 
 
 class GarbageCollector:
@@ -29,9 +25,10 @@ class GarbageCollector:
 
     __slots__ = ("__weakref__", "enabled_before", "timer")
 
-    def __init__(self, parent: QObject) -> None:
+    def __init__(self, parent: QObject, interval: int) -> None:
+        """Check the collection counts every *interval* milliseconds once started."""
         self.timer = QTimer(parent)
-        self.timer.setInterval(INTERVAL)
+        self.timer.setInterval(interval)
         self.timer.timeout.connect(self.check)
         self.enabled_before = gc.isenabled()
 
