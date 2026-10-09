@@ -993,7 +993,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Show the list of the keys this session binds, one dialog at a time."""
         if self._shortcuts_dialog is None:
             self._shortcuts_dialog = ShortcutsDialog(
-                self._shortcut_bindings, self.main_window
+                self._shortcut_bindings,
+                self.set_shortcuts,
+                self.reset_shortcuts,
+                self.main_window,
             )
         self._shortcuts_dialog.show()
         self._shortcuts_dialog.raise_()
