@@ -24,21 +24,34 @@ class NapariStyle:
     and icons for the current colour scheme, then again at every change of
     the scheme, so the session's colour scheme control switches between
     napari's dark and light themes. An unknown scheme gets the light theme.
-    The icons are written once per theme to the user's cache folder.
+    The icons are written once per theme to the user's cache folder. At
+    shutdown the application gets back the stylesheet it had before.
     """
 
     def __init__(self) -> None:
         self._app: QApplication | None = None
+        self._previous = ""
 
     def configure_application(self, app: QApplication) -> None:
         """Apply napari's theme for the current colour scheme, and again on each change."""
         self._app = app
+        self._previous = app.styleSheet()
         hints = app.styleHints()
         if hints is None:
             self._apply(QtNamespace.ColorScheme.Unknown)
             return
         hints.colorSchemeChanged.connect(self._apply)
         self._apply(hints.colorScheme())
+
+    def shutdown(self) -> None:
+        """Stop following the colour scheme, and restore the previous stylesheet."""
+        if self._app is None:
+            return
+        hints = self._app.styleHints()
+        if hints is not None:
+            hints.colorSchemeChanged.disconnect(self._apply)
+        self._app.setStyleSheet(self._previous)
+        self._app = None
 
     def _apply(self, scheme: QtNamespace.ColorScheme) -> None:
         theme = DARK if scheme == QtNamespace.ColorScheme.Dark else LIGHT

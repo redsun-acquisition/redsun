@@ -67,3 +67,17 @@ def test_a_scheme_change_switches_the_theme(
     assert LIGHT_BACKGROUND in light
     assert all(image.is_file() for image in images(dark) + images(light))
     assert set(images(dark)).isdisjoint(images(light))
+
+
+def test_shutdown_restores_the_stylesheet_and_stops_following(
+    qapp: QApplication, build: BuildSession, unstyled: None
+) -> None:
+    """Restore the application's own stylesheet at shutdown, and ignore later scheme changes."""
+    qapp.setStyleSheet("QLabel { color: red; }")
+    hints = QGuiApplication.styleHints()
+    assert hints is not None
+
+    build(StyledApp).shutdown()
+    hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
+
+    assert qapp.styleSheet() == "QLabel { color: red; }"

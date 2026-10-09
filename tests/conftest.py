@@ -19,7 +19,6 @@ from unittest import mock
 import pytest
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QCoreApplication
-from qtpy.QtGui import QGuiApplication
 from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:
@@ -75,11 +74,6 @@ def unstyled(
         "redsun.qt.styles.napari.user_cache_dir", lambda *a, **k: str(tmp_path)
     )
     yield
-    hints = QGuiApplication.styleHints()
-    assert hints is not None
-    # a test that failed before the style connected leaves nothing to disconnect
-    with contextlib.suppress(TypeError, RuntimeError):
-        hints.colorSchemeChanged.disconnect()
     qapp.setStyleSheet("")
 
 
