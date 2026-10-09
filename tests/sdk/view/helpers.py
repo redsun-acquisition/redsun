@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtTest import QTest
 
 T = TypeVar("T", bound=QtCore.QObject)
 
@@ -31,3 +32,21 @@ def type_into(edit: QtWidgets.QLineEdit, text: str) -> None:
     """Replace the text of *edit* by typing *text*, then press Enter."""
     edit.selectAll()
     press(edit, *text, QtCore.Qt.Key.Key_Return)
+
+
+def key_click(
+    widget: QtWidgets.QWidget, key: QtCore.Qt.Key, modifier: Any = None
+) -> None:
+    """Focus *widget* in its shown, active window and press *key* there, shortcuts included."""
+    window = widget.window()
+    assert window is not None
+    window.show()
+    window.activateWindow()
+    widget.setFocus()
+    QtWidgets.QApplication.processEvents()
+    # pyqt6's stubs type QTest's static methods as instance methods
+    test = cast("Any", QTest)
+    if modifier is None:
+        test.keyClick(widget, key)
+    else:
+        test.keyClick(widget, key, modifier)

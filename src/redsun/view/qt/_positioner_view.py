@@ -22,6 +22,7 @@ from redsun.log import Loggable
 from redsun.ports import slot
 from redsun.presenter import DescribesAxes  # noqa: TC001
 from redsun.qt import Dock
+from redsun.view import shortcut
 from redsun.view.qt.treeview import ConfigurationTab
 
 from ..._settings import Settings  # noqa: TC001
@@ -147,7 +148,10 @@ class PositionerView(QtW.QWidget, Loggable):
     The Motors tab holds one [`PositionerGroup`][redsun.view.qt.builtins.PositionerGroup]
     per device the positioner describes, and the saved positions. The
     Configuration tab shows and edits the configuration of every axis. The
-    Advanced tab sets the repeat interval of held step buttons. The session's
+    Advanced tab sets the repeat interval of held step buttons. With an axis
+    row or its step button focused, Left and Right step that axis down and
+    up; they are keyboard shortcuts, so the session file and the Keyboard
+    shortcuts list show and change them. The session's
     settings keep the saved positions and the repeat interval, under keys
     named after this view.
 
@@ -175,7 +179,7 @@ class PositionerView(QtW.QWidget, Loggable):
     """Widget built for each device; a subclass may name a subclass of its own that takes the same arguments."""
 
     sig_move = Signal(str, str, float)
-    """Device, axis and step, when a step button is pressed or repeats, or an arrow key steps."""
+    """Device, axis and step, when a step button is pressed or repeats, or Left or Right steps the focused axis."""
 
     sig_move_to = Signal(str, dict)
     """Device and the positions to go to, by axis."""
@@ -365,6 +369,28 @@ class PositionerView(QtW.QWidget, Loggable):
         if self._configuration_tab is not None:
             self._configuration_tab.set_locked(names)
         self._lock_entries()
+
+    def _row_has_focus(self) -> bool:
+        return any(group.focused_axis() is not None for group in self._groups.values())
+
+    @shortcut(
+        "Left", title="Step the focused axis down", scope="view", when=_row_has_focus
+    )
+    def step_down(self) -> None:
+        """Step the axis whose row has focus down by its step size."""
+        self._step_focused(-1.0)
+
+    @shortcut(
+        "Right", title="Step the focused axis up", scope="view", when=_row_has_focus
+    )
+    def step_up(self) -> None:
+        """Step the axis whose row has focus up by its step size."""
+        self._step_focused(1.0)
+
+    def _step_focused(self, sign: float) -> None:
+        for group in self._groups.values():
+            if (axis := group.focused_axis()) is not None:
+                group.step(axis, sign)
 
     def _key(self, setting: str) -> str:
         return f"{self.name}.{setting}"
