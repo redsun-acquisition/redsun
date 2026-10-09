@@ -36,6 +36,21 @@ jobs:
         with:
           ref: main
 
+      - name: Check there is something to release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          # towncrier refuses a version only when the whole heading matches,
+          # date included, so on a later day it would write a second section
+          if python3 scripts/release_notes.py extract "$VERSION" > /dev/null 2>&1; then
+            echo "The changelog already has a section for $VERSION."
+            exit 1
+          fi
+          if [ -z "$(find changelog.d -type f ! -name .gitkeep)" ]; then
+            echo "changelog.d holds no entries, so there is nothing to release."
+            exit 1
+          fi
+
       - name: Install uv
         uses: astral-sh/setup-uv@v10.2.0
 
