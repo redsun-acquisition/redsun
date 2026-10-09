@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from concurrent.futures import wait
 from functools import cache
 from threading import Thread
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, Final, TypeVar, overload
 
 import aiologic as aiol
 import psygnal._async
@@ -38,6 +39,9 @@ if TYPE_CHECKING:
 __all__ = ["cancel_task", "run_coro"]
 
 R = TypeVar("R")
+
+CLOSE_TIMEOUT: Final = 5.0
+"""Seconds `CulsansAsyncioBackend.close` waits for the drain to stop."""
 
 
 class AwaitableEvent:
@@ -110,8 +114,15 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
         self._queue.put_nowait(item)
 
     def close(self) -> None:
-        """Shut the queue down; the drain cancels pending callbacks."""
+        """Shut the queue down, and wait for the drain to stop and cancel pending callbacks.
+
+        Off the shared loop's thread, it returns once the drain has stopped,
+        or after `CLOSE_TIMEOUT` seconds; on that thread, at once, since the
+        drain can only stop once the call returns.
+        """
         self._queue.shutdown()
+        if not on_shared_loop():
+            wait([self._run_task], timeout=CLOSE_TIMEOUT)
 
     async def run(self) -> None:
         """Drain the queue until it is shut down or the drain is cancelled."""
