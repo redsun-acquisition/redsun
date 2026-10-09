@@ -113,6 +113,7 @@ if TYPE_CHECKING:
     from redsun.services import Service
     from redsun.view import Placement, WindowLayout
 
+    from .._settings import JsonValue
     from ._declarations import Key
     from ._profile import ProfileKind
     from ._questions import Shape
@@ -985,7 +986,7 @@ class Session(BuildableSession):
                 ]
         if problems:
             raise ValueError("; ".join(problems))
-        written = {
+        written: dict[str, JsonValue] = {
             command: [self.frontend.canonical_key(key) for key in keys]
             for command, keys in changes.items()
         }
