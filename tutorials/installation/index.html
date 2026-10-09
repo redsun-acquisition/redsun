@@ -5563,11 +5563,13 @@ and <code>.python-version</code> says which Python runs it.</p>
 <h2 id="2-install-redsun">2. Install redsun<a class="headerlink" href="#2-install-redsun" title="Permanent link">&para;</a></h2>
 <p>Add <code>redsun</code> to the project, with
 <a href="../../explanation/glossary/#qt-binding">PyQt6</a> to draw its windows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"redsun[pyqt]"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span>--compile-bytecode<span class="w"> </span><span class="s2">"redsun[pyqt]"</span>
 </span></code></pre></div>
 <p><code>uv</code> makes a virtual environment in the folder, called <code>.venv</code>, and installs
 <code>redsun</code> in it. You never need to activate that environment, because
-<code>uv run</code> uses it for you.</p>
+<code>uv run</code> uses it for you. <code>--compile-bytecode</code> prepares the Python files to
+run while they install, so the first session you start doesn't spend
+several seconds doing it.</p>
 <h2 id="3-check-that-it-works">3. Check that it works<a class="headerlink" href="#3-check-that-it-works" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import redsun; print(redsun.__version__)"</span>
 </span></code></pre></div>

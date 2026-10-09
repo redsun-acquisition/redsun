@@ -5609,7 +5609,7 @@ checks that the two agree -->
 <span class="install-label">Installer</span>
 <div class="install-choices">
 <button type="button" data-value="pip install">pip</button>
-<button type="button" data-value="uv pip install">uv</button>
+<button type="button" data-value="uv pip install --compile-bytecode">uv</button>
 </div>
 </div>
 <div class="install-row" data-role="extra" role="group" aria-label="Window">
@@ -5648,6 +5648,10 @@ such as <code>pip install "redsun[pyqt,zarr]"</code>: put the extras you want,
 named in each button's small print, between the brackets, separated by
 commas.</p></noscript>
 
+<p>With <code>uv</code>, the command adds <code>--compile-bytecode</code>, which prepares the Python
+files to run while they install. <code>pip</code> does that by itself; <code>uv</code> otherwise
+leaves it to the first session you start, which then takes several seconds
+longer.</p>
 <p>The guides for the optional parts are
 <a href="../write-a-derived-product/">writing a derived product</a>,
 <a href="../keep-a-catalog/">keeping a catalog of runs</a>,
