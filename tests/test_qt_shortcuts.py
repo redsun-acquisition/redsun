@@ -763,3 +763,34 @@ def test_reset_in_the_list_puts_the_defaults_back(
 
     assert rows(dialog, "Window")[0][1] == native("Ctrl+R")
     assert app.settings.get("shortcuts") == {}
+
+
+def test_a_saved_key_moves_a_menu_action_off_its_old_key(
+    qapp: QApplication, build: BuildSession, executed: list[str]
+) -> None:
+    """Show and run a menu action from its saved key, and no longer from the old one."""
+    action = {
+        "id": "keys.tool",
+        "title": "Tool",
+        "callback": "mock_bundle.menu_callbacks:note",
+        "menus": [{"id": WINDOW_MENU}],
+        "keybindings": [{"primary": "F9"}],
+    }
+    app = build(
+        RecordingApp,
+        {"actions": [action], "presenters": {"recorder": {"record": executed}}},
+    )
+    other = app.views["other"]
+    assert isinstance(other, Other)
+
+    app.set_shortcuts({"keys.tool": ["F8"]})
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+    after_old = len(executed)
+    key_click(other.edit, QtNamespace.Key.Key_F8)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    entry = menu.findAction("keys.tool")
+
+    assert isinstance(entry, QAction)
+    assert entry.shortcut().toString() == "F8"
+    assert (after_old, len(executed)) == (0, 1)

@@ -838,6 +838,16 @@ class QtSession(DesktopSession[QMainWindow], Session):
                     )
                     if disposer is not None:
                         self._action_key_disposers.append(disposer)
+                # a menu or toolbar entry read its key when it was built; app-model
+                # shares the entry between them and parents it to the application
+                entries = {
+                    entry
+                    for widget in self.main_window.findChildren(QWidget)
+                    for entry in widget.actions()
+                    if entry.objectName() == binding.command
+                }
+                for entry in entries:
+                    entry.setShortcuts([QKeySequence(key) for key in binding.keys])
                 continue
             action, host = self._command_actions[binding.command]
             action.setShortcuts([QKeySequence(key) for key in binding.keys])
