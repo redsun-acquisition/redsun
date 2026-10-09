@@ -5901,32 +5901,33 @@ shows how.</p>
 <p><img alt="The positioner view of the example session: a group for the stage, with a
 row for each of its axes x and y" src="../images/positioner.png" /></p>
 <ul>
-<li>The Motors tab has a group per device and a row per axis. <code>-</code> and <code>+</code> step
-  the axis by the size chosen beside them, and repeat while you hold them. With
-  the row or a step button focused, Left and Right do the same; the
-  <a href="../../reference/session-file/#shortcuts"><code>shortcuts</code></a> section of the
+<li>The Motors tab has a group per device and a row per axis. The minus and
+  plus buttons step the axis by the size chosen beside them, and repeat while
+  you hold them. The view's buttons show icons, and pointing at one says what
+  it does. With the row or a step button focused, Left and Right do the same;
+  the <a href="../../reference/session-file/#shortcuts"><code>shortcuts</code></a> section of the
   session file changes them as <code>positioner_view.step_down</code> and
-  <code>positioner_view.step_up</code>. A step starts
-  from the setpoint, so steps add up exactly, and from the readback after a
-  stop or a failure.</li>
-<li>The field beside <code>Go</code> shows where the axis is until you type a target.
-  Enter or <code>Go</code> sends the axis there. The view doesn't send a target that is
+  <code>positioner_view.step_up</code>. A step starts from the setpoint, so steps add up
+  exactly, and from the readback after a stop or a failure.</li>
+<li>The field beside the Go button, a crosshair, shows where the axis is until
+  you type a target. Enter or Go sends the axis there. The view doesn't send a target that is
   not a number or that falls outside the limits the device reports, and the
   group says why. The limits are read again after each configuration write and
   after a move that is refused or fails, so a changed offset moves them too. An
   axis that checks its own targets, as an <code>ophyd-async</code> <code>StandardMovable</code>
   does, also refuses a target outside its current limits when it moves.</li>
-<li><code>Stop</code> appears for a device that can be stopped, and stops the device and
+<li>Stop appears for a device that can be stopped, and stops the device and
   each of its axes at once. If one of them fails to stop, it is reported and
   the rest still stop.</li>
 <li>"moving" and "failed" show the state of each device, with the error after
   "failed".</li>
-<li><code>Save</code> keeps where a device stands, under a name you can edit, in the
-  Saved positions section. <code>Go</code> on an entry moves that device back there,
+<li>Save keeps where a device stands, under a name you can edit, in the
+  Saved positions section. Go on an entry moves that device back there,
   after the same checks as a typed target. A saved position also keeps the
   configuration values in the units of the axis' position, such as an offset.
-  If one has changed since, the first <code>Go</code> names it and the second moves.
-  <code>x</code> removes an entry, and for a few seconds after, <code>Undo</code> brings it back.</li>
+  If one has changed since, the first Go names it and the second moves.
+  The close button removes an entry, and for a few seconds after, Undo brings
+  it back.</li>
 <li>The Configuration tab shows each axis' configuration, such as <code>velocity</code>,
   and writes the entries that can be written. A value changed on the device
   by anything else is shown as it changes.</li>

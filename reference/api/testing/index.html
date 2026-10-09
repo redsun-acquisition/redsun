@@ -5831,6 +5831,8 @@
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its <code>tmp_path</code>, drop the <code>psygnal</code>
 emissions it left queued, and collect a Qt test's garbage on the main thread.
+On Windows under Qt's <code>offscreen</code> platform, they also point Qt at the system
+fonts, which that platform otherwise lacks.
 The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</code>.</p>
 
 

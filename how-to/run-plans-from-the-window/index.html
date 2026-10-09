@@ -5756,9 +5756,11 @@ directory, the motor to move and the plan's parameters" src="../images/acquisiti
 <li>Choose a plan in the list at the top, and the button beside it shows the
   plan's documentation. The plan's parameters, devices and the callbacks to
   attach follow below.</li>
-<li>Run starts the plan. The view shows it running once the presenter reports
-  that it started, and Run becomes Stop. A plan marked
-  <code>@continuous(pausable=True)</code> also has Pause, which becomes Resume. See
+<li>The Run button, with a play icon, starts the plan. The view shows it
+  running once the presenter reports that it started, and the button turns
+  into Stop. A plan marked <code>@continuous(pausable=True)</code> also has Pause, which
+  turns into Resume. The buttons show icons only; pointing at one shows its
+  name. See
   <a href="../write-a-continuous-plan/">Write a plan that runs until stopped</a>.</li>
 <li>Run stays disabled while a list of devices the plan needs is empty.</li>
 <li><code>Ctrl+R</code> runs the chosen plan and <code>Ctrl+.</code> stops the running one, from
