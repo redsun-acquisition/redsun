@@ -1,0 +1,48 @@
+"""napari's look for a Qt session, following its colour scheme."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from platformdirs import user_cache_dir
+from qtpy.QtCore import Qt as QtNamespace
+
+from ._vendor._napari.icons import write_icons
+from ._vendor._napari.theme import DARK, LIGHT, stylesheet
+
+if TYPE_CHECKING:
+    from qtpy.QtWidgets import QApplication
+
+__all__ = ["NapariStyle"]
+
+
+class NapariStyle:
+    """Gives the window napari's look, dark or light as the colour scheme reads.
+
+    A `configure_application` hook provider. It applies napari's stylesheet
+    and icons for the current colour scheme, then again at every change of
+    the scheme, so the session's colour scheme control switches between
+    napari's dark and light themes. An unknown scheme gets the light theme.
+    The icons are written once per theme to the user's cache folder.
+    """
+
+    def __init__(self) -> None:
+        self._app: QApplication | None = None
+
+    def configure_application(self, app: QApplication) -> None:
+        """Apply napari's theme for the current colour scheme, and again on each change."""
+        self._app = app
+        hints = app.styleHints()
+        if hints is None:
+            self._apply(QtNamespace.ColorScheme.Unknown)
+            return
+        hints.colorSchemeChanged.connect(self._apply)
+        self._apply(hints.colorScheme())
+
+    def _apply(self, scheme: QtNamespace.ColorScheme) -> None:
+        theme = DARK if scheme == QtNamespace.ColorScheme.Dark else LIGHT
+        cache = Path(user_cache_dir("redsun", appauthor=False))
+        icons = write_icons(theme, cache / "napari-style" / theme.name)
+        if self._app is not None:
+            self._app.setStyleSheet(stylesheet(theme, icons))

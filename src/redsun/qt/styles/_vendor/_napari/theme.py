@@ -195,9 +195,16 @@ def template(css: str, theme: Theme) -> str:
     return css
 
 
-def stylesheet(theme: Theme) -> str:
-    """Return napari's three stylesheets, in order, filled from *theme*."""
-    return "".join(
+def stylesheet(theme: Theme, icons: Path) -> str:
+    """Return napari's three stylesheets, in order, filled from *theme*.
+
+    The images the stylesheets name are read from *icons*, a folder
+    `write_icons` wrote for the same theme.
+    """
+    sheet = "".join(
         template(path.read_text(encoding="utf-8"), theme)
         for path in sorted(STYLES.glob("*.qss"))
     )
+    # napari loads its images through a search path prefix, but Qt refuses a
+    # prefix holding "_" such as theme_dark, so the images get the folder's path
+    return sheet.replace(f'url("theme_{theme.name}:/', f'url("{icons.as_posix()}/')

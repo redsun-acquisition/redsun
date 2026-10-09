@@ -19,6 +19,7 @@ from unittest import mock
 import pytest
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QCoreApplication
+from qtpy.QtGui import QGuiApplication
 from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:
@@ -63,6 +64,23 @@ def qapp() -> QApplication:
 
     start_emitting_from_queue()
     return app
+
+
+@pytest.fixture
+def unstyled(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[None, None, None]:
+    """Write a style's files under `tmp_path`, and leave the application unstyled."""
+    monkeypatch.setattr(
+        "redsun.qt.styles.napari.user_cache_dir", lambda *a, **k: str(tmp_path)
+    )
+    yield
+    hints = QGuiApplication.styleHints()
+    assert hints is not None
+    # a test that failed before the style connected leaves nothing to disconnect
+    with contextlib.suppress(TypeError, RuntimeError):
+        hints.colorSchemeChanged.disconnect()
+    qapp.setStyleSheet("")
 
 
 @pytest.fixture

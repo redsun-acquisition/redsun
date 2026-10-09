@@ -61,9 +61,11 @@ def test_a_template_fills_as_napari_fills_it() -> None:
 
 
 @pytest.mark.parametrize("theme", [DARK, LIGHT], ids=["dark", "light"])
-def test_the_whole_stylesheet_fills_with_no_placeholder_left(theme: Theme) -> None:
+def test_the_whole_stylesheet_fills_with_no_placeholder_left(
+    theme: Theme, tmp_path: Path
+) -> None:
     """Leave no placeholder in napari's three stylesheets once a theme fills them."""
-    assert "{{" not in stylesheet(theme)
+    assert "{{" not in stylesheet(theme, tmp_path)
 
 
 def test_the_icons_are_written_in_the_theme_colours(tmp_path: Path) -> None:
