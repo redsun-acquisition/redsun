@@ -980,11 +980,17 @@ class Session(BuildableSession):
         Raises
         ------
         ValueError
-            If a command is given more than two keys or a key the frontend
-            cannot read; nothing is saved then.
+            If a command is given a string, more than two keys or a key the
+            frontend cannot read; nothing is saved then.
+        RuntimeError
+            If the session is not built yet.
         """
         problems: list[str] = []
         for command, keys in changes.items():
+            # a string is a sequence of one-letter keys, never what was meant
+            if isinstance(keys, str):
+                problems.append(f"{command}: give a list of keys, not {keys!r}")
+                continue
             if len(keys) > 2:
                 problems.append(f"{command}: {len(keys)} keys, at most two")
             for key in keys:

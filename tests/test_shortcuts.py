@@ -181,12 +181,14 @@ def test_saved_keys_the_session_cannot_use_are_logged_once_and_kept(
 
 
 @pytest.mark.parametrize(
-    "keys", [["Ctrl+?"], ["F1", "F2", "F3"]], ids=["unreadable", "three"]
+    "keys",
+    [["Ctrl+?"], ["F1", "F2", "F3"], "F9"],
+    ids=["unreadable", "three", "a string"],
 )
 def test_setting_a_key_the_session_cannot_keep_is_refused(
-    build: BuildSession, keys: list[str]
+    build: BuildSession, keys: Any
 ) -> None:
-    """Refuse a key the frontend can't read, and more than two keys, saving nothing."""
+    """Refuse a key the frontend can't read, more than two keys, and a string for a list, saving nothing."""
     app = build(ToyApp)
 
     with pytest.raises(ValueError, match="panel.run"):
