@@ -93,7 +93,7 @@ A Qt session keeps these keys there itself:
 
 | key | what it holds |
 | --- | --- |
-| `window.geometry`, `window.state`, `window.layout` | where the window and its docks were left, and the placements they were left with |
+| `window.geometry`, `window.state`, `window.layout`, `window.center` | where the window and its docks were left, the layout they were left with, and how the centre's splitters and tabs were left |
 | `ask_on_close` | whether the close prompt still appears |
 
 A session started with `run` saves the window layout when it ends and puts it

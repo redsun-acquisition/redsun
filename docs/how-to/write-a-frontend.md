@@ -80,6 +80,40 @@ A view subclasses the base class of its placement and names the placement:
 --8<-- "docs/examples/console_frontend.py:app"
 ```
 
+## Support window layouts
+
+A frontend that can arrange its window shows the layout a session declares.
+List the regions of your window in `regions`, each with how a view the
+layout leaves out joins it, and say which region each of your placements
+asks for in `region_of`:
+
+```python
+from collections.abc import Mapping
+from typing import ClassVar
+
+from redsun import Column, Frontend, Placement, Row, Tabs
+
+
+class ConsoleFrontend(Frontend):
+    regions: ClassVar[Mapping[str, type[Row] | type[Column] | type[Tabs]]] = {
+        "screen": Column,
+    }
+    hides: ClassVar[bool] = False
+
+    @classmethod
+    def region_of(cls, placement: Placement) -> tuple[str, str | None] | None:
+        return ("screen", None) if isinstance(placement, Line) else None
+```
+
+`Line` is the placement your frontend defines. The session refuses a layout
+that names a region you don't list, or hides a view when `hides` is false.
+
+In `present`, call `self.resolve_layout()` and build the window from what it
+returns: the declared layout, with every other view added where its
+placement asks. If your window saves how the user arranged it, save
+`fingerprint()` of that layout beside it, and restore the arrangement only
+while the fingerprint matches.
+
 ## Let a session file name it
 
 Register the session class in the `redsun.frontends` entry point group of
