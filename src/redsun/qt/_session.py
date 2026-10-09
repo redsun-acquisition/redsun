@@ -879,9 +879,18 @@ class QtSession(DesktopSession[QMainWindow], Session):
         Raises
         ------
         ValueError
-            If a command is given more than two keys or a key Qt cannot bind;
-            nothing is saved or moved then.
+            If a command is given more than two keys, a key Qt cannot bind, or
+            belongs to a view the window holds no action for; nothing is saved
+            or moved then.
         """
+        unbindable = sorted(set(changes) & self._unbindable)
+        if unbindable:
+            raise ValueError(
+                "; ".join(
+                    f"{command}: this window cannot bind its keys"
+                    for command in unbindable
+                )
+            )
         super().set_shortcuts(changes)
         self._apply_shortcuts(self._settle_shortcuts(self._action_bindings)[0])
 

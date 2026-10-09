@@ -174,6 +174,8 @@ class ShortcutsDialog(QDialog):
             keys[index] = key
         else:
             keys.append(key)
+        if tuple(dict.fromkeys(keys)) == binding.keys:
+            return
         changes = {binding.command: tuple(dict.fromkeys(keys))}
         other = None if key in CLEARING else holder(self._bindings, binding, key)
         if other is not None:

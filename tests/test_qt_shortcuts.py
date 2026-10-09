@@ -799,3 +799,27 @@ def test_a_saved_key_moves_a_menu_action_off_its_old_key(
     assert isinstance(entry, QAction)
     assert entry.shortcut().toString() == "F8"
     assert (after_old, len(executed)) == (0, 1)
+
+
+def test_a_command_the_window_cannot_bind_refuses_a_saved_key(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Refuse a key for a command the window holds no action for, saving nothing."""
+    app = build(MenuThingApp)
+
+    with pytest.raises(ValueError, match="thing.thing"):
+        app.set_shortcuts({"thing.thing": ["F6"]})
+
+    assert "shortcuts" not in app.settings
+
+
+def test_a_key_cell_left_as_it_was_saves_nothing(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Save nothing when Backspace clears a key cell that holds no key."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 2, QtNamespace.Key.Key_Backspace)
+
+    assert "shortcuts" not in app.settings
