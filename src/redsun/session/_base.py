@@ -83,6 +83,7 @@ from ._factories import (
     setup_call,
 )
 from ._frontend import Frontend
+from ._layout import resolved_layout
 from ._plugins import installed, load_providers
 from ._profile import open_profile
 from ._protocols import (
@@ -107,6 +108,7 @@ if TYPE_CHECKING:
 
     from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
+    from redsun.view import Placement, WindowLayout
 
     from ._declarations import Key
     from ._profile import ProfileKind
@@ -235,6 +237,7 @@ class Session(BuildableSession):
         "_storage",
         "_store",
         "_transport",
+        "_window_layout",
         "_wiring",
     )
 
@@ -310,6 +313,7 @@ class Session(BuildableSession):
         # the sources merged as written, which is what saving writes: the
         # model holds the transport and the hooks in another shape
         self._merged: dict[str, Any] = {}
+        self._window_layout: WindowLayout | None = None
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
@@ -699,6 +703,7 @@ class Session(BuildableSession):
             logger.debug("No hooks installed")
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
+        self._window_layout = self._declared_layout(config)
         for declaration in self._declarations.values():
             if declaration.refusal is not None:
                 self._skip(declaration, declaration.refusal)
@@ -733,6 +738,69 @@ class Session(BuildableSession):
         # registered after the logs, so a provider's teardown is still logged
         for hook in distinct(self.hooks.values()):
             self._register_teardown(hook)
+
+    def window_layout(self) -> WindowLayout | None:
+        """Return the layout this session's window starts with, or `None` to place each view where it asks.
+
+        Override it to arrange the window. It is called once, while the
+        configuration is read and before any component is built, so it names
+        views rather than looking at them. A `layout` section in the session
+        file replaces what it returns, whole. A view it leaves out goes where
+        its placement asks.
+        """
+        return None
+
+    def _declared_layout(self, config: SessionFile) -> WindowLayout | None:
+        """Return the layout the file declares, or else the class, once the frontend has checked it.
+
+        Raises
+        ------
+        ConfigurationError
+            If the frontend cannot show the layout, naming where it was declared.
+        """
+        if config.layout is not None:
+            layout: WindowLayout | None = config.layout.to_layout()
+            where = [label(source) for source in self._sources()]
+        else:
+            layout = self.window_layout()
+            where = [f"{type(self).__qualname__}.window_layout()"]
+        if layout is None:
+            return None
+        problems = self.frontend.layout_problems(layout)
+        if problems:
+            raise ConfigurationError(where, problems)
+        return layout
+
+    def resolve_layout(self) -> WindowLayout:
+        """Return the layout the window starts with: what the session declares, completed by its views' placements.
+
+        A view whose class answers `placement` from a property takes what its
+        built instance answers. A name the declared layout gives that no view
+        placed in a region of the window answers to is left out, and logged.
+
+        Raises
+        ------
+        BuildError
+            If the configuration sets `strict` and the layout names such a view.
+        """
+        placements: dict[str, Placement | None] = {
+            name: declaration.placement
+            or getattr(declaration.instance, "placement", None)
+            for name, declaration in self._declarations.items()
+            if declaration.kind is Layer.VIEW
+        }
+        layout, dropped = resolved_layout(
+            self._window_layout, placements, self.frontend
+        )
+        if dropped:
+            message = (
+                f"The window layout names {listed(dropped)}, which no view "
+                "placed in a region of the window answers to"
+            )
+            if self._configuration().strict:
+                raise BuildError(message)
+            logger.warning("%s; left out", message)
+        return layout
 
     def _count_classes(self) -> None:
         """Count the components declaring each class, naming those declared twice."""

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
@@ -12,10 +13,26 @@ from app_model.types import Action, MenuRule
 from mock_bundle.panels import Panel
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
-from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QDockWidget,
+    QMainWindow,
+    QSplitter,
+    QTabWidget,
+    QWidget,
+)
 
-from redsun import AsHook, AsView, Declare, Placement
-from redsun.qt import WINDOW_MENU, Dock, MenuItem, QtSession
+from redsun import (
+    AsHook,
+    AsView,
+    Column,
+    Declare,
+    Placement,
+    Row,
+    Tabs,
+    WindowLayout,
+)
+from redsun.qt import WINDOW_MENU, Central, Dock, MenuItem, QtSession, attach
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -169,6 +186,108 @@ class WindowItemApp(QtSession):
     log: AsView[OpensLog]
 
 
+class LaidOutApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "laid-out-session"}
+
+    a: AsView[Panel]
+    b: AsView[Panel]
+    c: AsView[Panel]
+    d: AsView[Panel]
+    e: AsView[Panel]
+    p: AsView[Panel]
+    q: AsView[Panel]
+    r: AsView[Panel]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(
+            regions={
+                "left": Column(Row("a", "b"), Tabs("c", "d", current="d")),
+                "right": "e",
+                "center": Row("p", Tabs("q", "r", current="r")),
+            },
+            hidden=["e"],
+        )
+
+
+class PropertyApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "property-session"}
+
+    panel: AsView[Panel]
+    old: AsView[FragileByProperty]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(regions={"left": "panel"})
+
+
+class FragileLaidOutApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "fragile-laid-out-session"}
+
+    panel: AsView[Panel]
+    fragile: AsView[Fragile]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(regions={"left": Tabs("panel", "fragile")})
+
+
+class SeveralCentralApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "several-central-session"}
+
+    first: Annotated[AsView[Panel], Declare(placement=Central())]
+    second: Annotated[AsView[Panel], Declare(placement=Central())]
+    tool: Annotated[AsView[Panel], Declare(placement=Dock("top", group="g"))]
+    other: Annotated[AsView[Panel], Declare(placement=Dock("top", group="g"))]
+
+
+class SizedApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "sized-session"}
+
+    a: AsView[Panel]
+    b: AsView[Panel]
+    p: Annotated[AsView[Panel], Declare(placement=Central())]
+    q: Annotated[AsView[Panel], Declare(placement=Central())]
+    r: Annotated[AsView[Panel], Declare(placement=Central())]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(
+            regions={
+                "left": Column("a", "b", sizes=(1, 3)),
+                "center": Row("p", Tabs("q", "r"), sizes=(1, 2)),
+            },
+            sizes={"left": 0.25},
+        )
+
+
+class TabbedSizesApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "tabbed-sizes-session"}
+
+    a: AsView[Panel]
+    b: AsView[Panel]
+    c: AsView[Panel]
+    p: Annotated[AsView[Panel], Declare(placement=Central())]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(regions={"left": Column(Tabs("a", "b"), "c", sizes=(1, 3))})
+
+
+class OwnPresentApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "own-present-session"}
+
+    panel: AsView[Panel]
+
+    def present(self) -> None:
+        attach(self.main_window, self.views)
+
+
+class PropertyLaidOutApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "property-laid-out-session"}
+
+    panel: AsView[Panel]
+    old: AsView[FragileByProperty]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(regions={"left": Column("panel", "old")})
+
+
 def builtin_session(
     plugin_id: str, presenter: str | None, placement: str | None
 ) -> QtSession:
@@ -185,6 +304,13 @@ def builtin_session(
             "presenter": {"plugin_name": "redsun", "plugin_id": presenter}
         }
     return QtSession.from_config(config)
+
+
+def _shown(app: QtSession) -> None:
+    """Show *app*'s window at a known size, and let Qt lay it out, as `run` would."""
+    app.main_window.resize(1200, 800)
+    app.show()
+    QApplication.processEvents()
 
 
 def _dock(app: QtSession, name: str) -> QDockWidget:
@@ -398,7 +524,12 @@ def test_the_layout_goes_to_the_settings_file_as_text(
     build(LayoutApp).save_layout()
 
     written = json.loads((config_home / "layout-session.json").read_text())
-    assert sorted(written) == ["window.geometry", "window.layout", "window.state"]
+    assert sorted(written) == [
+        "window.center",
+        "window.geometry",
+        "window.layout",
+        "window.state",
+    ]
     assert base64.b64decode(written["window.state"])
 
 
@@ -507,3 +638,269 @@ def test_a_view_taking_placement_itself_is_refused(
 
     assert "taking" not in app.views
     assert "reserves for the session" in caplog.text
+
+
+def test_a_declared_layout_arranges_the_docks(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Split, stack and tab the docks of an edge as the layout says, the named tab on top."""
+    app = build(LaidOutApp)
+    window = app.main_window
+    window.resize(1200, 800)
+    window.show()
+    qapp.processEvents()
+    a, b, c, d = (_dock(app, name) for name in "abcd")
+
+    assert {window.dockWidgetArea(dock) for dock in (a, b, c, d)} == {LEFT}
+    assert window.dockWidgetArea(_dock(app, "e")) is RIGHT
+    assert a.geometry().x() < b.geometry().x()
+    assert a.geometry().y() == b.geometry().y()
+    assert d.geometry().y() > a.geometry().y()
+    assert window.tabifiedDockWidgets(c) == [d]
+    assert not d.visibleRegion().isEmpty()
+
+
+def test_the_centre_is_arranged_like_the_docks(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Build the centre as a splitter holding a view and tabs, the named tab current."""
+    app = build(LaidOutApp)
+
+    splitter = app.main_window.centralWidget()
+
+    assert isinstance(splitter, QSplitter)
+    assert splitter.orientation() is QtNamespace.Orientation.Horizontal
+    first, tabs = splitter.widget(0), splitter.widget(1)
+    assert first is not None
+    assert first.objectName() == "p"
+    assert isinstance(tabs, QTabWidget)
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["q", "r"]
+    assert tabs.currentIndex() == 1
+
+
+def test_a_hidden_dock_starts_hidden(qapp: QApplication, build: BuildSession) -> None:
+    """Start a dock the layout hides hidden, its Window menu entry unchecked."""
+    app = build(LaidOutApp)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    menu.aboutToShow.emit()
+    action = menu.findAction("laid-out-session.toggle_dock.e")
+    assert isinstance(action, QAction)
+
+    assert _dock(app, "e").isHidden()
+    assert not action.isChecked()
+
+
+def test_without_a_layout_the_window_is_as_before(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Tab several central views and a group's docks, as a session without a layout always did."""
+    app = build(SeveralCentralApp)
+
+    tabs = app.main_window.centralWidget()
+
+    assert isinstance(tabs, QTabWidget)
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["first", "second"]
+    assert app.main_window.tabifiedDockWidgets(_dock(app, "tool")) == [
+        _dock(app, "other")
+    ]
+    assert app.main_window.dockWidgetArea(_dock(app, "tool")) is TOP
+
+
+def test_a_failed_view_keeps_its_slot_in_the_layout(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put a failed view's placeholder in the place the layout gives it, and keep the saved layout."""
+    first = build(FragileLaidOutApp)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
+    first.save_layout()
+    first.shutdown()
+
+    second = build(FragileLaidOutApp, {"views": {"fragile": {"fail": True}}})
+
+    assert "fragile" not in second.views
+    assert second.main_window.dockWidgetArea(_dock(second, "fragile")) is LEFT
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT
+
+
+def test_a_view_placed_by_a_property_is_still_attached(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Attach a view placed by a deprecated property where it asks, beside a declared layout."""
+    app = build(PropertyApp)
+
+    assert app.main_window.dockWidgetArea(_dock(app, "old")) is RIGHT
+
+
+def test_a_changed_layout_skips_the_saved_one(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Start from a changed layout rather than the arrangement saved under the old one."""
+    caplog.set_level(logging.INFO, logger="redsun")
+    first = build(LaidOutApp)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "a"))
+    first.save_layout()
+    first.shutdown()
+
+    second = build(LaidOutApp, {"layout": {"regions": {"left": {"tabs": ["a", "b"]}}}})
+
+    assert second.main_window.dockWidgetArea(_dock(second, "a")) is LEFT
+    assert "placed differently" in caplog.text
+
+
+def test_declared_sizes_apply_when_the_window_shows(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Give the left edge its share of the window, and each split its weights, once the window shows."""
+    app = build(SizedApp)
+
+    _shown(app)
+
+    a, b = _dock(app, "a"), _dock(app, "b")
+    splitter = app.main_window.centralWidget()
+    assert isinstance(splitter, QSplitter)
+    first, second = splitter.sizes()
+    assert 250 <= a.width() <= 350
+    assert 2.4 <= b.height() / a.height() <= 3.6
+    assert 1.6 <= second / first <= 2.4
+
+
+def test_reset_layout_gives_the_declared_sizes_back(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Return a dock the user widened to its declared share when Reset layout runs."""
+    app = build(SizedApp)
+    _shown(app)
+    app.main_window.resizeDocks(
+        [_dock(app, "a")], [700], QtNamespace.Orientation.Horizontal
+    )
+
+    app.model.commands.execute_command("sized-session.reset_layout")
+    qapp.processEvents()
+
+    assert 250 <= _dock(app, "a").width() <= 350
+
+
+def test_a_restored_layout_keeps_its_sizes(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep the sizes the user left, the centre's included, over the declared ones."""
+    first = build(SizedApp)
+    _shown(first)
+    first.main_window.resizeDocks(
+        [_dock(first, "a")], [500], QtNamespace.Orientation.Horizontal
+    )
+    splitter = first.main_window.centralWidget()
+    assert isinstance(splitter, QSplitter)
+    splitter.setSizes([400, 200])
+    tabs = splitter.widget(1)
+    assert isinstance(tabs, QTabWidget)
+    tabs.setCurrentIndex(1)
+    first.save_layout()
+    first.shutdown()
+
+    second = build(SizedApp)
+    _shown(second)
+
+    restored = second.main_window.centralWidget()
+    assert isinstance(restored, QSplitter)
+    left, right = restored.sizes()
+    restored_tabs = restored.widget(1)
+    assert isinstance(restored_tabs, QTabWidget)
+    assert 420 <= _dock(second, "a").width() <= 580
+    assert 1.6 <= left / right <= 2.4
+    assert restored_tabs.currentIndex() == 1
+
+
+def test_a_tab_group_in_a_weighted_edge_keeps_the_edge_narrow(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Size an edge whose weighted column holds tabs from the docks on screen, not the tab behind."""
+    app = build(TabbedSizesApp)
+
+    _shown(app)
+
+    a, c = _dock(app, "a"), _dock(app, "c")
+    # the tab bar sits in the group's share, under the dock, on some styles
+    group = c.geometry().top() - a.geometry().top()
+    assert c.width() < 400
+    assert 2.4 <= c.height() / group <= 3.6
+
+
+def test_a_session_presenting_its_own_way_still_shows_and_saves(
+    qapp: QApplication, config_home: Path, build: BuildSession
+) -> None:
+    """Show and save a session whose own present step skips the layout."""
+    app = build(OwnPresentApp)
+
+    _shown(app)
+    app.save_layout()
+
+    written = json.loads((config_home / "own-present-session.json").read_text())
+    assert app.main_window.isVisible()
+    assert written["window.center"] == []
+
+
+def test_a_damaged_settings_file_starts_from_the_placements(
+    qapp: QApplication,
+    config_home: Path,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Start the docks where their placements say when the saved layout cannot be read, and log why."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+    path = config_home / "layout-session.json"
+    written = json.loads(path.read_text())
+    written["window.state"] = "a"
+    path.write_text(json.dumps(written))
+
+    second = build(LayoutApp)
+
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+    assert "could not be read" in caplog.text
+
+
+def test_moving_a_property_placed_view_in_the_layout_skips_the_saved_one(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Start from a layout that moved a view placed by a property, rather than the saved arrangement."""
+    caplog.set_level(logging.INFO, logger="redsun")
+    first = build(PropertyLaidOutApp)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
+    first.save_layout()
+    first.shutdown()
+
+    second = build(
+        PropertyLaidOutApp,
+        {"layout": {"regions": {"left": {"column": ["old", "panel"]}}}},
+    )
+
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
+    assert "placed differently" in caplog.text
+
+
+def test_attach_refuses_a_layout_naming_a_view_it_was_not_given(
+    qapp: QApplication,
+) -> None:
+    """Refuse a layout naming a view that is not among those to attach, naming it."""
+    with pytest.raises(ValueError, match="'ghost'"):
+        attach(QMainWindow(), {}, layout=WindowLayout(regions={"left": "ghost"}))
+
+
+def test_a_second_show_keeps_the_sizes_the_user_set(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep a dock the user widened when the window is shown again."""
+    app = build(SizedApp)
+    _shown(app)
+    app.main_window.resizeDocks(
+        [_dock(app, "a")], [700], QtNamespace.Orientation.Horizontal
+    )
+    qapp.processEvents()
+
+    _shown(app)
+
+    assert _dock(app, "a").width() > 600

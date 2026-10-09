@@ -36,3 +36,4 @@ never edited; a later one replaces it.
 - [25. A view's placement chosen per declaration](0025-a-views-placement-chosen-per-declaration.md)
 - [26. Parameter limits from `annotated-types`, checked by `pydantic`](0026-parameter-limits-from-annotated-types.md)
 - [27. A saved window layout gives way to a changed placement](0027-a-saved-window-layout-gives-way-to-a-changed-placement.md)
+- [28. A session declares its first window layout](0028-a-session-declares-its-first-window-layout.md)

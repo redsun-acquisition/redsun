@@ -208,6 +208,54 @@ class MyApp(QtSession):
     ]
 ```
 
+## Lay out the whole window
+
+When placements aren't enough, declare the whole first layout of the window
+in the session. Return a [`WindowLayout`][redsun.WindowLayout] from
+`window_layout()`: it says what fills each edge and the centre, how much of
+the window an edge takes, and which docks start hidden.
+
+```python
+from redsun import AsView, Column, Row, Tabs, WindowLayout
+from redsun.qt import QtSession
+from redsun.view.qt.builtins import LightView, LogView, PositionerView
+
+
+class MyApp(QtSession):
+    stage: AsView[PositionerView]
+    lights: AsView[LightView]
+    log: AsView[LogView]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(
+            regions={"left": Column("stage", "lights", sizes=(2, 1)), "bottom": "log"},
+            sizes={"left": 0.25},
+            hidden=["log"],
+        )
+```
+
+The stages sit above the lights on the left edge and take two thirds of it.
+The edge takes a quarter of the window's width, and the log starts hidden at
+the bottom until you show it from the **Window** menu. A
+[`Row`][redsun.Row] puts views side by side, a [`Column`][redsun.Column]
+stacks them, and [`Tabs`][redsun.Tabs] shows them as tabs, with `current`
+on top.
+
+A session file says the same in a `layout` section, which replaces what
+`window_layout()` returns:
+
+```yaml
+layout:
+  regions:
+    left: {column: [stage, lights], sizes: [2, 1]}
+    bottom: log
+  sizes: {left: 0.25}
+  hidden: [log]
+```
+
+A view the layout leaves out still goes where its placement asks. The
+[session file reference](../reference/session-file.md#layout) lists every key.
+
 ## See a changed placement take effect
 
 A changed placement shows the next time you start the session. A session

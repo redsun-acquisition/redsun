@@ -69,6 +69,13 @@ In `Frontend.requires`, a frontend lists what each placement must hold: Qt asks
 for a `QWidget` in a dock or in the centre, and a `QAction` in a menu or
 toolbar.
 
+A session can also declare the whole first layout of its window: which views
+share an edge, side by side, stacked or as tabs, and how much of the window
+each edge takes. The layout places the views it names, and every other view
+goes where its placement asks, so placements still work in a session that
+declares a layout. [ADR 28](decisions/0028-a-session-declares-its-first-window-layout.md)
+says why the session decides and not the view.
+
 ### Checks before a build
 
 The session checks every view before it builds anything; point at a check to
@@ -208,6 +215,8 @@ and `Session.view_arguments`, to add arguments to every view's constructor.
 | what | where | the Qt frontend |
 | --- | --- | --- |
 | the placements it shows | `Frontend.requires` | `Central`, `Dock`, `MenuItem`, `ToolBarItem` |
+| the regions a window layout fills | `Frontend.regions`, `Frontend.region_of` | `center`, `left`, `right`, `top`, `bottom` |
+| whether a layout may start a view hidden | `Frontend.hides` | yes |
 | the thread its views' slots run on | [`Frontend.thread_of`][redsun.Frontend.thread_of] | the main thread, for a `QWidget` |
 | the delivery of the calls held for that thread | the session's `run` | `psygnal.qt.start_emitting_from_queue` |
 

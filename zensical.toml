@@ -129,6 +129,7 @@ nav = [
                 "explanation/decisions/0025-a-views-placement-chosen-per-declaration.md",
                 "explanation/decisions/0026-parameter-limits-from-annotated-types.md",
                 "explanation/decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement.md",
+                "explanation/decisions/0028-a-session-declares-its-first-window-layout.md",
         ]},
     ]},
     { "Reference" = [

@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from redsun.ports import SlotThread
-    from redsun.view import Placement
+    from redsun.view import Column, Placement, Row, Tabs, WindowLayout
 
 __all__ = ["Frontend"]
 
@@ -24,6 +24,9 @@ class Frontend:
     An empty table constrains nothing, which is what an application that names
     no toolkit gets.
 
+    `regions`, `hides` and `region_of` say how a window layout maps onto the
+    frontend's window; a frontend leaving them empty accepts none.
+
     `thread_of` says where the slots of a component run when the component
     does not say. A slot held for a thread is called there once that thread
     calls `psygnal.emit_queued`, which a session built on the frontend does
@@ -31,6 +34,15 @@ class Frontend:
     """
 
     requires: ClassVar[Mapping[type[Placement], type]] = {}
+
+    regions: ClassVar[Mapping[str, type[Row | Column | Tabs]]] = {}
+    """The regions of the window a layout fills, each with how a view the layout leaves out joins it.
+
+    Empty here: a frontend listing no region accepts no window layout.
+    """
+
+    hides: ClassVar[bool] = False
+    """Whether a window layout may start a view hidden."""
 
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
@@ -70,6 +82,31 @@ class Frontend:
             f"{cls.__name__} reads no placement from a session file; give a "
             "placement object in Python instead"
         )
+
+    @classmethod
+    def region_of(cls, placement: Placement) -> tuple[str, str | None] | None:
+        """Return the region *placement* asks for and the group it suggests, or `None` outside any region.
+
+        A frontend with regions overrides it; this one places nothing in one.
+        """
+        return None
+
+    @classmethod
+    def layout_problems(cls, layout: WindowLayout) -> list[str]:
+        """Return what this frontend cannot show of *layout*, one line each as `layout.key: what`."""
+        if not cls.regions:
+            return [f"layout: {cls.__name__} lays out no window"]
+        known = ", ".join(repr(region) for region in cls.regions)
+        problems = [
+            f"layout.{section}.{region}: {cls.__name__} has no region "
+            f"{region!r}; it has {known}"
+            for section, keys in (("regions", layout.regions), ("sizes", layout.sizes))
+            for region in keys
+            if region not in cls.regions
+        ]
+        if layout.hidden and not cls.hides:
+            problems.append(f"layout.hidden: {cls.__name__} starts no view hidden")
+        return problems
 
     @classmethod
     def check_placement(
