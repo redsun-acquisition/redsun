@@ -409,8 +409,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     __slots__ = (
         "_action_bindings",
+        "_action_key_disposers",
         "_broken_conditions",
         "_close_guard",
+        "_command_actions",
         "_conditional_actions",
         "_default_state",
         "_main_window",
@@ -420,6 +422,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         "_shortcuts_dialog",
         "_shown_layout",
         "_sized",
+        "_unbindable",
         "_view_keys",
         "_window_actions",
         "_window_widgets",
@@ -460,6 +463,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._view_keys: dict[QWidget, set[str]] = {}
         self._conditional_actions: list[tuple[QAction, str, Callable[[], bool]]] = []
         self._broken_conditions: set[str] = set()
+        self._command_actions: dict[str, tuple[QAction, QWidget]] = {}
+        self._unbindable: set[str] = set()
+        self._action_key_disposers: list[Callable[[], None]] = []
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -759,28 +765,16 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _bind_shortcuts(
         self, views: Mapping[str, AttachableComponent]
     ) -> list[Binding]:
-        """Bind the settled keys, and return the bindings as bound.
+        """Register each component's command and its action, then bind the settled keys.
 
-        A component's command is registered here, and its keys bound on the
-        window, or on its view for a view's own keys. A session file action is
-        registered already; its settled keys go to the application's keybinding
-        registry, so the menus showing it show and honour them as they always
-        have. A command id another command has, and a view key on a view that is
-        no widget, leave the keys unbound and are logged.
+        A component's command is registered here, with an action on the window,
+        or on its view for a view's own keys. A command id another command has,
+        and a view key on a view that is no widget, leave the command without
+        keys for the whole session, and are logged.
         """
-        bound: list[Binding] = []
-        hosts: dict[str, QWidget] = {}
-        for binding in self.resolve_shortcuts(self._action_bindings):
+        resolved = self.resolve_shortcuts(self._action_bindings)
+        for binding in resolved:
             if binding.run is None:
-                for key in binding.keys:
-                    rule = KeyBindingRule(primary=key)
-                    if (
-                        disposer := self.model.keybindings.register_keybinding_rule(
-                            binding.command, rule
-                        )
-                    ) is not None:
-                        self.on_release(disposer)
-                bound.append(binding)
                 continue
             try:
                 self.on_release(
@@ -797,7 +791,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
                     "%s: another command has this id, so its keys stay unbound",
                     binding.command,
                 )
-                bound.append(replace(binding, keys=()))
+                self._unbindable.add(binding.command)
                 continue
             host = self.main_window if binding.view is None else views.get(binding.view)
             if not isinstance(host, QWidget):
@@ -807,40 +801,84 @@ class QtSession(DesktopSession[QMainWindow], Session):
                         binding.command,
                         binding.view,
                     )
-                bound.append(replace(binding, keys=()))
+                self._unbindable.add(binding.command)
                 continue
-            hosts[binding.command] = host
-            bound.append(binding)
+            action = QAction(binding.title, host)
+            action.setObjectName(binding.command)
+            action.triggered.connect(partial(self._run_command, binding.command))
+            action.setShortcutContext(
+                QtNamespace.ShortcutContext.WindowShortcut
+                if binding.view is None
+                else QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
+            )
+            host.addAction(action)
+            self._command_actions[binding.command] = (action, host)
+        self.on_release(self._drop_action_keys)
+        if self._command_actions:
+            self.app.focusChanged.connect(self._follow_focus)
+            self.on_release(self._stop_following_focus)
+        return self._apply_shortcuts(resolved)
+
+    def _apply_shortcuts(self, resolved: Sequence[Binding]) -> list[Binding]:
+        """Put the settled keys on the commands' actions and in the registry, and return the bindings as bound."""
+        self._drop_action_keys()
+        bound: list[Binding] = []
         window_actions: list[tuple[QAction, tuple[str, ...]]] = []
         view_keys: dict[QWidget, set[str]] = {}
         conditional: list[tuple[QAction, str, Callable[[], bool]]] = []
-        for binding in bound:
-            host_widget = hosts.get(binding.command)
-            if host_widget is None or not binding.keys:
+        for binding in resolved:
+            if binding.command in self._unbindable:
+                bound.append(replace(binding, keys=()))
                 continue
-            action = QAction(binding.title, host_widget)
-            action.setObjectName(binding.command)
-            action.triggered.connect(partial(self._run_command, binding.command))
+            bound.append(binding)
+            if binding.run is None:
+                for key in binding.keys:
+                    disposer = self.model.keybindings.register_keybinding_rule(
+                        binding.command, KeyBindingRule(primary=key)
+                    )
+                    if disposer is not None:
+                        self._action_key_disposers.append(disposer)
+                continue
+            action, host = self._command_actions[binding.command]
             action.setShortcuts([QKeySequence(key) for key in binding.keys])
             if binding.view is None:
-                action.setShortcutContext(QtNamespace.ShortcutContext.WindowShortcut)
                 window_actions.append((action, binding.keys))
             else:
-                action.setShortcutContext(
-                    QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
-                )
-                view_keys.setdefault(host_widget, set()).update(binding.keys)
-            host_widget.addAction(action)
+                view_keys.setdefault(host, set()).update(binding.keys)
             if binding.when is not None:
                 conditional.append((action, binding.command, binding.when))
         self._window_actions = window_actions
         self._view_keys = view_keys
         self._conditional_actions = conditional
-        if conditional or (view_keys and window_actions):
-            self.app.focusChanged.connect(self._follow_focus)
-            self.on_release(self._stop_following_focus)
+        self._shortcut_bindings = bound
+        if self._command_actions:
             self._follow_focus(None, self.app.focusWidget())
+        if self._shortcuts_dialog is not None:
+            self._shortcuts_dialog.set_bindings(bound)
         return bound
+
+    def _drop_action_keys(self) -> None:
+        """Take the session file actions' keys out of the keybinding registry."""
+        for disposer in self._action_key_disposers:
+            disposer()
+        self._action_key_disposers = []
+
+    def set_shortcuts(self, changes: Mapping[str, Sequence[str]]) -> None:
+        """Save the user's keys, then move them onto the window's commands at once.
+
+        Raises
+        ------
+        ValueError
+            If a command is given more than two keys or a key Qt cannot bind;
+            nothing is saved or moved then.
+        """
+        super().set_shortcuts(changes)
+        self._apply_shortcuts(self._settle_shortcuts(self._action_bindings)[0])
+
+    def reset_shortcuts(self) -> None:
+        """Forget the user's keys, then put the defaults back on the window's commands."""
+        super().reset_shortcuts()
+        self._apply_shortcuts(self._settle_shortcuts(self._action_bindings)[0])
 
     def _follow_focus(self, _old: QWidget | None, new: QWidget | None) -> None:
         """Turn each conditional key on or off, and take from the window's keys those the focused view binds.

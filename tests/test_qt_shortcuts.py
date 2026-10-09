@@ -558,3 +558,73 @@ def test_a_view_key_that_is_off_still_keeps_the_window_key_out_of_its_view(
 
     assert ran == []
     assert not tree.top.isExpanded()
+
+
+def test_a_saved_key_moves_a_command_at_once_and_a_reset_moves_it_back(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Run a command from its new key and not its old one, and from the old one after a reset."""
+    ran: list[str] = []
+    app = build(KeysApp, {"views": {"panel": {"ran": ran}}})
+    other = app.views["other"]
+    assert isinstance(other, Other)
+
+    app.set_shortcuts({"panel.run": ["F9"]})
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
+    after_old = list(ran)
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+    after_new = list(ran)
+    app.reset_shortcuts()
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
+
+    assert (after_old, after_new, ran) == ([], ["run"], ["run", "run"])
+
+
+def test_a_saved_key_moves_a_session_file_action_in_the_registry(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Give a session file action its saved key in the keybinding registry, dropping the old one."""
+    action = {
+        "id": "keys.plain",
+        "title": "Plain",
+        "callback": "mock_bundle.menu_callbacks:note",
+    }
+    app = build(KeysApp, {"actions": [action], "shortcuts": {"keys.plain": "F8"}})
+
+    app.set_shortcuts({"keys.plain": ["F9"]})
+    moved = app.model.keybindings.get_keybinding("keys.plain")
+    app.set_shortcuts({"keys.plain": []})
+
+    assert moved is not None
+    assert str(moved.keybinding) == "F9"
+    assert app.model.keybindings.get_keybinding("keys.plain") is None
+
+
+def test_an_edited_view_key_still_wins_inside_its_view(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep a view key moved onto the window's key winning while its view has focus."""
+    ran: list[str] = []
+    app = build(KeysApp, {"views": {"panel": {"ran": ran}}})
+    panel, other = app.views["panel"], app.views["other"]
+    assert isinstance(panel, Panel)
+    assert isinstance(other, Other)
+
+    app.set_shortcuts({"panel.refresh": ["Ctrl+R"]})
+    key_click(panel.edit, QtNamespace.Key.Key_R, CTRL)
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
+
+    assert ran == ["refresh", "run"]
+
+
+def test_the_open_list_shows_a_saved_key(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a key saved while the list is open."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    app.set_shortcuts({"panel.run": ["F9"]})
+
+    assert rows(dialog, "Window")[0][1] == native("F9")

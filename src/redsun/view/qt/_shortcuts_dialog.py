@@ -77,6 +77,12 @@ class ShortcutsDialog(QDialog):
         self._groups.currentTextChanged.connect(self._show_group)
         self._show_group(WINDOW)
 
+    def set_bindings(self, bindings: Sequence[Binding]) -> None:
+        """Show *bindings* in place of those shown, keeping the group chosen."""
+        self._bindings = list(bindings)
+        self._notes = notes(self._bindings)
+        self._show_group(self._groups.currentText())
+
     def _show_group(self, group: str) -> None:
         """Fill the table with the bindings of *group*."""
         view = None if group == WINDOW else group
