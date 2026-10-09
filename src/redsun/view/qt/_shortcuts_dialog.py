@@ -157,6 +157,8 @@ class ShortcutsDialog(QDialog):
 
     def _captured(self, row: int, column: int, editor: QKeySequenceEdit) -> None:
         """Turn the key pressed in *editor* into a change, asking first if it is taken."""
+        # the editor finishes again when a prompt takes its focus
+        editor.editingFinished.disconnect()
         sequence = editor.keySequence()
         self._table.removeCellWidget(row, column)
         if sequence.isEmpty():

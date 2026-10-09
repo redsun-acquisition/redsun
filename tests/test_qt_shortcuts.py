@@ -304,11 +304,16 @@ def edit_key(
 def answer(
     monkeypatch: pytest.MonkeyPatch, button: QMessageBox.StandardButton
 ) -> list[str]:
-    """Answer the next question the dialog asks with *button*, and return what it asked."""
+    """Answer each question the dialog asks with *button*, and return what it asked."""
     asked: list[str] = []
 
     def exec_(prompt: QMessageBox) -> int:
+        # shown and active, as a real prompt is, so the key editor loses focus
+        prompt.show()
+        prompt.activateWindow()
+        QApplication.processEvents()
         asked.append(prompt.text())
+        prompt.close()
         return int(button)
 
     monkeypatch.setattr(QMessageBox, "exec", exec_)
