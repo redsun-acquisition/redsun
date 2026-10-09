@@ -879,13 +879,17 @@ class Session(BuildableSession):
         replace a command's keys first, then the keys the user saved with
         [`set_shortcuts`][redsun.Session.set_shortcuts]; a key two commands
         ask for in one place, the whole window or one view, stays with the
-        first. Every change is logged.
+        command the user saved it for, or else the first. Every change is
+        logged.
 
         Raises
         ------
         BuildError
             If the configuration sets `strict` and a key had to be moved or
-            left out. Saved keys the session cannot use are only logged.
+            left out. What the user's saved keys move or leave out is only
+            logged.
+        RuntimeError
+            If the session is not built yet.
         """
         resolved, problems = self._settle_shortcuts(extra)
         if problems:
@@ -919,17 +923,17 @@ class Session(BuildableSession):
                 if not refusals:
                     keys.append(self.frontend.canonical_key(key))
             checked.append(replace(binding, keys=tuple(keys)))
-        saved = self._saved_shortcuts({binding.command for binding in checked})
-        resolved, settled = resolved_shortcuts(
-            checked, {**self._shortcut_overrides, **saved}
+        saved, notes = self._saved_shortcuts({binding.command for binding in checked})
+        resolved, settled, moved = resolved_shortcuts(
+            checked, {**self._shortcut_overrides, **saved}, saved
         )
+        self._note_saved_shortcuts(notes + moved)
         return resolved, problems + settled
 
-    def _saved_shortcuts(self, known: Collection[str]) -> dict[str, tuple[str, ...]]:
-        """Return the keys the user saved for the commands in *known*.
-
-        Anything else saved is left out, and logged the first time it is seen.
-        """
+    def _saved_shortcuts(
+        self, known: Collection[str]
+    ) -> tuple[dict[str, tuple[str, ...]], list[str]]:
+        """Return the keys the user saved for the commands in *known*, and a line per entry left out."""
         stored = self.settings.get(SAVED_SHORTCUTS, {})
         notes: list[str] = []
         saved: dict[str, tuple[str, ...]] = {}
@@ -953,15 +957,18 @@ class Session(BuildableSession):
                 notes += refusals
                 continue
             saved[command] = tuple(self.frontend.canonical_key(k) for k in keys)
+        return saved, notes
+
+    def _note_saved_shortcuts(self, notes: Sequence[str]) -> None:
+        """Log each line about the user's saved keys the first time it comes up."""
         new = [note for note in notes if note not in self._reported_saved_shortcuts]
         if new:
             self._reported_saved_shortcuts.update(new)
             logger.warning(
-                "Saved keyboard shortcuts left out (%s):\n%s",
+                "Saved keyboard shortcuts (%s):\n%s",
                 self.settings.path,
                 "\n".join(f"  {note}" for note in new),
             )
-        return saved
 
     def set_shortcuts(self, changes: Mapping[str, Sequence[str]]) -> None:
         """Save the user's keys for the commands in *changes*, an empty list for none.

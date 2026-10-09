@@ -193,3 +193,17 @@ def test_setting_a_key_the_session_cannot_keep_is_refused(
         app.set_shortcuts({"panel.run": keys})
 
     assert "shortcuts" not in app.settings
+
+
+def test_a_saved_key_taking_a_default_does_not_stop_a_strict_session(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Give a saved key to its command over an earlier default, and only log it under strict."""
+    app = build(ToyApp, {"strict": True, "shortcuts": {"controller.restart": "F3"}})
+    app.set_shortcuts({"controller.restart": ["Ctrl+R"]})
+
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        keys = {b.command: b.keys for b in app.resolve_shortcuts()}
+
+    assert (keys["panel.run"], keys["controller.restart"]) == ((), ("Ctrl+R",))
+    assert "kept on controller.restart, taken from panel.run" in caplog.text
