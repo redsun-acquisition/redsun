@@ -234,3 +234,13 @@ def test_a_file_layout_is_written_back(build: BuildSession) -> None:
     app = build(PlainShelfApp, {"layout": layout})
 
     assert app.serialize()["layout"] == layout
+
+
+def test_a_node_of_no_known_kind_gets_one_readable_line(build: BuildSession) -> None:
+    """Refuse a layout node with no known key in one line naming the kinds a node may be."""
+    with pytest.raises(ConfigurationError) as caught:
+        build(PlainShelfApp, {"layout": {"regions": {"left": {"rows": ["a"]}}}})
+
+    lines = str(caught.value).splitlines()[1:]
+    assert len(lines) == 1
+    assert "row, column or tabs" in lines[0]

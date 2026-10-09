@@ -8,15 +8,25 @@ from contextlib import suppress
 from difflib import get_close_matches
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Final, TypeAlias, TypeGuard, cast
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Final,
+    TypeAlias,
+    TypeGuard,
+    cast,
+)
 
 import yaml
 from pydantic import (
     AfterValidator,
     BaseModel,
     BeforeValidator,
+    Discriminator,
     Field,
     ModelWrapValidatorHandler,
+    Tag,
     ValidationError,
     field_validator,
     model_validator,
@@ -269,7 +279,8 @@ def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
     """Say each problem as `section.key: what`, a hook entry by its hook points.
 
     The model holds hook entries as a list of groups, so a problem in one is
-    located by its position there, which the file does not show.
+    located by its position there, which the file does not show. The tag
+    naming the kind of a layout node is left out, the file not writing it.
     """
     groups: list[dict[str, Any]] = []
     # grouping fails on an entry that is not a mapping; that entry is then the
@@ -278,12 +289,17 @@ def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
         if isinstance(data.get("hooks"), Mapping):
             groups = group_hook_entries(data["hooks"])
 
-    def by_hook_points(loc: list[str | int]) -> list[str | int]:
+    def located(loc: list[str | int]) -> list[str | int]:
         if loc[:1] == ["hooks"] and len(loc) > 1 and isinstance(loc[1], int) and groups:
             loc[1] = "+".join(groups[loc[1]]["moments"])
-        return loc
+        # the tag naming a layout node's kind is the model's, not the file's
+        return [
+            part
+            for part in loc
+            if not (isinstance(part, str) and part.startswith("node:"))
+        ]
 
-    return problem_lines(error, by_hook_points)
+    return problem_lines(error, located)
 
 
 def nonempty_path(value: Any) -> Any:
@@ -457,7 +473,39 @@ class TabsEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
         return self
 
 
-NodeEntry: TypeAlias = str | RowEntry | ColumnEntry | TabsEntry
+def node_kind(value: object) -> str:
+    """Return the tag of the kind of layout node *value* writes, `node:unknown` for no kind or several."""
+    match value:
+        case str():
+            return "node:name"
+        case RowEntry():
+            return "node:row"
+        case ColumnEntry():
+            return "node:column"
+        case TabsEntry():
+            return "node:tabs"
+        case Mapping():
+            kinds = [kind for kind in ("row", "column", "tabs") if kind in value]
+            return f"node:{kinds[0]}" if len(kinds) == 1 else "node:unknown"
+    return "node:unknown"
+
+
+def unknown_node(value: object) -> object:
+    """Refuse a layout node of no kind, or of several."""
+    # a ValueError, since pydantic reports no other at the key's location
+    raise ValueError(
+        "a node is a view's name, or a mapping with one of the keys row, column or tabs"
+    )
+
+
+NodeEntry: TypeAlias = Annotated[
+    Annotated[str, Tag("node:name")]
+    | Annotated[RowEntry, Tag("node:row")]
+    | Annotated[ColumnEntry, Tag("node:column")]
+    | Annotated[TabsEntry, Tag("node:tabs")]
+    | Annotated[Any, AfterValidator(unknown_node), Tag("node:unknown")],
+    Discriminator(node_kind),
+]
 """A view's name, or views arranged together, as a session file writes them."""
 
 RowEntry.model_rebuild()
@@ -475,6 +523,8 @@ def node_of(entry: NodeEntry) -> Node:
             return Column(*map(node_of, children), sizes=sizes)
         case TabsEntry(tabs=names, current=current):
             return Tabs(*names, current=current)
+    # validation refuses any other node before this reads it
+    raise TypeError(f"{entry!r} is no layout node")
 
 
 class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
