@@ -81,3 +81,16 @@ def test_shutdown_restores_the_stylesheet_and_stops_following(
     hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
 
     assert qapp.styleSheet() == "QLabel { color: red; }"
+
+
+def test_both_themes_icons_are_written_when_the_session_builds(
+    qapp: QApplication, build: BuildSession, unstyled: None, tmp_path: Path
+) -> None:
+    """Write the icons of both themes at build, so a later scheme change writes no file."""
+    build(StyledApp)
+
+    written = [
+        tmp_path / "napari-style" / name / "check.svg" for name in ("dark", "light")
+    ]
+
+    assert all(path.is_file() for path in written)
