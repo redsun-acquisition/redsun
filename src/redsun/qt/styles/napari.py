@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from platformdirs import user_cache_dir
 from qtpy.QtCore import Qt as QtNamespace
+from qtpy.QtGui import QGuiApplication
 
 from ._vendor._napari.icons import write_icons
 from ._vendor._napari.theme import DARK, LIGHT, stylesheet
@@ -36,18 +37,17 @@ class NapariStyle:
         """Apply napari's theme for the current colour scheme, and again on each change."""
         self._app = app
         self._previous = app.styleSheet()
-        hints = app.styleHints()
-        if hints is None:
-            self._apply(QtNamespace.ColorScheme.Unknown)
-            return
-        hints.colorSchemeChanged.connect(self._apply)
-        self._apply(hints.colorScheme())
+        hints = QGuiApplication.styleHints()
+        if hints is not None:
+            hints.colorSchemeChanged.connect(self._apply)
+        unknown = QtNamespace.ColorScheme.Unknown
+        self._apply(hints.colorScheme() if hints is not None else unknown)
 
     def shutdown(self) -> None:
         """Stop following the colour scheme, and restore the previous stylesheet."""
         if self._app is None:
             return
-        hints = self._app.styleHints()
+        hints = QGuiApplication.styleHints()
         if hints is not None:
             hints.colorSchemeChanged.disconnect(self._apply)
         self._app.setStyleSheet(self._previous)
