@@ -5623,10 +5623,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#labels" class="md-nav__link">
+  <a href="#changelog-entries" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Labels
+        Changelog entries
       </span>
     </span>
   </a>
@@ -6251,10 +6251,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#labels" class="md-nav__link">
+  <a href="#changelog-entries" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Labels
+        Changelog entries
       </span>
     </span>
   </a>
@@ -6578,9 +6578,11 @@ dependencies for you.</p>
    <a href="#checks-before-each-commit">the commit checks</a>. A change to the docs alone
    only needs <a href="#building-the-docs">the docs build</a>.</li>
 <li><strong>Open a pull request against <code>main</code>.</strong> Write its title and description as
-   <a href="#pull-requests">Pull requests</a> describes. It also needs the
-   <a href="#labels">label</a> that says which section of the changelog it belongs in. If you can't set labels, say which one you think
-   fits, and a maintainer adds it.</li>
+   <a href="#pull-requests">Pull requests</a> describes. Then add a
+   <a href="#changelog-entries">changelog entry</a> for each change a user will notice.
+   The changelog check fails until the entry is pushed, which is expected.
+   If you're not sure what to write, open the pull request without it and say
+   so: a maintainer can add or fix the entry on your branch.</li>
 <li><strong>Wait for CI and a review.</strong> CI runs the same checks as <code>uv run tox</code> and
    reports the result on the pull request. If a reviewer asks for changes,
    push them to the same branch, and the pull request updates by itself.</li>
@@ -6806,8 +6808,7 @@ moment and needs a display, which CI provides with a virtual one.</p>
 </span></code></pre></div>
 <h2 id="commit-messages-and-pull-requests">Commit messages and pull requests<a class="headerlink" href="#commit-messages-and-pull-requests" title="Permanent link">&para;</a></h2>
 <p>Commit messages, issue titles and pull requests all follow one form, so the
-history reads the same everywhere and the changelog can be written from the
-pull requests.</p>
+history reads the same everywhere.</p>
 <h3 id="commit-messages">Commit messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h3>
 <p>The first line follows <a href="https://www.conventionalcommits.org">Conventional Commits</a>:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>type(scope): summary
@@ -6835,9 +6836,9 @@ change it asks for: <code>fix: log files stay open after shutdown</code>,
 you.</p>
 <h3 id="pull-requests">Pull requests<a class="headerlink" href="#pull-requests" title="Permanent link">&para;</a></h3>
 <p>Open the pull request against <code>main</code>. Its title follows the same rules as a
-commit's first line, because the changelog entry is made from it:
-<code>feat(session): add strict sessions</code> is listed under <em>Added</em> as "Add strict
-sessions".</p>
+commit's first line, such as <code>feat(session): add strict sessions</code>. The
+changelog doesn't use it: what users read comes from the
+<a href="#changelog-entries">changelog entries</a> the pull request adds.</p>
 <p>The description is a list of one-line bullets in the imperative, one per
 change a reviewer can see, with no headers:</p>
 <div class="language-markdown highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">-</span><span class="w"> </span>Add <span class="sb">`strict`</span> to the session file
@@ -6846,49 +6847,67 @@ change a reviewer can see, with no headers:</p>
 </span></code></pre></div>
 <p>A change that existing code must follow says so in its bullet. Leave out tests,
 coverage and the checks you ran: CI reports them on the pull request.</p>
-<h3 id="labels">Labels<a class="headerlink" href="#labels" title="Permanent link">&para;</a></h3>
-<p>Every pull request needs one label saying which changelog section it goes in,
-and CI refuses a pull request without one.</p>
+<h3 id="changelog-entries">Changelog entries<a class="headerlink" href="#changelog-entries" title="Permanent link">&para;</a></h3>
+<p>Each change a user will notice gets a file in <code>changelog.d/</code>, named after the
+pull request and the kind of change, such as <code>412.fixed.md</code>. Open the pull
+request first, so you know its number. A release collects the files into the
+<a href="../../reference/changelog/">changelog</a>, one entry each, and links each entry
+to its pull request.</p>
 <table>
 <thead>
 <tr>
-<th>label</th>
-<th>changelog section</th>
+<th>kind</th>
+<th>use it when</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td><code>breaking</code></td>
+<td>code that uses <code>redsun</code> has to change</td>
+</tr>
+<tr>
 <td><code>added</code></td>
-<td>Added</td>
+<td>something new: a class, a function, a keyword, a section of the session file</td>
 </tr>
 <tr>
 <td><code>changed</code></td>
-<td>Changed</td>
+<td>something that already existed behaves differently</td>
 </tr>
 <tr>
 <td><code>deprecated</code></td>
-<td>Deprecated</td>
+<td>something still works but warns, and goes in a later release</td>
 </tr>
 <tr>
 <td><code>removed</code></td>
-<td>Removed</td>
+<td>something is gone</td>
 </tr>
 <tr>
 <td><code>fixed</code></td>
-<td>Fixed</td>
+<td>something now works as its documentation says</td>
 </tr>
 <tr>
 <td><code>security</code></td>
-<td>Security</td>
-</tr>
-<tr>
-<td><code>skip-changelog</code></td>
-<td>none: tests, CI, refactors nobody using <code>redsun</code> would notice</td>
+<td>a vulnerability is closed</td>
 </tr>
 </tbody>
 </table>
-<p>Add <code>breaking</code> as well when existing code has to change. The entry is then
-marked <strong>Breaking</strong>.</p>
+<p><code>towncrier</code> writes the file for you. Keep the text in single quotes, so the
+shell leaves its backticks alone:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>create<span class="w"> </span><span class="m">412</span>.fixed.md<span class="w"> </span>--content<span class="w"> </span><span class="s1">'A link that `wire` and `wiring:` both name is made once.'</span>
+</span></code></pre></div>
+<p>A second change of the same kind in one pull request goes in <code>412.fixed.2.md</code>.</p>
+<p>An entry says what changed, in a line or two, and names what a user would
+type to reach it: a name <code>redsun</code> exports as it is, such as <code>WindowLayout</code>,
+and any other with its module, such as <code>redsun.aio.run_coro</code>. It doesn't say why: that belongs in the pull request or in
+a <a href="../../explanation/decisions/">decision record</a>.</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>Good: Add <span class="sb">`timeout=`</span> to <span class="sb">`run_coro`</span>, which cancels the coroutine when the wait ends without a result.
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>Bad:  Improve run_coro.
+</span></code></pre></div>
+<p>A change to something not released yet gets no entry of its own. Edit the
+entry that added it instead, so the release says what users get.</p>
+<p>A pull request nobody using <code>redsun</code> would notice, such as tests, CI, a
+refactor or docs alone, needs no entry. A maintainer gives it the
+<code>skip-changelog</code> label, and CI accepts it without one.</p>
 <h2 id="writing-documentation">Writing documentation<a class="headerlink" href="#writing-documentation" title="Permanent link">&para;</a></h2>
 <p>Write for someone new: picture a reader who knows some Python and nothing about
 <code>redsun</code> or lab hardware, and explain things the way you would in person. Talk
@@ -6940,7 +6959,7 @@ and tutorial steps are the exception: they say what the reader does, such as
 "Declare the device".</p>
 <p>The first time a page uses a technical word, link it to its entry in the
 <a href="../../explanation/glossary/">glossary</a>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>A [<span class="nt">layer</span>](<span class="na">../explanation/glossary.md#layer</span>) is built after the one before it.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>A [<span class="nt">layer</span>](<span class="na">../explanation/glossary.md#layer</span>) is built after the one before it.
 </span></code></pre></div>
 <p>If the glossary doesn't have the word yet, add it there first. Acronyms such
 as <abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> also go in <code>includes/abbreviations.md</code>, which shows them as tooltips on
@@ -6962,7 +6981,7 @@ block, before "What you built".</p>
 <p>The tutorial scripts are type checked with the rest of the code, by
 <code>uv run tox -e mypy-pyqt,mypy-pyside</code>.</p>
 <h3 id="checking-your-changes">Checking your changes<a class="headerlink" href="#checking-your-changes" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>docs
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>docs
 </span></code></pre></div>
 <p>This builds the site, then checks that every cross-reference found its
 target, every included script was read, and every link to a part of a page
@@ -6991,55 +7010,55 @@ decision, doesn't need one.</p>
 <p>Don't edit an accepted <abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr>. Write a new one that replaces it, and set the old
 one's status to "Superseded by" with a link to the new one.</p>
 <h2 id="making-a-release">Making a release<a class="headerlink" href="#making-a-release" title="Permanent link">&para;</a></h2>
-<p>A release starts with the changelog, which a script writes from the pull
-requests merged since the last release, grouped by their
-<a href="#labels">labels</a>. Don't edit it by hand.</p>
+<p>A release starts with the changelog, which <code>towncrier</code> writes from the entry
+files the pull requests added since the last release. Don't edit it by hand,
+except to fix an entry while releasing.</p>
 <h3 id="what-you-need-for-a-release">What you need for a release<a class="headerlink" href="#what-you-need-for-a-release" title="Permanent link">&para;</a></h3>
 <p>You need a clone of the repository, and <code>gh</code>, the GitHub command-line tool,
 signed in with access to it.</p>
 <h3 id="1-write-the-changelog">1. Write the changelog<a class="headerlink" href="#1-write-the-changelog" title="Permanent link">&para;</a></h3>
 <p>On an up-to-date <code>main</code>, make a release branch and write the section, with
-the version without its <code>v</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.14.1
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/release_notes.py<span class="w"> </span>prepare<span class="w"> </span><span class="m">0</span>.14.1
+the version without its <code>v</code> and today's date:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>git<span class="w"> </span>pull
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.14.1
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>build<span class="w"> </span>--yes<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.14.1<span class="w"> </span>--date<span class="w"> </span><span class="m">01</span>-10-2026
 </span></code></pre></div>
-<p>The script asks GitHub for the pull requests merged since the last final
-release, and writes a section for them at the top of
-<code>docs/reference/changelog.md</code>, with the date and a compare link.</p>
-<p>Read the section. If a title reads badly, rename the pull request it came from,
-so the changelog and GitHub agree. Then discard the section with <code>git checkout
-docs/reference/changelog.md</code> and run the script again.</p>
+<p><code>towncrier</code> collects the files in <code>changelog.d/</code> into a section at the top of
+<code>docs/reference/changelog.md</code>, deletes them, and stages both changes. <code>--yes</code>
+deletes them without asking; without it, a "no" leaves them to be collected
+again by the next release.</p>
+<p>Read the section. If an entry reads badly, fix it in the changelog, which is
+now the only copy.</p>
 <h3 id="2-merge-the-changelog">2. Merge the changelog<a class="headerlink" href="#2-merge-the-changelog" title="Permanent link">&para;</a></h3>
 <p>Commit the section, push the branch, and open a pull request for it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.14.1
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--base<span class="w"> </span>main<span class="w"> </span>--label<span class="w"> </span>skip-changelog<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Adds the changelog section for 0.14.1."</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.14.1
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--base<span class="w"> </span>main<span class="w"> </span>--label<span class="w"> </span>skip-changelog<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Adds the changelog section for 0.14.1."</span>
 </span></code></pre></div>
 <p>The checks start as on any pull request. Merge it once they pass.</p>
 <h3 id="3-tag-the-release">3. Tag the release<a class="headerlink" href="#3-tag-the-release" title="Permanent link">&para;</a></h3>
 <p>Tag the merge commit and push the tag:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.14.1
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.14.1
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>git<span class="w"> </span>pull
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.14.1
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.14.1
 </span></code></pre></div>
 <p>The tag publishes the package to PyPI and the docs, and creates the GitHub
 release, whose notes are the changelog section.</p>
 <div class="admonition warning">
 <p class="admonition-title">A final-release tag without a changelog section</p>
 <p>If the tag's version has no section, the package build fails with a
-message naming the <code>prepare</code> command, and neither PyPI nor the GitHub
-release gets anything. Merge the changelog pull request (steps 1 and 2)
+message naming the <code>towncrier build</code> command, and neither PyPI nor the
+GitHub release gets anything. Merge the changelog pull request (steps 1 and 2)
 before you tag.</p>
 </div>
 <h3 id="release-candidates">Release candidates<a class="headerlink" href="#release-candidates" title="Permanent link">&para;</a></h3>
 <p>Tag a candidate <code>v0.14.1rc1</code> without preparing anything. It publishes the
-package, but no GitHub release and no changelog section: the final release's
-section lists every pull request since the previous final release.</p>
+package, but no GitHub release and no changelog section: the entries stay in
+<code>changelog.d/</code> until the final release collects them.</p>
 
 
 
