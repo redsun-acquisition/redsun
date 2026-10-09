@@ -45,7 +45,6 @@ dev = [
     { include-group = "tox" },
     { include-group = "epics" },
     { include-group = "pva" },
-    { include-group = "pyqt" },
     { include-group = "tiled" },
     { include-group = "zarr" },
     { include-group = "ome-zarr" },
@@ -265,6 +264,11 @@ runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
+[tool.uv]
+# a plain `uv sync` or `uv run` gets one Qt binding; the pyside legs ask for
+# their own with --no-default-groups, so they never see PyQt6
+default-groups = ["dev", "pyqt"]
+
 [tool.tox]
 requires = ["tox>=4.28", "tox-uv-bare>=1.36"]
 env_list = ["lint", "mypy-pyqt", "mypy-pyside", "tests-pyqt", "tests-pyside", "docs"]
@@ -298,7 +302,7 @@ set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]
-dependency_groups = ["dev", "docs"]
+dependency_groups = ["dev", "docs", "pyqt"]
 pass_env = ["DISPLAY", "QT_QPA_PLATFORM"]
 commands = [
     ["python", "scripts/export_schemas.py"],

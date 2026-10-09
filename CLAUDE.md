@@ -104,7 +104,10 @@ and missed the one CI failed on. Trust tox.
 CI type-checks and tests against pyqt6 **and** pyside6, one workflow per
 binding (`pyqt6.yaml`, `pyside6.yaml`, both calling `test-binding.yaml`). The
 `mypy-*` and `tests-*` environments each sync only their own binding's group
-and set `QT_API`, which is what decides the branches qtpy exposes.
+and set `QT_API`, which is what decides the branches qtpy exposes. The `dev`
+group holds no binding: `[tool.uv] default-groups` adds `pyqt` to a plain
+`uv run`, and CI's pyside6 jobs pass `--no-default-groups`, so they run without
+PyQt6 installed, as a `redsun[pyside]` user does.
 
 pyside6 aborts the process when a widget is destroyed off the GUI thread, and
 Python's garbage collection runs on whichever thread happens to allocate. So
