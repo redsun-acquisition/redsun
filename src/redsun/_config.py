@@ -598,6 +598,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     layout: LayoutEntry | None = None
     """The first layout of the window, in place of the one the session class declares."""
 
+    shortcuts: dict[str, str | list[str] | None] = {}
+    """Keys by command id, `<component>.<method>`, replacing what the component declares; `null` unbinds."""
+
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""
 
@@ -666,6 +669,20 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
             listed = ", ".join(repr(name) for name in sorted(known)) or "none"
             # a ValueError, since pydantic reports no other at the key's location
             raise ValueError(f"asks for frontend {value!r}; registered: {listed}")
+        return value
+
+    @field_validator("shortcuts")
+    @classmethod
+    def two_keys_at_most(
+        cls, value: dict[str, str | list[str] | None]
+    ) -> dict[str, str | list[str] | None]:
+        """Refuse a command given more than two keys."""
+        for command, keys in value.items():
+            if isinstance(keys, list) and len(keys) > 2:
+                # a ValueError, since pydantic reports no other at the key's location
+                raise ValueError(
+                    f"gives {command!r} {len(keys)} keys; a command takes two at most"
+                )
         return value
 
     @field_validator("pairs")

@@ -92,6 +92,19 @@ class Frontend:
         return None
 
     @classmethod
+    def key_problems(cls, key: str) -> list[str]:
+        """Return what is wrong with *key* in this frontend's spelling; nothing here."""
+        return []
+
+    @classmethod
+    def canonical_key(cls, key: str) -> str:
+        """Return *key* as this frontend writes it, so two spellings of one key compare equal.
+
+        *key* unchanged here.
+        """
+        return key
+
+    @classmethod
     def layout_problems(cls, layout: WindowLayout) -> list[str]:
         """Return what this frontend cannot show of *layout*, one line each as `layout.key: what`."""
         if not cls.regions:

@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
+from dataclasses import replace
 from enum import StrEnum
 from pathlib import Path
 from typing import (
@@ -97,6 +98,7 @@ from ._protocols import (
     Serializable,
 )
 from ._questions import NoAnswer, answer, optional_arg, shape_of, without_none
+from ._shortcuts import Binding, candidates, resolved_shortcuts
 from ._wiring import NotBuilt, Wiring
 
 if TYPE_CHECKING:
@@ -259,6 +261,7 @@ class Session(BuildableSession):
         "_settings",
         "_shared",
         "_shared_values",
+        "_shortcut_overrides",
         "_storage",
         "_store",
         "_transport",
@@ -339,6 +342,7 @@ class Session(BuildableSession):
         # model holds the transport and the hooks in another shape
         self._merged: dict[str, Any] = {}
         self._window_layout: WindowLayout | None = None
+        self._shortcut_overrides: dict[str, tuple[str, ...]] = {}
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
@@ -729,6 +733,7 @@ class Session(BuildableSession):
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
         self._window_layout = self._declared_layout(config)
+        self._shortcut_overrides = self._read_shortcuts(config)
         for declaration in self._declarations.values():
             if declaration.refusal is not None:
                 self._skip(declaration, declaration.refusal)
@@ -826,6 +831,77 @@ class Session(BuildableSession):
                 raise BuildError(message)
             logger.warning("%s; left out", message)
         return layout
+
+    def _read_shortcuts(self, config: SessionFile) -> dict[str, tuple[str, ...]]:
+        """Return the file's `shortcuts`, each command's keys as the frontend writes them.
+
+        Raises
+        ------
+        ConfigurationError
+            If the frontend cannot read a key, naming its command.
+        """
+        overrides: dict[str, tuple[str, ...]] = {}
+        problems: list[str] = []
+        for command, given in config.shortcuts.items():
+            keys = (
+                ()
+                if given is None
+                else (given,)
+                if isinstance(given, str)
+                else tuple(given)
+            )
+            for key in keys:
+                problems += [
+                    f"shortcuts.{command}: {line}"
+                    for line in self.frontend.key_problems(key)
+                ]
+            if not problems:
+                overrides[command] = tuple(
+                    self.frontend.canonical_key(key) for key in keys
+                )
+        if problems:
+            raise ConfigurationError(
+                [label(source) for source in self._sources()], problems
+            )
+        return overrides
+
+    def resolve_shortcuts(self, extra: Sequence[Binding] = ()) -> list[Binding]:
+        """Return the keys the window binds: what the components declare, then *extra*, settled.
+
+        The components count in the order they are declared. The session
+        file's `shortcuts` replace a command's keys first; a key two commands
+        ask for in one place, the whole window or one view, stays with the
+        first, and the change is logged.
+
+        Raises
+        ------
+        BuildError
+            If the configuration sets `strict` and a key had to be moved or
+            left out.
+        """
+        components = {
+            name: declaration.instance
+            for name, declaration in self._declarations.items()
+            if declaration.kind in (Layer.PRESENTER, Layer.VIEW)
+            and declaration.instance is not None
+        }
+        found, problems = candidates(components, views=set(self.views))
+        found = [
+            replace(b, keys=tuple(self.frontend.canonical_key(k) for k in b.keys))
+            for b in found
+        ]
+        resolved, settled = resolved_shortcuts(
+            [*found, *extra], self._shortcut_overrides
+        )
+        problems += settled
+        if problems:
+            message = "Keyboard shortcuts:\n" + "\n".join(
+                f"  {line}" for line in problems
+            )
+            if self._configuration().strict:
+                raise BuildError(message)
+            logger.warning(message)
+        return resolved
 
     def _count_classes(self) -> None:
         """Count the components declaring each class, naming those declared twice."""
