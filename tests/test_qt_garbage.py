@@ -8,6 +8,7 @@ import weakref
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
+from qtpy.QtCore import QCoreApplication, QEvent, QTimer
 
 from redsun.qt import QtSession
 
@@ -79,3 +80,16 @@ def test_shutdown_frees_the_sessions_cycles_on_the_gui_thread(
     app.shutdown()
 
     assert freed == [threading.main_thread().ident]
+
+
+def test_shutdown_leaves_no_timer_behind(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Delete the collector's timer when the session shuts down."""
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    before = len(qapp.findChildren(QTimer))
+
+    build(EmptyApp).shutdown()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    assert len(qapp.findChildren(QTimer)) == before

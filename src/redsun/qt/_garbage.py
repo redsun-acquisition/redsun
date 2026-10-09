@@ -40,12 +40,13 @@ class GarbageCollector:
         self.timer.start()
 
     def stop(self) -> None:
-        """Stop checking, collect once, and turn automatic collection back on if it was on.
+        """Stop checking for good, collect once, and turn automatic collection back on if it was on.
 
         Called on the GUI thread, so the cycles left behind are freed there
         rather than by the next automatic collection on another thread.
         """
         self.timer.stop()
+        self.timer.deleteLater()
         gc.collect()
         if self.enabled_before:
             gc.enable()
