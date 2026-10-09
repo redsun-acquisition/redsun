@@ -75,6 +75,7 @@ dependencies for you.
 5. **Open a pull request against `main`.** Write its title and description as
    [Pull requests](#pull-requests) describes. Then add a
    [changelog entry](#changelog-entries) for each change a user will notice.
+   The changelog check fails until the entry is pushed, which is expected.
    If you're not sure what to write, open the pull request without it and say
    so: a maintainer can add or fix the entry on your branch.
 6. **Wait for CI and a review.** CI runs the same checks as `uv run tox` and
@@ -349,8 +350,7 @@ uv run --group docs zensical serve --dev-addr localhost:8080
 ## Commit messages and pull requests
 
 Commit messages, issue titles and pull requests all follow one form, so the
-history reads the same everywhere and the changelog can be written from the
-pull requests.
+history reads the same everywhere.
 
 ### Commit messages
 
@@ -389,9 +389,9 @@ you.
 ### Pull requests
 
 Open the pull request against `main`. Its title follows the same rules as a
-commit's first line, because the changelog entry is made from it:
-`feat(session): add strict sessions` is listed under *Added* as "Add strict
-sessions".
+commit's first line, such as `feat(session): add strict sessions`. The
+changelog doesn't use it: what users read comes from the
+[changelog entries](#changelog-entries) the pull request adds.
 
 The description is a list of one-line bullets in the imperative, one per
 change a reviewer can see, with no headers:
@@ -423,16 +423,18 @@ to its pull request.
 | `fixed` | something now works as its documentation says |
 | `security` | a vulnerability is closed |
 
-`towncrier` writes the file for you:
+`towncrier` writes the file for you. Keep the text in single quotes, so the
+shell leaves its backticks alone:
 
 ```bash
-uv run towncrier create 412.fixed.md --content "A link that wire and wiring: both name is made once."
+uv run towncrier create 412.fixed.md --content 'A link that `wire` and `wiring:` both name is made once.'
 ```
 
 A second change of the same kind in one pull request goes in `412.fixed.2.md`.
 
 An entry says what changed, in a line or two, and names what a user would
-type to reach it. It doesn't say why: that belongs in the pull request or in
+type to reach it: a name `redsun` exports as it is, such as `WindowLayout`,
+and any other with its module, such as `redsun.aio.run_coro`. It doesn't say why: that belongs in the pull request or in
 a [decision record](../explanation/decisions/index.md).
 
 ```markdown
@@ -570,11 +572,13 @@ the version without its `v` and today's date:
 git switch main
 git pull
 git switch -c release/v0.14.1
-uv run towncrier build --version 0.14.1 --date 01-10-2026
+uv run towncrier build --yes --version 0.14.1 --date 01-10-2026
 ```
 
 `towncrier` collects the files in `changelog.d/` into a section at the top of
-`docs/reference/changelog.md`, and deletes them.
+`docs/reference/changelog.md`, deletes them, and stages both changes. `--yes`
+deletes them without asking; without it, a "no" leaves them to be collected
+again by the next release.
 
 Read the section. If an entry reads badly, fix it in the changelog, which is
 now the only copy.
@@ -610,12 +614,12 @@ release, whose notes are the changelog section.
 !!! warning "A final-release tag without a changelog section"
 
     If the tag's version has no section, the package build fails with a
-    message naming the `prepare` command, and neither PyPI nor the GitHub
-    release gets anything. Merge the changelog pull request (steps 1 and 2)
+    message naming the `towncrier build` command, and neither PyPI nor the
+    GitHub release gets anything. Merge the changelog pull request (steps 1 and 2)
     before you tag.
 
 ### Release candidates
 
 Tag a candidate `v0.14.1rc1` without preparing anything. It publishes the
-package, but no GitHub release and no changelog section: the final release's
-section lists every pull request since the previous final release.
+package, but no GitHub release and no changelog section: the entries stay in
+`changelog.d/` until the final release collects them.
