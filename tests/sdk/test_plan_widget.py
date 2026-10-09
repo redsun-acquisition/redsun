@@ -561,8 +561,8 @@ class TestCallbacksList:
 class TestPlanWidgetControlAPI:
     """Tests for PlanWidget.toggle / pause / setEnabled / enable_actions."""
 
-    def test_toggle_swaps_the_run_button_text(self) -> None:
-        """Switch the run button text between Run and Stop on toggle."""
+    def test_toggle_swaps_the_run_button_between_run_and_stop(self) -> None:
+        """Switch the run button between Run and Stop on toggle, by icon and name."""
         pw = create_plan_widget(_continuous_spec())
         pw.toggle(True)
         assert (pw.run_button.accessibleName(), pw.run_button.text()) == (
@@ -618,8 +618,8 @@ class TestPlanWidgetControlAPI:
         assert pw.actions_group is not None
         assert pw.actions_group.isEnabled()
 
-    def test_pause_swaps_the_pause_button_text(self) -> None:
-        """Switch the pause button text between Pause and Resume."""
+    def test_pause_swaps_the_pause_button_between_pause_and_resume(self) -> None:
+        """Switch the pause button between Pause and Resume, by icon and name."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         pw.toggle(True)

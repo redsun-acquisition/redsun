@@ -47,7 +47,7 @@ class ColorSchemeMode(StrEnum):
 
     @property
     def glyph(self) -> str:
-        """The character the control shows while this mode is asked for."""
+        """A character standing for this mode in plain text; the control shows an icon."""
         return GLYPHS[self]
 
     def apply(self) -> None:
@@ -143,7 +143,7 @@ class ColorSchemeButton(QToolButton):
 
     @property
     def mode(self) -> ColorSchemeMode:
-        """The mode asked for, which the glyph shows."""
+        """The mode asked for, which the icon shows."""
         return self._mode
 
     def cycle(self) -> None:
