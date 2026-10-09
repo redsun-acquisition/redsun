@@ -337,6 +337,8 @@ filename = "docs/reference/changelog.md"
 start_string = "<!-- towncrier release notes start -->\n"
 title_format = "## [{version}](https://github.com/redsun-acquisition/redsun/releases/tag/v{version}) - {project_date}"
 issue_format = "[#{issue}](https://github.com/redsun-acquisition/redsun/pull/{issue})"
+# set, even empty, so a misnamed entry fails the build instead of being skipped
+ignore = []
 
 [[tool.towncrier.type]]
 directory = "breaking"
