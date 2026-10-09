@@ -28,7 +28,8 @@ on the site to the same choice.
 === "Session file"
 
     Name the provider in the `hooks` section, under the name of the hook
-    point, with the path to import it from.
+    point, with the path to import it from, or with its short name when
+    `redsun` ships it.
 
 ## Pick a hook point
 
@@ -94,6 +95,34 @@ It doesn't inherit from anything, because having the method is enough.
     ```
 
     The path is written `module:ClassName`.
+
+## Use a provider `redsun` ships
+
+`redsun` ships providers you can install without writing your own. A session
+file names one by a short name instead of a class path, and the
+[session file reference](../reference/session-file.md#hooks) lists the names.
+[Choose a style](choose-a-style.md) shows one of them in use.
+
+=== "Session class"
+
+    ```python
+    from redsun.qt.styles.napari import NapariStyle
+
+
+    class MyApp(QtSession):
+        configure_application: AsHook[NapariStyle]
+    ```
+
+=== "Session file"
+
+    ```yaml
+    hooks:
+      configure_application: napari
+    ```
+
+    The name alone is short for `provider: napari`, which you write out when
+    you pass `kwargs`. A name stands for one hook point only, so writing the
+    same name at two points is refused like two identical entries.
 
 ## Pass constructor arguments
 
@@ -242,6 +271,7 @@ raised as [`ConfigurationError`][redsun.ConfigurationError], located as
 | `cannot construct hook provider 'X' ...` | the constructor refused the arguments |
 | `hooks.x.provider: Field required` | `provider` is missing from the file entry |
 | `hooks.x.name: Extra inputs are not permitted` | an argument was written beside `provider` instead of under `kwargs` |
+| `unknown hook provider 'x'; built-in names: ...` | the short name is not one `redsun` ships; check its spelling against the list |
 | `hook provider 'p' is named twice, at 'a' and at 'b', with the same keys` | two identical entries; anchor one, or change the arguments |
 | `hook point(s) 'x' are named both on MyApp and in the configuration` | the class and the file both name the point; remove one |
 

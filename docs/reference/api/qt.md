@@ -54,6 +54,12 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Styles
+
+::: redsun.qt.styles.napari.NapariStyle
+    options:
+      show_root_heading: true
+
 ## Actions
 
 ::: redsun.qt.ActionError

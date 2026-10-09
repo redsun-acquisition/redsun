@@ -103,6 +103,11 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (420, 360),
         None,
     ),
+    Path("docs/examples/napari_style.py"): (
+        Path("docs/how-to/images/napari-style.png"),
+        (460, 560),
+        None,
+    ),
     Path("docs/examples/log_view.py"): (
         Path("docs/how-to/images/log-view.png"),
         (820, 360),
@@ -187,6 +192,7 @@ def capture(
             mock.patch("redsun._settings.user_config_dir", elsewhere),
             mock.patch("redsun.log.user_data_dir", elsewhere),
             mock.patch("redsun.path_provider.user_data_dir", elsewhere),
+            mock.patch("redsun.qt.styles.napari.user_cache_dir", elsewhere),
             mock.patch.object(
                 QApplication, "exec", lambda _: photograph(target, size, press)
             ),
