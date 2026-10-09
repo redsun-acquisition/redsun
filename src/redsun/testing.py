@@ -2,13 +2,14 @@
 
 A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
-acquisition data and catalogs under its `tmp_path`, and drop the `psygnal`
-emissions it left queued.
+acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
+emissions it left queued, and collect a Qt test's garbage on the main thread.
 The module defines no `qapp`, so it combines with `pytest-qt`.
 """
 
 from __future__ import annotations
 
+import gc
 import logging
 import os
 from typing import TYPE_CHECKING, Protocol, TypeVar
@@ -35,6 +36,7 @@ __all__ = [
     "BuildSession",
     "StartService",
     "build",
+    "collect_qt_garbage",
     "config_home",
     "data_directory",
     "empty_emission_queue",
@@ -143,6 +145,19 @@ def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     root = tmp_path / "config"
     monkeypatch.setattr("redsun._settings.user_config_dir", lambda *a, **k: str(root))
     return root
+
+
+@pytest.fixture(autouse=True)
+def collect_qt_garbage(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    """Collect after each test using `qapp`, on the main thread.
+
+    A widget the test left in a reference cycle would otherwise be freed by
+    the next collection, which a later test may run on another thread;
+    `pyside6` aborts when a widget is destroyed off the GUI thread.
+    """
+    yield
+    if "qapp" in request.fixturenames:
+        gc.collect()
 
 
 @pytest.fixture(autouse=True)

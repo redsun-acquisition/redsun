@@ -7,7 +7,6 @@ when no display is available (headless CI without `QT_QPA_PLATFORM=offscreen`).
 from __future__ import annotations
 
 import contextlib
-import gc
 import os
 import sys
 import time
@@ -55,19 +54,6 @@ def wait_until() -> Callable[..., bool]:
         return predicate()
 
     return poll
-
-
-@pytest.fixture(autouse=True)
-def collect_qt_garbage(request: pytest.FixtureRequest) -> Generator[None, None, None]:
-    """Collect after each test using `qapp`, on the main thread.
-
-    A widget the test left in a reference cycle would otherwise be freed by
-    the next collection, which a later test may run on another thread;
-    `pyside6` aborts when a widget is destroyed off the GUI thread.
-    """
-    yield
-    if "qapp" in request.fixturenames:
-        gc.collect()
 
 
 @pytest.fixture(scope="session")
