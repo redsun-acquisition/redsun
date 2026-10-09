@@ -99,6 +99,7 @@ from ._color_scheme import (
     ColorSchemeButton,
     ColorSchemeMode,
 )
+from ._garbage import GarbageCollector
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -559,6 +560,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # QApplication takes the next widget built with it
         self._qt_app = qt_app
         self.on_release(self._forget_application_object)
+        # pyside6 aborts when a collection on a background thread frees a widget
+        collector = GarbageCollector(qt_app)
+        collector.start()
+        self.on_release(collector.stop)
 
         self._model = Application(self.name)
         self.on_release(self._forget_application)
