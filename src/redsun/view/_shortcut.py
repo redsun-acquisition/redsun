@@ -87,12 +87,17 @@ def shortcut(
     ValueError
         If the key or the title is empty, or the scope is unknown.
     TypeError
-        When applied to a method that needs arguments besides itself, or to a
-        coroutine method.
+        When applied to a method that needs arguments besides itself, to a
+        coroutine method, or to a method that already has a key.
     """
     record = Shortcut(key, title, scope, mac, win, linux)
 
     def decorate(method: F) -> F:
+        if isinstance(getattr(method, SHORTCUT_ATTR, None), Shortcut):
+            raise TypeError(
+                f"{method.__qualname__} already has a key; give a second one in "
+                "the session file's shortcuts section"
+            )
         if inspect.iscoroutinefunction(method):
             raise TypeError(
                 f"{method.__qualname__} is a coroutine method, which a key "

@@ -201,3 +201,13 @@ def test_overrides_replace_drop_and_report_unknown_commands() -> None:
         ("panel.stop", ()),
     ]
     assert problems == ["ghost.run: no such command; its keys are left out"]
+
+
+def test_a_second_shortcut_on_one_method_is_refused() -> None:
+    """Refuse a second key on one method, which would drop the first."""
+    with pytest.raises(TypeError, match="already"):
+
+        class Twice:
+            @shortcut("F1", title="One")
+            @shortcut("F2", title="Two")
+            def run(self) -> None: ...
