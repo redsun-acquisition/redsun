@@ -1748,6 +1748,8 @@
       
         
       
+        
+      
     
     
     
@@ -1896,6 +1898,35 @@
     
   
   How to add menu actions to a Qt session
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/add-keyboard-shortcuts/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-keyboard" viewBox="0 0 24 24"><path d="M10 8h.01M12 12h.01M14 8h.01M16 12h.01M18 8h.01M6 8h.01M7 16h10M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to add keyboard shortcuts
 
     
   </span>
@@ -3283,6 +3314,8 @@
       
         
       
+        
+      
     
     
     
@@ -4082,6 +4115,33 @@
     
   
   28. A session declares its first window layout
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  29. Keyboard shortcuts are declared by components
 
     
   </span>
@@ -5053,6 +5113,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;layout_problems
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.key_problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;key_problems
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.canonical_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;canonical_key
       </span>
     </span>
   </a>
@@ -6223,6 +6305,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.key_problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;key_problems
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.canonical_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;canonical_key
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.Qt.thread_of" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7147,9 +7251,11 @@ be shown with it, so what it left behind is deleted.</p>
 <p>A view that failed to build and asked for a dock or the centre is
 replaced there by a widget naming it and the reason. When any
 component failed to build or to be set up, a button in the status bar
-counts them and lists them with their tracebacks. A Window menu,
-added after the main-view hook has run, shows or hides each dock and
-puts every dock back where its placement says.</p>
+counts them and lists them with their tracebacks. The keyboard
+shortcuts are bound before the main-view hook runs, so the menus it
+builds show them. A Window menu, added after the hook has run, shows or
+hides each dock, puts every dock back where its placement says, and
+lists the shortcuts.</p>
 
 
     </div>
@@ -7489,6 +7595,54 @@ with its group, <code>{menu: &lt;name&gt;}</code> an entry in that menu and
     <div class="doc doc-contents ">
 
         <p>Return what Qt cannot show of <em>layout</em>, a share for the centre and opposite edges filling the window included.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.qt.Qt.key_problems" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">key_problems</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.qt.Qt.key_problems" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">key_problems</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return why <em>key</em> is not one app-model reads, or nothing.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.qt.Qt.canonical_key" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">canonical_key</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.qt.Qt.canonical_key" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">canonical_key</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return <em>key</em> as app-model writes it.</p>
 
 
     </div>

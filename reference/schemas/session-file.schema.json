@@ -549,6 +549,28 @@
       "default": null,
       "description": "The first layout of the window, in place of the one the session class declares."
     },
+    "shortcuts": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "default": {},
+      "description": "Keys by command id, `<component>.<method>`, replacing what the component declares; `null` unbinds.",
+      "title": "Shortcuts",
+      "type": "object"
+    },
     "storage": {
       "anyOf": [
         {

@@ -1748,6 +1748,8 @@
       
         
       
+        
+      
     
     
     
@@ -1896,6 +1898,35 @@
     
   
   How to add menu actions to a Qt session
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/add-keyboard-shortcuts/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-keyboard" viewBox="0 0 24 24"><path d="M10 8h.01M12 12h.01M14 8h.01M16 12h.01M18 8h.01M6 8h.01M7 16h10M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to add keyboard shortcuts
 
     
   </span>
@@ -3283,6 +3314,8 @@
       
         
       
+        
+      
     
     
     
@@ -4082,6 +4115,33 @@
     
   
   28. A session declares its first window layout
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  29. Keyboard shortcuts are declared by components
 
     
   </span>
@@ -5240,6 +5300,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.Session.resolve_shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;resolve_shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.Session.wire" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6116,6 +6187,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;region_of
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Frontend.key_problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;key_problems
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Frontend.canonical_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;canonical_key
       </span>
     </span>
   </a>
@@ -7103,6 +7196,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.Session.resolve_shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;resolve_shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.Session.wire" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7979,6 +8083,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;region_of
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Frontend.key_problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;key_problems
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Frontend.canonical_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;canonical_key
       </span>
     </span>
   </a>
@@ -9392,6 +9518,57 @@ placed in a region of the window answers to is left out, and logged.</p>
             <td>
               <div class="doc-md-description">
                 <p>If the configuration sets <code>strict</code> and the layout names such a view.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.Session.resolve_shortcuts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">resolve_shortcuts</span>
+
+
+<a href="#redsun.Session.resolve_shortcuts" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">resolve_shortcuts</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">extra</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Binding</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Binding</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the keys the window binds: what the components declare, then <em>extra</em>, settled.</p>
+<p>The components count in the order they are declared. A key the
+frontend cannot read is left out. The session file's <code>shortcuts</code>
+replace a command's keys first; a key two commands ask for in one
+place, the whole window or one view, stays with the first. Every change
+is logged.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;BuildError&lt;/span&gt; (&lt;code&gt;redsun.errors.BuildError&lt;/code&gt;)" href="../errors/#redsun.errors.BuildError">BuildError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the configuration sets <code>strict</code> and a key had to be moved or
+left out.</p>
               </div>
             </td>
           </tr>
@@ -12139,6 +12316,55 @@ here: the slot runs on the thread that emits.</p>
 
         <p>Return the region <em>placement</em> asks for and the group it suggests, or <code>None</code> outside any region.</p>
 <p>A frontend with regions overrides it; this one places nothing in one.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.Frontend.key_problems" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">key_problems</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.Frontend.key_problems" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">key_problems</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return what is wrong with <em>key</em> in this frontend's spelling; nothing here.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.Frontend.canonical_key" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">canonical_key</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.Frontend.canonical_key" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">canonical_key</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return <em>key</em> as this frontend writes it, so two spellings of one key compare equal.</p>
+<p><em>key</em> unchanged here.</p>
 
 
     </div>

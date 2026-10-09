@@ -1748,6 +1748,8 @@
       
         
       
+        
+      
     
     
     
@@ -1896,6 +1898,35 @@
     
   
   How to add menu actions to a Qt session
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/add-keyboard-shortcuts/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-keyboard" viewBox="0 0 24 24"><path d="M10 8h.01M12 12h.01M14 8h.01M16 12h.01M18 8h.01M6 8h.01M7 16h10M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to add keyboard shortcuts
 
     
   </span>
@@ -3283,6 +3314,8 @@
       
         
       
+        
+      
     
     
     
@@ -4094,6 +4127,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  29. Keyboard shortcuts are declared by components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4427,6 +4487,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Layout
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Shortcuts
       </span>
     </span>
   </a>
@@ -5486,6 +5557,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hooks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5697,6 +5779,12 @@ write one, split it over several files and read a failure.</p>
 <td>mapping</td>
 <td>the layout of the session class</td>
 <td><a href="#layout">where the views start</a> in the window</td>
+</tr>
+<tr>
+<td><code>shortcuts</code></td>
+<td>mapping</td>
+<td>empty</td>
+<td><a href="#shortcuts">keys</a> replacing what the components declare</td>
 </tr>
 <tr>
 <td><code>providers</code></td>
@@ -6079,6 +6167,36 @@ replaces an earlier one whole.</p>
 </table>
 <p>A view the layout leaves out goes where its placement asks. A name no view
 answers to is logged and left out, and refused when <code>strict</code> is set.</p>
+<h2 id="shortcuts">Shortcuts<a class="headerlink" href="#shortcuts" title="Permanent link">&para;</a></h2>
+<p><code>shortcuts</code> gives commands other keys than the components declare. A
+command is named <code>&lt;component&gt;.&lt;method&gt;</code>, after the component's name in the
+session and the method its shortcut runs.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">acquisition_view.run_selected</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">acquisition.stop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Ctrl+.</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Escape</span><span class="p p-Indicator">]</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">positioner.step_back</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;component&gt;.&lt;method&gt;</code></td>
+<td>text, a list of two, or <code>null</code></td>
+<td>the component's key</td>
+<td>the key, two keys, or <code>null</code> for none</td>
+</tr>
+</tbody>
+</table>
+<p>A key is written as the frontend reads it; for Qt, <code>Ctrl</code> is the Command key
+on macOS. A key two commands ask for in the same place stays with the first,
+and the change is logged, or refused when <code>strict</code> is set.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
 <p><code>hooks</code> maps a <abbr title="A named point in a session's life, such as the build or the closing of the window, at which the session calls one of your objects.">hook point</abbr> to an entry.</p>
 <table>
