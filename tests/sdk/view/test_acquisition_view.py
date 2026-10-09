@@ -247,3 +247,17 @@ def test_the_stop_key_reaches_a_plan_launched_but_not_yet_started(
     view.stop_plan()
 
     assert sent == ["launch", "stop"]
+
+
+def test_the_info_button_is_an_icon_named_for_screen_readers(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Show the plan information button as an icon with words for screen readers."""
+    view = make_view(settings, parent)
+    info = next(
+        button
+        for button in view.findChildren(QtWidgets.QPushButton)
+        if button.accessibleName() == "Information about the selected plan"
+    )
+
+    assert (info.text(), info.icon().isNull()) == ("", False)

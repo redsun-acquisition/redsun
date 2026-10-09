@@ -23,6 +23,7 @@ from qtpy import QtWidgets as QtW
 from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
 
+from ._icons import set_icon
 from ._value_widgets import located, problems_of
 from ._widget_factory import create_param_widget
 
@@ -160,12 +161,15 @@ class PlanWidget:
         """
         with QtCore.QSignalBlocker(self.run_button):
             self.run_button.setChecked(status)
-        self.run_button.setText("Stop" if status else "Run")
+        if status:
+            set_icon(self.run_button, "stop", "Stop the plan")
+        else:
+            set_icon(self.run_button, "play", "Run the plan")
         if self.pause_button:
             if not status:
                 with QtCore.QSignalBlocker(self.pause_button):
                     self.pause_button.setChecked(False)
-                self.pause_button.setText("Pause")
+                set_icon(self.pause_button, "pause", "Pause the plan")
             self.pause_button.setEnabled(status)
         if self.actions_group:
             self.actions_group.setEnabled(status)
@@ -186,7 +190,10 @@ class PlanWidget:
             `True` when pausing; `False` when resuming.
         """
         if self.pause_button:
-            self.pause_button.setText("Resume" if status else "Pause")
+            if status:
+                set_icon(self.pause_button, "play", "Resume the plan")
+            else:
+                set_icon(self.pause_button, "pause", "Pause the plan")
 
     def setEnabled(self, enabled: bool) -> None:
         """Enable or disable the whole plan widget.
@@ -473,7 +480,8 @@ def _build_run_buttons(
     run_layout = QtW.QHBoxLayout()
     run_container = QtW.QWidget(parent)
 
-    run_button = QtW.QPushButton("Run")
+    run_button = QtW.QPushButton()
+    set_icon(run_button, "play", "Run the plan")
     if spec.continuous:
         run_button.setCheckable(True)
         run_button.toggled.connect(toggle_callback)
@@ -483,7 +491,8 @@ def _build_run_buttons(
 
     pause_button: QtW.QPushButton | None = None
     if spec.pausable:
-        pause_button = QtW.QPushButton("Pause")
+        pause_button = QtW.QPushButton()
+        set_icon(pause_button, "pause", "Pause the plan")
         pause_button.setEnabled(False)
         pause_button.setCheckable(True)
         pause_button.toggled.connect(pause_callback)
