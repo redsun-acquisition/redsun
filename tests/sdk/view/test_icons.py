@@ -47,6 +47,18 @@ def test_an_icon_replaces_the_text_and_carries_the_words(qapp: QApplication) -> 
     assert not button.icon().isNull()
 
 
+def test_an_icon_is_larger_than_the_text_it_replaces(qapp: QApplication) -> None:
+    """Size an icon above the button's line height, whatever the font size."""
+    button = QPushButton()
+    font = button.font()
+    font.setPointSize(20)
+    button.setFont(font)
+
+    set_icon(button, "play", "Run the plan")
+
+    assert button.iconSize().height() > button.fontMetrics().height()
+
+
 def test_an_icon_follows_the_palette_and_its_disabled_colour(
     qapp: QApplication,
 ) -> None:

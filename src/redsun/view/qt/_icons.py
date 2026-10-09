@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from qtpy.QtCore import QEvent, QObject
+from qtpy.QtCore import QEvent, QObject, QSize
 from qtpy.QtGui import QIcon, QPalette
 from qtpy.QtWidgets import QAbstractButton, QComboBox, QWidget
 from superqt import fonticon
@@ -13,6 +13,9 @@ __all__ = ["set_icon", "set_item_icon"]
 
 PREFIX: Final = "mdi7"
 """The icon font's prefix in `superqt.fonticon` keys."""
+
+SCALE: Final = 1.4
+"""An icon's size as a multiple of its widget's line height."""
 
 
 def icon(name: str, palette: QPalette) -> QIcon:
@@ -74,6 +77,9 @@ def set_icon(button: QAbstractButton, name: str, words: str) -> None:
     button.setText("")
     button.setToolTip(words)
     button.setAccessibleName(words)
+    # the style's 16 px is smaller than the text an icon stands in for
+    side = round(button.fontMetrics().height() * SCALE)
+    button.setIconSize(QSize(side, side))
     repaint = repaint_for(button)
     repaint.button = name
     repaint.draw()
