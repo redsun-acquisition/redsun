@@ -44,12 +44,14 @@ Add `redsun` to the project, with
 [PyQt6](../explanation/glossary.md#qt-binding) to draw its windows:
 
 ```bash
-uv add "redsun[pyqt]"
+uv add --compile-bytecode "redsun[pyqt]"
 ```
 
 `uv` makes a virtual environment in the folder, called `.venv`, and installs
 `redsun` in it. You never need to activate that environment, because
-`uv run` uses it for you.
+`uv run` uses it for you. `--compile-bytecode` prepares the Python files to
+run while they install, so the first session you start doesn't spend
+several seconds doing it.
 
 ## 3. Check that it works
 
