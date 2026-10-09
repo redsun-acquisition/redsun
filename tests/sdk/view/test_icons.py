@@ -15,8 +15,9 @@ from qtpy.QtWidgets import (
     QStyleFactory,
     QToolButton,
 )
+from superqt import QCollapsible
 
-from redsun.view.qt._icons import set_icon, set_item_icon
+from redsun.view.qt._icons import set_collapsible_icons, set_icon, set_item_icon
 
 pytestmark = pytest.mark.qt
 
@@ -86,6 +87,23 @@ def test_an_icon_follows_the_palette_and_its_disabled_colour(
     assert "#ff0000" in first
     assert "#0000ff" in colours(button.icon())
     assert "#00ff00" in colours(button.icon(), QIcon.Mode.Disabled)
+
+
+def test_a_collapsible_arrow_follows_the_palette(qapp: QApplication) -> None:
+    """Draw a collapsible's arrows in its text colour, collapsed and expanded, again after a style sheet changes it."""
+    collapsible = QCollapsible("Saved positions")
+    collapsible.setStyleSheet("QPushButton { color: #ff0000; }")
+    set_collapsible_icons(collapsible)
+    first = colours(collapsible.toggleButton().icon())
+
+    collapsible.setStyleSheet("QPushButton { color: #0000ff; }")
+    QApplication.sendPostedEvents()
+    collapsed = colours(collapsible.toggleButton().icon())
+    collapsible.expand(animate=False)
+
+    assert "#ff0000" in first
+    assert "#0000ff" in collapsed
+    assert "#0000ff" in colours(collapsible.toggleButton().icon())
 
 
 def test_a_changed_icon_survives_a_palette_change(qapp: QApplication) -> None:

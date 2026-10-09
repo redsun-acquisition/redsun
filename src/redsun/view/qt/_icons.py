@@ -7,9 +7,9 @@ from typing import Final
 from qtpy.QtCore import QEvent, QObject, QSize, Qt
 from qtpy.QtGui import QIcon, QPalette
 from qtpy.QtWidgets import QAbstractButton, QComboBox, QWidget
-from superqt import fonticon
+from superqt import QCollapsible, fonticon
 
-__all__ = ["set_icon", "set_item_icon"]
+__all__ = ["set_collapsible_icons", "set_icon", "set_item_icon"]
 
 PREFIX: Final = "mdi7"
 """The icon font's prefix in `superqt.fonticon` keys."""
@@ -64,6 +64,7 @@ class Repaint(QObject):
         super().__init__(widget)
         self.button: str | None = None
         self.items: dict[int, str] = {}
+        self.arrows: tuple[str, str] | None = None
         widget.installEventFilter(self)
 
     def eventFilter(self, watched: QObject | None, event: QEvent | None) -> bool:
@@ -83,6 +84,10 @@ class Repaint(QObject):
         if isinstance(widget, QComboBox):
             for index, name in self.items.items():
                 widget.setItemIcon(index, icon(name, widget))
+        if self.arrows is not None and isinstance(widget, QCollapsible):
+            collapsed, expanded = self.arrows
+            widget.setCollapsedIcon(icon(collapsed, widget.toggleButton()))
+            widget.setExpandedIcon(icon(expanded, widget.toggleButton()))
 
 
 def repaint_for(widget: QWidget) -> Repaint:
@@ -111,4 +116,18 @@ def set_item_icon(combo: QComboBox, index: int, name: str) -> None:
     """Show the icon *name* beside item *index* of *combo*, following its palette."""
     repaint = repaint_for(combo)
     repaint.items[index] = name
+    repaint.draw()
+
+
+def set_collapsible_icons(collapsible: QCollapsible) -> None:
+    """Show *collapsible*'s arrows as icons following its palette.
+
+    `QCollapsible` draws its own arrows once, in the text colour of that
+    moment, so a light/dark switch would leave them in the old colour.
+    """
+    repaint = repaint_for(collapsible)
+    repaint.arrows = ("menu-right", "menu-down")
+    # the button has a style sheet of its own, so its palette changes apart
+    # from the collapsible's and only the button's own events report it
+    collapsible.toggleButton().installEventFilter(repaint)
     repaint.draw()

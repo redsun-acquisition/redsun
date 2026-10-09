@@ -26,6 +26,7 @@ from redsun.view import shortcut
 from redsun.view.qt.treeview import ConfigurationTab
 
 from ..._settings import Settings  # noqa: TC001
+from ._icons import set_collapsible_icons
 from ._positioner_group import PositionerGroup, StepBox, tool_button
 
 if TYPE_CHECKING:
@@ -226,6 +227,7 @@ class PositionerView(QtW.QWidget, Loggable):
 
         self._devices = QtW.QVBoxLayout()
         self._saved = QCollapsible("Saved positions", self)
+        set_collapsible_icons(self._saved)
         self._undo_row = QtW.QWidget(self)
         self._undo_label = QtW.QLabel(self._undo_row)
         self._undo_label.setWordWrap(True)
