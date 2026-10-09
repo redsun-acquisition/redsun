@@ -6,7 +6,8 @@ icon: lucide/keyboard
 
 A component runs one of its methods from a key once you mark the method with
 [`shortcut`][redsun.shortcut]. The session binds the key when it builds, and
-lists it under **Window** -> **Keyboard shortcuts**.
+lists it under **Window** -> **Keyboard shortcuts**, where the user can change
+it too.
 
 ## Mark a method
 
@@ -97,6 +98,19 @@ shortcuts:
 
 The [session file reference](../reference/session-file.md#shortcuts) lists
 the rules.
+
+## Change a key in the window
+
+The user changes keys in **Window** -> **Keyboard shortcuts**. Double-click a
+key cell and press the new key; Backspace or Delete clears it. When another
+command already has that key in the same place, the list asks "Already used
+by *Run*; move it here?", and on yes the key moves and the other command is
+left without it.
+
+The session keeps these changes in its settings file, apart from the session
+file, and applies them over the `shortcuts` section in every later run.
+**Reset to defaults** forgets them, so the keys the components declare and
+the session file gives come back.
 
 ## Read a conflict
 
