@@ -202,9 +202,10 @@ class AcquisitionView(QtW.QWidget, Loggable):
 
     @shortcut("Ctrl+.", title="Stop the running plan")
     def stop_plan(self) -> None:
-        """Stop the running plan, if one runs."""
-        if self._running is not None:
-            self.sig_stop.emit()
+        """Ask to stop the running plan, or the one launched and not yet started."""
+        # the view hears of a start after the presenter, which keeps a stop
+        # for a launched plan and ignores one with nothing launched
+        self.sig_stop.emit()
 
     def _end(self, plan: str) -> bool:
         widget = self.plan_widgets.get(plan)
