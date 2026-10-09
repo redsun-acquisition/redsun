@@ -18,6 +18,55 @@
       "title": "CatalogConfig",
       "type": "object"
     },
+    "ColumnEntry": {
+      "additionalProperties": false,
+      "description": "Views stacked in a layout, as a session file writes them.",
+      "properties": {
+        "column": {
+          "description": "What shares the space, top to bottom.",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/RowEntry"
+              },
+              {
+                "$ref": "#/$defs/ColumnEntry"
+              },
+              {
+                "$ref": "#/$defs/TabsEntry"
+              },
+              {}
+            ]
+          },
+          "title": "Column",
+          "type": "array"
+        },
+        "sizes": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One positive weight per child.",
+          "title": "Sizes"
+        }
+      },
+      "required": [
+        "column"
+      ],
+      "title": "ColumnEntry",
+      "type": "object"
+    },
     "ComponentEntry": {
       "additionalProperties": true,
       "description": "A component's entry: the plugin it comes from, and its constructor keywords.\n\nEvery key besides the plugin keys is a keyword for the component's\nconstructor, which checks them when the component is built.",
@@ -105,6 +154,104 @@
       "title": "DeviceEntry",
       "type": "object"
     },
+    "LayoutEntry": {
+      "additionalProperties": false,
+      "description": "The first layout of the window, as a session file writes it.",
+      "properties": {
+        "regions": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/RowEntry"
+              },
+              {
+                "$ref": "#/$defs/ColumnEntry"
+              },
+              {
+                "$ref": "#/$defs/TabsEntry"
+              },
+              {}
+            ]
+          },
+          "default": {},
+          "description": "What fills each region, by the frontend's region names.",
+          "title": "Regions",
+          "type": "object"
+        },
+        "sizes": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {},
+          "description": "The share of the window each region takes, between 0 and 1.",
+          "title": "Sizes",
+          "type": "object"
+        },
+        "hidden": {
+          "default": [],
+          "description": "The views that start hidden.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Hidden",
+          "type": "array"
+        }
+      },
+      "title": "LayoutEntry",
+      "type": "object"
+    },
+    "RowEntry": {
+      "additionalProperties": false,
+      "description": "Views side by side in a layout, as a session file writes them.",
+      "properties": {
+        "row": {
+          "description": "What shares the space, left to right.",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/RowEntry"
+              },
+              {
+                "$ref": "#/$defs/ColumnEntry"
+              },
+              {
+                "$ref": "#/$defs/TabsEntry"
+              },
+              {}
+            ]
+          },
+          "title": "Row",
+          "type": "array"
+        },
+        "sizes": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One positive weight per child.",
+          "title": "Sizes"
+        }
+      },
+      "required": [
+        "row"
+      ],
+      "title": "RowEntry",
+      "type": "object"
+    },
     "StorageConfig": {
       "additionalProperties": false,
       "description": "Where a session writes, and whether it keeps a catalog of its runs.",
@@ -143,6 +290,38 @@
         }
       },
       "title": "StorageConfig",
+      "type": "object"
+    },
+    "TabsEntry": {
+      "additionalProperties": false,
+      "description": "Views sharing one space as tabs, as a session file writes them.",
+      "properties": {
+        "tabs": {
+          "description": "The views, in the order of their tabs.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tabs",
+          "type": "array"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The view shown on top; the first when left out.",
+          "title": "Current"
+        }
+      },
+      "required": [
+        "tabs"
+      ],
+      "title": "TabsEntry",
       "type": "object"
     },
     "ViewEntry": {
@@ -357,6 +536,18 @@
           "type": "null"
         }
       ]
+    },
+    "layout": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LayoutEntry"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The first layout of the window, in place of the one the session class declares."
     },
     "storage": {
       "anyOf": [

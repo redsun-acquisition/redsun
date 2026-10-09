@@ -3281,6 +3281,8 @@
       
         
       
+        
+      
     
     
     
@@ -4053,6 +4055,33 @@
     
   
   27. A saved window layout gives way to a changed placement
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0028-a-session-declares-its-first-window-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  28. A session declares its first window layout
 
     
   </span>
@@ -4948,6 +4977,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.QtSession.show" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;show
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.QtSession.run" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -4991,6 +5031,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_placement
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.region_of" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;region_of
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.layout_problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;layout_problems
       </span>
     </span>
   </a>
@@ -6078,6 +6140,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.QtSession.show" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;show
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.QtSession.run" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6121,6 +6194,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_placement
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.region_of" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;region_of
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.qt.Qt.layout_problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;layout_problems
       </span>
     </span>
   </a>
@@ -7079,7 +7174,8 @@ puts every dock back where its placement says.</p>
 ignores one it has not seen. The geometry always comes back. The docks
 come back only while the views ask for the places they asked for when
 the layout was saved, so a changed placement shows on the next run; a
-layout saved without that record is restored.</p>
+layout saved without that record is restored. The centre's splitters
+and current tabs come back with the docks.</p>
 
 
     </div>
@@ -7149,6 +7245,29 @@ filled from the components this session built.</p>
 <p>Without one, reporting stays where it was and nothing brackets the
 build. The <code>runtime</code> step has run by now, so the <code>QApplication</code> a
 hook is handed exists.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.qt.QtSession.show" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">show</span>
+
+
+<a href="#redsun.qt.QtSession.show" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">show</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.</p>
+<p>The sizes are given once, so showing the window again keeps what the
+user changed. <code>run</code> calls it; a script that runs the event loop itself
+calls it in place of showing <code>main_window</code>.</p>
 
 
     </div>
@@ -7320,6 +7439,56 @@ with its group, <code>{menu: &lt;name&gt;}</code> an entry in that menu and
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.qt.Qt.region_of" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">region_of</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.qt.Qt.region_of" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">region_of</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">placement</span><span class="p">:</span> <span class="n">Placement</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return <code>center</code> for <code>Central</code>, a dock's edge and group, and <code>None</code> for a menu or toolbar item.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.qt.Qt.layout_problems" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">layout_problems</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#redsun.qt.Qt.layout_problems" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">layout_problems</span><span class="p">(</span><span class="n">layout</span><span class="p">:</span> <span class="n">WindowLayout</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return what Qt cannot show of <em>layout</em>, a share for the centre and opposite edges filling the window included.</p>
 
 
     </div>
@@ -7921,15 +8090,20 @@ said three ways.</p>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">window</span><span class="p">:</span> <span class="n">QMainWindow</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">views</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AttachableComponent</span><span class="p">],</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">placements</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Placement</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">layout</span><span class="p">:</span> <span class="n">WindowLayout</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Attach every view of <em>views</em> to <em>window</em> where it asks to be.</p>
+        <p>Attach every view of <em>views</em> to <em>window</em>, where <em>layout</em> puts it or else where it asks.</p>
 <p><em>placements</em> gives, by name, the placement a view's declaration chose;
-any other view is placed where its <code>placement</code> asks. Docks of one edge
-and group are tabbed together, in the order of <em>views</em>.</p>
+any other view is placed where its <code>placement</code> asks. <em>layout</em> is a
+resolved layout, such as
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;resolve_layout&lt;/span&gt;" href="../session/#redsun.Session.resolve_layout"><code>Session.resolve_layout</code></a> returns;
+without one the placements alone decide, docks of one edge and group
+tabbed together in the order of <em>views</em>. Menu and toolbar items go where
+their placement asks.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -7949,6 +8123,17 @@ and group are tabbed together, in the order of <em>views</em>.</p>
               <div class="doc-md-description">
                 <p>If a view asks for a placement Qt does not attach, or is not the
 toolkit type that placement demands.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>layout</em> leaves out a view that asks for a dock or the centre, or
+names one that is not in <em>views</em>.</p>
               </div>
             </td>
           </tr>

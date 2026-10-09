@@ -3281,6 +3281,8 @@
       
         
       
+        
+      
     
     
     
@@ -4065,6 +4067,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0028-a-session-declares-its-first-window-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  28. A session declares its first window layout
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4387,6 +4416,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Pairs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Layout
       </span>
     </span>
   </a>
@@ -5435,6 +5475,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Layout
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hooks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5640,6 +5691,12 @@ write one, split it over several files and read a failure.</p>
 <td>mapping</td>
 <td>empty</td>
 <td>the <a href="#components">views</a>, by name</td>
+</tr>
+<tr>
+<td><code>layout</code></td>
+<td>mapping</td>
+<td>the layout of the session class</td>
+<td><a href="#layout">where the views start</a> in the window</td>
 </tr>
 <tr>
 <td><code>providers</code></td>
@@ -5934,6 +5991,94 @@ with a warning.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">pairs</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">motor_ctrl</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">motor_widget</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
+<h2 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">&para;</a></h2>
+<p><code>layout</code> sets where the views start in the window. It replaces the layout the
+session class returns from <code>window_layout()</code>, and a later file's <code>layout</code>
+replaces an earlier one whole.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">layout</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">regions</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">center</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">image</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">plot</span><span class="p p-Indicator">]}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stage</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">lights</span><span class="p p-Indicator">],</span><span class="nt"> current</span><span class="p">:</span><span class="w"> </span><span class="nv">stage</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">right</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">plans</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">progress</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">files</span><span class="p p-Indicator">]}],</span><span class="nt"> sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">bottom</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> right</span><span class="p">:</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="nt"> bottom</span><span class="p">:</span><span class="w"> </span><span class="nv">0.15</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">hidden</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">log</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>regions</code></td>
+<td>mapping</td>
+<td>empty</td>
+<td>what fills each region of the window; the Qt frontend has <code>center</code>, <code>left</code>, <code>right</code>, <code>top</code> and <code>bottom</code></td>
+</tr>
+<tr>
+<td><code>sizes</code></td>
+<td>mapping</td>
+<td>empty</td>
+<td>the share of the window each region takes, between 0 and 1: of its width for <code>left</code> and <code>right</code>, of its height for <code>top</code> and <code>bottom</code></td>
+</tr>
+<tr>
+<td><code>hidden</code></td>
+<td>list</td>
+<td>empty</td>
+<td>the views that start hidden</td>
+</tr>
+</tbody>
+</table>
+<p>A region holds a view's name, or one of these mappings:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>row</code></td>
+<td>list</td>
+<td>required</td>
+<td>views side by side, left to right</td>
+</tr>
+<tr>
+<td><code>column</code></td>
+<td>list</td>
+<td>required</td>
+<td>views stacked, top to bottom</td>
+</tr>
+<tr>
+<td><code>sizes</code></td>
+<td>list</td>
+<td>equal shares</td>
+<td>with <code>row</code> or <code>column</code>: one positive weight per child</td>
+</tr>
+<tr>
+<td><code>tabs</code></td>
+<td>list</td>
+<td>required</td>
+<td>the names of views sharing one space as tabs</td>
+</tr>
+<tr>
+<td><code>current</code></td>
+<td>text</td>
+<td>the first tab</td>
+<td>with <code>tabs</code>: the view shown on top</td>
+</tr>
+</tbody>
+</table>
+<p>A view the layout leaves out goes where its placement asks. A name no view
+answers to is logged and left out, and refused when <code>strict</code> is set.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
 <p><code>hooks</code> maps a <abbr title="A named point in a session's life, such as the build or the closing of the window, at which the session calls one of your objects.">hook point</abbr> to an entry.</p>
 <table>

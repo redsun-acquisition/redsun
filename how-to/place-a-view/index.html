@@ -1939,6 +1939,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#lay-out-the-whole-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Lay out the whole window
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-a-changed-placement-take-effect" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -3438,6 +3449,8 @@
       
         
       
+        
+      
     
     
     
@@ -4210,6 +4223,33 @@
     
   
   27. A saved window layout gives way to a changed placement
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0028-a-session-declares-its-first-window-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  28. A session declares its first window layout
 
     
   </span>
@@ -5439,6 +5479,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#lay-out-the-whole-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Lay out the whole window
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-a-changed-placement-take-effect" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6245,6 +6296,50 @@ order you declare the views in:</p>
 </span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="n">AsView</span><span class="p">[</span><span class="n">LightView</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">placement</span><span class="o">=</span><span class="n">Dock</span><span class="p">(</span><span class="s2">"right"</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">"hardware"</span><span class="p">))</span>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="p">]</span>
 </span></code></pre></div>
+<h2 id="lay-out-the-whole-window">Lay out the whole window<a class="headerlink" href="#lay-out-the-whole-window" title="Permanent link">&para;</a></h2>
+<p>When placements aren't enough, declare the whole first layout of the window
+in the session. Return a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;WindowLayout&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/view/#redsun.WindowLayout"><code>WindowLayout</code></a> from
+<code>window_layout()</code>: it says what fills each edge and the centre, how much of
+the window an edge takes, and which docks start hidden.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsView</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Row</span><span class="p">,</span> <span class="n">Tabs</span><span class="p">,</span> <span class="n">WindowLayout</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtSession</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.builtins</span><span class="w"> </span><span class="kn">import</span> <span class="n">LightView</span><span class="p">,</span> <span class="n">LogView</span><span class="p">,</span> <span class="n">PositionerView</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">stage</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">PositionerView</span><span class="p">]</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">lights</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">LightView</span><span class="p">]</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">log</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">LogView</span><span class="p">]</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">window_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WindowLayout</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>        <span class="k">return</span> <span class="n">WindowLayout</span><span class="p">(</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="n">regions</span><span class="o">=</span><span class="p">{</span><span class="s2">"left"</span><span class="p">:</span> <span class="n">Column</span><span class="p">(</span><span class="s2">"stage"</span><span class="p">,</span> <span class="s2">"lights"</span><span class="p">,</span> <span class="n">sizes</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="s2">"bottom"</span><span class="p">:</span> <span class="s2">"log"</span><span class="p">},</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>            <span class="n">sizes</span><span class="o">=</span><span class="p">{</span><span class="s2">"left"</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">},</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>            <span class="n">hidden</span><span class="o">=</span><span class="p">[</span><span class="s2">"log"</span><span class="p">],</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>        <span class="p">)</span>
+</span></code></pre></div>
+<p>The stages sit above the lights on the left edge and take two thirds of it.
+The edge takes a quarter of the window's width, and the log starts hidden at
+the bottom until you show it from the <strong>Window</strong> menu. A
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Row&lt;/span&gt;" href="../../reference/api/view/#redsun.Row"><code>Row</code></a> puts views side by side, a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Column&lt;/span&gt;" href="../../reference/api/view/#redsun.Column"><code>Column</code></a>
+stacks them, and <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Tabs&lt;/span&gt;" href="../../reference/api/view/#redsun.Tabs"><code>Tabs</code></a> shows them as tabs, with <code>current</code>
+on top.</p>
+<p>A session file says the same in a <code>layout</code> section, which replaces what
+<code>window_layout()</code> returns:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">layout</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">regions</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stage</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">lights</span><span class="p p-Indicator">],</span><span class="nt"> sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">]}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">bottom</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="nv">0.25</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">hidden</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">log</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<p>A view the layout leaves out still goes where its placement asks. The
+<a href="../../reference/session-file/#layout">session file reference</a> lists every key.</p>
 <h2 id="see-a-changed-placement-take-effect">See a changed placement take effect<a class="headerlink" href="#see-a-changed-placement-take-effect" title="Permanent link">&para;</a></h2>
 <p>A changed placement shows the next time you start the session. A session
 started with <code>run</code> saves where the user left the docks when it ends, and
@@ -6263,9 +6358,9 @@ the saved layout is kept.</p>
 that isn't the type its placement needs, and the build summary lists it under
 <code>Not built</code>. Here <code>MyView</code>, a <code>QWidget</code>, asks for a <code>MenuItem</code>; the real
 lines end with the file and line they were logged from:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>[29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>[29-09-26|08:42:44][WARNING]: Session built: 0/0 devices, 0/0 presenters, 0/1 views
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Not built: snap (view)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>[29-09-26|08:42:44][WARNING]: Session built: 0/0 devices, 0/0 presenters, 0/1 views
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Not built: snap (view)
 </span></code></pre></div>
 
 

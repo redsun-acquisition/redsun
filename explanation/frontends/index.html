@@ -3447,6 +3447,8 @@
       
         
       
+        
+      
     
     
     
@@ -4222,6 +4224,33 @@
     
   
   27. A saved window layout gives way to a changed placement
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0028-a-session-declares-its-first-window-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  28. A session declares its first window layout
 
     
   </span>
@@ -6184,6 +6213,12 @@ function setUpFigures() {
 <p>In <code>Frontend.requires</code>, a frontend lists what each placement must hold: Qt asks
 for a <code>QWidget</code> in a dock or in the centre, and a <code>QAction</code> in a menu or
 toolbar.</p>
+<p>A session can also declare the whole first layout of its window: which views
+share an edge, side by side, stacked or as tabs, and how much of the window
+each edge takes. The layout places the views it names, and every other view
+goes where its placement asks, so placements still work in a session that
+declares a layout. <a href="../decisions/0028-a-session-declares-its-first-window-layout/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 28</a>
+says why the session decides and not the view.</p>
 <h3 id="checks-before-a-build">Checks before a build<a class="headerlink" href="#checks-before-a-build" title="Permanent link">&para;</a></h3>
 <p>The session checks every view before it builds anything; point at a check to
 read what it asks:</p>
@@ -6653,6 +6688,16 @@ and <code>Session.view_arguments</code>, to add arguments to every view's constr
 <td>the placements it shows</td>
 <td><code>Frontend.requires</code></td>
 <td><code>Central</code>, <code>Dock</code>, <code>MenuItem</code>, <code>ToolBarItem</code></td>
+</tr>
+<tr>
+<td>the regions a window layout fills</td>
+<td><code>Frontend.regions</code>, <code>Frontend.region_of</code></td>
+<td><code>center</code>, <code>left</code>, <code>right</code>, <code>top</code>, <code>bottom</code></td>
+</tr>
+<tr>
+<td>whether a layout may start a view hidden</td>
+<td><code>Frontend.hides</code></td>
+<td>yes</td>
 </tr>
 <tr>
 <td>the thread its views' slots run on</td>
