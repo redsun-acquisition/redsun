@@ -129,3 +129,67 @@ def test_the_shortcuts_section_is_written_back(build: BuildSession) -> None:
     app = build(ToyApp, {"shortcuts": section})
 
     assert app.serialize()["shortcuts"] == section
+
+
+def test_saved_keys_apply_over_the_session_file_until_reset(
+    build: BuildSession,
+) -> None:
+    """Apply a saved key over the session file's, and the file's again after a reset."""
+    app = build(ToyApp, {"shortcuts": {"panel.run": "F1"}})
+
+    app.set_shortcuts({"panel.run": ["F9"], "panel.stop": []})
+    saved = {b.command: b.keys for b in app.resolve_shortcuts()}
+    stored = app.settings.get("shortcuts")
+    app.reset_shortcuts()
+    reset = {b.command: b.keys for b in app.resolve_shortcuts()}
+
+    assert (saved["panel.run"], saved["panel.stop"]) == (("F9",), ())
+    assert stored == {"panel.run": ["F9"], "panel.stop": []}
+    assert (reset["panel.run"], reset["panel.stop"]) == (("F1",), ("Escape",))
+
+
+def test_a_stolen_key_stays_stolen_in_a_second_session(build: BuildSession) -> None:
+    """Keep a key moved to a later command there in the next session built."""
+    first = build(ToyApp)
+    first.set_shortcuts({"controller.restart": ["Ctrl+R"], "panel.run": []})
+    first.shutdown()
+
+    second = build(ToyApp)
+    keys = {b.command: b.keys for b in second.resolve_shortcuts()}
+
+    assert (keys["panel.run"], keys["controller.restart"]) == ((), ("Ctrl+R",))
+
+
+def test_saved_keys_the_session_cannot_use_are_logged_once_and_kept(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log a saved command the session lacks and a key it can't read once, keep them in the file, and build under strict."""
+    app = build(ToyApp, {"strict": True, "shortcuts": {"controller.restart": "F3"}})
+    app.settings.set(
+        "shortcuts", {"gone.thing": ["F1"], "panel.run": ["Ctrl+?"], "panel.stop": 3}
+    )
+
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        first = {b.command: b.keys for b in app.resolve_shortcuts()}
+        app.resolve_shortcuts()
+    app.set_shortcuts({"panel.stop": ["F2"]})
+
+    assert first["panel.run"] == ("Ctrl+R",)
+    assert caplog.text.count("gone.thing") == 1
+    assert caplog.text.count("Ctrl+?") == 1
+    assert app.settings.get("shortcuts")["gone.thing"] == ["F1"]
+
+
+@pytest.mark.parametrize(
+    "keys", [["Ctrl+?"], ["F1", "F2", "F3"]], ids=["unreadable", "three"]
+)
+def test_setting_a_key_the_session_cannot_keep_is_refused(
+    build: BuildSession, keys: list[str]
+) -> None:
+    """Refuse a key the frontend can't read, and more than two keys, saving nothing."""
+    app = build(ToyApp)
+
+    with pytest.raises(ValueError, match="panel.run"):
+        app.set_shortcuts({"panel.run": keys})
+
+    assert "shortcuts" not in app.settings

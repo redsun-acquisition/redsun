@@ -11,7 +11,7 @@ from ..view._shortcut import shortcuts
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping, Sequence
 
-__all__ = ["Binding", "candidates", "resolved_shortcuts"]
+__all__ = ["Binding", "candidates", "holder", "resolved_shortcuts"]
 
 
 @dataclass(frozen=True)
@@ -96,3 +96,21 @@ def resolved_shortcuts(
             )
         resolved.append(replace(binding, keys=tuple(kept)))
     return resolved, problems
+
+
+def holder(bindings: Sequence[Binding], binding: Binding, key: str) -> Binding | None:
+    """Return the other binding holding *key* where *binding* acts, or `None`.
+
+    Two bindings act in the same place when both act in the whole window, or
+    both in one view.
+    """
+    return next(
+        (
+            other
+            for other in bindings
+            if other.command != binding.command
+            and other.view == binding.view
+            and key in other.keys
+        ),
+        None,
+    )

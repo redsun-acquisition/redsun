@@ -102,7 +102,7 @@ from ._shortcuts import Binding, candidates, resolved_shortcuts
 from ._wiring import NotBuilt, Wiring
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Collection, Iterable
     from contextlib import AbstractContextManager
 
     from ophyd_async.core import Device
@@ -123,6 +123,9 @@ P = TypeVar("P")
 
 CallbackCatalogue: TypeAlias = Mapping[str, CallbackType]
 """The key a component asks for to receive every document router the session built."""
+
+SAVED_SHORTCUTS: Final = "shortcuts"
+"""The settings key holding the keys the user changed, by command."""
 
 
 logger = logging.getLogger("redsun")
@@ -256,6 +259,7 @@ class Session(BuildableSession):
         "_profile",
         "_releases",
         "_report",
+        "_reported_saved_shortcuts",
         "_services",
         "_session_config",
         "_settings",
@@ -343,6 +347,7 @@ class Session(BuildableSession):
         self._merged: dict[str, Any] = {}
         self._window_layout: WindowLayout | None = None
         self._shortcut_overrides: dict[str, tuple[str, ...]] = {}
+        self._reported_saved_shortcuts: set[str] = set()
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
@@ -870,16 +875,31 @@ class Session(BuildableSession):
 
         The components count in the order they are declared. A key the
         frontend cannot read is left out. The session file's `shortcuts`
-        replace a command's keys first; a key two commands ask for in one
-        place, the whole window or one view, stays with the first. Every change
-        is logged.
+        replace a command's keys first, then the keys the user saved with
+        [`set_shortcuts`][redsun.Session.set_shortcuts]; a key two commands
+        ask for in one place, the whole window or one view, stays with the
+        first. Every change is logged.
 
         Raises
         ------
         BuildError
             If the configuration sets `strict` and a key had to be moved or
-            left out.
+            left out. Saved keys the session cannot use are only logged.
         """
+        resolved, problems = self._settle_shortcuts(extra)
+        if problems:
+            message = "Keyboard shortcuts:\n" + "\n".join(
+                f"  {line}" for line in problems
+            )
+            if self._configuration().strict:
+                raise BuildError(message)
+            logger.warning(message)
+        return resolved
+
+    def _settle_shortcuts(
+        self, extra: Sequence[Binding]
+    ) -> tuple[list[Binding], list[str]]:
+        """Return the bindings with every layer applied, and the conflicts settled on the way."""
         components = {
             name: declaration.instance
             for name, declaration in self._declarations.items()
@@ -898,16 +918,84 @@ class Session(BuildableSession):
                 if not refusals:
                     keys.append(self.frontend.canonical_key(key))
             checked.append(replace(binding, keys=tuple(keys)))
-        resolved, settled = resolved_shortcuts(checked, self._shortcut_overrides)
-        problems += settled
-        if problems:
-            message = "Keyboard shortcuts:\n" + "\n".join(
-                f"  {line}" for line in problems
+        saved = self._saved_shortcuts({binding.command for binding in checked})
+        resolved, settled = resolved_shortcuts(
+            checked, {**self._shortcut_overrides, **saved}
+        )
+        return resolved, problems + settled
+
+    def _saved_shortcuts(self, known: Collection[str]) -> dict[str, tuple[str, ...]]:
+        """Return the keys the user saved for the commands in *known*.
+
+        Anything else saved is left out, and logged the first time it is seen.
+        """
+        stored = self.settings.get(SAVED_SHORTCUTS, {})
+        notes: list[str] = []
+        saved: dict[str, tuple[str, ...]] = {}
+        if not isinstance(stored, dict):
+            notes.append(f"the saved keys are not a mapping: {stored!r}")
+            stored = {}
+        for command, keys in stored.items():
+            if command not in known:
+                notes.append(f"{command}: no such command in this session")
+                continue
+            if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
+                notes.append(f"{command}: saved keys {keys!r} are not a list of keys")
+                continue
+            refusals = [
+                f"{command}: {line}"
+                for key in keys
+                for line in self.frontend.key_problems(key)
+            ]
+            if refusals:
+                # a half-read entry would unbind what the user meant to keep
+                notes += refusals
+                continue
+            saved[command] = tuple(self.frontend.canonical_key(k) for k in keys)
+        new = [note for note in notes if note not in self._reported_saved_shortcuts]
+        if new:
+            self._reported_saved_shortcuts.update(new)
+            logger.warning(
+                "Saved keyboard shortcuts left out (%s):\n%s",
+                self.settings.path,
+                "\n".join(f"  {note}" for note in new),
             )
-            if self._configuration().strict:
-                raise BuildError(message)
-            logger.warning(message)
-        return resolved
+        return saved
+
+    def set_shortcuts(self, changes: Mapping[str, Sequence[str]]) -> None:
+        """Save the user's keys for the commands in *changes*, an empty list for none.
+
+        The keys apply over the session file's from the next
+        [`resolve_shortcuts`][redsun.Session.resolve_shortcuts] on, in this
+        session and the next. Saved keys of other commands are kept.
+
+        Raises
+        ------
+        ValueError
+            If a command is given more than two keys or a key the frontend
+            cannot read; nothing is saved then.
+        """
+        problems: list[str] = []
+        for command, keys in changes.items():
+            if len(keys) > 2:
+                problems.append(f"{command}: {len(keys)} keys, at most two")
+            for key in keys:
+                problems += [
+                    f"{command}: {line}" for line in self.frontend.key_problems(key)
+                ]
+        if problems:
+            raise ValueError("; ".join(problems))
+        written = {
+            command: [self.frontend.canonical_key(key) for key in keys]
+            for command, keys in changes.items()
+        }
+        stored = self.settings.get(SAVED_SHORTCUTS, {})
+        kept = stored if isinstance(stored, dict) else {}
+        self.settings.set(SAVED_SHORTCUTS, {**kept, **written})
+
+    def reset_shortcuts(self) -> None:
+        """Forget every key the user saved, so the session file's and the components' apply."""
+        self.settings.set(SAVED_SHORTCUTS, {})
 
     def _count_classes(self) -> None:
         """Count the components declaring each class, naming those declared twice."""

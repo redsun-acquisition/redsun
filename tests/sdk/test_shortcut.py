@@ -9,7 +9,7 @@ import pytest
 
 from redsun import Shortcut, shortcut, slot
 from redsun.ports import ports
-from redsun.session._shortcuts import Binding, candidates, resolved_shortcuts
+from redsun.session._shortcuts import Binding, candidates, holder, resolved_shortcuts
 from redsun.view._shortcut import shortcuts
 
 if TYPE_CHECKING:
@@ -240,3 +240,18 @@ def test_a_condition_that_cannot_be_called_is_refused() -> None:
     """Refuse a condition that is not a function."""
     with pytest.raises(ValueError, match="condition"):
         shortcut("Left", title="Back", when=cast("Any", "ready"))
+
+
+def test_the_holder_of_a_key_is_another_command_in_the_same_place() -> None:
+    """Find the other command holding a key where a binding acts, and none elsewhere."""
+    run = Binding("panel.run", "Run", ("Ctrl+R",), None, None)
+    restart = Binding("controller.restart", "Restart", ("F5",), None, None)
+    refresh = Binding("panel.refresh", "Refresh", ("F5",), "panel", None)
+
+    found = [
+        holder([run, restart, refresh], run, "F5"),
+        holder([run, restart, refresh], refresh, "F5"),
+        holder([run, restart, refresh], run, "Ctrl+R"),
+    ]
+
+    assert found == [restart, None, None]
