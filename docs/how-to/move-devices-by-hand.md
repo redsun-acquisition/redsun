@@ -143,7 +143,10 @@ row for each of its axes x and y](images/positioner.png)
 
 - The Motors tab has a group per device and a row per axis. `-` and `+` step
   the axis by the size chosen beside them, and repeat while you hold them. With
-  the row or a step button focused, Left and Right do the same. A step starts
+  the row or a step button focused, Left and Right do the same; the
+  [`shortcuts`](../reference/session-file.md#shortcuts) section of the
+  session file changes them as `positioner_view.step_down` and
+  `positioner_view.step_up`. A step starts
   from the setpoint, so steps add up exactly, and from the readback after a
   stop or a failure.
 - The field beside `Go` shows where the axis is until you type a target.

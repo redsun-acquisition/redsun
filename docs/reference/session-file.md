@@ -205,9 +205,9 @@ session and the method its shortcut runs.
 
 ```yaml
 shortcuts:
-  acquisition_view.run_selected: Ctrl+Shift+R
-  acquisition.stop: [Ctrl+., Escape]
-  positioner.step_back: null
+  acquisition_view.run_plan: Ctrl+Shift+R
+  acquisition_view.stop_plan: [Ctrl+., Escape]
+  positioner_view.step_down: null
 ```
 
 | Key | Type | Default | Holds |
