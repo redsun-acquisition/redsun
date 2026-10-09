@@ -96,6 +96,7 @@ jobs:
     name: oldest supported binding
     needs: [binding]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         if: inputs.floor != ''
@@ -124,6 +125,13 @@ jobs:
         run: |
           with=""
           for requirement in $FLOOR; do with="$with --with $requirement"; done
+          # fails if the overlay did not win, so the job can't pass on the newest versions
+          uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} $with python -c "
+          import importlib.metadata as m, os, sys
+          wrong = [r for r in os.environ['FLOOR'].split() if m.version(r.split('==')[0]) != r.split('==')[1]]
+          print('running on', os.environ['FLOOR'])
+          sys.exit(f'not the floor versions: {wrong}' if wrong else 0)
+          "
           uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} $with pytest -q --color=yes
 
   upload_coverage:
