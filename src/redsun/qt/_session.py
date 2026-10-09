@@ -54,7 +54,7 @@ from app_model.types import MenuRule, ToggleRule
 from platformdirs import user_documents_dir
 from psygnal import emit_queued
 from psygnal.qt import start_emitting_from_queue
-from qtpy.QtCore import QByteArray, QEvent, QObject
+from qtpy.QtCore import QByteArray, QEvent, QObject, QRect
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
@@ -96,7 +96,7 @@ from ._color_scheme import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterator, Sequence
     from contextlib import AbstractContextManager
     from pathlib import Path
     from types import TracebackType
@@ -105,6 +105,7 @@ if TYPE_CHECKING:
     from in_n_out import Store
 
     from .._config import Source
+    from .._settings import JsonValue
     from ..ports import SlotThread
     from ..session._declarations import Declaration
     from ..session._profile import ProfileKind
@@ -367,6 +368,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         "_main_window",
         "_model",
         "_qt_app",
+        "_restored",
         "_shown_layout",
         "_window_widgets",
     )
@@ -397,6 +399,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         self._close_guard: CloseGuard | None = None
         self._default_state: QByteArray | None = None
+        self._restored = False
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -609,8 +612,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ignores one it has not seen. The geometry always comes back. The docks
         come back only while the views ask for the places they asked for when
         the layout was saved, so a changed placement shows on the next run; a
-        layout saved without that record is restored.
+        layout saved without that record is restored. The centre's splitters
+        and current tabs come back with the docks.
         """
+        self._restored = False
         geometry = self.settings.get("window.geometry")
         if isinstance(geometry, str):
             self.main_window.restoreGeometry(QByteArray(base64.b64decode(geometry)))
@@ -627,6 +632,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
             )
             return
         self.main_window.restoreState(QByteArray(base64.b64decode(state)))
+        restore_centre(
+            self.main_window, self._shown_layout, self.settings.get("window.center")
+        )
+        self._restored = True
 
     def _layout_fingerprint(self) -> str:
         """Return a digest of the layout the window starts with, which a saved layout is kept for.
@@ -655,6 +664,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.settings.set("window.geometry", encoded(self._main_window.saveGeometry()))
         self.settings.set("window.state", encoded(self._main_window.saveState()))
         self.settings.set("window.layout", self._layout_fingerprint())
+        self.settings.set(
+            "window.center", centre_state(self._main_window, self._shown_layout)
+        )
 
     def _register_window_actions(
         self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
@@ -716,9 +728,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.on_release(lambda: self.model.menus.menus_changed.disconnect(keep_items))
 
     def _reset_layout(self) -> None:
-        """Put every dock back where it was before a saved layout was restored."""
+        """Put every dock back where it was before a saved layout was restored, at its declared size."""
         if self._default_state is not None:
             self.main_window.restoreState(self._default_state)
+        fit_layout(self.main_window, self._shown_layout)
 
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.
@@ -885,6 +898,16 @@ class QtSession(DesktopSession[QMainWindow], Session):
             return hook.during_build(self.app)
         return nullcontext(self._report)
 
+    def show(self) -> None:
+        """Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.
+
+        `run` calls it; a script that runs the event loop itself calls it in
+        place of showing `main_window`.
+        """
+        self.main_window.show()
+        if not self._restored:
+            fit_layout(self.main_window, self._shown_layout)
+
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop.
 
@@ -900,7 +923,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.on_release(self.save_layout)
         self.app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
-        self.main_window.show()
+        self.show()
         sys.exit(self.app.exec())
 
 
@@ -1158,3 +1181,139 @@ def central_widget(node: Node, widgets: Mapping[str, QWidget]) -> QWidget:
             return splitter
         case _:
             assert_never(node)
+
+
+def shares(count: int, sizes: Sequence[float] | None) -> list[float]:
+    """Return the share of its space each of *count* children takes, by *sizes* or equally."""
+    weights = list(sizes) if sizes is not None else [1.0] * count
+    total = sum(weights)
+    return [weight / total for weight in weights]
+
+
+def declares_sizes(node: Node) -> bool:
+    """Return whether a split in *node* gives its children weights."""
+    if isinstance(node, Split):
+        return node.sizes is not None or any(
+            declares_sizes(child) for child in node.children
+        )
+    return False
+
+
+def extents(node: Node, width: int, height: int) -> Iterator[tuple[str, int, int]]:
+    """Yield each view of *node* with the width and height its share of *width* by *height* gives it."""
+    match node:
+        case str():
+            yield node, width, height
+        case Tabs(names=names):
+            for name in names:
+                yield name, width, height
+        case Split(children=children, sizes=sizes):
+            across = isinstance(node, Row)
+            for child, share in zip(
+                children, shares(len(children), sizes), strict=True
+            ):
+                if across:
+                    yield from extents(child, round(width * share), height)
+                else:
+                    yield from extents(child, width, round(height * share))
+        case _:
+            assert_never(node)
+
+
+def fit_docks(
+    window: QMainWindow, region: str, node: Node, share: float | None
+) -> None:
+    """Give the docks of *region* their share of *window*, and each split of *node* its weights."""
+    docks = {
+        dock.objectName(): dock
+        for dock in window.findChildren(QDockWidget, options=DIRECT_CHILDREN)
+        if not dock.isHidden()
+    }
+    box = QRect()
+    for name in names_in(node):
+        # a tab behind another reports no useful geometry
+        if name in docks and docks[name].isVisible():
+            box = box.united(docks[name].geometry())
+    width, height = box.width(), box.height()
+    if share is not None:
+        if region in ("left", "right"):
+            width = round(window.width() * share)
+        else:
+            height = round(window.height() * share)
+    sized = [
+        (docks[name], w, h)
+        for name, w, h in extents(node, width, height)
+        if name in docks
+    ]
+    window.resizeDocks(
+        [dock for dock, _, _ in sized], [w for _, w, _ in sized], HORIZONTAL
+    )
+    window.resizeDocks(
+        [dock for dock, _, _ in sized], [h for _, _, h in sized], VERTICAL
+    )
+
+
+def fit_centre(node: Node, widget: QWidget | None) -> None:
+    """Give each splitter of the centre its weights, and each tab group its current tab."""
+    if isinstance(node, Tabs) and isinstance(widget, QTabWidget):
+        widget.setCurrentIndex(node.names.index(node.current) if node.current else 0)
+    elif isinstance(node, Split) and isinstance(widget, QSplitter):
+        total = sum(widget.sizes())
+        widget.setSizes(
+            [round(total * share) for share in shares(len(node.children), node.sizes)]
+        )
+        for index, child in enumerate(node.children):
+            fit_centre(child, widget.widget(index))
+
+
+def fit_layout(window: QMainWindow, layout: WindowLayout) -> None:
+    """Give each region and split of *layout* its share of *window* as shown, and the centre its current tabs.
+
+    An edge with no share and no weights keeps the sizes Qt gave it.
+    """
+    for region, node in layout.regions.items():
+        if region == "center":
+            fit_centre(node, window.centralWidget())
+        elif region in layout.sizes or declares_sizes(node):
+            fit_docks(window, region, node, layout.sizes.get(region))
+
+
+def centre_parts(node: Node, widget: QWidget | None) -> list[QSplitter | QTabWidget]:
+    """Return the splitters and tab groups the centre was built with for *node*, in order."""
+    if isinstance(node, Tabs) and isinstance(widget, QTabWidget):
+        return [widget]
+    if isinstance(node, Split) and isinstance(widget, QSplitter):
+        parts: list[QSplitter | QTabWidget] = [widget]
+        for index, child in enumerate(node.children):
+            parts.extend(centre_parts(child, widget.widget(index)))
+        return parts
+    return []
+
+
+def centre_state(window: QMainWindow, layout: WindowLayout) -> list[JsonValue]:
+    """Return where the user left the centre's splitters, and which tabs are current."""
+    node = layout.regions.get("center")
+    if node is None:
+        return []
+    return [
+        encoded(part.saveState())
+        if isinstance(part, QSplitter)
+        else part.currentIndex()
+        for part in centre_parts(node, window.centralWidget())
+    ]
+
+
+def restore_centre(window: QMainWindow, layout: WindowLayout, state: object) -> None:
+    """Put the centre's splitters and tabs back as *state*, from `centre_state`, recorded them.
+
+    A state of another shape is ignored.
+    """
+    node = layout.regions.get("center")
+    parts = [] if node is None else centre_parts(node, window.centralWidget())
+    if not isinstance(state, list) or len(state) != len(parts):
+        return
+    for part, value in zip(parts, state, strict=True):
+        if isinstance(part, QSplitter) and isinstance(value, str):
+            part.restoreState(QByteArray(base64.b64decode(value)))
+        elif isinstance(part, QTabWidget) and isinstance(value, int):
+            part.setCurrentIndex(value)

@@ -238,6 +238,25 @@ class SeveralCentralApp(QtSession):
     other: Annotated[AsView[Panel], Declare(placement=Dock("top", group="g"))]
 
 
+class SizedApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "sized-session"}
+
+    a: AsView[Panel]
+    b: AsView[Panel]
+    p: Annotated[AsView[Panel], Declare(placement=Central())]
+    q: Annotated[AsView[Panel], Declare(placement=Central())]
+    r: Annotated[AsView[Panel], Declare(placement=Central())]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(
+            regions={
+                "left": Column("a", "b", sizes=(1, 3)),
+                "center": Row("p", Tabs("q", "r"), sizes=(1, 2)),
+            },
+            sizes={"left": 0.25},
+        )
+
+
 def builtin_session(
     plugin_id: str, presenter: str | None, placement: str | None
 ) -> QtSession:
@@ -254,6 +273,13 @@ def builtin_session(
             "presenter": {"plugin_name": "redsun", "plugin_id": presenter}
         }
     return QtSession.from_config(config)
+
+
+def _shown(app: QtSession) -> None:
+    """Show *app*'s window at a known size, and let Qt lay it out, as `run` would."""
+    app.main_window.resize(1200, 800)
+    app.show()
+    QApplication.processEvents()
 
 
 def _dock(app: QtSession, name: str) -> QDockWidget:
@@ -467,7 +493,12 @@ def test_the_layout_goes_to_the_settings_file_as_text(
     build(LayoutApp).save_layout()
 
     written = json.loads((config_home / "layout-session.json").read_text())
-    assert sorted(written) == ["window.geometry", "window.layout", "window.state"]
+    assert sorted(written) == [
+        "window.center",
+        "window.geometry",
+        "window.layout",
+        "window.state",
+    ]
     assert base64.b64decode(written["window.state"])
 
 
@@ -684,3 +715,67 @@ def test_a_changed_layout_skips_the_saved_one(
 
     assert second.main_window.dockWidgetArea(_dock(second, "a")) is LEFT
     assert "placed differently" in caplog.text
+
+
+def test_declared_sizes_apply_when_the_window_shows(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Give the left edge its share of the window, and each split its weights, once the window shows."""
+    app = build(SizedApp)
+
+    _shown(app)
+
+    a, b = _dock(app, "a"), _dock(app, "b")
+    splitter = app.main_window.centralWidget()
+    assert isinstance(splitter, QSplitter)
+    first, second = splitter.sizes()
+    assert 250 <= a.width() <= 350
+    assert 2.4 <= b.height() / a.height() <= 3.6
+    assert 1.6 <= second / first <= 2.4
+
+
+def test_reset_layout_gives_the_declared_sizes_back(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Return a dock the user widened to its declared share when Reset layout runs."""
+    app = build(SizedApp)
+    _shown(app)
+    app.main_window.resizeDocks(
+        [_dock(app, "a")], [700], QtNamespace.Orientation.Horizontal
+    )
+
+    app.model.commands.execute_command("sized-session.reset_layout")
+    qapp.processEvents()
+
+    assert 250 <= _dock(app, "a").width() <= 350
+
+
+def test_a_restored_layout_keeps_its_sizes(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep the sizes the user left, the centre's included, over the declared ones."""
+    first = build(SizedApp)
+    _shown(first)
+    first.main_window.resizeDocks(
+        [_dock(first, "a")], [500], QtNamespace.Orientation.Horizontal
+    )
+    splitter = first.main_window.centralWidget()
+    assert isinstance(splitter, QSplitter)
+    splitter.setSizes([400, 200])
+    tabs = splitter.widget(1)
+    assert isinstance(tabs, QTabWidget)
+    tabs.setCurrentIndex(1)
+    first.save_layout()
+    first.shutdown()
+
+    second = build(SizedApp)
+    _shown(second)
+
+    restored = second.main_window.centralWidget()
+    assert isinstance(restored, QSplitter)
+    left, right = restored.sizes()
+    restored_tabs = restored.widget(1)
+    assert isinstance(restored_tabs, QTabWidget)
+    assert 420 <= _dock(second, "a").width() <= 580
+    assert 1.6 <= left / right <= 2.4
+    assert restored_tabs.currentIndex() == 1
