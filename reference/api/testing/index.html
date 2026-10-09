@@ -5131,6 +5131,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.testing.collect_qt_garbage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;collect_qt_garbage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.testing.start_service" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5636,6 +5647,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.testing.collect_qt_garbage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;collect_qt_garbage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.testing.start_service" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5807,8 +5829,8 @@
         <p>Pytest fixtures for testing components, sessions and services.</p>
 <p>A suite loads them with <code>-p redsun.testing</code>, in <code>addopts</code> or on the command
 line. Loading them makes every test keep session settings, session logs,
-acquisition data and catalogs under its <code>tmp_path</code>, and drop the <code>psygnal</code>
-emissions it left queued.
+acquisition data and catalogs under its <code>tmp_path</code>, drop the <code>psygnal</code>
+emissions it left queued, and collect a Qt test's garbage on the main thread.
 The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</code>.</p>
 
 
@@ -6083,6 +6105,31 @@ all of them when more than one session raised.</p>
 <p>Left queued, an emission is delivered by the next test running the event
 loop, to whatever its target has become; a destroyed widget ends the
 interpreter.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="redsun.testing.collect_qt_garbage" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">collect_qt_garbage</span>
+
+
+<a href="#redsun.testing.collect_qt_garbage" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">collect_qt_garbage</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">request</span><span class="p">:</span> <span class="n">FixtureRequest</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Collect after each test using <code>qapp</code>, on the main thread.</p>
+<p>A widget the test left in a reference cycle would otherwise be freed by
+the next collection, which a later test may run on another thread;
+<code>pyside6</code> aborts when a widget is destroyed off the GUI thread.</p>
 
 
     </div>

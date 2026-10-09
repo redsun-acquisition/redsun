@@ -4916,6 +4916,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.QtSession.garbage_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;garbage_interval
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.QtSession.main_window" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6123,6 +6134,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#redsun.qt.QtSession.garbage_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;garbage_interval
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.qt.QtSession.main_window" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7028,6 +7050,33 @@ the application, the async backend and the window are all made by <code>build</c
 
 
 
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.qt.QtSession.garbage_interval" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">garbage_interval</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+  </span>
+
+<a href="#redsun.qt.QtSession.garbage_interval" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">garbage_interval</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Milliseconds between two checks of Python's garbage.</p>
+<p>From build to shutdown, Python's automatic garbage collection is off and
+the running Qt event loop collects instead, every this many milliseconds,
+on the GUI thread; while the event loop doesn't run, nothing is collected.</p>
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-attribute">
 
