@@ -563,6 +563,15 @@ except to fix an entry while releasing.
 You need maintainer access to the repository on GitHub. A clone is only
 needed to release [from a clone](#from-a-clone).
 
+Once, before the first release, an organisation owner allows workflows to
+open pull requests: in the organisation's **Settings** -> **Actions** ->
+**General**, and then in the repository's, tick **Allow GitHub Actions to
+create and approve pull requests** under **Workflow permissions**.
+
+Don't merge other pull requests between the first and the last step. The
+release takes `main` as it is when you publish, so a pull request merged in
+between ships without its entry in the section.
+
 ### 1. Prepare the changelog
 
 Open **Actions**, pick **Prepare release**, and click **Run workflow**. Type
@@ -574,14 +583,19 @@ is that section. To see the section first without changing anything, tick
 **Only show the changelog section**: the run then shows it in its summary
 and stops there.
 
+The run refuses a version the changelog already has, and a release with no
+entries in `changelog.d/`. If it fails after pushing the branch
+`release/v0.15.0`, delete that branch and run it again.
+
 ### 2. Merge the changelog
 
 Read the section in the pull request. If an entry reads badly, fix it in
 `docs/reference/changelog.md` on the pull request's branch, which now holds
-the only copy.
+the only copy. Fix the date in the section's heading there too, if you
+publish on a later day.
 
-A pull request opened by a workflow starts no checks, so close it and reopen
-it to start them. Merge it once they pass.
+The checks of a pull request opened by a workflow wait for approval: click
+**Approve workflows to run** in the merge box. Merge once they pass.
 
 ### 3. Publish the release
 
@@ -596,8 +610,12 @@ docs, and fills the release's description from the changelog section.
 !!! warning "A release published before its changelog"
 
     If the version has no section yet, the package build fails, nothing
-    reaches PyPI, and the release stays empty. Delete the release and its
-    tag, merge the changelog pull request, and publish the release again.
+    reaches PyPI, and the release stays empty. Delete the release, then its
+    tag on the **Tags** page or with `git push --delete origin v0.15.0`,
+    merge the changelog pull request, and publish the release again.
+
+If the release run fails for another reason, such as a flaky test, open the
+run and click **Re-run failed jobs**.
 
 ### From a clone
 
