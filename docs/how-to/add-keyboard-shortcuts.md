@@ -46,19 +46,42 @@ reuse a combination that already acts in the whole window:
 
 ```python
 class MyView(QWidget):
-    @shortcut("Left", title="Step back", scope="view")
-    def step_back(self) -> None: ...
+    @shortcut("F5", title="Refresh", scope="view")
+    def refresh(self) -> None: ...
 ```
 
-While the view has focus, `Left` steps back; anywhere else it does what the
+While the view has focus, `F5` refreshes it; anywhere else it does what the
 window binds it to. A presenter has nothing to focus, so its keys always act
 in the whole window.
 
 A text field with the focus keeps the keys it uses itself, such as `Ctrl+C`
-and the arrow keys, so a shortcut on one of them doesn't act while a text
-field has focus. Other widgets give way instead: a window shortcut on `Up`
-takes the key from a focused spin box, which then doesn't step. Keep bare
-arrow keys to a view's own shortcuts.
+and the arrow keys, so a shortcut on one of those keys doesn't act there.
+Most other widgets give way. A tree, a tab bar, a slider or a button loses
+its arrow keys to a shortcut, and a spin box loses `Up` and `Down`, so it no
+longer steps. A view key on a bare arrow therefore takes the key from those
+widgets in its own view, and a window key takes it from them everywhere. The
+next section shows how to leave the key to them most of the time.
+
+## Act only part of the time
+
+A key can wait for a condition. Give `when=` a function of the component,
+such as a method defined above the decorated one, and the key acts only
+while that function returns true. The rest of the time the key does nothing,
+so the key press goes to the widget that has focus:
+
+```python
+class MyView(QWidget):
+    def _row_has_focus(self) -> bool: ...
+
+    @shortcut("Left", title="Step back", scope="view", when=_row_has_focus)
+    def step_back(self) -> None: ...
+```
+
+Here `Left` steps back while a row of the view has focus, and moves through
+a tree or a tab bar of the same view the rest of the time. The session asks
+the function each time the focus moves, not at each key press, so the method
+still checks anything that can change while the focus stays put, such as
+whether the row is locked.
 
 ## Change a key in the session file
 

@@ -48,7 +48,11 @@ toolkit can't call, override
 
 If your frontend binds keyboard shortcuts, override `key_problems`, to refuse
 a key your toolkit can't bind, and `canonical_key`, to write each key one way
-so two spellings of one key are seen as the same.
+so two spellings of one key are seen as the same. A binding that
+[`resolve_shortcuts`][redsun.Session.resolve_shortcuts] returns with a
+`when` function acts only while that function returns true, so ask it again
+each time the focus moves and leave the key press to the focused widget
+while it returns false.
 
 ## Define the session
 
