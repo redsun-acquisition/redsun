@@ -2046,6 +2046,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#change-a-key-in-the-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Change a key in the window
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-a-conflict" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5495,6 +5506,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#change-a-key-in-the-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Change a key in the window
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-a-conflict" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5636,7 +5658,8 @@
 <h1 id="how-to-add-keyboard-shortcuts">How to add keyboard shortcuts<a class="headerlink" href="#how-to-add-keyboard-shortcuts" title="Permanent link">&para;</a></h1>
 <p>A component runs one of its methods from a key once you mark the method with
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;shortcut&lt;/span&gt;" href="../../reference/api/view/#redsun.shortcut"><code>shortcut</code></a>. The session binds the key when it builds, and
-lists it under <strong>Window</strong> -&gt; <strong>Keyboard shortcuts</strong>.</p>
+lists it under <strong>Window</strong> -&gt; <strong>Keyboard shortcuts</strong>, where the user can change
+it too.</p>
 <h2 id="mark-a-method">Mark a method<a class="headerlink" href="#mark-a-method" title="Permanent link">&para;</a></h2>
 <p>Put <code>@shortcut</code> on a method of a view or a presenter, with the key and a
 title for the list:</p>
@@ -5705,6 +5728,16 @@ command is named after the component and the method:</p>
 </span></code></pre></div>
 <p>The <a href="../../reference/session-file/#shortcuts">session file reference</a> lists
 the rules.</p>
+<h2 id="change-a-key-in-the-window">Change a key in the window<a class="headerlink" href="#change-a-key-in-the-window" title="Permanent link">&para;</a></h2>
+<p>The user changes keys in <strong>Window</strong> -&gt; <strong>Keyboard shortcuts</strong>. Double-click a
+key cell and press the new key; Backspace or Delete clears it. When another
+command already has that key in the same place, the list asks "Already used
+by <em>Run</em>; move it here?", and on yes the key moves and the other command is
+left without it.</p>
+<p>The session keeps these changes in its settings file, apart from the session
+file, and applies them over the <code>shortcuts</code> section in every later run.
+<strong>Reset to defaults</strong> forgets them, so the keys the components declare and
+the session file gives come back.</p>
 <h2 id="read-a-conflict">Read a conflict<a class="headerlink" href="#read-a-conflict" title="Permanent link">&para;</a></h2>
 <p>Two components conflict when they ask for one key that acts in the same
 place: both in the whole window, or both in one view. The first declared

@@ -6281,8 +6281,9 @@ declares a layout. <a href="../decisions/0028-a-session-declares-its-first-windo
 says why the session decides and not the view.</p>
 <p>Keyboard shortcuts work the other way round: each component marks the
 methods its keys run, and the session collects them, settles two components
-asking for one key, and lets the session file change them. The frontend
-binds the result, anywhere in its window or only while a view has focus.
+asking for one key, and lets the session file change them, then the keys the
+user saved from the window. The frontend binds the result, anywhere in its
+window or only while a view has focus.
 <a href="../decisions/0029-keyboard-shortcuts-are-declared-by-components/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 29</a>
 says why.</p>
 <h3 id="checks-before-a-build">Checks before a build<a class="headerlink" href="#checks-before-a-build" title="Permanent link">&para;</a></h3>

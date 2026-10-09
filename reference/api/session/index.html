@@ -5311,6 +5311,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.Session.set_shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Session.reset_shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;reset_shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.Session.wire" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7200,6 +7222,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;resolve_shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Session.set_shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.Session.reset_shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;reset_shortcuts
       </span>
     </span>
   </a>
@@ -9547,9 +9591,11 @@ placed in a region of the window answers to is left out, and logged.</p>
         <p>Return the keys the window binds: what the components declare, then <em>extra</em>, settled.</p>
 <p>The components count in the order they are declared. A key the
 frontend cannot read is left out. The session file's <code>shortcuts</code>
-replace a command's keys first; a key two commands ask for in one
-place, the whole window or one view, stays with the first. Every change
-is logged.</p>
+replace a command's keys first, then the keys the user saved with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;set_shortcuts&lt;/span&gt;" href="./#redsun.Session.set_shortcuts"><code>set_shortcuts</code></a>; a key two commands
+ask for in one place, the whole window or one view, stays with the
+command the user saved it for, or else the first. Every change is
+logged.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -9568,12 +9614,100 @@ is logged.</p>
             <td>
               <div class="doc-md-description">
                 <p>If the configuration sets <code>strict</code> and a key had to be moved or
-left out.</p>
+left out. What the user's saved keys move or leave out is only
+logged.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the session is not built yet.</p>
               </div>
             </td>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.Session.set_shortcuts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">set_shortcuts</span>
+
+
+<a href="#redsun.Session.set_shortcuts" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">set_shortcuts</span><span class="p">(</span><span class="n">changes</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Save the user's keys for the commands in <em>changes</em>, an empty list for none.</p>
+<p>The keys apply over the session file's from the next
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;resolve_shortcuts&lt;/span&gt;" href="./#redsun.Session.resolve_shortcuts"><code>resolve_shortcuts</code></a> on, in this
+session and the next. Saved keys of other commands are kept.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a command is given a string, more than two keys or a key the
+frontend cannot read; nothing is saved then.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the session is not built yet.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.Session.reset_shortcuts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">reset_shortcuts</span>
+
+
+<a href="#redsun.Session.reset_shortcuts" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">reset_shortcuts</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Forget every key the user saved, so the session file's and the components' apply.</p>
 
 
     </div>

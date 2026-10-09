@@ -5757,7 +5757,10 @@ so two spellings of one key are seen as the same. A binding that
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;resolve_shortcuts&lt;/span&gt;" href="../../reference/api/session/#redsun.Session.resolve_shortcuts"><code>resolve_shortcuts</code></a> returns with a
 <code>when</code> function acts only while that function returns true, so ask it again
 each time the focus moves and leave the key press to the focused widget
-while it returns false.</p>
+while it returns false. A frontend that lets the user change keys calls
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;set_shortcuts&lt;/span&gt;" href="../../reference/api/session/#redsun.Session.set_shortcuts"><code>set_shortcuts</code></a> or
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;reset_shortcuts&lt;/span&gt;" href="../../reference/api/session/#redsun.Session.reset_shortcuts"><code>reset_shortcuts</code></a>, then binds what
+<code>resolve_shortcuts</code> returns again.</p>
 <h2 id="define-the-session">Define the session<a class="headerlink" href="#define-the-session" title="Permanent link">&para;</a></h2>
 <p>Subclass <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Session&lt;/span&gt;" href="../../reference/api/session/#redsun.Session"><code>Session</code></a>, set <code>frontend</code>, and fill <code>present</code>,
 which runs once every view is built and linked:</p>
