@@ -20,6 +20,9 @@ from redsun.view.qt._icons import set_icon, set_item_icon
 
 pytestmark = pytest.mark.qt
 
+STYLES = QStyleFactory.keys()
+"""The Qt styles this machine can create."""
+
 
 def colours(icon: QIcon, mode: QIcon.Mode = QIcon.Mode.Normal) -> set[str]:
     """Return the opaque colours drawn in *icon* at 32 by 32."""
@@ -143,7 +146,7 @@ def test_an_icon_goes_on_its_own_button_not_a_child_with_one(
 
 
 @pytest.mark.skipif(
-    QStyleFactory.create("windows11") is None,
+    "windows11" not in [name.lower() for name in STYLES],
     reason="the windows11 style is only built on Windows",
 )
 @pytest.mark.parametrize(
