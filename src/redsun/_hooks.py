@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import logging
+import re
 from abc import abstractmethod
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Annotated, Any, Protocol, TypeVar, runtime_checkable
 
-from pydantic import BaseModel
+from pydantic import AfterValidator, BaseModel
 
 from redsun.errors import HookError
 
-from ._manifest import ClassPath, import_class
+from ._manifest import class_path, import_class
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -205,14 +206,30 @@ def distinct(objects: Iterable[object]) -> tuple[object, ...]:
     return tuple(seen.values())
 
 
+def provider_name(value: str) -> str:
+    """Refuse text that is neither a class path nor a short name such as `napari`."""
+    if ":" in value:
+        return class_path(value)
+    if not re.fullmatch(r"[a-z][a-z0-9_-]*", value):
+        raise ValueError(
+            f"{value!r} is neither a class path ('module:ClassName') nor the "
+            "short name of a built-in provider"
+        )
+    return value
+
+
+ProviderName = Annotated[str, AfterValidator(provider_name)]
+"""A hook provider named by its class path or by a built-in provider's short name."""
+
+
 class HookGroup(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
     """One provider of the `hooks` section, and every hook point it serves."""
 
     moments: tuple[str, ...]
     """The hook points the entry appeared under."""
 
-    provider: ClassPath
-    """The provider's class, as `module:ClassName`."""
+    provider: ProviderName
+    """The provider's class, as `module:ClassName`, or a built-in provider's short name."""
 
     kwargs: dict[str, Any] = {}
     """Keywords the provider is constructed with."""
@@ -221,18 +238,27 @@ class HookGroup(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings
 def group_hook_entries(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return one entry per distinct object in *raw*, with the hook points naming it.
 
+    An entry written as a provider's name alone serves its own hook point
+    only: unlike a mapping, a name cannot be anchored and aliased to share
+    one provider.
+
     Raises
     ------
     ValueError
-        If an entry is not a mapping.
+        If an entry is neither a mapping nor a name.
     """
     grouped: dict[int, tuple[list[str], Mapping[str, Any]]] = {}
+    named: list[dict[str, Any]] = []
     for moment, entry in raw.items():
+        if isinstance(entry, str):
+            named.append({"provider": entry, "moments": (moment,)})
+            continue
         if not isinstance(entry, Mapping):
             # pydantic turns a ValueError raised in a validator into a
             # ValidationError at the entry's location; a TypeError escapes
             raise ValueError(  # noqa: TRY004
-                f"hooks entry {moment!r} must be a mapping, got {type(entry).__name__}"
+                f"hooks entry {moment!r} must be a mapping or a provider's name, "
+                f"got {type(entry).__name__}"
             )
         # a YAML anchor and its alias resolve to one object; once validated
         # they would be two equal copies, so sharing is read here or never
@@ -243,4 +269,7 @@ def group_hook_entries(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
             )
         served, _ = grouped.setdefault(id(entry), ([], entry))
         served.append(moment)
-    return [{**entry, "moments": tuple(served)} for served, entry in grouped.values()]
+    return [
+        *({**entry, "moments": tuple(served)} for served, entry in grouped.values()),
+        *named,
+    ]

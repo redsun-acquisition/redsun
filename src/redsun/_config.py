@@ -732,7 +732,9 @@ def session_file_schema() -> dict[str, Any]:
     schema["$defs"]["HookEntry"] = groups
     properties["hooks"] = {
         "type": "object",
-        "additionalProperties": {"$ref": "#/$defs/HookEntry"},
+        "additionalProperties": {
+            "anyOf": [{"type": "string"}, {"$ref": "#/$defs/HookEntry"}]
+        },
     }
     for section in (*EMPTY_AS_MAPPING, "hooks", "pairs"):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
