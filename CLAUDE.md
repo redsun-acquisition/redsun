@@ -114,7 +114,7 @@ thread timer (`redsun.qt._garbage`, the approach pyqtgraph's
 every test using `qapp`, so no widget a test leaves in a cycle is freed later
 on the loop thread.
 
-`scripts/mypy_qt.py` is what the two environments call. `qtpy mypy-args` prints
+`scripts/mypy_qt.py` is what the two `mypy-*` environments call. `qtpy mypy-args` prints
 the `--always-true` / `--always-false` flags for the selected binding, and
 composing that with mypy needs command substitution, which `cmd.exe` lacks and
 no tox `commands` line can express; the script does both in one process.
