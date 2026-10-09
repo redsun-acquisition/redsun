@@ -64,9 +64,9 @@ shuts down, the style puts it back and stops following the colour scheme.
 
 The stylesheets and icons are napari 0.9.2's, copied unchanged into
 `redsun.qt.styles`, so napari doesn't need to be installed. They stay under
-napari's BSD 3-Clause licence, which is beside them. The style writes the
-icons in the theme's colours to your user cache folder the first time it
-needs them, and reuses them after that.
+napari's BSD 3-Clause licence, which is beside them. When the session
+builds, the style writes the icons of both themes, in their colours, to your
+user cache folder, and a file that hasn't changed isn't written again.
 
 ## See also
 

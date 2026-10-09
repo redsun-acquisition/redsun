@@ -36,8 +36,11 @@ had to spell out the class path.
   file names a built-in provider as `configure_application: napari`, or as
   `provider: napari` when it passes `kwargs`.
 - The stylesheet points at the recoloured icons by their file path. napari
-  registers the folder under a path prefix such as `theme_dark`, but Qt
-  refuses a prefix holding an underscore, so the images would never load.
+  registers the folder under a path prefix such as `theme_dark` with
+  `QDir.addSearchPath`, which adds the folder once more at every call, and
+  `QDir.setSearchPaths`, which would replace it, refuses a prefix holding an
+  underscore. A file path needs neither, and leaves behind no setting that
+  every window in the process shares.
 - `redsun.qt.styles` imports nothing, so a session loads only the style it
   names.
 

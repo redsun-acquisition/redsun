@@ -205,6 +205,7 @@ def stylesheet(theme: Theme, icons: Path) -> str:
         template(path.read_text(encoding="utf-8"), theme)
         for path in sorted(STYLES.glob("*.qss"))
     )
-    # napari loads its images through a search path prefix, but Qt refuses a
-    # prefix holding "_" such as theme_dark, so the images get the folder's path
+    # napari registers the folder as a search path, which addSearchPath adds
+    # again at every call and setSearchPaths refuses for a prefix holding "_",
+    # so the images get the folder's path and nothing process-wide is left
     return sheet.replace(f'url("theme_{theme.name}:/', f'url("{icons.as_posix()}/')
