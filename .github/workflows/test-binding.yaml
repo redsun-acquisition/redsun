@@ -1,14 +1,54 @@
-name: Run tests
+name: Test one Qt binding
 
 on:
   workflow_call:
+    inputs:
+      binding:
+        description: "The Qt binding to type-check and test against: pyqt6 or pyside6"
+        required: true
+        type: string
     secrets:
       codecov_token:
         required: false
 
+env:
+  # the dependency group and the tox suffix of each binding; empty for an
+  # unknown one, which the binding job refuses before anything runs
+  GROUP: ${{ fromJSON('{"pyqt6":"pyqt","pyside6":"pyside"}')[inputs.binding] }}
+
 jobs:
+  binding:
+    name: Check the binding
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse a binding this workflow doesn't know
+        if: env.GROUP == ''
+        run: |
+          echo "::error::unknown binding '${{ inputs.binding }}': pass pyqt6 or pyside6"
+          exit 1
+
+  mypy:
+    name: mypy
+    needs: [binding]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.14"
+
+      # the environment, the binding and the flags all come from
+      # [tool.tox] in pyproject.toml, so this runs what a contributor runs
+      - name: Run mypy
+        run: uv run --locked --only-group tox tox -e mypy-${{ env.GROUP }}
+
   test:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
+    needs: [binding]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -34,14 +74,16 @@ jobs:
             sudo apt-get install -y libegl1 libdbus-1-3 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 x11-utils libxcb-cursor0 libopengl0
 
       - name: Run tests with coverage
+        env:
+          QT_API: ${{ inputs.binding }}
         run: |
-            uv run --locked coverage run -p -m pytest --color=yes
+            uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} coverage run -p -m pytest --color=yes
         shell: bash
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
-          name: covreport-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: covreport-${{ inputs.binding }}-${{ matrix.os }}-py${{ matrix.python-version }}
           path: ./.coverage*
           include-hidden-files: true
 
@@ -60,7 +102,7 @@ jobs:
       - name: Download coverage data
         uses: actions/download-artifact@v8
         with:
-          pattern: covreport-*
+          pattern: covreport-${{ inputs.binding }}-*
           path: covreports
           merge-multiple: true
 
@@ -76,4 +118,17 @@ jobs:
         with:
           fail_ci_if_error: true
           verbose: true
+          flags: ${{ inputs.binding }}
           token: ${{ secrets.codecov_token }}
+
+  # what the ruleset requires: a job skipped because a dependency failed
+  # counts as passed, so this runs regardless and fails on its own
+  passed:
+    name: ${{ inputs.binding }} passed
+    if: ${{ !cancelled() }}
+    needs: [binding, mypy, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any check did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

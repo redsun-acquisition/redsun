@@ -21,5 +21,5 @@ Rules:
   excluded from coverage.
 
 Iterate `uv run pytest <scope> -x -q` until green, then confirm with
-`uv run tox -e tests -- <scope>`.
+`uv run tox -e tests-pyqt -- <scope>`.
 Report only: files changed, pass/fail count.

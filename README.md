@@ -3,6 +3,8 @@
 [![PyPI - Status](https://img.shields.io/pypi/status/redsun)](https://pypi.org/project/redsun)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/redsun-acquisition/redsun/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/redsun-acquisition/redsun/actions/workflows/ci.yaml)
+[![PyQt6](https://github.com/redsun-acquisition/redsun/actions/workflows/pyqt6.yaml/badge.svg?branch=main)](https://github.com/redsun-acquisition/redsun/actions/workflows/pyqt6.yaml)
+[![PySide6](https://github.com/redsun-acquisition/redsun/actions/workflows/pyside6.yaml/badge.svg?branch=main)](https://github.com/redsun-acquisition/redsun/actions/workflows/pyside6.yaml)
 [![codecov](https://codecov.io/gh/redsun-acquisition/redsun/graph/badge.svg?token=XAL7NBIU9N)](https://codecov.io/gh/redsun-acquisition/redsun)
 [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fredsun-acquisition.github.io%2Fredsun&label=docs)](https://redsun-acquisition.github.io/redsun)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)

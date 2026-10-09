@@ -99,6 +99,7 @@ from ._color_scheme import (
     ColorSchemeButton,
     ColorSchemeMode,
 )
+from ._garbage import GarbageCollector
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -429,6 +430,15 @@ class QtSession(DesktopSession[QMainWindow], Session):
     )
 
     frontend = Qt
+
+    garbage_interval: ClassVar[int] = 100
+    """Milliseconds between two checks of Python's garbage.
+
+    From build to shutdown, Python's automatic garbage collection is off and
+    the running Qt event loop collects instead, every this many milliseconds,
+    on the GUI thread; while the event loop doesn't run, nothing is collected.
+    """
+
     hook_points: ClassVar[Mapping[str, type]] = {
         QtHook.CREATE_APPLICATION: CreatesApplication,
         QtHook.CONFIGURE_APPLICATION: ConfiguresApplication,
@@ -559,6 +569,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # QApplication takes the next widget built with it
         self._qt_app = qt_app
         self.on_release(self._forget_application_object)
+        # pyside6 aborts when a collection on a background thread frees a widget
+        collector = GarbageCollector(qt_app, self.garbage_interval)
+        collector.start()
+        self.on_release(collector.stop)
 
         self._model = Application(self.name)
         self.on_release(self._forget_application)

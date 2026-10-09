@@ -146,6 +146,19 @@ def test_clear_async_backend_closes_the_queue(
         backend.put((None, ()))  # type: ignore[arg-type]
 
 
+def test_clearing_the_backend_returns_once_its_drain_has_stopped(
+    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Stop the drain, and log that it stopped, before clear_async_backend returns."""
+    with caplog.at_level(logging.DEBUG, logger="redsun"):
+        clear_async_backend()
+        running = backend.running.is_set()
+        messages = [record.getMessage() for record in caplog.records]
+
+    assert not running
+    assert "Dispatch queue shut down" in messages
+
+
 def test_emit_from_foreign_thread_reaches_an_idle_loop(
     backend: CulsansAsyncioBackend,
 ) -> None:

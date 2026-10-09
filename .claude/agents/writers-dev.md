@@ -12,7 +12,7 @@ The rules live in CLAUDE.md (Acquisition storage section) and
 read them before editing, don't restate them here. The session catalog is
 session code, not storage: see the container-dev agent.
 
-Verify with `uv run tox -e tests -- tests/sdk/writers -x`, then
+Verify with `uv run tox -e tests-pyqt -- tests/sdk/writers -x`, then
 `uv run tox -e mypy-pyqt,mypy-pyside`.
 
 Report only: files changed, pass/fail counts, invariants touched.
