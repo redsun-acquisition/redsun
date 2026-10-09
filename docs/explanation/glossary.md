@@ -51,7 +51,7 @@ every component, connect them and show them.
 ### Build step
 
 A build step is one named stage of a [build](#build), such as `services`,
-`devices` or `views`. `BUILD_STEPS` lists them in order, so a progress display
+`devices` or `views`. `BuildStep` lists them in order, so a progress display
 knows how many there are.
 
 ### Callback

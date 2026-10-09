@@ -218,6 +218,6 @@ The exceptions a session raises are in [`redsun.errors`](errors.md).
 
 ## Build steps
 
-::: redsun.session.BUILD_STEPS
+::: redsun.session.BuildStep
     options:
       show_root_heading: true

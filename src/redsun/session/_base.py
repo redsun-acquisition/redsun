@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
+from enum import StrEnum
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -114,7 +115,7 @@ if TYPE_CHECKING:
     from ._profile import ProfileKind
     from ._questions import Shape
 
-__all__ = ["BUILD_STEPS", "Session"]
+__all__ = ["BuildStep", "Session"]
 
 P = TypeVar("P")
 
@@ -132,26 +133,50 @@ logging.getLogger("in_n_out").addHandler(logging.NullHandler())
 ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
 """The order the layers are built in, which is the order they may depend in."""
 
-BUILD_STEPS: Final[tuple[str, ...]] = (
-    "services",
-    "devices",
-    "connect",
-    "registry",
-    "presenters",
-    "views",
-    "setup",
-    "seal",
-    "wiring",
-    "presentation",
-    "report",
-)
-"""The steps a build reports, in order, to whatever is watching it.
 
-A `during_build` hook is told one of these names as each step starts.
+class BuildStep(StrEnum):
+    """The steps a build reports to whatever is watching it, in the order it runs them.
 
-`Session.build` runs two steps before the first of these, reading the
-configuration and starting the toolkit's runtime, and reports neither.
-"""
+    A `during_build` hook is told each one as it starts. A member is a `str`,
+    so it compares equal to its name, and `len(BuildStep)` counts the steps
+    for a progress display. `Session.build` runs two steps before the first
+    of these, reading the configuration and starting the toolkit's runtime,
+    and reports neither.
+    """
+
+    SERVICES = "services"
+    """Start the services the devices talk to."""
+
+    DEVICES = "devices"
+    """Build the devices."""
+
+    CONNECT = "connect"
+    """Connect every device that connects at start, to a simulated backend under `mock`."""
+
+    REGISTRY = "registry"
+    """Open the store the components are built from, and fill it with the shared values."""
+
+    PRESENTERS = "presenters"
+    """Build the presenters."""
+
+    VIEWS = "views"
+    """Build the views."""
+
+    SETUP = "setup"
+    """Hand every component what another component owns."""
+
+    SEAL = "seal"
+    """Check what was built, and close the session to further building."""
+
+    WIRING = "wiring"
+    """Connect each signal to the slots that ask for it."""
+
+    PRESENTATION = "presentation"
+    """Put the views where the frontend shows them."""
+
+    REPORT = "report"
+    """Log what the build made, counted against what was declared."""
+
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
@@ -647,22 +672,22 @@ class Session(BuildableSession):
             # before the runtime that shows it
             with self.open_span() as report:
                 self._report = report
-                steps = (
-                    self.start_services,
-                    self.build_devices,
-                    self.connect_built_devices,
-                    self.open_registry,
-                    self.build_presenters,
-                    self.build_views,
-                    self.setup_components,
-                    self.seal,
-                    self.apply_wiring,
-                    self.present,
-                    self.log_summary,
-                )
-                for step, run in zip(BUILD_STEPS, steps, strict=True):
+                runs = {
+                    BuildStep.SERVICES: self.start_services,
+                    BuildStep.DEVICES: self.build_devices,
+                    BuildStep.CONNECT: self.connect_built_devices,
+                    BuildStep.REGISTRY: self.open_registry,
+                    BuildStep.PRESENTERS: self.build_presenters,
+                    BuildStep.VIEWS: self.build_views,
+                    BuildStep.SETUP: self.setup_components,
+                    BuildStep.SEAL: self.seal,
+                    BuildStep.WIRING: self.apply_wiring,
+                    BuildStep.PRESENTATION: self.present,
+                    BuildStep.REPORT: self.log_summary,
+                }
+                for step in BuildStep:
                     self._report(step)
-                    run()
+                    runs[step]()
         except Exception as e:
             logger.error("Build stopped: %s", e)
             self.shutdown()

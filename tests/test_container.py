@@ -6,6 +6,7 @@ import gc
 import logging
 import weakref
 from collections.abc import Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType, cast
 
@@ -18,6 +19,7 @@ from ophyd_async.core import (
 )
 from psygnal import Signal
 
+import redsun.session
 from redsun import (
     Alias,
     AsDevice,
@@ -39,10 +41,10 @@ from redsun import (
 )
 from redsun.aio import run_coro
 from redsun.ports import WiringError
-from redsun.session import Layer
+from redsun.session import BuildStep, Layer
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
     from redsun import Link
@@ -2066,3 +2068,26 @@ def test_a_session_built_again_starts_from_nothing(
         assert "Not built: flaky" not in caplog.text
     finally:
         app.shutdown()
+
+
+def test_a_build_reports_every_step_in_order(build: BuildSession) -> None:
+    """Report each build step once, in the order `BuildStep` lists them."""
+    reported: list[str] = []
+
+    class Watched(Session):
+        config: ClassVar[dict[str, Any]] = {"session": "watched"}
+
+        def open_span(self) -> nullcontext[Callable[[str], None]]:
+            return nullcontext(reported.append)
+
+    build(Watched)
+
+    assert reported == list(BuildStep)
+
+
+def test_the_old_name_of_the_build_steps_warns_and_still_lists_them() -> None:
+    """Warn on reading `BUILD_STEPS`, which lists the same steps as `BuildStep`."""
+    with pytest.warns(DeprecationWarning, match="BuildStep"):
+        steps = redsun.session.BUILD_STEPS
+
+    assert steps == tuple(BuildStep)

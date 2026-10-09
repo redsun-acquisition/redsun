@@ -197,13 +197,13 @@ class Splash:
 Check the image in the constructor, because a missing file gives an empty
 `QPixmap` instead of an error, and a splash that shows nothing.
 
-The steps reported are those in `BUILD_STEPS`:
+The steps reported are the members of `BuildStep`, in order:
 
 ```python
-from redsun.session import BUILD_STEPS
+from redsun.session import BuildStep
 ```
 
-Size a progress bar from `len(BUILD_STEPS)` rather than counting by hand, so
+Size a progress bar from `len(BuildStep)` rather than counting by hand, so
 it stays right when the steps change. Each step is reported when it starts,
 so fill the bar to the end after the `yield`. The `finally` closes the splash
 even when the build fails.
