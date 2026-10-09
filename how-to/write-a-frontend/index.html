@@ -5753,7 +5753,11 @@ toolkit can't call, override
   &lt;/span&gt;" href="../../reference/api/session/#redsun.Frontend.check_view"><code>check_view</code></a> and raise <code>TypeError</code>.</p>
 <p>If your frontend binds keyboard shortcuts, override <code>key_problems</code>, to refuse
 a key your toolkit can't bind, and <code>canonical_key</code>, to write each key one way
-so two spellings of one key are seen as the same.</p>
+so two spellings of one key are seen as the same. A binding that
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;resolve_shortcuts&lt;/span&gt;" href="../../reference/api/session/#redsun.Session.resolve_shortcuts"><code>resolve_shortcuts</code></a> returns with a
+<code>when</code> function acts only while that function returns true, so ask it again
+each time the focus moves and leave the key press to the focused widget
+while it returns false.</p>
 <h2 id="define-the-session">Define the session<a class="headerlink" href="#define-the-session" title="Permanent link">&para;</a></h2>
 <p>Subclass <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Session&lt;/span&gt;" href="../../reference/api/session/#redsun.Session"><code>Session</code></a>, set <code>frontend</code>, and fill <code>present</code>,
 which runs once every view is built and linked:</p>

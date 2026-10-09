@@ -5903,7 +5903,10 @@ row for each of its axes x and y" src="../images/positioner.png" /></p>
 <ul>
 <li>The Motors tab has a group per device and a row per axis. <code>-</code> and <code>+</code> step
   the axis by the size chosen beside them, and repeat while you hold them. With
-  the row or a step button focused, Left and Right do the same. A step starts
+  the row or a step button focused, Left and Right do the same; the
+  <a href="../../reference/session-file/#shortcuts"><code>shortcuts</code></a> section of the
+  session file changes them as <code>positioner_view.step_down</code> and
+  <code>positioner_view.step_up</code>. A step starts
   from the setpoint, so steps add up exactly, and from the readback after a
   stop or a failure.</li>
 <li>The field beside <code>Go</code> shows where the axis is until you type a target.

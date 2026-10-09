@@ -5761,6 +5761,11 @@ directory, the motor to move and the plan's parameters" src="../images/acquisiti
   <code>@continuous(pausable=True)</code> also has Pause, which becomes Resume. See
   <a href="../write-a-continuous-plan/">Write a plan that runs until stopped</a>.</li>
 <li>Run stays disabled while a list of devices the plan needs is empty.</li>
+<li><code>Ctrl+R</code> runs the chosen plan and <code>Ctrl+.</code> stops the running one, from
+  anywhere in the window; on macOS they are Command-R and Command-period. The
+  <a href="../../reference/session-file/#shortcuts"><code>shortcuts</code></a> section of the
+  session file changes them as <code>acquisition_view.run_plan</code> and
+  <code>acquisition_view.stop_plan</code>.</li>
 <li>When a plan raises, its plan widget shows "failed:" and the error until it
   runs again, and the session log holds the full traceback.</li>
 <li>Each run's files are named after its plan. "Choose root..." sets the
