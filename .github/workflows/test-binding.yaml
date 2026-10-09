@@ -12,12 +12,24 @@ on:
         required: false
 
 env:
-  # the dependency group and the tox suffix of each binding
-  GROUP: ${{ inputs.binding == 'pyqt6' && 'pyqt' || 'pyside' }}
+  # the dependency group and the tox suffix of each binding; empty for an
+  # unknown one, which the binding job refuses before anything runs
+  GROUP: ${{ fromJSON('{"pyqt6":"pyqt","pyside6":"pyside"}')[inputs.binding] }}
 
 jobs:
+  binding:
+    name: Check the binding
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse a binding this workflow doesn't know
+        if: env.GROUP == ''
+        run: |
+          echo "::error::unknown binding '${{ inputs.binding }}': pass pyqt6 or pyside6"
+          exit 1
+
   mypy:
     name: mypy
+    needs: [binding]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -36,6 +48,7 @@ jobs:
 
   test:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
+    needs: [binding]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -113,7 +126,7 @@ jobs:
   passed:
     name: ${{ inputs.binding }} passed
     if: ${{ !cancelled() }}
-    needs: [mypy, test]
+    needs: [binding, mypy, test]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any check did not succeed
