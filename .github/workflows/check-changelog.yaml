@@ -4,20 +4,41 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   entry:
     name: Require a changelog entry
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
     runs-on: ubuntu-latest
     steps:
+      - name: Read the labels
+        id: labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # read now rather than from the event: a pull request opened with a
+          # label gets it a moment after its "opened" event fires
+          skip=$(gh pr view "$PR" --repo "$REPO" --json labels --jq 'any(.labels[]; .name == "skip-changelog")')
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          if [ "$skip" = "true" ]; then
+            echo "Labelled skip-changelog: no entry needed."
+          fi
+
       - uses: actions/checkout@v7
+        if: steps.labels.outputs.skip != 'true'
         with:
           fetch-depth: 0
 
       - name: Install uv
+        if: steps.labels.outputs.skip != 'true'
         uses: astral-sh/setup-uv@v10.2.0
 
       - name: Check for an entry in changelog.d
+        if: steps.labels.outputs.skip != 'true'
         run: |
           uvx towncrier==26.9.0 check --compare-with "origin/${{ github.base_ref }}" || {
             echo "Add a file to changelog.d/ for each change, or ask for the skip-changelog label:"
