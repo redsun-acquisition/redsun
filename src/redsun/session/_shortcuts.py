@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from functools import partial
 from typing import TYPE_CHECKING
 
 from ..view._shortcut import shortcuts
@@ -32,6 +33,9 @@ class Binding:
     run: Callable[[], object] | None
     """What the keys call, or `None` for a command the frontend already holds."""
 
+    when: Callable[[], bool] | None = None
+    """While it returns false the keys do nothing; `None` for always."""
+
 
 def candidates(
     components: Mapping[str, object], views: Collection[str]
@@ -53,8 +57,9 @@ def candidates(
                 )
                 continue
             view = name if record.scope == "view" else None
+            when = None if record.when is None else partial(record.when, component)
             found.append(
-                Binding(command, record.title, (record.key_here(),), view, method)
+                Binding(command, record.title, (record.key_here(),), view, method, when)
             )
     return found, problems
 

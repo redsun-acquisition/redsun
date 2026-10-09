@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -40,6 +40,17 @@ class Panel:
 
     @shortcut("Escape", title="Cancel", scope="view")
     def cancel(self) -> None: ...
+
+
+class Gated:
+    def __init__(self) -> None:
+        self.ready = False
+
+    def _is_ready(self) -> bool:
+        return self.ready
+
+    @shortcut("Left", title="Back", scope="view", when=_is_ready)
+    def back(self) -> None: ...
 
 
 class Controller:
@@ -211,3 +222,21 @@ def test_a_second_shortcut_on_one_method_is_refused() -> None:
             @shortcut("F1", title="One")
             @shortcut("F2", title="Two")
             def run(self) -> None: ...
+
+
+def test_a_condition_is_asked_of_its_component() -> None:
+    """Call a binding's condition with the component that declared it."""
+    gated = Gated()
+    (binding,), _ = candidates({"gated": gated}, {"gated"})
+    assert binding.when is not None
+
+    before = binding.when()
+    gated.ready = True
+
+    assert (before, binding.when()) == (False, True)
+
+
+def test_a_condition_that_cannot_be_called_is_refused() -> None:
+    """Refuse a condition that is not a function."""
+    with pytest.raises(ValueError, match="condition"):
+        shortcut("Left", title="Back", when=cast("Any", "ready"))

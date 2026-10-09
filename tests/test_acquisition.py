@@ -165,3 +165,16 @@ def test_the_stack_is_declared_from_a_session_file(
 
     assert isinstance(session.presenters["acquisition"], AcquisitionPresenter)
     assert isinstance(session.views["acquisition_view"], AcquisitionView)
+
+
+@pytest.mark.qt
+def test_the_view_binds_its_run_and_stop_keys(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Bind Ctrl+R and Ctrl+. to the view's run and stop in a strict session."""
+    session = build(PairedApp, {"mock": True, "strict": True})
+
+    keys = {b.command: b.keys for b in session.resolve_shortcuts()}
+
+    assert keys["acquisition_view.run_plan"] == ("Ctrl+R",)
+    assert keys["acquisition_view.stop_plan"] == ("Ctrl+.",)

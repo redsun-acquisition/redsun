@@ -215,3 +215,35 @@ def test_the_base_directory_is_shown_from_the_start(
     view = make_view(settings, parent, acquisition)
 
     assert child(view, QtWidgets.QLineEdit, "base-dir").text() == str(tmp_path)
+
+
+def test_the_run_key_launches_the_chosen_plan_only_when_none_runs(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Launch the chosen plan from `run_plan`, and nothing while a plan runs."""
+    view = make_view(settings, parent)
+    asked: list[str] = []
+    view.sig_launch.connect(lambda plan, values, callbacks: asked.append(plan))
+    choose(view, "rest")
+
+    view.run_plan()
+    view.set_started("rest")
+    view.run_plan()
+
+    assert asked == ["rest"]
+
+
+def test_the_stop_key_reaches_a_plan_launched_but_not_yet_started(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Send a stop from `stop_plan` right after `run_plan`, before the plan reports it started."""
+    view = make_view(settings, parent)
+    sent: list[str] = []
+    view.sig_launch.connect(lambda *args: sent.append("launch"))
+    view.sig_stop.connect(lambda: sent.append("stop"))
+    choose(view, "rest")
+
+    view.run_plan()
+    view.stop_plan()
+
+    assert sent == ["launch", "stop"]

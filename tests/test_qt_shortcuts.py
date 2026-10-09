@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from app_model.backends.qt import QModelMenu
 from mock_bundle.menu_callbacks import Executed
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction, QKeySequence
-from qtpy.QtTest import QTest
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
     QLineEdit,
     QTableWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +31,7 @@ from redsun import (
 )
 from redsun.qt import WINDOW_MENU, Central, Dock, MenuItem, QtSession
 from redsun.view.qt._shortcuts_dialog import ShortcutsDialog
+from tests.sdk.view.helpers import key_click
 
 if TYPE_CHECKING:
     from redsun.testing import BuildSession
@@ -72,6 +74,62 @@ class Other(QWidget):
         self.name = name
         self.edit = QLineEdit(self)
         QVBoxLayout(self).addWidget(self.edit)
+
+
+class Tree(QWidget):
+    """A view whose Left key acts only while it is ready, beside a tree using Left."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(
+        self,
+        name: str,
+        parent: QWidget,
+        ran: list[str] | None = None,
+        ready: bool = False,
+        broken: bool = False,
+    ) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.ran = ran if ran is not None else []
+        self.ready = ready
+        self.broken = broken
+        self.tree = QTreeWidget(self)
+        self.top = QTreeWidgetItem(["top"])
+        QTreeWidgetItem(self.top, ["leaf"])
+        self.tree.addTopLevelItem(self.top)
+        self.top.setExpanded(True)
+        self.tree.setCurrentItem(self.top)
+        self.edit = QLineEdit(self)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.tree)
+        layout.addWidget(self.edit)
+
+    def _is_ready(self) -> bool:
+        if self.broken:
+            raise RuntimeError("cannot tell")
+        return self.ready
+
+    @shortcut("Left", title="Back", scope="view", when=_is_ready)
+    def back(self) -> None:
+        self.ran.append("back")
+
+
+class Walker(QWidget):
+    """A view with a window key on Left."""
+
+    placement: Placement = Dock("right")
+
+    def __init__(
+        self, name: str, parent: QWidget, ran: list[str] | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.ran = ran if ran is not None else []
+
+    @shortcut("Left", title="Walk")
+    def walk(self) -> None:
+        self.ran.append("walk")
 
 
 class Misspelt(Panel):
@@ -140,6 +198,20 @@ class ShadowApp(QtSession):
     shadow: AsView[Shadow]
 
 
+class TreeApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "tree-session"}
+
+    tree: AsView[Tree]
+    other: AsView[Other]
+
+
+class TreeWalkerApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "tree-walker-session"}
+
+    tree: AsView[Tree]
+    walker: AsView[Walker]
+
+
 class Recorder:
     """Presenter providing the list the commands record into."""
 
@@ -201,22 +273,6 @@ def rows(dialog: ShortcutsDialog, group: str) -> list[list[str]]:
     ]
 
 
-def press(widget: QWidget, key: QtNamespace.Key, modifier: Any = None) -> None:
-    """Focus *widget* in its shown, active window and press *key* there."""
-    window = widget.window()
-    assert window is not None
-    window.show()
-    window.activateWindow()
-    widget.setFocus()
-    QApplication.processEvents()
-    # pyqt6's stubs type QTest's static methods as instance methods
-    test = cast("Any", QTest)
-    if modifier is None:
-        test.keyClick(widget, key)
-    else:
-        test.keyClick(widget, key, modifier)
-
-
 def test_a_window_key_runs_its_method_from_anywhere(
     qapp: QApplication, build: BuildSession
 ) -> None:
@@ -226,7 +282,7 @@ def test_a_window_key_runs_its_method_from_anywhere(
     other = app.views["other"]
     assert isinstance(other, Other)
 
-    press(other.edit, QtNamespace.Key.Key_R, CTRL)
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
 
     assert ran == ["run"]
 
@@ -241,8 +297,8 @@ def test_a_view_key_runs_only_with_focus_in_its_view(
     assert isinstance(panel, Panel)
     assert isinstance(other, Other)
 
-    press(other.edit, QtNamespace.Key.Key_F5)
-    press(panel.edit, QtNamespace.Key.Key_F5)
+    key_click(other.edit, QtNamespace.Key.Key_F5)
+    key_click(panel.edit, QtNamespace.Key.Key_F5)
 
     assert ran == ["refresh"]
 
@@ -262,7 +318,7 @@ def test_a_conflicting_action_key_is_not_bound(
     other = app.views["other"]
     assert isinstance(other, Other)
 
-    press(other.edit, QtNamespace.Key.Key_R, CTRL)
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
 
     note_keys = [
         a.shortcut().toString()
@@ -343,8 +399,8 @@ def test_a_view_key_wins_inside_its_view_and_the_window_key_elsewhere(
     assert isinstance(panel, Panel)
     assert isinstance(shadow, Shadow)
 
-    press(shadow.edit, QtNamespace.Key.Key_R, CTRL)
-    press(panel.edit, QtNamespace.Key.Key_R, CTRL)
+    key_click(shadow.edit, QtNamespace.Key.Key_R, CTRL)
+    key_click(panel.edit, QtNamespace.Key.Key_R, CTRL)
 
     assert view_ran == ["here"]
     assert window_ran == ["run"]
@@ -398,7 +454,7 @@ def test_a_disabled_action_does_not_run_from_its_key(
     other = app.views["other"]
     assert isinstance(other, Other)
 
-    press(other.edit, QtNamespace.Key.Key_F9)
+    key_click(other.edit, QtNamespace.Key.Key_F9)
 
     assert executed == []
 
@@ -443,3 +499,62 @@ def test_a_view_key_of_a_menu_entry_is_listed_unbound(
     dialog = opened(build(MenuThingApp))
 
     assert rows(dialog, "thing") == [["Thing", "unbound", "", ""]]
+
+
+def test_a_view_key_acts_only_while_its_condition_holds(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Leave Left to the tree while the view is not ready, and run the key once it is."""
+    ran: list[str] = []
+    app = build(TreeApp, {"views": {"tree": {"ran": ran}}})
+    tree, other = app.views["tree"], app.views["other"]
+    assert isinstance(tree, Tree)
+    assert isinstance(other, Other)
+
+    key_click(tree.tree, QtNamespace.Key.Key_Left)
+    collapsed = not tree.top.isExpanded()
+    tree.ready = True
+    key_click(other.edit, QtNamespace.Key.Key_Escape)
+    key_click(tree.tree, QtNamespace.Key.Key_Left)
+
+    assert collapsed
+    assert ran == ["back"]
+
+
+def test_a_condition_that_raises_is_logged_once_and_leaves_the_key_off(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log a condition that raises once, and leave Left to the tree."""
+    ran: list[str] = []
+    app = build(TreeApp, {"views": {"tree": {"ran": ran, "broken": True}}})
+    tree, other = app.views["tree"], app.views["other"]
+    assert isinstance(tree, Tree)
+    assert isinstance(other, Other)
+
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        key_click(tree.tree, QtNamespace.Key.Key_Left)
+        key_click(other.edit, QtNamespace.Key.Key_Escape)
+        key_click(tree.tree, QtNamespace.Key.Key_Left)
+
+    assert ran == []
+    assert not tree.top.isExpanded()
+    assert [r.getMessage() for r in caplog.records].count(
+        "tree.back: its condition raised, so its key stays off"
+    ) == 1
+
+
+def test_a_view_key_that_is_off_still_keeps_the_window_key_out_of_its_view(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Give Left to the focused tree, not to the window's key, while the view's key is off."""
+    ran: list[str] = []
+    app = build(
+        TreeWalkerApp, {"views": {"tree": {"ran": ran}, "walker": {"ran": ran}}}
+    )
+    tree = app.views["tree"]
+    assert isinstance(tree, Tree)
+
+    key_click(tree.tree, QtNamespace.Key.Key_Left)
+
+    assert ran == []
+    assert not tree.top.isExpanded()

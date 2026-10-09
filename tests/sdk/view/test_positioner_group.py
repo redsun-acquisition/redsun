@@ -88,19 +88,6 @@ def test_a_step_box_left_without_a_number_keeps_the_last_step(
     assert steps == [0.1, 0.1, 0.1]
 
 
-def test_arrow_keys_pressed_on_a_row_step_its_axis(group: PositionerGroup) -> None:
-    """Step the axis of the row that receives Right and Left key presses."""
-    steps: list[float] = []
-    group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
-    row = child(group, QtWidgets.QLabel, "readback:theta").parentWidget()
-    assert row is not None
-
-    press(row, QtCore.Qt.Key.Key_Right)
-    press(row, QtCore.Qt.Key.Key_Left)
-
-    assert steps == [1.0, -1.0]
-
-
 def test_enter_in_go_to_moves_the_axis_there(group: PositionerGroup) -> None:
     """Emit a go-to for the axis when Enter is pressed in its field."""
     targets: list[tuple[str, dict[str, float]]] = []
@@ -197,39 +184,12 @@ def test_go_to_refuses_a_target_outside_the_limits(
     assert "-5.00" in refused
 
 
-def test_arrow_keys_do_not_step_a_locked_device(group: PositionerGroup) -> None:
-    """Ignore Left and Right on a row of a locked device."""
-    steps: list[float] = []
-    group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
-    row = child(group, QtWidgets.QLabel, "readback:x").parentWidget()
-    assert row is not None
-
-    group.set_locked(True)
-    press(row, QtCore.Qt.Key.Key_Right)
-
-    assert steps == []
-
-
 def test_the_repeat_interval_reaches_every_step_button(group: PositionerGroup) -> None:
     """Repeat every step button of the device at the interval set."""
     group.set_repeat_interval(120)
 
     buttons = group.findChildren(QtWidgets.QAbstractButton)
     assert {b.autoRepeatInterval() for b in buttons if b.autoRepeat()} == {120}
-
-
-def test_arrow_keys_pressed_on_a_step_button_step_the_axis(
-    group: PositionerGroup,
-) -> None:
-    """Step the axis with Right and Left key presses sent to its step button."""
-    steps: list[float] = []
-    group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
-    plus = child(group, QtWidgets.QAbstractButton, "plus:x")
-
-    press(plus, QtCore.Qt.Key.Key_Right)
-    press(plus, QtCore.Qt.Key.Key_Left)
-
-    assert steps == [1.0, -1.0]
 
 
 def test_every_control_has_a_name_a_screen_reader_can_say(
@@ -365,3 +325,40 @@ def test_an_unknown_step_box_is_refused(qapp: QtWidgets.QApplication) -> None:
             repeat_interval=1,
             step_box="slider",  # type: ignore[arg-type]
         )
+
+
+def test_a_step_moves_an_axis_unless_its_device_is_locked(
+    group: PositionerGroup,
+) -> None:
+    """Step an axis by its chosen size, signed, and not while the device is locked."""
+    steps: list[tuple[str, float]] = []
+    group.sig_move.connect(lambda device, axis, delta: steps.append((axis, delta)))
+
+    group.step("theta", 1.0)
+    group.step("theta", -1.0)
+    group.set_locked(True)
+    group.step("x", 1.0)
+
+    assert steps == [("theta", 1.0), ("theta", -1.0)]
+
+
+def test_the_focused_axis_is_the_one_whose_row_or_step_button_has_focus(
+    qapp: QtWidgets.QApplication, group: PositionerGroup
+) -> None:
+    """Name the axis whose row or step button has focus, and none for its other fields."""
+    group.show()
+    group.activateWindow()
+    row = child(group, QtWidgets.QLabel, "readback:theta").parentWidget()
+    assert row is not None
+    focused = []
+    for widget in (
+        child(group, QtWidgets.QWidget, "plus:x"),
+        child(group, QtWidgets.QWidget, "goto:x"),
+        child(group, QtWidgets.QWidget, "step:theta"),
+        row,
+    ):
+        widget.setFocus()
+        qapp.processEvents()
+        focused.append(group.focused_axis())
+
+    assert focused == ["x", None, None, "theta"]

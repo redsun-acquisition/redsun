@@ -7,13 +7,14 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
-from qtpy import QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from redsun import AsDevice, AsPresenter, AsView, Declare, Link
 from redsun.presenter import AcquisitionPresenter, PositionerPresenter
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import PositionerView
 from tests.sdk.mocks import Stage
+from tests.sdk.view.helpers import child, key_click
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -178,3 +179,25 @@ def test_the_built_ins_are_declared_from_a_session_file(
 
     assert isinstance(session.presenters["positioner"], PositionerPresenter)
     assert isinstance(session.views["positioner_view"], PositionerView)
+
+
+def test_arrow_keys_step_the_focused_axis_and_leave_the_tab_bar_its_own(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Step the axis whose row has focus with Right and Left, and switch tabs with Right on the tab bar."""
+    session = build(Lab)
+    view = session.views["positioner_view"]
+    assert isinstance(view, PositionerView)
+    steps: list[tuple[str, str, float]] = []
+    view.sig_move.connect(lambda *args: steps.append(args))
+    row = child(view, QtWidgets.QLabel, "readback:x").parentWidget()
+    bar = view.tabs.tabBar()
+    assert row is not None
+    assert bar is not None
+
+    key_click(row, QtCore.Qt.Key.Key_Right)
+    key_click(row, QtCore.Qt.Key.Key_Left)
+    key_click(bar, QtCore.Qt.Key.Key_Right)
+
+    assert steps == [("stage", "x", 1.0), ("stage", "x", -1.0)]
+    assert view.tabs.currentIndex() == 1

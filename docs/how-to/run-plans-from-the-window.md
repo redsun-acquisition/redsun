@@ -83,6 +83,11 @@ directory, the motor to move and the plan's parameters](images/acquisition.png)
   `@continuous(pausable=True)` also has Pause, which becomes Resume. See
   [Write a plan that runs until stopped](write-a-continuous-plan.md).
 - Run stays disabled while a list of devices the plan needs is empty.
+- `Ctrl+R` runs the chosen plan and `Ctrl+.` stops the running one, from
+  anywhere in the window; on macOS they are Command-R and Command-period. The
+  [`shortcuts`](../reference/session-file.md#shortcuts) section of the
+  session file changes them as `acquisition_view.run_plan` and
+  `acquisition_view.stop_plan`.
 - When a plan raises, its plan widget shows "failed:" and the error until it
   runs again, and the session log holds the full traceback.
 - Each run's files are named after its plan. "Choose root..." sets the

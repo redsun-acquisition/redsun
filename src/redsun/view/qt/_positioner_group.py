@@ -51,12 +51,11 @@ def tool_button(text: str, name: str, parent: QtW.QWidget) -> QtW.QToolButton:
 class AxisRow(QtW.QWidget):
     """An axis: name, readback and units, then steps and a go-to field.
 
-    With focus on the row or one of its step buttons, Left and Right step the
-    axis; a frame shows that the row has focus.
+    A frame shows that the row or one of its step buttons has focus.
     """
 
     sig_step = Signal(float)
-    """Signed step, when a step button is pressed or repeats, or an arrow key."""
+    """Signed step, when a step button is pressed or repeats, or `step_by` runs."""
 
     sig_go = Signal(float)
     """Target, when a target in range is sent."""
@@ -235,29 +234,19 @@ class AxisRow(QtW.QWidget):
         if not self.target.hasFocus() and not self.target.isModified():
             self.target.setText(self.format_value(value))
 
-    def arrow_step(self, event: QtGui.QKeyEvent) -> bool:
-        """Step for Left or Right while the row is not locked, and say if it did."""
-        sign = {QtCore.Qt.Key.Key_Left: -1.0, QtCore.Qt.Key.Key_Right: 1.0}.get(
-            QtCore.Qt.Key(event.key())
-        )
-        if sign is None or not self.buttons[0].isEnabled():
-            return False
-        self.sig_step.emit(sign * self.step_size())
-        return True
+    def holds_focus(self) -> bool:
+        """Tell whether the row or one of its step buttons has focus."""
+        return self.hasFocus() or any(button.hasFocus() for button in self.buttons)
 
-    def keyPressEvent(self, event: QtGui.QKeyEvent | None) -> None:
-        """Step with Left and Right while the row has focus and is not locked."""
-        if event is not None and not self.arrow_step(event):
-            super().keyPressEvent(event)
+    def step_by(self, sign: float) -> None:
+        """Step by the chosen size times *sign*, unless the row is locked."""
+        if self.buttons[0].isEnabled():
+            self.sig_step.emit(sign * self.step_size())
 
     def eventFilter(
         self, watched: QtCore.QObject | None, event: QtCore.QEvent | None
     ) -> bool:
-        """Step for arrow keys on a focused step button, and track its focus."""
-        if isinstance(event, QtGui.QKeyEvent) and event.type() == (
-            QtCore.QEvent.Type.KeyPress
-        ):
-            return self.arrow_step(event)
+        """Repaint when a step button gains or loses focus."""
         if event is not None and event.type() in (
             QtCore.QEvent.Type.FocusIn,
             QtCore.QEvent.Type.FocusOut,
@@ -269,7 +258,7 @@ class AxisRow(QtW.QWidget):
         """Frame the row while it or one of its step buttons has focus."""
         if event is not None:
             super().paintEvent(event)
-        if self.hasFocus() or any(button.hasFocus() for button in self.buttons):
+        if self.holds_focus():
             painter = QtW.QStylePainter(self)
             option = QtW.QStyleOptionFocusRect()
             option.initFrom(self)
@@ -384,6 +373,16 @@ class PositionerGroup(QtW.QGroupBox):
         """The last readback of each axis."""
         return {axis: row.position for axis, row in self._rows.items()}
 
+    def focused_axis(self) -> str | None:
+        """Return the axis whose row or step button has focus, or `None`."""
+        return next(
+            (axis for axis, row in self._rows.items() if row.holds_focus()), None
+        )
+
+    def step(self, axis: str, sign: float) -> None:
+        """Step *axis* by its chosen size times *sign*, unless the device is locked."""
+        self._rows[axis].step_by(sign)
+
     def set_readback(self, axis: str, value: float) -> None:
         """Show *value* as the readback of *axis*."""
         self._rows[axis].show_position(value)
@@ -411,7 +410,20 @@ class PositionerGroup(QtW.QGroupBox):
         self._state.setToolTip(message)
 
     def set_locked(self, locked: bool) -> None:
-        """Disable the controls while *locked*; readbacks keep updating."""
+        """Disable the controls while *locked*; readbacks keep updating.
+
+        A control holding the focus gives it to its row, or to the first row
+        for a button above the rows, so the focus stays with the locked device.
+        """
+        focus = QtW.QApplication.focusWidget()
+        if locked and focus in self._controls:
+            # Qt moves the focus off a disabled control to the next one, which
+            # can be another device's row, where a held arrow key steps it
+            rows = list(self._rows.values())
+            row = next(
+                (r for r in rows if focus in r.controls), rows[0] if rows else self
+            )
+            row.setFocus()
         for widget in self._controls:
             widget.setEnabled(not locked)
 

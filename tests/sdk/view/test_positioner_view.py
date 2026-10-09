@@ -352,6 +352,31 @@ def test_a_locked_device_cannot_go_to_its_saved_positions(
     assert not child(view, QtWidgets.QAbstractButton, "saved-go:0").isEnabled()
 
 
+@pytest.mark.parametrize(
+    ("focused", "axis"),
+    [("plus:theta", "theta"), ("goto:theta", "theta"), ("save", "x")],
+)
+def test_locking_a_device_keeps_the_focus_off_another_device(
+    qapp: QtWidgets.QApplication,
+    parent: QtWidgets.QWidget,
+    settings: Settings,
+    focused: str,
+    axis: str | None,
+) -> None:
+    """Keep the focus in a locked device's group, on the row of the control that had it or its first row."""
+    view = make_view(settings, parent)
+    parent.show()
+    parent.activateWindow()
+    stage, focus = group(view, "stage"), group(view, "focus")
+    child(stage, QtWidgets.QWidget, focused).setFocus()
+    qapp.processEvents()
+
+    view.set_locked(frozenset({"stage"}))
+    qapp.processEvents()
+
+    assert (stage.focused_axis(), focus.focused_axis()) == (axis, None)
+
+
 def test_saving_opens_the_saved_positions(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:

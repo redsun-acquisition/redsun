@@ -14,6 +14,7 @@ from redsun.log import Loggable
 from redsun.ports import slot
 from redsun.presenter import DescribesPlans  # noqa: TC001
 from redsun.qt import Dock
+from redsun.view import shortcut
 from redsun.view.qt.utils import PlanInfoDialog, PlanWidget, create_plan_widget
 
 from ..._settings import Settings  # noqa: TC001
@@ -31,6 +32,8 @@ class AcquisitionView(QtW.QWidget, Loggable):
     and the directory runs write under. The view shows a plan running only
     once the presenter reports it started, and shows why a plan failed until
     it runs again. The plan chosen last is kept in the session's settings.
+    `Ctrl+R` runs the chosen plan and `Ctrl+.` stops the running one,
+    anywhere in the window.
     """
 
     placement: Placement = Dock("left")
@@ -188,6 +191,21 @@ class AcquisitionView(QtW.QWidget, Loggable):
     def update_base_dir(self, path: Path) -> None:
         """Show the directory runs write under."""
         self._base_dir.setText(str(path))
+
+    @shortcut("Ctrl+R", title="Run the chosen plan")
+    def run_plan(self) -> None:
+        """Run the chosen plan as its Run button does, unless a plan runs."""
+        widget = self.plan_widgets.get(self._chooser.currentText())
+        if self._running is None and widget is not None:
+            # a disabled button, for parameters with problems, ignores the click
+            widget.run_button.click()
+
+    @shortcut("Ctrl+.", title="Stop the running plan")
+    def stop_plan(self) -> None:
+        """Ask to stop the running plan, or the one launched and not yet started."""
+        # the view hears of a start after the presenter, which keeps a stop
+        # for a launched plan and ignores one with nothing launched
+        self.sig_stop.emit()
 
     def _end(self, plan: str) -> bool:
         widget = self.plan_widgets.get(plan)
