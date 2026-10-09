@@ -57,6 +57,7 @@ nav = [
             "how-to/write-a-frontend.md",
             "how-to/install-hooks.md",
             "how-to/add-menu-actions.md",
+            "how-to/add-keyboard-shortcuts.md",
         ]},
         { "Run a session" = [
             "how-to/run-without-a-gui.md",
@@ -130,6 +131,7 @@ nav = [
                 "explanation/decisions/0026-parameter-limits-from-annotated-types.md",
                 "explanation/decisions/0027-a-saved-window-layout-gives-way-to-a-changed-placement.md",
                 "explanation/decisions/0028-a-session-declares-its-first-window-layout.md",
+                "explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components.md",
         ]},
     ]},
     { "Reference" = [
