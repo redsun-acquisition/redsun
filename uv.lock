@@ -1808,6 +1808,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fonticon-materialdesignicons7"
+version = "7.2.96"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/92/749e69a86c5c97197daa28ad0532e075d27f33469a7126dc52701395cb9f/fonticon_materialdesignicons7-7.2.96.tar.gz", hash = "sha256:151c800658635d1da6f168ebb808db19f97288e1f9a9a743947854a3f1690e8a", size = 634663, upload-time = "2023-04-17T17:15:28.159Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/01/64d00d540a316169e72ac45d96427b593a2caa2195e949bebd9ff54816de/fonticon_materialdesignicons7-7.2.96-py3-none-any.whl", hash = "sha256:187191b5e9e58c397396d876a6cea9f0a935b26f22056b1605ef6ad7808ffa1d", size = 633252, upload-time = "2023-04-17T17:15:26.145Z" },
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5370,6 +5379,7 @@ profile = [
 ]
 pyqt = [
     { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "pyqt6-qt6" },
@@ -5378,6 +5388,7 @@ pyqt = [
 ]
 pyside = [
     { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
     { name = "magicgui" },
     { name = "pyside6-essentials" },
     { name = "qtpy" },
@@ -5385,6 +5396,7 @@ pyside = [
 ]
 qt-common = [
     { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
     { name = "magicgui" },
     { name = "qtpy" },
     { name = "superqt" },
@@ -5456,6 +5468,7 @@ pva = [
 ]
 pyqt = [
     { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "pyqt6-qt6" },
@@ -5464,6 +5477,7 @@ pyqt = [
 ]
 pyside = [
     { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
     { name = "magicgui" },
     { name = "pyside6-essentials" },
     { name = "qtpy" },
@@ -5471,6 +5485,7 @@ pyside = [
 ]
 qt-common = [
     { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
     { name = "magicgui" },
     { name = "qtpy" },
     { name = "superqt" },
@@ -5498,6 +5513,9 @@ requires-dist = [
     { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
+    { name = "fonticon-materialdesignicons7", marker = "extra == 'pyqt'", specifier = ">=7.2.96" },
+    { name = "fonticon-materialdesignicons7", marker = "extra == 'pyside'", specifier = ">=7.2.96" },
+    { name = "fonticon-materialdesignicons7", marker = "extra == 'qt-common'", specifier = ">=7.2.96" },
     { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
@@ -5578,6 +5596,7 @@ pva = [
 ]
 pyqt = [
     { name = "app-model", specifier = ">=0.5.1" },
+    { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyqt6", specifier = ">=6.11.0" },
     { name = "pyqt6-qt6", specifier = "!=6.11.0,!=6.11.1" },
@@ -5586,6 +5605,7 @@ pyqt = [
 ]
 pyside = [
     { name = "app-model", specifier = ">=0.5.1" },
+    { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyside6-essentials", specifier = ">=6.10.2,!=6.11.0,!=6.11.1" },
     { name = "qtpy", specifier = ">=2.4.3" },
@@ -5593,6 +5613,7 @@ pyside = [
 ]
 qt-common = [
     { name = "app-model", specifier = ">=0.5.1" },
+    { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
     { name = "superqt", specifier = ">=0.8.2" },

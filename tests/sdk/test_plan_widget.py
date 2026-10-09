@@ -561,13 +561,16 @@ class TestCallbacksList:
 class TestPlanWidgetControlAPI:
     """Tests for PlanWidget.toggle / pause / setEnabled / enable_actions."""
 
-    def test_toggle_swaps_the_run_button_text(self) -> None:
-        """Switch the run button text between Run and Stop on toggle."""
+    def test_toggle_swaps_the_run_button_between_run_and_stop(self) -> None:
+        """Switch the run button between Run and Stop on toggle, by icon and name."""
         pw = create_plan_widget(_continuous_spec())
         pw.toggle(True)
-        assert pw.run_button.text() == "Stop"
+        assert (pw.run_button.accessibleName(), pw.run_button.text()) == (
+            "Stop the plan",
+            "",
+        )
         pw.toggle(False)
-        assert pw.run_button.text() == "Run"
+        assert pw.run_button.accessibleName() == "Run the plan"
 
     def test_toggle_off_releases_a_plan_that_ended_while_paused(self) -> None:
         """Reset the run and pause buttons, calling nothing, when a paused plan ends."""
@@ -589,7 +592,7 @@ class TestPlanWidgetControlAPI:
         assert not pw.run_button.isChecked()
         assert pw.run_button.isEnabled()
         assert not pw.pause_button.isChecked()
-        assert pw.pause_button.text() == "Pause"
+        assert pw.pause_button.accessibleName() == "Pause the plan"
 
     def test_toggle_enables_the_pause_button_while_running(self) -> None:
         """Enable the pause button only while the plan runs."""
@@ -615,15 +618,15 @@ class TestPlanWidgetControlAPI:
         assert pw.actions_group is not None
         assert pw.actions_group.isEnabled()
 
-    def test_pause_swaps_the_pause_button_text(self) -> None:
-        """Switch the pause button text between Pause and Resume."""
+    def test_pause_swaps_the_pause_button_between_pause_and_resume(self) -> None:
+        """Switch the pause button between Pause and Resume, by icon and name."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         pw.toggle(True)
         pw.pause(True)
-        assert pw.pause_button.text() == "Resume"
+        assert pw.pause_button.accessibleName() == "Resume the plan"
         pw.pause(False)
-        assert pw.pause_button.text() == "Pause"
+        assert pw.pause_button.accessibleName() == "Pause the plan"
 
     def test_a_paused_plan_can_be_stopped(self) -> None:
         """Keep the stop button enabled while the plan is paused, and report its press."""

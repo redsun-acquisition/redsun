@@ -73,21 +73,26 @@ def test_clicking_cycles_system_light_dark_and_round(
     qapp: QApplication,
     build: BuildSession,
 ) -> None:
-    """Cycle the mode system -> light -> dark -> system, with a new button text each time."""
+    """Cycle the mode system -> light -> dark -> system, with a new icon and name each time."""
     control = _control(build(PlainApp))
     seen = []
 
     for _ in range(4):
-        seen.append((control.mode, control.text()))
+        seen.append((control.mode, control.accessibleName(), control.text()))
         control.click()
 
-    assert [mode for mode, _ in seen] == [
+    assert [mode for mode, _, _ in seen] == [
         ColorSchemeMode.SYSTEM,
         ColorSchemeMode.LIGHT,
         ColorSchemeMode.DARK,
         ColorSchemeMode.SYSTEM,
     ]
-    assert len({text for _, text in seen[:3]}) == 3
+    assert [name for _, name, _ in seen[:3]] == [
+        f"Colour scheme: {mode} (click to change)"
+        for mode in ("system", "light", "dark")
+    ]
+    assert [text for _, _, text in seen] == [""] * 4
+    assert not control.icon().isNull()
 
 
 def test_the_control_is_pushed_to_the_right_edge(

@@ -9,6 +9,8 @@ from psygnal import Signal
 from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
+from ._icons import set_icon
+
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -39,12 +41,10 @@ def number_validator(
     return validator
 
 
-def tool_button(text: str, name: str, parent: QtW.QWidget) -> QtW.QToolButton:
-    """Return a compact button showing *text*, named *name* for screen readers."""
+def tool_button(icon: str, words: str, parent: QtW.QWidget) -> QtW.QToolButton:
+    """Return a compact button showing *icon*, with *words* for its tooltip and screen readers."""
     button = QtW.QToolButton(parent)
-    button.setText(text)
-    button.setAccessibleName(name)
-    button.setToolTip(name)
+    set_icon(button, icon, words)
     return button
 
 
@@ -99,12 +99,12 @@ class AxisRow(QtW.QWidget):
         )
 
         self.buttons: list[QtW.QToolButton] = []
-        for sign, label, text in ((-1.0, "minus", "-"), (1.0, "plus", "+")):
+        for sign, label in ((-1.0, "minus"), (1.0, "plus")):
             direction = "down" if sign < 0 else "up"
-            button = tool_button(text, f"Step {axis} {direction}", self)
+            button = tool_button(label, f"Step {axis} {direction}", self)
             button.setObjectName(f"{label}:{axis}")
             button.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
-            button.setFixedWidth(button.sizeHint().height() + 8)
+            button.setFixedWidth(button.sizeHint().height())
             button.installEventFilter(self)
             button.setAutoRepeat(True)
             button.setAutoRepeatDelay(repeat_delay)
@@ -164,8 +164,8 @@ class AxisRow(QtW.QWidget):
         self.target.setValidator(self.validator)
         self.set_limits(*info.readback.limits)
         self.target.returnPressed.connect(self.go)
-        self.go_button = tool_button("Go", f"Go {axis} to target", self)
-        self.go_button.setFixedWidth(self.fontMetrics().horizontalAdvance("Go") + 16)
+        self.go_button = tool_button("crosshairs-gps", f"Go {axis} to target", self)
+        self.go_button.setFixedWidth(self.go_button.sizeHint().height())
         self.go_button.setObjectName(f"go:{axis}")
         self.go_button.clicked.connect(self.go)
         self.controls: tuple[QtW.QWidget, ...] = (
@@ -332,13 +332,13 @@ class PositionerGroup(QtW.QGroupBox):
         self._controls: list[QtW.QWidget] = []
         self._stop: QtW.QToolButton | None = None
         if any(info.stoppable for info in axes.values()):
-            self._stop = tool_button("Stop", f"Stop {device}", self)
+            self._stop = tool_button("stop", f"Stop {device}", self)
             self._stop.setObjectName("stop")
             self._stop.clicked.connect(lambda: self.sig_stop.emit(device))
             header.addWidget(self._stop)
             self._controls.append(self._stop)
         header.addStretch(1)
-        self._save = tool_button("Save", f"Save where {device} stands", self)
+        self._save = tool_button("content-save", f"Save where {device} stands", self)
         self._save.setObjectName("save")
         self._save.clicked.connect(lambda: self.sig_save.emit(device))
         header.addWidget(self._save)

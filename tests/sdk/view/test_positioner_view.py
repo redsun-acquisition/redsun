@@ -251,6 +251,18 @@ def test_the_repeat_interval_defaults_to_the_keyword(
     assert child(view, QLabeledSlider).value() == 80
 
 
+def test_the_saved_position_buttons_are_icons(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Show the saved positions' Go, remove and Undo buttons as icons, with no text."""
+    view = make_view(settings, parent)
+    child(group(view, "stage"), QtWidgets.QAbstractButton, "save").click()
+    names = ("saved-go:0", "saved-remove:0", "saved-undo")
+    buttons = [child(view, QtWidgets.QAbstractButton, name) for name in names]
+
+    assert [(b.text(), b.icon().isNull()) for b in buttons] == [("", False)] * 3
+
+
 def test_a_saved_position_outlives_the_view_and_moves_its_device(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
@@ -446,11 +458,12 @@ def test_a_locked_device_cannot_be_configured_until_released(
 def test_the_view_fits_a_narrow_dock(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
-    """Keep the view within 26 digits of its font: about 190 px at 9 pt."""
+    """Keep the view within 190 px, the width of a narrow dock at 9 pt."""
     view = make_view(settings, parent)
-    digit = view.fontMetrics().horizontalAdvance("0")
 
-    assert view.minimumSizeHint().width() <= 26 * digit
+    # in pixels: frames and margins don't shrink with the font, and how wide a
+    # digit is depends on the platform's fonts and dots per inch
+    assert view.minimumSizeHint().width() <= 190
 
 
 def test_a_name_freed_by_a_removal_is_used_again(

@@ -13,6 +13,8 @@ from qtpy import QtWidgets as QtW
 from redsun.log import GlobalFormatter, log_buffer, service_of, session_log
 from redsun.qt import Dock
 
+from ._icons import set_item_icon
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -27,6 +29,15 @@ LEVELS = (
     ("ERROR", logging.ERROR),
     ("CRITICAL", logging.CRITICAL),
 )
+
+LEVEL_ICONS = {
+    logging.DEBUG: "bug",
+    logging.INFO: "information",
+    logging.WARNING: "alert",
+    logging.ERROR: "alert-circle",
+    logging.CRITICAL: "alert-octagon",
+}
+"""The icon beside each level in the level selector."""
 
 # TODO: the level colours are fixed, two sets picked by background lightness;
 # a palette with its own colours for log levels could supply them instead
@@ -130,8 +141,9 @@ class LogView(QtW.QWidget):
 
         self._level_combo = QtW.QComboBox(self)
         self._level_combo.setObjectName("level")
-        for label, level in LEVELS:
+        for index, (label, level) in enumerate(LEVELS):
             self._level_combo.addItem(label, level)
+            set_item_icon(self._level_combo, index, LEVEL_ICONS[level])
         self._level_combo.setCurrentIndex(self._level_combo.findData(self._level))
         self._level_combo.currentIndexChanged.connect(self._on_level_selected)
 

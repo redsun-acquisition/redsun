@@ -208,6 +208,15 @@ def test_every_control_has_a_name_a_screen_reader_can_say(
     assert unnamed == []
 
 
+def test_every_button_of_the_group_is_an_icon(group: PositionerGroup) -> None:
+    """Show each of the group's buttons as an icon, with no text."""
+    buttons = group.findChildren(QtWidgets.QAbstractButton)
+
+    assert [(b.text(), b.icon().isNull()) for b in buttons] == [("", False)] * len(
+        buttons
+    )
+
+
 def test_pressing_down_in_the_step_box_selects_the_next_step(
     group: PositionerGroup,
 ) -> None:

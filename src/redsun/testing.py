@@ -4,6 +4,8 @@ A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and collect a Qt test's garbage on the main thread.
+On Windows under Qt's `offscreen` platform, they also point Qt at the system
+fonts, which that platform otherwise lacks.
 The module defines no `qapp`, so it combines with `pytest-qt`.
 """
 
@@ -12,6 +14,8 @@ from __future__ import annotations
 import gc
 import logging
 import os
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
@@ -26,7 +30,6 @@ from .services._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
-    from pathlib import Path
 
     from redsun.session import Launch
 
@@ -145,6 +148,18 @@ def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     root = tmp_path / "config"
     monkeypatch.setattr("redsun._settings.user_config_dir", lambda *a, **k: str(root))
     return root
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Give Qt's `offscreen` platform the system fonts on Windows.
+
+    There it finds no fonts of its own, so once an icon font is loaded every
+    text falls back to it and measures nothing.
+    """
+    offscreen = os.environ.get("QT_QPA_PLATFORM", "").startswith("offscreen")
+    if offscreen and sys.platform == "win32":
+        fonts = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
+        os.environ.setdefault("QT_QPA_FONTDIR", str(fonts))
 
 
 @pytest.fixture(autouse=True)

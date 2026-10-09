@@ -18,6 +18,7 @@ from redsun.view import shortcut
 from redsun.view.qt.utils import PlanInfoDialog, PlanWidget, create_plan_widget
 
 from ..._settings import Settings  # noqa: TC001
+from ._icons import set_icon
 
 if TYPE_CHECKING:
     from redsun.engine import ProgressState
@@ -71,12 +72,9 @@ class AcquisitionView(QtW.QWidget, Loggable):
         self._chooser.setObjectName("plans")
         self._chooser.setToolTip("Select a plan to run")
         self._info = QtW.QPushButton(self)
-        style = self.style()
-        assert style is not None
-        self._info.setIcon(
-            style.standardIcon(QtW.QStyle.StandardPixmap.SP_FileDialogInfoView)
+        set_icon(
+            self._info, "information-outline", "Information about the selected plan"
         )
-        self._info.setToolTip("Information about the selected plan")
         self._info.setFlat(True)
         self._info.clicked.connect(self._show_info)
         top.addWidget(self._chooser, 1)

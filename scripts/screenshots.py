@@ -149,7 +149,7 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
         next(
             b
             for b in view.findChildren(QPushButton)
-            if b.text() == "Run" and b.isVisible()
+            if b.accessibleName() == "Run the plan" and b.isVisible()
         ).click()
         finished = time.monotonic() + SETTLE
         while time.monotonic() < finished:
