@@ -563,11 +563,6 @@ except to fix an entry while releasing.
 You need maintainer access to the repository on GitHub. A clone is only
 needed to release [from a clone](#from-a-clone).
 
-Once, before the first release, an organisation owner allows workflows to
-open pull requests: in the organisation's **Settings** -> **Actions** ->
-**General**, and then in the repository's, tick **Allow GitHub Actions to
-create and approve pull requests** under **Workflow permissions**.
-
 Don't merge other pull requests between the first and the last step. The
 release takes `main` as it is when you publish, so a pull request merged in
 between ships without its entry in the section.
