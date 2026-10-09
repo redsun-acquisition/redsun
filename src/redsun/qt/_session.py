@@ -27,8 +27,10 @@ MyApp().run()
 from __future__ import annotations
 
 import base64
+import hashlib
 import inspect
 import itertools
+import json
 import logging
 import sys
 import weakref
@@ -327,8 +329,15 @@ class Qt(Frontend):
 
     @classmethod
     def layout_problems(cls, layout: WindowLayout) -> list[str]:
-        """Return what Qt cannot show of *layout*, a share for the centre included."""
+        """Return what Qt cannot show of *layout*, a share for the centre and opposite edges filling the window included."""
         problems = super().layout_problems(layout)
+        for first, second in (("left", "right"), ("top", "bottom")):
+            together = layout.sizes.get(first, 0) + layout.sizes.get(second, 0)
+            if together >= 1:
+                problems.append(
+                    f"layout.sizes: {first} and {second} take {together:g} of the "
+                    "window together and leave nothing for the centre"
+                )
         if "center" in layout.sizes:
             problems.append(
                 "layout.sizes.center: the centre takes what the docks leave; "
@@ -368,8 +377,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         "_main_window",
         "_model",
         "_qt_app",
-        "_restored",
         "_shown_layout",
+        "_sized",
         "_window_widgets",
     )
 
@@ -399,7 +408,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         self._close_guard: CloseGuard | None = None
         self._default_state: QByteArray | None = None
-        self._restored = False
+        self._shown_layout = WindowLayout()
+        self._sized = False
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -615,13 +625,30 @@ class QtSession(DesktopSession[QMainWindow], Session):
         layout saved without that record is restored. The centre's splitters
         and current tabs come back with the docks.
         """
-        self._restored = False
+        self._sized = False
+        try:
+            self._sized = self._restore_saved_layout()
+        except ValueError:
+            logger.warning(
+                "The window layout saved in %s could not be read, so the docks "
+                "start where their placements say",
+                self.settings.path,
+            )
+
+    def _restore_saved_layout(self) -> bool:
+        """Restore the saved geometry, and the docks and centre while the layout matches, and return whether they came back.
+
+        Raises
+        ------
+        ValueError
+            If a saved value is not the base64 text the session writes.
+        """
         geometry = self.settings.get("window.geometry")
         if isinstance(geometry, str):
             self.main_window.restoreGeometry(QByteArray(base64.b64decode(geometry)))
         state = self.settings.get("window.state")
         if not isinstance(state, str):
-            return
+            return False
         saved = self.settings.get("window.layout")
         if saved is not None and saved != self._layout_fingerprint():
             logger.info(
@@ -630,20 +657,25 @@ class QtSession(DesktopSession[QMainWindow], Session):
                 self.name,
                 self.settings.path,
             )
-            return
-        self.main_window.restoreState(QByteArray(base64.b64decode(state)))
+            return False
+        self.main_window.restoreState(
+            QByteArray(base64.b64decode(state, validate=True))
+        )
         restore_centre(
             self.main_window, self._shown_layout, self.settings.get("window.center")
         )
-        self._restored = True
+        return True
 
     def _layout_fingerprint(self) -> str:
         """Return a digest of the layout the window starts with, which a saved layout is kept for.
 
-        Each view counts with the placement its declaration holds, so one that
-        fails to build does not discard the saved layout. A view whose class
-        answers `placement` from a property has none there, and changing what
-        the property answers keeps the saved layout.
+        The digest covers the layout the session declares, the name of every
+        view, and the layout those resolve to. Each view counts with the
+        placement its declaration holds, so one that fails to build does not
+        discard the saved layout. A view whose class answers `placement` from a
+        property has none there, so changing what the property answers keeps
+        the saved layout, while moving the view in the declared layout does
+        not.
         """
         placements: dict[str, Placement | None] = {
             name: declaration.placement
@@ -651,7 +683,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
             if declaration.kind is Layer.VIEW
         }
         layout, _ = resolved_layout(self._window_layout, placements, self.frontend)
-        return layout.fingerprint()
+        declared = self._window_layout or WindowLayout()
+        content = [layout.fingerprint(), declared.fingerprint(), list(placements)]
+        return hashlib.sha256(json.dumps(content).encode()).hexdigest()
 
     def save_layout(self) -> None:
         """Remember where this user left the window, and the placements it was left with.
@@ -901,12 +935,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def show(self) -> None:
         """Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.
 
-        `run` calls it; a script that runs the event loop itself calls it in
-        place of showing `main_window`.
+        The sizes are given once, so showing the window again keeps what the
+        user changed. `run` calls it; a script that runs the event loop itself
+        calls it in place of showing `main_window`.
         """
         self.main_window.show()
-        if not self._restored:
+        if not self._sized:
             fit_layout(self.main_window, self._shown_layout)
+            self._sized = True
 
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop.
@@ -1010,7 +1046,8 @@ def attach(
         If a view asks for a placement Qt does not attach, or is not the
         toolkit type that placement demands.
     ValueError
-        If *layout* leaves out a view that asks for a dock or the centre.
+        If *layout* leaves out a view that asks for a dock or the centre, or
+        names one that is not in *views*.
     """
     asked = {
         name: (placements or {}).get(name) or view.placement
@@ -1021,6 +1058,12 @@ def attach(
     if layout is None:
         layout, _ = resolved_layout(None, dict(asked), Qt)
     placed = set(layout.names)
+    unknown = [name for name in layout.names if name not in views]
+    if unknown:
+        raise ValueError(
+            f"the window layout names {', '.join(map(repr, unknown))}, which "
+            "are not among the views to attach"
+        )
     missing = [
         name
         for name, placement in asked.items()
@@ -1232,7 +1275,7 @@ def fit_docks(
     box = QRect()
     for name in names_in(node):
         # a tab behind another reports no useful geometry
-        if name in docks and docks[name].isVisible():
+        if name in docks and docks[name].geometry().intersects(window.rect()):
             box = box.united(docks[name].geometry())
     width, height = box.width(), box.height()
     if share is not None:

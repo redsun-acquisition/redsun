@@ -32,7 +32,7 @@ from redsun import (
     Tabs,
     WindowLayout,
 )
-from redsun.qt import WINDOW_MENU, Central, Dock, MenuItem, QtSession
+from redsun.qt import WINDOW_MENU, Central, Dock, MenuItem, QtSession, attach
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -255,6 +255,37 @@ class SizedApp(QtSession):
             },
             sizes={"left": 0.25},
         )
+
+
+class TabbedSizesApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "tabbed-sizes-session"}
+
+    a: AsView[Panel]
+    b: AsView[Panel]
+    c: AsView[Panel]
+    p: Annotated[AsView[Panel], Declare(placement=Central())]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(regions={"left": Column(Tabs("a", "b"), "c", sizes=(1, 3))})
+
+
+class OwnPresentApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "own-present-session"}
+
+    panel: AsView[Panel]
+
+    def present(self) -> None:
+        attach(self.main_window, self.views)
+
+
+class PropertyLaidOutApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "property-laid-out-session"}
+
+    panel: AsView[Panel]
+    old: AsView[FragileByProperty]
+
+    def window_layout(self) -> WindowLayout | None:
+        return WindowLayout(regions={"left": Column("panel", "old")})
 
 
 def builtin_session(
@@ -779,3 +810,95 @@ def test_a_restored_layout_keeps_its_sizes(
     assert 420 <= _dock(second, "a").width() <= 580
     assert 1.6 <= left / right <= 2.4
     assert restored_tabs.currentIndex() == 1
+
+
+def test_a_tab_group_in_a_weighted_edge_keeps_the_edge_narrow(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Size an edge whose weighted column holds tabs from the docks on screen, not the tab behind."""
+    app = build(TabbedSizesApp)
+
+    _shown(app)
+
+    a, c = _dock(app, "a"), _dock(app, "c")
+    assert c.width() < 400
+    assert 2.4 <= c.height() / a.height() <= 3.6
+
+
+def test_a_session_presenting_its_own_way_still_shows_and_saves(
+    qapp: QApplication, config_home: Path, build: BuildSession
+) -> None:
+    """Show and save a session whose own present step skips the layout."""
+    app = build(OwnPresentApp)
+
+    _shown(app)
+    app.save_layout()
+
+    written = json.loads((config_home / "own-present-session.json").read_text())
+    assert app.main_window.isVisible()
+    assert written["window.center"] == []
+
+
+def test_a_damaged_settings_file_starts_from_the_placements(
+    qapp: QApplication,
+    config_home: Path,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Start the docks where their placements say when the saved layout cannot be read, and log why."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+    path = config_home / "layout-session.json"
+    written = json.loads(path.read_text())
+    written["window.state"] = "a"
+    path.write_text(json.dumps(written))
+
+    second = build(LayoutApp)
+
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+    assert "could not be read" in caplog.text
+
+
+def test_moving_a_property_placed_view_in_the_layout_skips_the_saved_one(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Start from a layout that moved a view placed by a property, rather than the saved arrangement."""
+    caplog.set_level(logging.INFO, logger="redsun")
+    first = build(PropertyLaidOutApp)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
+    first.save_layout()
+    first.shutdown()
+
+    second = build(
+        PropertyLaidOutApp,
+        {"layout": {"regions": {"left": {"column": ["old", "panel"]}}}},
+    )
+
+    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
+    assert "placed differently" in caplog.text
+
+
+def test_attach_refuses_a_layout_naming_a_view_it_was_not_given(
+    qapp: QApplication,
+) -> None:
+    """Refuse a layout naming a view that is not among those to attach, naming it."""
+    with pytest.raises(ValueError, match="'ghost'"):
+        attach(QMainWindow(), {}, layout=WindowLayout(regions={"left": "ghost"}))
+
+
+def test_a_second_show_keeps_the_sizes_the_user_set(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep a dock the user widened when the window is shown again."""
+    app = build(SizedApp)
+    _shown(app)
+    app.main_window.resizeDocks(
+        [_dock(app, "a")], [700], QtNamespace.Orientation.Horizontal
+    )
+    qapp.processEvents()
+
+    _shown(app)
+
+    assert _dock(app, "a").width() > 600

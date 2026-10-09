@@ -1074,6 +1074,18 @@ def test_qt_names_the_region_a_placement_asks_for(
     assert Qt.region_of(placement) == region
 
 
+@pytest.mark.parametrize(
+    "sizes", [{"left": 0.6, "right": 0.5}, {"top": 0.5, "bottom": 0.5}]
+)
+def test_qt_refuses_opposite_edges_that_leave_no_centre(
+    sizes: dict[str, float],
+) -> None:
+    """Refuse shares of opposite edges that add up to the whole window or more."""
+    problems = Qt.layout_problems(WindowLayout(sizes=sizes))
+
+    assert any("leave nothing" in line for line in problems)
+
+
 def test_qt_refuses_a_size_for_the_centre() -> None:
     """Refuse a share for the centre, which takes what the docks leave."""
     problems = Qt.layout_problems(WindowLayout(sizes={"center": 0.5}))
