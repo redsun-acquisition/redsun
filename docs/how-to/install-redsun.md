@@ -80,7 +80,7 @@ checks that the two agree -->
 <span class="install-label">Installer</span>
 <div class="install-choices">
 <button type="button" data-value="pip install">pip</button>
-<button type="button" data-value="uv pip install">uv</button>
+<button type="button" data-value="uv pip install --compile-bytecode">uv</button>
 </div>
 </div>
 <div class="install-row" data-role="extra" role="group" aria-label="Window">
@@ -118,6 +118,11 @@ checks that the two agree -->
 such as <code>pip install "redsun[pyqt,zarr]"</code>: put the extras you want,
 named in each button's small print, between the brackets, separated by
 commas.</p></noscript>
+
+With `uv`, the command adds `--compile-bytecode`, which prepares the Python
+files to run while they install. `pip` does that by itself; `uv` otherwise
+leaves it to the first session you start, which then takes several seconds
+longer.
 
 The guides for the optional parts are
 [writing a derived product](write-a-derived-product.md),
