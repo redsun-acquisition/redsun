@@ -10,6 +10,16 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Keyboard shortcuts
+
+::: redsun.shortcut
+    options:
+      show_root_heading: true
+
+::: redsun.Shortcut
+    options:
+      show_root_heading: true
+
 ## Window layout
 
 ::: redsun.WindowLayout
