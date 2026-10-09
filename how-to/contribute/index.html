@@ -5773,10 +5773,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1-write-the-changelog" class="md-nav__link">
+  <a href="#1-prepare-the-changelog" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        1. Write the changelog
+        1. Prepare the changelog
       </span>
     </span>
   </a>
@@ -5795,10 +5795,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-tag-the-release" class="md-nav__link">
+  <a href="#3-publish-the-release" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. Tag the release
+        3. Publish the release
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-a-clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        From a clone
       </span>
     </span>
   </a>
@@ -6401,10 +6412,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1-write-the-changelog" class="md-nav__link">
+  <a href="#1-prepare-the-changelog" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        1. Write the changelog
+        1. Prepare the changelog
       </span>
     </span>
   </a>
@@ -6423,10 +6434,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-tag-the-release" class="md-nav__link">
+  <a href="#3-publish-the-release" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. Tag the release
+        3. Publish the release
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-a-clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        From a clone
       </span>
     </span>
   </a>
@@ -7014,51 +7036,74 @@ one's status to "Superseded by" with a link to the new one.</p>
 files the pull requests added since the last release. Don't edit it by hand,
 except to fix an entry while releasing.</p>
 <h3 id="what-you-need-for-a-release">What you need for a release<a class="headerlink" href="#what-you-need-for-a-release" title="Permanent link">&para;</a></h3>
-<p>You need a clone of the repository, and <code>gh</code>, the GitHub command-line tool,
-signed in with access to it.</p>
-<h3 id="1-write-the-changelog">1. Write the changelog<a class="headerlink" href="#1-write-the-changelog" title="Permanent link">&para;</a></h3>
-<p>On an up-to-date <code>main</code>, make a release branch and write the section, with
-the version without its <code>v</code> and today's date:</p>
+<p>You need maintainer access to the repository on GitHub. A clone is only
+needed to release <a href="#from-a-clone">from a clone</a>.</p>
+<p>Don't merge other pull requests between the first and the last step. The
+release takes <code>main</code> as it is when you publish, so a pull request merged in
+between ships without its entry in the section.</p>
+<h3 id="1-prepare-the-changelog">1. Prepare the changelog<a class="headerlink" href="#1-prepare-the-changelog" title="Permanent link">&para;</a></h3>
+<p>Open <strong>Actions</strong>, pick <strong>Prepare release</strong>, and click <strong>Run workflow</strong>. Type
+the version without its <code>v</code>, such as <code>0.15.0</code>, and run it.</p>
+<p>The run collects the files in <code>changelog.d/</code> into the version's section, and
+opens a pull request, "docs: write the 0.15.0 changelog", whose description
+is that section. To see the section first without changing anything, tick
+<strong>Only show the changelog section</strong>: the run then shows it in its summary
+and stops there.</p>
+<p>The run refuses a version the changelog already has, and a release with no
+entries in <code>changelog.d/</code>. If it fails after pushing the branch
+<code>release/v0.15.0</code>, delete that branch and run it again.</p>
+<h3 id="2-merge-the-changelog">2. Merge the changelog<a class="headerlink" href="#2-merge-the-changelog" title="Permanent link">&para;</a></h3>
+<p>Read the section in the pull request. If an entry reads badly, fix it in
+<code>docs/reference/changelog.md</code> on the pull request's branch, which now holds
+the only copy. Fix the date in the section's heading there too, if you
+publish on a later day.</p>
+<p>The checks of a pull request opened by a workflow wait for approval: click
+<strong>Approve workflows to run</strong> in the merge box. Merge once they pass.</p>
+<h3 id="3-publish-the-release">3. Publish the release<a class="headerlink" href="#3-publish-the-release" title="Permanent link">&para;</a></h3>
+<p>Open <strong>Releases</strong> and click <strong>Draft a new release</strong>. Under <strong>Choose a tag</strong>,
+type <code>v0.15.0</code> and pick <strong>Create new tag on publish</strong>, with <code>main</code> as the
+target. Title the release <code>v0.15.0</code>, leave its description empty, and click
+<strong>Publish release</strong>.</p>
+<p>The new tag starts the release run. It publishes the package to PyPI and the
+docs, and fills the release's description from the changelog section.</p>
+<div class="admonition warning">
+<p class="admonition-title">A release published before its changelog</p>
+<p>If the version has no section yet, the package build fails, nothing
+reaches PyPI, and the release stays empty. Delete the release, then its
+tag on the <strong>Tags</strong> page or with <code>git push --delete origin v0.15.0</code>,
+merge the changelog pull request, and publish the release again.</p>
+</div>
+<p>If the release run fails for another reason, such as a flaky test, open the
+run and click <strong>Re-run failed jobs</strong>.</p>
+<h3 id="from-a-clone">From a clone<a class="headerlink" href="#from-a-clone" title="Permanent link">&para;</a></h3>
+<p>When Actions isn't available, the same release works by hand. On an
+up-to-date <code>main</code>, write the section with the version and today's date:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.14.1
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>build<span class="w"> </span>--yes<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.14.1<span class="w"> </span>--date<span class="w"> </span><span class="m">01</span>-10-2026
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.15.0
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>build<span class="w"> </span>--yes<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.15.0<span class="w"> </span>--date<span class="w"> </span><span class="m">12</span>-10-2026
 </span></code></pre></div>
-<p><code>towncrier</code> collects the files in <code>changelog.d/</code> into a section at the top of
-<code>docs/reference/changelog.md</code>, deletes them, and stages both changes. <code>--yes</code>
-deletes them without asking; without it, a "no" leaves them to be collected
-again by the next release.</p>
-<p>Read the section. If an entry reads badly, fix it in the changelog, which is
-now the only copy.</p>
-<h3 id="2-merge-the-changelog">2. Merge the changelog<a class="headerlink" href="#2-merge-the-changelog" title="Permanent link">&para;</a></h3>
-<p>Commit the section, push the branch, and open a pull request for it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.14.1
+<p><code>towncrier</code> collects the files in <code>changelog.d/</code> into the section, deletes
+them, and stages both changes. Commit them, push the branch and open the pull
+request:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"docs: write the 0.15.0 changelog"</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.15.0
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--base<span class="w"> </span>main<span class="w"> </span>--label<span class="w"> </span>skip-changelog<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Adds the changelog section for 0.14.1."</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: write the 0.15.0 changelog"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Writes the changelog section for 0.15.0."</span>
 </span></code></pre></div>
-<p>The checks start as on any pull request. Merge it once they pass.</p>
-<h3 id="3-tag-the-release">3. Tag the release<a class="headerlink" href="#3-tag-the-release" title="Permanent link">&para;</a></h3>
-<p>Tag the merge commit and push the tag:</p>
+<p>Once it's merged, tag the merge commit and push the tag:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.14.1
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.14.1
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.15.0
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.15.0
 </span></code></pre></div>
-<p>The tag publishes the package to PyPI and the docs, and creates the GitHub
-release, whose notes are the changelog section.</p>
-<div class="admonition warning">
-<p class="admonition-title">A final-release tag without a changelog section</p>
-<p>If the tag's version has no section, the package build fails with a
-message naming the <code>towncrier build</code> command, and neither PyPI nor the
-GitHub release gets anything. Merge the changelog pull request (steps 1 and 2)
-before you tag.</p>
-</div>
+<p>The release run then creates the GitHub release itself.</p>
 <h3 id="release-candidates">Release candidates<a class="headerlink" href="#release-candidates" title="Permanent link">&para;</a></h3>
-<p>Tag a candidate <code>v0.14.1rc1</code> without preparing anything. It publishes the
-package, but no GitHub release and no changelog section: the entries stay in
-<code>changelog.d/</code> until the final release collects them.</p>
+<p>Tag a candidate <code>v0.15.0rc1</code> without preparing anything, from a clone or
+from <strong>Draft a new release</strong> with <strong>Set as a pre-release</strong> ticked. It
+publishes the package, but no changelog section and no release description:
+the entries stay in <code>changelog.d/</code> until the final release collects them.</p>
 
 
 
