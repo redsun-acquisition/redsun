@@ -14,13 +14,14 @@ __all__ = ["GarbageCollector"]
 
 
 class GarbageCollector:
-    """Collects Python's garbage from a timer on the GUI thread, never elsewhere.
+    """Runs Python's automatic garbage collection from a timer on the GUI thread.
 
     Python collects on whichever thread allocates when a count passes its
     threshold, and a widget destroyed off the GUI thread aborts the
     application under `pyside6`. While started, automatic collection is off
     and each check collects the oldest generation whose count passed its
-    threshold, as automatic collection would.
+    threshold, as automatic collection would. A `gc.collect()` called on
+    another thread still runs there.
     """
 
     __slots__ = ("__weakref__", "enabled_before", "timer")
@@ -39,8 +40,13 @@ class GarbageCollector:
         self.timer.start()
 
     def stop(self) -> None:
-        """Stop checking, and turn automatic collection back on if it was on."""
+        """Stop checking, collect once, and turn automatic collection back on if it was on.
+
+        Called on the GUI thread, so the cycles left behind are freed there
+        rather than by the next automatic collection on another thread.
+        """
         self.timer.stop()
+        gc.collect()
         if self.enabled_before:
             gc.enable()
 

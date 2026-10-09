@@ -64,3 +64,18 @@ def test_shutdown_leaves_automatic_collection_as_it_found_it(
         gc.enable()
 
     assert after is before
+
+
+def test_shutdown_frees_the_sessions_cycles_on_the_gui_thread(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Free the cycles left when a session shuts down, on the GUI thread, before collection is automatic again."""
+    app = build(EmptyApp)
+    freed: list[int] = []
+    cycle = Cycle()
+    weakref.finalize(cycle, lambda: freed.append(threading.get_ident()))
+    del cycle
+
+    app.shutdown()
+
+    assert freed == [threading.main_thread().ident]

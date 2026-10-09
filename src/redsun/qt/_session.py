@@ -432,7 +432,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
     frontend = Qt
 
     garbage_interval: ClassVar[int] = 100
-    """Milliseconds between two checks of Python's garbage, collected on the GUI thread."""
+    """Milliseconds between two checks of Python's garbage.
+
+    From build to shutdown, Python's automatic garbage collection is off and
+    the running Qt event loop collects instead, every this many milliseconds,
+    on the GUI thread; while the event loop doesn't run, nothing is collected.
+    """
 
     hook_points: ClassVar[Mapping[str, type]] = {
         QtHook.CREATE_APPLICATION: CreatesApplication,
