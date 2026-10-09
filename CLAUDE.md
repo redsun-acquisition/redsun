@@ -129,7 +129,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 ## Architecture invariants
 
-- **`Session.build()` step order cannot change**, and `BUILD_STEPS` records
+- **`Session.build()` step order cannot change**, and `BuildStep` records
   it: services -> devices -> connect -> registry -> presenters -> views ->
   setup -> seal -> wiring -> presentation -> report, after
   `read_configuration` and `start_runtime`. Never move work into `__init__`
