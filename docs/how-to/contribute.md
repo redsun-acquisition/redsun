@@ -560,66 +560,83 @@ except to fix an entry while releasing.
 
 ### What you need for a release
 
-You need a clone of the repository, and `gh`, the GitHub command-line tool,
-signed in with access to it.
+You need maintainer access to the repository on GitHub. A clone is only
+needed to release [from a clone](#from-a-clone).
 
-### 1. Write the changelog
+### 1. Prepare the changelog
 
-On an up-to-date `main`, make a release branch and write the section, with
-the version without its `v` and today's date:
+Open **Actions**, pick **Prepare release**, and click **Run workflow**. Type
+the version without its `v`, such as `0.15.0`, and run it.
 
-```bash
-git switch main
-git pull
-git switch -c release/v0.14.1
-uv run towncrier build --yes --version 0.14.1 --date 01-10-2026
-```
-
-`towncrier` collects the files in `changelog.d/` into a section at the top of
-`docs/reference/changelog.md`, deletes them, and stages both changes. `--yes`
-deletes them without asking; without it, a "no" leaves them to be collected
-again by the next release.
-
-Read the section. If an entry reads badly, fix it in the changelog, which is
-now the only copy.
+The run collects the files in `changelog.d/` into the version's section, and
+opens a pull request, "docs: write the 0.15.0 changelog", whose description
+is that section. To see the section first without changing anything, tick
+**Only show the changelog section**: the run then shows it in its summary
+and stops there.
 
 ### 2. Merge the changelog
 
-Commit the section, push the branch, and open a pull request for it:
+Read the section in the pull request. If an entry reads badly, fix it in
+`docs/reference/changelog.md` on the pull request's branch, which now holds
+the only copy.
 
-```bash
-git commit -am "docs: add the 0.14.1 changelog"
-git push origin release/v0.14.1
-gh pr create --base main --label skip-changelog \
-  --title "docs: add the 0.14.1 changelog" \
-  --body "Adds the changelog section for 0.14.1."
-```
+A pull request opened by a workflow starts no checks, so close it and reopen
+it to start them. Merge it once they pass.
 
-The checks start as on any pull request. Merge it once they pass.
+### 3. Publish the release
 
-### 3. Tag the release
+Open **Releases** and click **Draft a new release**. Under **Choose a tag**,
+type `v0.15.0` and pick **Create new tag on publish**, with `main` as the
+target. Title the release `v0.15.0`, leave its description empty, and click
+**Publish release**.
 
-Tag the merge commit and push the tag:
+The new tag starts the release run. It publishes the package to PyPI and the
+docs, and fills the release's description from the changelog section.
+
+!!! warning "A release published before its changelog"
+
+    If the version has no section yet, the package build fails, nothing
+    reaches PyPI, and the release stays empty. Delete the release and its
+    tag, merge the changelog pull request, and publish the release again.
+
+### From a clone
+
+When Actions isn't available, the same release works by hand. On an
+up-to-date `main`, write the section with the version and today's date:
 
 ```bash
 git switch main
 git pull
-git tag v0.14.1
-git push origin v0.14.1
+git switch -c release/v0.15.0
+uv run towncrier build --yes --version 0.15.0 --date 12-10-2026
 ```
 
-The tag publishes the package to PyPI and the docs, and creates the GitHub
-release, whose notes are the changelog section.
+`towncrier` collects the files in `changelog.d/` into the section, deletes
+them, and stages both changes. Commit them, push the branch and open the pull
+request:
 
-!!! warning "A final-release tag without a changelog section"
+```bash
+git commit -m "docs: write the 0.15.0 changelog"
+git push origin release/v0.15.0
+gh pr create --base main --label skip-changelog \
+  --title "docs: write the 0.15.0 changelog" \
+  --body "Writes the changelog section for 0.15.0."
+```
 
-    If the tag's version has no section, the package build fails with a
-    message naming the `towncrier build` command, and neither PyPI nor the
-    GitHub release gets anything. Merge the changelog pull request (steps 1 and 2)
-    before you tag.
+Once it's merged, tag the merge commit and push the tag:
+
+```bash
+git switch main
+git pull
+git tag v0.15.0
+git push origin v0.15.0
+```
+
+The release run then creates the GitHub release itself.
 
 ### Release candidates
 
-Tag a candidate `v0.14.1rc1` without preparing anything. It publishes the
-package, but no GitHub release and no changelog section: the entries stay in
-`changelog.d/` until the final release collects them.
+Tag a candidate `v0.15.0rc1` without preparing anything, from a clone or
+from **Draft a new release** with **Set as a pre-release** ticked. It
+publishes the package, but no changelog section and no release description:
+the entries stay in `changelog.d/` until the final release collects them.
