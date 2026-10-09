@@ -93,6 +93,7 @@ from ..session._protocols import DesktopSession
 from ..session._shortcuts import Binding
 from ..view._layout import Split, names_in
 from ..view.qt._failed import FailedView, FailuresButton
+from ..view.qt._shortcuts_dialog import ShortcutsDialog
 from ._actions import read_actions
 from ._color_scheme import (
     ColorSchemeButton,
@@ -406,6 +407,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         "_model",
         "_qt_app",
         "_shortcut_bindings",
+        "_shortcuts_dialog",
         "_shown_layout",
         "_sized",
         "_window_widgets",
@@ -441,6 +443,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._sized = False
         self._action_bindings: list[Binding] = []
         self._shortcut_bindings: list[Binding] = []
+        self._shortcuts_dialog: ShortcutsDialog | None = None
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -781,12 +784,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _register_window_actions(
         self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
     ) -> None:
-        """Register a toggle for each dock and "Reset layout", and show them as the Window menu.
+        """Register a toggle for each dock, "Reset layout" and "Keyboard shortcuts", as the Window menu.
 
         The docks are those of *views*, and those added since *earlier* was
         taken that have an object name no other dock has. A dock a view adds
-        by itself gets no toggle, and a session with no dock shows no such
-        menu. A menu bar that already shows `WINDOW_MENU` gets no second one.
+        by itself gets no toggle. A session with no dock gets no "Reset
+        layout", and one with neither docks nor shortcuts no such menu. A menu bar that already shows `WINDOW_MENU` gets no second one.
         The views placed in a menu named Window move into this one, above the
         toggles.
         """
@@ -801,17 +804,27 @@ class QtSession(DesktopSession[QMainWindow], Session):
             name = dock.objectName()
             if dock not in earlier and name and name not in docks:
                 docks[name] = dock
-        if not docks:
+        if not docks and not self._shortcut_bindings:
             return
         actions = [dock_toggle(self.name, dock) for dock in docks.values()]
-        actions.append(
-            Action(
-                id=f"{self.name}.reset_layout",
-                title="Reset layout",
-                callback=self._reset_layout,
-                menus=[MenuRule(id=WINDOW_MENU, group="2_layout")],
+        if docks:
+            actions.append(
+                Action(
+                    id=f"{self.name}.reset_layout",
+                    title="Reset layout",
+                    callback=self._reset_layout,
+                    menus=[MenuRule(id=WINDOW_MENU, group="2_layout")],
+                )
             )
-        )
+        if self._shortcut_bindings:
+            actions.append(
+                Action(
+                    id=f"{self.name}.show_shortcuts",
+                    title="Keyboard shortcuts",
+                    callback=self._show_shortcuts,
+                    menus=[MenuRule(id=WINDOW_MENU, group="3_shortcuts")],
+                )
+            )
         self.on_release(self.model.register_actions(actions))
         bar = window.menuBar()
         if bar is None or window.findChild(QModelMenu, WINDOW_MENU) is not None:
@@ -836,6 +849,15 @@ class QtSession(DesktopSession[QMainWindow], Session):
         keep_items({WINDOW_MENU})
         self.model.menus.menus_changed.connect(keep_items)
         self.on_release(lambda: self.model.menus.menus_changed.disconnect(keep_items))
+
+    def _show_shortcuts(self) -> None:
+        """Show the list of the keys this session binds, one dialog at a time."""
+        if self._shortcuts_dialog is None:
+            self._shortcuts_dialog = ShortcutsDialog(
+                self._shortcut_bindings, self.main_window
+            )
+        self._shortcuts_dialog.show()
+        self._shortcuts_dialog.raise_()
 
     def _reset_layout(self) -> None:
         """Put every dock back where it was before a saved layout was restored, at its declared size."""

@@ -6,13 +6,22 @@ import logging
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pytest
+from app_model.backends.qt import QModelMenu
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtGui import QAction
+from qtpy.QtGui import QAction, QKeySequence
 from qtpy.QtTest import QTest
-from qtpy.QtWidgets import QApplication, QLineEdit, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QLineEdit,
+    QTableWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from redsun import AsView, Placement, shortcut
-from redsun.qt import Dock, QtSession
+from redsun.qt import WINDOW_MENU, Central, Dock, QtSession
+from redsun.view.qt._shortcuts_dialog import ShortcutsDialog
 
 if TYPE_CHECKING:
     from redsun.testing import BuildSession
@@ -75,6 +84,61 @@ class MisspeltApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "misspelt-session"}
 
     panel: AsView[Misspelt]
+
+
+class Shadow(QWidget):
+    """A central view whose own key is the window's run key."""
+
+    placement: Placement = Central()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    @shortcut("Ctrl+R", title="Run here", scope="view")
+    def run_here(self) -> None: ...
+
+
+class ShadowApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "shadow-session"}
+
+    panel: AsView[Panel]
+    shadow: AsView[Shadow]
+
+
+class CentralOnlyApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "central-only-session"}
+
+    shadow: AsView[Shadow]
+
+
+def native(key: str) -> str:
+    """Return *key* as the dialog shows it."""
+    return QKeySequence(key).toString(QKeySequence.SequenceFormat.NativeText)
+
+
+def opened(app: QtSession) -> ShortcutsDialog:
+    """Open the session's shortcut list from its command, and return it."""
+    app.model.commands.execute_command(f"{app.name}.show_shortcuts").result()
+    dialog = app.main_window.findChild(ShortcutsDialog)
+    assert isinstance(dialog, ShortcutsDialog)
+    return dialog
+
+
+def rows(dialog: ShortcutsDialog, group: str) -> list[list[str]]:
+    """Return the table's cells as text once *group* is chosen."""
+    combo = dialog.findChild(QComboBox)
+    table = dialog.findChild(QTableWidget)
+    assert combo is not None
+    assert table is not None
+    combo.setCurrentText(group)
+    return [
+        [
+            item.text() if (item := table.item(row, column)) is not None else ""
+            for column in range(table.columnCount())
+        ]
+        for row in range(table.rowCount())
+    ]
 
 
 def press(widget: QWidget, key: QtNamespace.Key, modifier: Any = None) -> None:
@@ -159,3 +223,47 @@ def test_a_bad_key_a_component_declares_is_logged_and_left_out(
 
     assert "panel.pause" in caplog.text
     assert "'Ctrl+Period'" in caplog.text
+
+
+def test_the_dialog_lists_every_binding_by_group(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """List window keys under Window and a view's own keys under that view, in native text."""
+    dialog = opened(build(KeysApp))
+
+    combo = dialog.findChild(QComboBox)
+    assert combo is not None
+    assert [combo.itemText(i) for i in range(combo.count())] == ["Window", "panel"]
+    assert rows(dialog, "Window") == [["Run", native("Ctrl+R"), "", ""]]
+    assert rows(dialog, "panel") == [["Refresh", native("F5"), "", ""]]
+
+
+def test_an_unbound_command_is_listed_as_unbound(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """List a command left without a key, rather than leaving it out."""
+    dialog = opened(build(KeysApp, {"shortcuts": {"panel.refresh": None}}))
+
+    assert rows(dialog, "panel") == [["Refresh", "unbound", "", ""]]
+
+
+def test_a_shadowing_view_key_is_marked(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Mark a view key on a window key's combination, in both rows."""
+    dialog = opened(build(ShadowApp))
+
+    assert rows(dialog, "Window")[0][3] == "shadowed in shadow"
+    assert rows(dialog, "shadow") == [["Run here", native("Ctrl+R"), "", "shadows Run"]]
+
+
+def test_a_session_with_shortcuts_and_no_dock_has_the_window_menu(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show the Window menu with Keyboard shortcuts when no view is a dock."""
+    app = build(CentralOnlyApp)
+
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+
+    assert isinstance(menu, QModelMenu)
+    assert "Keyboard shortcuts" in [a.text() for a in menu.actions()]
