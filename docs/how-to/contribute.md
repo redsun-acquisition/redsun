@@ -132,11 +132,11 @@ reports.
 uv run tox
 ```
 
-That lints, type-checks against both Qt bindings, runs the tests and builds
-the docs. Run one environment with `-e`:
+That lints, type-checks against both Qt bindings, runs the tests under each
+of them and builds the docs. Run one environment with `-e`:
 
 ```bash
-uv run tox -e tests
+uv run tox -e tests-pyqt
 uv run tox -e mypy-pyqt
 ```
 
@@ -144,7 +144,7 @@ uv run tox -e mypy-pyqt
 | --- | --- |
 | `lint` | `prek run --all-files`: the [commit checks](#checks-before-each-commit) |
 | `mypy-pyqt` / `mypy-pyside` | `mypy` against that Qt binding |
-| `tests` | `pytest -q` |
+| `tests-pyqt` / `tests-pyside` | `pytest -q` under that Qt binding |
 | `docs` | `zensical build` then the cross-reference check |
 
 ### Only some tests
@@ -153,13 +153,13 @@ Arguments after `--` go to `pytest`:
 
 ```bash
 # the tests of the shared modules only
-uv run tox -e tests -- tests/sdk/
+uv run tox -e tests-pyqt -- tests/sdk/
 
 # a specific test function
-uv run tox -e tests -- tests/test_container.py::test_function_name
+uv run tox -e tests-pyqt -- tests/test_container.py::test_function_name
 
 # everything matching a pattern
-uv run tox -e tests -- -k "test_wiring"
+uv run tox -e tests-pyqt -- -k "test_wiring"
 ```
 
 The project environment skips the sync, so it's faster while editing:

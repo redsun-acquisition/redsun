@@ -267,7 +267,7 @@ convention = "numpy"
 
 [tool.tox]
 requires = ["tox>=4.28", "tox-uv-bare>=1.36"]
-env_list = ["lint", "mypy-pyqt", "mypy-pyside", "tests", "docs"]
+env_list = ["lint", "mypy-pyqt", "mypy-pyside", "tests-pyqt", "tests-pyside", "docs"]
 
 [tool.tox.env_run_base]
 runner = "uv-venv-lock-runner"
@@ -287,7 +287,14 @@ dependency_groups = ["dev", "pyside"]
 set_env = { QT_API = "pyside6" }
 commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 
-[tool.tox.env.tests]
+[tool.tox.env.tests-pyqt]
+dependency_groups = ["dev", "pyqt"]
+set_env = { QT_API = "pyqt6" }
+commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
+
+[tool.tox.env.tests-pyside]
+dependency_groups = ["dev", "pyside"]
+set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]

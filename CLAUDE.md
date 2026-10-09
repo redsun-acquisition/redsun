@@ -73,9 +73,9 @@ a second `uv.exe` in the project `.venv` and shadows the installed one:
 
 ```bash
 uv run prek install              # once: run the prek.toml hooks on every commit
-uv run tox                       # lint, both mypy legs, tests, docs
-uv run tox -e tests              # one environment
-uv run tox -e tests -- tests/sdk -x              # posargs reach pytest
+uv run tox                       # lint, both mypy legs, both test legs, docs
+uv run tox -e tests-pyqt         # one environment
+uv run tox -e tests-pyqt -- tests/sdk -x         # posargs reach pytest
 uv run tox -e mypy-pyqt,mypy-pyside
 ```
 
@@ -83,7 +83,7 @@ uv run tox -e mypy-pyqt,mypy-pyside
 | --- | --- |
 | `lint` | `prek run --all-files`: the commit hooks, ruff included |
 | `mypy-pyqt` / `mypy-pyside` | mypy against that binding |
-| `tests` | `pytest -q` |
+| `tests-pyqt` / `tests-pyside` | `pytest -q` under that binding |
 | `docs` | `zensical build`, `scripts/check_xrefs.py`, then a `towncrier` draft |
 
 **Run what the change can break, not the whole matrix.** A change confined to
@@ -101,9 +101,18 @@ and missed the one CI failed on. Trust tox.
 
 ### The Qt binding matrix
 
-CI type-checks against pyqt6 **and** pyside6, and runs the tests against pyqt6
-alone. `mypy-pyqt` and `mypy-pyside` each sync only their own binding's group
+CI type-checks and tests against pyqt6 **and** pyside6, one workflow per
+binding (`pyqt6.yaml`, `pyside6.yaml`, both calling `test-binding.yaml`). The
+`mypy-*` and `tests-*` environments each sync only their own binding's group
 and set `QT_API`, which is what decides the branches qtpy exposes.
+
+pyside6 aborts the process when a widget is destroyed off the GUI thread, and
+Python's garbage collection runs on whichever thread happens to allocate. So
+a running `QtSession` turns automatic collection off and collects on a GUI
+thread timer (`redsun.qt._garbage`, the approach pyqtgraph's
+`GarbageCollector` takes), and the `collect_qt_garbage` fixture collects after
+every test using `qapp`, so no widget a test leaves in a cycle is freed later
+on the loop thread.
 
 `scripts/mypy_qt.py` is what the two environments call. `qtpy mypy-args` prints
 the `--always-true` / `--always-false` flags for the selected binding, and
