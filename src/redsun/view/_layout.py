@@ -57,6 +57,10 @@ class Split:
 class Row(Split):
     """Views side by side, left to right.
 
+    Each child is a view's name or another node. `sizes` gives one positive
+    weight per child, and each child takes its weight's share of the width;
+    without it the children share the width equally.
+
     Raises
     ------
     ValueError
@@ -70,6 +74,10 @@ class Row(Split):
 
 class Column(Split):
     """Views stacked, top to bottom.
+
+    Each child is a view's name or another node. `sizes` gives one positive
+    weight per child, and each child takes its weight's share of the height;
+    without it the children share the height equally.
 
     Raises
     ------
@@ -100,6 +108,9 @@ class TabGroup:
 
 class Tabs(TabGroup):
     """Views sharing one space as tabs.
+
+    Each tab is a view's name. `current` names the view shown on top; without
+    it the first is.
 
     Raises
     ------

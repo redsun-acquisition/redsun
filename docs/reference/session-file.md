@@ -169,12 +169,12 @@ replaces an earlier one whole.
 ```yaml
 layout:
   regions:
-    center: {tabs: [preview, panorama]}
-    left: {tabs: [scan, temporal, lasers], current: scan}
-    right: {column: [micro, {tabs: [trace, fcs]}], sizes: [1, 2]}
+    center: {tabs: [image, plot]}
+    left: {tabs: [stage, lights], current: stage}
+    right: {column: [plans, {tabs: [progress, files]}], sizes: [1, 2]}
     bottom: log
   sizes: {left: 0.2, right: 0.3, bottom: 0.15}
-  hidden: [webcam]
+  hidden: [log]
 ```
 
 | Key | Type | Default | Holds |

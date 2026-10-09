@@ -742,7 +742,9 @@ class Session(BuildableSession):
     def window_layout(self) -> WindowLayout | None:
         """Return the layout this session's window starts with, or `None` to place each view where it asks.
 
-        Override it to arrange the window. A `layout` section in the session
+        Override it to arrange the window. It is called once, while the
+        configuration is read and before any component is built, so it names
+        views rather than looking at them. A `layout` section in the session
         file replaces what it returns, whole. A view it leaves out goes where
         its placement asks.
         """

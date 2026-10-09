@@ -88,7 +88,7 @@ def test_a_node_refuses_what_it_cannot_hold(
 
 def test_a_hidden_name_the_layout_does_not_place_is_accepted() -> None:
     """Accept a hidden view the layout leaves to the view's own placement."""
-    WindowLayout(hidden=["webcam"])
+    WindowLayout(hidden=["camera"])
 
 
 @pytest.mark.parametrize(
