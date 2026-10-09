@@ -46,6 +46,10 @@ To refuse a view class for another reason, such as a constructor your
 toolkit can't call, override
 [`check_view`][redsun.Frontend.check_view] and raise `TypeError`.
 
+If your frontend binds keyboard shortcuts, override `key_problems`, to refuse
+a key your toolkit can't bind, and `canonical_key`, to write each key one way
+so two spellings of one key are seen as the same.
+
 ## Define the session
 
 Subclass [`Session`][redsun.Session], set `frontend`, and fill `present`,

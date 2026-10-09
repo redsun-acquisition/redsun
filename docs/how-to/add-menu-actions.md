@@ -71,9 +71,14 @@ The keys are menu ids, and the values are the titles shown.
 `SAVE_MENU` is the menu `redsun` puts its own commands in, such as
 `Save configuration as...`. Include it to offer them.
 
-`WINDOW_MENU` holds a toggle for each dock and **Reset layout**. The session
+`WINDOW_MENU` holds a toggle for each dock, **Reset layout** and **Keyboard
+shortcuts**. The session
 adds it at the end of the menu bar after your hook has run, so leave it out
 unless you want it somewhere else in the bar.
+
+An entry's `keybindings` are checked with the components' keyboard
+shortcuts, and the `shortcuts` section of the session file can change them,
+as [How to add keyboard shortcuts](add-keyboard-shortcuts.md) shows.
 
 ## Read a failure
 

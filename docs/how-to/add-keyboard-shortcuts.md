@@ -28,9 +28,11 @@ class MyController:
 ```
 
 The method takes no arguments, since a key has none to give. Write the key
-as `app-model` does, such as `Ctrl+Shift+R`, `F5` or `Escape`. `Ctrl` is the
-Command key on macOS, so one key works everywhere; give `mac=`, `win=` or
-`linux=` only when a platform needs a different one.
+with `app-model`'s names, such as `Ctrl+Shift+R`, `F5`, `Escape` or
+`Delete`. `Ctrl` is the Command key on macOS, so one key works everywhere;
+give `mac=`, `win=` or `linux=` only when a platform needs a different one.
+Don't write `Cmd` for Command: in `app-model`'s names, `Cmd` and `Meta` are
+the Control key on macOS.
 
 A method can be a [slot](../explanation/glossary.md#slot) and a shortcut at
 once. A coroutine method can't be a shortcut yet, because a key fires on
@@ -51,6 +53,12 @@ class MyView(QWidget):
 While the view has focus, `Left` steps back; anywhere else it does what the
 window binds it to. A presenter has nothing to focus, so its keys always act
 in the whole window.
+
+A text field with the focus keeps the keys it uses itself, such as `Ctrl+C`
+and the arrow keys, so a shortcut on one of them doesn't act while a text
+field has focus. Other widgets give way instead: a window shortcut on `Up`
+takes the key from a focused spin box, which then doesn't step. Keep bare
+arrow keys to a view's own shortcuts.
 
 ## Change a key in the session file
 
