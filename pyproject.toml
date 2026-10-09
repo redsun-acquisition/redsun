@@ -68,6 +68,7 @@ docs = [
 
 qt-common = [
     "app-model>=0.5.1",
+    "fonticon-materialdesignicons7>=7.2.96",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
     "superqt>=0.8.2",
@@ -125,6 +126,7 @@ profile = [
 [project.optional-dependencies]
 qt-common = [
     "app-model>=0.5.1",
+    "fonticon-materialdesignicons7>=7.2.96",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
     "superqt>=0.8.2",
