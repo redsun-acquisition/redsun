@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, get_args
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -61,7 +61,8 @@ class Shortcut:
             problems.append("its title is empty")
         if self.scope not in get_args(Scope):
             problems.append(f"its scope {self.scope!r} is neither 'window' nor 'view'")
-        if self.when is not None and not callable(self.when):
+        # the annotation says callable, but a method name given as a string passes it
+        if self.when is not None and not callable(cast("object", self.when)):
             problems.append("its condition is not a function")
         if problems:
             raise ValueError(f"shortcut: {'; '.join(problems)}")
