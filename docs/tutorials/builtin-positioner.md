@@ -126,12 +126,13 @@ Compare it with the window of the
 [last tutorial](device-service.md#4-run-it): the row of nudge buttons at the
 bottom is gone, and the positioner on the left has a group for each of
 `stage`, `fast_stage` and `remote_stage`. Each group shows where its stage
-is, `-` and `+` buttons with a step size beside them, and a field where you
-type a position to go to. Hold `+`, and the stage keeps stepping until you
-let go.
+is, minus and plus buttons with a step size beside them, and a field where
+you type a position to go to. Hold the plus button, and the stage keeps
+stepping until you let go. Pointing at a button shows its name.
 
-`Save` records where a stage stands in the Saved positions section, under a
-name you can change, and `Go` beside the saved entry moves the stage back
+The Save button records where a stage stands in the Saved positions
+section, under a name you can change, and the Go button beside the saved
+entry moves the stage back
 there. The Advanced tab sets how fast a held button repeats. The
 Configuration tab lists the configuration a stage declares; yours declare
 none, so the tab says so.

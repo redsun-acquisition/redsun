@@ -86,9 +86,9 @@ In a session class, declare both components and pair them in `wire()`:
 ![The light view of the example session: a laser with its on/off button,
 slider and intensity field, and an LED that is on](images/lights.png)
 
-- The button of each light says whether it is on, as the light reads back. A
-  click asks for the other state, and the button changes when the light
-  confirms it.
+- The button of each light shows a lit bulb while the light is on, as the
+  light reads back, and an outline while it is off. A click asks for the
+  other state, and the button changes when the light confirms it.
 - The slider and the number field show the intensity the light reads back,
   except while you drag the slider or type in the field. The view writes the
   intensity when you let the slider go, when you press Enter or leave the field

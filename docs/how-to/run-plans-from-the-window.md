@@ -78,9 +78,11 @@ directory, the motor to move and the plan's parameters](images/acquisition.png)
 - Choose a plan in the list at the top, and the button beside it shows the
   plan's documentation. The plan's parameters, devices and the callbacks to
   attach follow below.
-- Run starts the plan. The view shows it running once the presenter reports
-  that it started, and Run becomes Stop. A plan marked
-  `@continuous(pausable=True)` also has Pause, which becomes Resume. See
+- The Run button, with a play icon, starts the plan. The view shows it
+  running once the presenter reports that it started, and the button turns
+  into Stop. A plan marked `@continuous(pausable=True)` also has Pause, which
+  turns into Resume. The buttons show icons only; pointing at one shows its
+  name. See
   [Write a plan that runs until stopped](write-a-continuous-plan.md).
 - Run stays disabled while a list of devices the plan needs is empty.
 - `Ctrl+R` runs the chosen plan and `Ctrl+.` stops the running one, from

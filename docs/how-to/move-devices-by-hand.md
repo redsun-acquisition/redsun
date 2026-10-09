@@ -141,32 +141,35 @@ shows how.
 ![The positioner view of the example session: a group for the stage, with a
 row for each of its axes x and y](images/positioner.png)
 
-- The Motors tab has a group per device and a row per axis. `-` and `+` step
-  the axis by the size chosen beside them, and repeat while you hold them. With
+- The Motors tab has a group per device and a row per axis. The minus and
+  plus buttons step the axis by the size chosen beside them, and repeat while
+  you hold them. Every button in the view shows an icon, and pointing at one
+  shows its name. With
   the row or a step button focused, Left and Right do the same; the
   [`shortcuts`](../reference/session-file.md#shortcuts) section of the
   session file changes them as `positioner_view.step_down` and
   `positioner_view.step_up`. A step starts
   from the setpoint, so steps add up exactly, and from the readback after a
   stop or a failure.
-- The field beside `Go` shows where the axis is until you type a target.
-  Enter or `Go` sends the axis there. The view doesn't send a target that is
+- The field beside the Go button, a crosshair, shows where the axis is until
+  you type a target. Enter or Go sends the axis there. The view doesn't send a target that is
   not a number or that falls outside the limits the device reports, and the
   group says why. The limits are read again after each configuration write and
   after a move that is refused or fails, so a changed offset moves them too. An
   axis that checks its own targets, as an `ophyd-async` `StandardMovable`
   does, also refuses a target outside its current limits when it moves.
-- `Stop` appears for a device that can be stopped, and stops the device and
+- Stop appears for a device that can be stopped, and stops the device and
   each of its axes at once. If one of them fails to stop, it is reported and
   the rest still stop.
 - "moving" and "failed" show the state of each device, with the error after
   "failed".
-- `Save` keeps where a device stands, under a name you can edit, in the
-  Saved positions section. `Go` on an entry moves that device back there,
+- Save keeps where a device stands, under a name you can edit, in the
+  Saved positions section. Go on an entry moves that device back there,
   after the same checks as a typed target. A saved position also keeps the
   configuration values in the units of the axis' position, such as an offset.
-  If one has changed since, the first `Go` names it and the second moves.
-  `x` removes an entry, and for a few seconds after, `Undo` brings it back.
+  If one has changed since, the first Go names it and the second moves.
+  The close button removes an entry, and for a few seconds after, Undo brings
+  it back.
 - The Configuration tab shows each axis' configuration, such as `velocity`,
   and writes the entries that can be written. A value changed on the device
   by anything else is shown as it changes.
