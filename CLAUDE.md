@@ -46,9 +46,10 @@ redsun/
 |   `-- reference/             api/ pages, changelog (generated)
 |-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
 |                              mypy_qt.py (tox mypy legs),
-|                              release_notes.py (changelog sections),
+|                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)
-|-- .github/workflows/         CI, changelog label check, docs
+|-- changelog.d/                towncrier entry files, one per change
+|-- .github/workflows/         CI, changelog entry check, docs
 |-- .claude/                   agents, commands, docs-conventions skill
 |-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox
 |-- zensical.toml              docs site and navigation
@@ -234,11 +235,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   where the feature needing it runs, marked `# noqa: PLC0415`, so a session
   without the extra never imports it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
-- Public API change -> docstring, and a changelog label on the pull request.
-  The changelog is written from the labels at release time ("Making a release"
-  in `docs/how-to/contribute.md`); never edit `docs/reference/changelog.md` by
-  hand. A change that breaks existing code also gets the `breaking` label and a
-  line on the current `docs/how-to/migrate-from-*.md` page.
+- Public API change -> docstring, and a changelog entry file in
+  `changelog.d/` (`<pr>.<type>.md`; "Changelog entries" in
+  `docs/how-to/contribute.md`). A release collects the files into
+  `docs/reference/changelog.md`; never edit that file by hand. A change that
+  breaks existing code also gets a `breaking` entry and a line on the current
+  `docs/how-to/migrate-from-*.md` page.
 
 ### Docstrings and comments
 

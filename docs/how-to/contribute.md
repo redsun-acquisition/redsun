@@ -73,9 +73,10 @@ dependencies for you.
    [the commit checks](#checks-before-each-commit). A change to the docs alone
    only needs [the docs build](#building-the-docs).
 5. **Open a pull request against `main`.** Write its title and description as
-   [Pull requests](#pull-requests) describes. It also needs the
-   [label](#labels) that says which section of the changelog it belongs in. If you can't set labels, say which one you think
-   fits, and a maintainer adds it.
+   [Pull requests](#pull-requests) describes. Then add a
+   [changelog entry](#changelog-entries) for each change a user will notice.
+   If you're not sure what to write, open the pull request without it and say
+   so: a maintainer can add or fix the entry on your branch.
 6. **Wait for CI and a review.** CI runs the same checks as `uv run tox` and
    reports the result on the pull request. If a reviewer asks for changes,
    push them to the same branch, and the pull request updates by itself.
@@ -404,23 +405,47 @@ change a reviewer can see, with no headers:
 A change that existing code must follow says so in its bullet. Leave out tests,
 coverage and the checks you ran: CI reports them on the pull request.
 
-### Labels
+### Changelog entries
 
-Every pull request needs one label saying which changelog section it goes in,
-and CI refuses a pull request without one.
+Each change a user will notice gets a file in `changelog.d/`, named after the
+pull request and the kind of change, such as `412.fixed.md`. Open the pull
+request first, so you know its number. A release collects the files into the
+[changelog](../reference/changelog.md), one entry each, and links each entry
+to its pull request.
 
-| label | changelog section |
+| kind | use it when |
 | --- | --- |
-| `added` | Added |
-| `changed` | Changed |
-| `deprecated` | Deprecated |
-| `removed` | Removed |
-| `fixed` | Fixed |
-| `security` | Security |
-| `skip-changelog` | none: tests, CI, refactors nobody using `redsun` would notice |
+| `breaking` | code that uses `redsun` has to change |
+| `added` | something new: a class, a function, a keyword, a section of the session file |
+| `changed` | something that already existed behaves differently |
+| `deprecated` | something still works but warns, and goes in a later release |
+| `removed` | something is gone |
+| `fixed` | something now works as its documentation says |
+| `security` | a vulnerability is closed |
 
-Add `breaking` as well when existing code has to change. The entry is then
-marked **Breaking**.
+`towncrier` writes the file for you:
+
+```bash
+uv run towncrier create 412.fixed.md --content "A link that wire and wiring: both name is made once."
+```
+
+A second change of the same kind in one pull request goes in `412.fixed.2.md`.
+
+An entry says what changed, in a line or two, and names what a user would
+type to reach it. It doesn't say why: that belongs in the pull request or in
+a [decision record](../explanation/decisions/index.md).
+
+```markdown
+Good: Add `timeout=` to `run_coro`, which cancels the coroutine when the wait ends without a result.
+Bad:  Improve run_coro.
+```
+
+A change to something not released yet gets no entry of its own. Edit the
+entry that added it instead, so the release says what users get.
+
+A pull request nobody using `redsun` would notice, such as tests, CI, a
+refactor or docs alone, needs no entry. A maintainer gives it the
+`skip-changelog` label, and CI accepts it without one.
 
 ## Writing documentation
 
@@ -527,9 +552,9 @@ one's status to "Superseded by" with a link to the new one.
 
 ## Making a release
 
-A release starts with the changelog, which a script writes from the pull
-requests merged since the last release, grouped by their
-[labels](#labels). Don't edit it by hand.
+A release starts with the changelog, which `towncrier` writes from the entry
+files the pull requests added since the last release. Don't edit it by hand,
+except to fix an entry while releasing.
 
 ### What you need for a release
 
@@ -539,22 +564,20 @@ signed in with access to it.
 ### 1. Write the changelog
 
 On an up-to-date `main`, make a release branch and write the section, with
-the version without its `v`:
+the version without its `v` and today's date:
 
 ```bash
 git switch main
 git pull
 git switch -c release/v0.14.1
-uv run python scripts/release_notes.py prepare 0.14.1
+uv run towncrier build --version 0.14.1 --date 01-10-2026
 ```
 
-The script asks GitHub for the pull requests merged since the last final
-release, and writes a section for them at the top of
-`docs/reference/changelog.md`, with the date and a compare link.
+`towncrier` collects the files in `changelog.d/` into a section at the top of
+`docs/reference/changelog.md`, and deletes them.
 
-Read the section. If a title reads badly, rename the pull request it came from,
-so the changelog and GitHub agree. Then discard the section with `git checkout
-docs/reference/changelog.md` and run the script again.
+Read the section. If an entry reads badly, fix it in the changelog, which is
+now the only copy.
 
 ### 2. Merge the changelog
 
