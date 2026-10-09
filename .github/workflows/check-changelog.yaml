@@ -1,0 +1,26 @@
+name: Changelog
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+jobs:
+  entry:
+    name: Require a changelog entry
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Check for an entry in changelog.d
+        run: |
+          uvx towncrier==26.9.0 check --compare-with "origin/${{ github.base_ref }}" || {
+            echo "Add a file to changelog.d/ for each change, or ask for the skip-changelog label:"
+            echo "https://redsun-acquisition.github.io/redsun/how-to/contribute/#changelog-entries"
+            exit 1
+          }

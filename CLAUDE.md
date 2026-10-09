@@ -46,9 +46,10 @@ redsun/
 |   `-- reference/             api/ pages, changelog (generated)
 |-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
 |                              mypy_qt.py (tox mypy legs),
-|                              release_notes.py (changelog sections),
+|                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)
-|-- .github/workflows/         CI, changelog label check, docs
+|-- changelog.d/               towncrier entry files, one per change
+|-- .github/workflows/         CI, changelog entry check, docs
 |-- .claude/                   agents, commands, docs-conventions skill
 |-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox
 |-- zensical.toml              docs site and navigation
@@ -83,11 +84,11 @@ uv run tox -e mypy-pyqt,mypy-pyside
 | `lint` | `prek run --all-files`: the commit hooks, ruff included |
 | `mypy-pyqt` / `mypy-pyside` | mypy against that binding |
 | `tests` | `pytest -q` |
-| `docs` | `zensical build` then `scripts/check_xrefs.py` |
+| `docs` | `zensical build`, `scripts/check_xrefs.py`, then a `towncrier` draft |
 
 **Run what the change can break, not the whole matrix.** A change confined to
-`docs/` (pages, ADRs, changelogs, `zensical.toml`) can only break the docs
-build, so validate it with `uv run tox -e docs` alone. A change to docstrings
+`docs/` (pages, ADRs, changelogs, `zensical.toml`) or to `changelog.d/` can
+only break the docs build, so validate it with `uv run tox -e docs` alone. A change to docstrings
 in `src/` also runs `lint`, since ruff's `D` rules check docstrings and the
 reference pages render them: `uv run tox -e lint,docs`. A change to docstrings
 or comments in `tests/` alone runs `lint`; no test can change with it.
@@ -234,11 +235,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   where the feature needing it runs, marked `# noqa: PLC0415`, so a session
   without the extra never imports it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
-- Public API change -> docstring, and a changelog label on the pull request.
-  The changelog is written from the labels at release time ("Making a release"
-  in `docs/how-to/contribute.md`); never edit `docs/reference/changelog.md` by
-  hand. A change that breaks existing code also gets the `breaking` label and a
-  line on the current `docs/how-to/migrate-from-*.md` page.
+- Public API change -> docstring, and a changelog entry file in
+  `changelog.d/` (`<pr>.<type>.md`; "Changelog entries" in
+  `docs/how-to/contribute.md`). A release collects the files into
+  `docs/reference/changelog.md`; edit that file by hand only to fix an entry
+  while releasing. A change that breaks existing code also gets a `breaking`
+  entry and a line on the current `docs/how-to/migrate-from-*.md` page.
 
 ### Docstrings and comments
 

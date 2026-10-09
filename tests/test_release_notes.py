@@ -1,156 +1,48 @@
-"""The changelog section a release is prepared with, and the notes read back from it."""
+"""The notes a GitHub release takes from its changelog section."""
 
 from __future__ import annotations
 
-import datetime
-from typing import TYPE_CHECKING
-
 import pytest
 
-from scripts.release_notes import extract, insert, prepare, section, worded
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-NOTES = """\
-## What's Changed
-### Added
-* feat: add strict sessions by @someone in https://github.com/o/r/pull/140
-### Changed
-* refactor!: promote the session layer by @someone in https://github.com/o/r/pull/141
-### Fixed
-* chore: bump the actions group by @dependabot[bot] in https://github.com/o/r/pull/142
-
-## New Contributors
-* @newcomer made their first contribution in https://github.com/o/r/pull/139
-
-**Full Changelog**: https://github.com/o/r/compare/v0.13.0...v0.14.0
-"""
+from scripts.release_notes import extract
 
 CHANGELOG = """\
 # Changelog
 
 Intro.
 
-## [0.13.0] - 23-09-2026
+<!-- towncrier release notes start -->
 
-### Fixed
+## [0.15.0](https://github.com/o/r/releases/tag/v0.15.0) - 12-10-2026
 
-- an older fix
+### Breaking
 
-[0.13.0]: https://github.com/o/r/compare/v0.12.0...v0.13.0
-"""
-
-
-def reach_github(*args: str) -> str:
-    """Stand in for every call to GitHub, which a refused preparation never makes."""
-    raise AssertionError("prepare reached GitHub")
-
-
-@pytest.fixture
-def offline_changelog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point `prepare` at a copy of `CHANGELOG` and fail any call it makes to GitHub."""
-    changelog = tmp_path / "changelog.md"
-    changelog.write_text(CHANGELOG, encoding="utf-8")
-    monkeypatch.setattr("scripts.release_notes.CHANGELOG", changelog)
-    monkeypatch.setattr("scripts.release_notes.gh", reach_github)
-    monkeypatch.setattr("scripts.release_notes.previous_final_tag", reach_github)
-    return changelog
-
-
-def test_a_release_section_is_written_above_the_last_and_read_back() -> None:
-    """Write a release section above the previous one, naming each author, and read both back."""
-    new = section("0.14.0", datetime.date(2026, 10, 1), NOTES, breaking={141})
-    link = "[0.14.0]: https://github.com/o/r/compare/v0.13.0...v0.14.0"
-
-    changelog = insert(CHANGELOG, new, link)
-
-    assert (
-        changelog
-        == """\
-# Changelog
-
-Intro.
-
-## [0.14.0] - 01-10-2026
+- Drop a hook ([#141](https://github.com/o/r/pull/141))
 
 ### Added
 
-- Add strict sessions ([#140](https://github.com/o/r/pull/140)) by [@someone](https://github.com/someone)
+- Add strict sessions ([#140](https://github.com/o/r/pull/140))
 
-### Changed
+## [0.14.3] - 01-10-2026
 
-- **Breaking:** Promote the session layer ([#141](https://github.com/o/r/pull/141)) by [@someone](https://github.com/someone)
+### Added
 
-### Fixed
+- an older addition
 
-- Bump the actions group ([#142](https://github.com/o/r/pull/142)) by [@dependabot](https://github.com/apps/dependabot)
-
-## [0.13.0] - 23-09-2026
-
-### Fixed
-
-- an older fix
-
-[0.13.0]: https://github.com/o/r/compare/v0.12.0...v0.13.0
-[0.14.0]: https://github.com/o/r/compare/v0.13.0...v0.14.0
+[0.14.3]: https://github.com/o/r/compare/v0.14.2...v0.14.3
 """
+
+
+def test_a_section_towncrier_wrote_is_read_back() -> None:
+    """Read a section under a linked heading, and an older one, each without its heading or links."""
+    assert extract(CHANGELOG, "0.15.0") == (
+        "### Breaking\n\n- Drop a hook ([#141](https://github.com/o/r/pull/141))\n\n"
+        "### Added\n\n- Add strict sessions ([#140](https://github.com/o/r/pull/140))\n"
     )
-    assert extract(changelog, "0.13.0") == "### Fixed\n\n- an older fix\n"
-    assert extract(changelog, "0.14.0").startswith("### Added\n")
+    assert extract(CHANGELOG, "0.14.3") == "### Added\n\n- an older addition\n"
 
 
-def test_the_first_section_goes_below_the_introduction() -> None:
-    """Put the first section below the introduction, without contributors or links."""
-    new = section("0.14.0", datetime.date(2026, 10, 1), NOTES, breaking=set())
-
-    changelog = insert("# Changelog\n\nIntro.\n", new, "[0.14.0]: https://x")
-
-    assert changelog.startswith("# Changelog\n\nIntro.\n\n## [0.14.0] - 01-10-2026\n")
-    assert changelog.endswith("\n[0.14.0]: https://x\n")
-    assert "New Contributors" not in changelog
-    assert "Full Changelog" not in changelog
-
-
-@pytest.mark.parametrize(
-    ("title", "entry"),
-    [
-        pytest.param("feat: add strict sessions", "Add strict sessions", id="type"),
-        pytest.param("fix(engine): wake a latch", "Wake a latch", id="scope"),
-        pytest.param("refactor(qt)!: drop a hook", "Drop a hook", id="breaking"),
-        pytest.param(
-            "fix: `wire` yields links", "`wire` yields links", id="code-first"
-        ),
-        pytest.param("Bump the actions group", "Bump the actions group", id="no-type"),
-        pytest.param("docs: say why: a colon", "Say why: a colon", id="second-colon"),
-    ],
-)
-def test_an_entry_drops_the_type_its_section_already_says(
-    title: str, entry: str
-) -> None:
-    """Drop the commit type and scope from an entry and capitalise a leading letter."""
-    assert worded(title) == entry
-
-
-def test_reading_a_version_never_prepared_names_the_prepare_command() -> None:
-    """Refuse a missing section with a message naming the prepare command."""
-    with pytest.raises(LookupError, match=r"release_notes\.py prepare 0\.14\.1"):
-        extract(CHANGELOG, "0.14.1")
-
-
-@pytest.mark.parametrize("version", ["v0.14.1", "0.14", "0.14.1rc1", ""])
-@pytest.mark.usefixtures("offline_changelog")
-def test_preparing_a_version_not_shaped_x_y_z_is_refused(version: str) -> None:
-    """Refuse a version that is not three dot-separated numbers."""
-    with pytest.raises(ValueError, match="0.14.0"):
-        prepare(version)
-
-
-def test_preparing_a_version_the_changelog_has_is_refused(
-    offline_changelog: Path,
-) -> None:
-    """Refuse to prepare a version again, leaving its section as it was."""
-    with pytest.raises(ValueError, match=r"already has a section for 0\.13\.0"):
-        prepare("0.13.0")
-
-    assert offline_changelog.read_text(encoding="utf-8") == CHANGELOG
+def test_reading_a_version_never_built_names_the_build_command() -> None:
+    """Refuse a missing section with a message naming the command that writes it."""
+    with pytest.raises(LookupError, match=r"towncrier build --version 0\.16\.0"):
+        extract(CHANGELOG, "0.16.0")
