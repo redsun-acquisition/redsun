@@ -821,8 +821,10 @@ def test_a_tab_group_in_a_weighted_edge_keeps_the_edge_narrow(
     _shown(app)
 
     a, c = _dock(app, "a"), _dock(app, "c")
+    # the tab bar sits in the group's share, under the dock, on some styles
+    group = c.geometry().top() - a.geometry().top()
     assert c.width() < 400
-    assert 2.4 <= c.height() / a.height() <= 3.6
+    assert 2.4 <= c.height() / group <= 3.6
 
 
 def test_a_session_presenting_its_own_way_still_shows_and_saves(
