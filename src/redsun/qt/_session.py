@@ -70,7 +70,7 @@ from qtpy.QtWidgets import (
 )
 
 from redsun.errors import ConfigurationInUse, HookError
-from redsun.view import Placement
+from redsun.view import Column, Placement, Row, Tabs, WindowLayout
 
 from .._hooks import (
     ConfiguresApplication,
@@ -230,6 +230,14 @@ class Qt(Frontend):
         MenuItem: QAction,
         ToolBarItem: QAction,
     }
+    regions: ClassVar[Mapping[str, type[Row | Column | Tabs]]] = {
+        "center": Tabs,
+        "left": Column,
+        "right": Column,
+        "top": Row,
+        "bottom": Row,
+    }
+    hides: ClassVar[bool] = True
 
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
@@ -294,6 +302,27 @@ class Qt(Frontend):
             "left, right, top, bottom, central, {dock: <edge>, group: <name>}, "
             "{menu: <name>} or {toolbar: <name>}"
         )
+
+    @classmethod
+    def region_of(cls, placement: Placement) -> tuple[str, str | None] | None:
+        """Return `center` for `Central`, a dock's edge and group, and `None` for a menu or toolbar item."""
+        match placement:
+            case Central():
+                return "center", None
+            case Dock(area=area, group=group):
+                return area, group
+        return None
+
+    @classmethod
+    def layout_problems(cls, layout: WindowLayout) -> list[str]:
+        """Return what Qt cannot show of *layout*, a share for the centre included."""
+        problems = super().layout_problems(layout)
+        if "center" in layout.sizes:
+            problems.append(
+                "layout.sizes.center: the centre takes what the docks leave; "
+                "give shares to the edges"
+            )
+        return problems
 
     @classmethod
     def thread_of(cls, consumer: object) -> SlotThread:

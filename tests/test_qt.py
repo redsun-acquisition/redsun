@@ -46,6 +46,7 @@ from redsun import (
     Declare,
     Placement,
     Session,
+    WindowLayout,
     slot,
 )
 from redsun.qt import (
@@ -1056,6 +1057,28 @@ def test_qt_refuses_a_placement_it_cannot_read(value: object) -> None:
     """Refuse a value naming no Qt placement, listing the forms Qt reads."""
     with pytest.raises(ValueError, match="left, right, top, bottom, central"):
         Qt.read_placement(value)
+
+
+@pytest.mark.parametrize(
+    ("placement", "region"),
+    [
+        (Central(), ("center", None)),
+        (Dock("left", group="tools"), ("left", "tools")),
+        (MenuItem("File"), None),
+    ],
+)
+def test_qt_names_the_region_a_placement_asks_for(
+    placement: Placement, region: tuple[str, str | None] | None
+) -> None:
+    """Put a central view in the centre, a dock in its edge with its group, and a menu item nowhere."""
+    assert Qt.region_of(placement) == region
+
+
+def test_qt_refuses_a_size_for_the_centre() -> None:
+    """Refuse a share for the centre, which takes what the docks leave."""
+    problems = Qt.layout_problems(WindowLayout(sizes={"center": 0.5}))
+
+    assert any("center" in line for line in problems)
 
 
 def test_a_failed_view_leaves_its_reason_where_it_would_have_been(
