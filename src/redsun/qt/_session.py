@@ -38,6 +38,7 @@ from collections.abc import Mapping  # noqa: TC003
 from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import partial
 from typing import (
     TYPE_CHECKING,
     ClassVar,
@@ -52,13 +53,13 @@ from typing import (
 
 from app_model import Action, Application
 from app_model.backends.qt import QModelMainWindow, QModelMenu
-from app_model.types import MenuRule, ToggleRule
+from app_model.types import KeyBinding, KeyBindingRule, KeyCode, MenuRule, ToggleRule
 from platformdirs import user_documents_dir
 from psygnal import emit_queued
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QByteArray, QEvent, QObject, QRect
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtGui import QAction
+from qtpy.QtGui import QAction, QKeySequence
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -89,6 +90,7 @@ from ..session._factories import resolved
 from ..session._frontend import Frontend
 from ..session._layout import resolved_layout
 from ..session._protocols import DesktopSession
+from ..session._shortcuts import Binding
 from ..view._layout import Split, names_in
 from ..view.qt._failed import FailedView, FailuresButton
 from ._actions import read_actions
@@ -158,6 +160,11 @@ EDGE_NAMES: Final = frozenset(get_args(Area))
 
 DIRECT_CHILDREN: Final = QtNamespace.FindChildOption.FindDirectChildrenOnly
 """Find a widget's own children, not theirs."""
+
+NOT_KEYS: Final = frozenset(
+    {KeyCode.UNKNOWN, KeyCode.Ctrl, KeyCode.Shift, KeyCode.Alt, KeyCode.Meta}
+)
+"""What app-model reads a combination's last part as when it holds no key of its own."""
 
 HORIZONTAL: Final = QtNamespace.Orientation.Horizontal
 """Side by side."""
@@ -346,6 +353,26 @@ class Qt(Frontend):
         return problems
 
     @classmethod
+    def key_problems(cls, key: str) -> list[str]:
+        """Return why *key* is not one app-model reads, or nothing."""
+        try:
+            parsed = KeyBinding.validate(key)
+        except (TypeError, ValueError) as error:
+            return [f"{key!r} is not a key: {error}"]
+        # app-model reads some names it does not know without an error, such
+        # as "Ctrl+Period" as "Ctrl+", leaving no key in the combination
+        if any(part.key in NOT_KEYS for part in parsed.parts):
+            return [
+                f"{key!r} names no key app-model reads; write it as Qt does, such as 'Ctrl+.'"
+            ]
+        return []
+
+    @classmethod
+    def canonical_key(cls, key: str) -> str:
+        """Return *key* as app-model writes it."""
+        return str(KeyBinding.validate(key))
+
+    @classmethod
     def thread_of(cls, consumer: object) -> SlotThread:
         """Run a widget's slots on the main thread, the only one it may be used from."""
         return "main" if isinstance(consumer, QWidget) else None
@@ -372,11 +399,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
     """
 
     __slots__ = (
+        "_action_bindings",
         "_close_guard",
         "_default_state",
         "_main_window",
         "_model",
         "_qt_app",
+        "_shortcut_bindings",
         "_shown_layout",
         "_sized",
         "_window_widgets",
@@ -410,6 +439,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._default_state: QByteArray | None = None
         self._shown_layout = WindowLayout()
         self._sized = False
+        self._action_bindings: list[Binding] = []
+        self._shortcut_bindings: list[Binding] = []
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -584,6 +615,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
+        self._shortcut_bindings = self._bind_shortcuts(views)
         self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()
@@ -701,6 +733,50 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.settings.set(
             "window.center", centre_state(self._main_window, self._shown_layout)
         )
+
+    def _bind_shortcuts(
+        self, views: Mapping[str, AttachableComponent]
+    ) -> list[Binding]:
+        """Bind the settled keys: on the window, or on a view for a view's own keys.
+
+        A command the components declare is registered here; a session file
+        action already is, and gets its keys only. Returns the bindings as
+        bound.
+        """
+        bound = self.resolve_shortcuts(self._action_bindings)
+        commands = [
+            Action(id=binding.command, title=binding.title, callback=binding.run)
+            for binding in bound
+            if binding.run is not None
+        ]
+        if commands:
+            self.on_release(self.model.register_actions(commands))
+        for binding in bound:
+            if not binding.keys:
+                continue
+            host = self.main_window if binding.view is None else views.get(binding.view)
+            if not isinstance(host, QWidget):
+                logger.warning(
+                    "%s: view %r is not a widget, so its keys stay unbound",
+                    binding.command,
+                    binding.view,
+                )
+                continue
+            action = QAction(binding.title, host)
+            action.setObjectName(binding.command)
+            action.triggered.connect(partial(self._run_command, binding.command))
+            action.setShortcuts([QKeySequence(key) for key in binding.keys])
+            action.setShortcutContext(
+                QtNamespace.ShortcutContext.WindowShortcut
+                if binding.view is None
+                else QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
+            )
+            host.addAction(action)
+        return bound
+
+    def _run_command(self, command: str) -> None:
+        """Run *command*, so a key and a menu entry run it the same way."""
+        self.model.commands.execute_command(command).result()
 
     def _register_window_actions(
         self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
@@ -904,7 +980,26 @@ class QtSession(DesktopSession[QMainWindow], Session):
         actions = read_actions(self._configuration().actions, type(self).__name__)
         if not actions:
             return
-        self.on_release(self.model.register_actions(actions))
+        # their keys are settled with the components' and bound in present, so
+        # the registry gets none that a component took first
+        self._action_bindings = [
+            Binding(
+                action.id,
+                action.title,
+                tuple(
+                    k for rule in action.keybindings or () if (k := platform_key(rule))
+                ),
+                None,
+                None,
+            )
+            for action in actions
+            if action.keybindings
+        ]
+        self.on_release(
+            self.model.register_actions(
+                [action.model_copy(update={"keybindings": None}) for action in actions]
+            )
+        )
         logger.debug(
             "Registered %d action(s) on %r: %s",
             len(actions),
@@ -1360,3 +1455,10 @@ def restore_centre(window: QMainWindow, layout: WindowLayout, state: object) -> 
             part.restoreState(QByteArray(base64.b64decode(value)))
         elif isinstance(part, QTabWidget) and isinstance(value, int):
             part.setCurrentIndex(value)
+
+
+def platform_key(rule: KeyBindingRule) -> str | None:
+    """Return the key *rule* gives the platform this runs on, as app-model writes it."""
+    here = {"darwin": rule.mac, "win32": rule.win}.get(sys.platform, rule.linux)
+    chosen = here if here is not None else rule.primary
+    return None if chosen is None else str(KeyBinding.validate(chosen))

@@ -868,10 +868,11 @@ class Session(BuildableSession):
     def resolve_shortcuts(self, extra: Sequence[Binding] = ()) -> list[Binding]:
         """Return the keys the window binds: what the components declare, then *extra*, settled.
 
-        The components count in the order they are declared. The session
-        file's `shortcuts` replace a command's keys first; a key two commands
-        ask for in one place, the whole window or one view, stays with the
-        first, and the change is logged.
+        The components count in the order they are declared. A key the
+        frontend cannot read is left out. The session file's `shortcuts`
+        replace a command's keys first; a key two commands ask for in one
+        place, the whole window or one view, stays with the first. Every change
+        is logged.
 
         Raises
         ------
@@ -886,13 +887,18 @@ class Session(BuildableSession):
             and declaration.instance is not None
         }
         found, problems = candidates(components, views=set(self.views))
-        found = [
-            replace(b, keys=tuple(self.frontend.canonical_key(k) for k in b.keys))
-            for b in found
-        ]
-        resolved, settled = resolved_shortcuts(
-            [*found, *extra], self._shortcut_overrides
-        )
+        checked = []
+        for binding in [*found, *extra]:
+            keys = []
+            for key in binding.keys:
+                refusals = self.frontend.key_problems(key)
+                problems += [
+                    f"{binding.command}: {line}; left out" for line in refusals
+                ]
+                if not refusals:
+                    keys.append(self.frontend.canonical_key(key))
+            checked.append(replace(binding, keys=tuple(keys)))
+        resolved, settled = resolved_shortcuts(checked, self._shortcut_overrides)
         problems += settled
         if problems:
             message = "Keyboard shortcuts:\n" + "\n".join(
