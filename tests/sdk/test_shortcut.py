@@ -9,7 +9,7 @@ import pytest
 
 from redsun import Shortcut, shortcut, slot
 from redsun.ports import ports
-from redsun.session._shortcuts import Binding, candidates, resolved_shortcuts
+from redsun.session._shortcuts import Binding, candidates, holder, resolved_shortcuts
 from redsun.view._shortcut import shortcuts
 
 if TYPE_CHECKING:
@@ -161,7 +161,7 @@ def test_components_become_bindings_in_declaration_order() -> None:
 
 def test_the_first_window_key_wins_and_both_are_named() -> None:
     """Keep a window key on the first command asking for it, and name both in the report."""
-    resolved, problems = resolved_shortcuts(
+    resolved, problems, _ = resolved_shortcuts(
         [binding("panel.run", "Ctrl+R"), binding("controller.restart", "Ctrl+R")], {}
     )
 
@@ -174,7 +174,7 @@ def test_the_first_window_key_wins_and_both_are_named() -> None:
 
 def test_a_view_key_shadowing_a_window_key_is_kept_without_report() -> None:
     """Keep a view key on the same combination as a window key, and report nothing."""
-    resolved, problems = resolved_shortcuts(
+    resolved, problems, _ = resolved_shortcuts(
         [
             binding("panel.run", "Ctrl+R"),
             binding("panel.again", "Ctrl+R", view="panel"),
@@ -188,7 +188,7 @@ def test_a_view_key_shadowing_a_window_key_is_kept_without_report() -> None:
 
 def test_two_keys_of_one_view_conflict() -> None:
     """Treat two keys of one view on one combination as a conflict."""
-    resolved, problems = resolved_shortcuts(
+    resolved, problems, _ = resolved_shortcuts(
         [
             binding("panel.a", "F5", view="panel"),
             binding("panel.b", "F5", view="panel"),
@@ -202,7 +202,7 @@ def test_two_keys_of_one_view_conflict() -> None:
 
 def test_overrides_replace_drop_and_report_unknown_commands() -> None:
     """Replace a command's keys, drop one given no key, and name an override for no command."""
-    resolved, problems = resolved_shortcuts(
+    resolved, problems, _ = resolved_shortcuts(
         [binding("panel.run", "Ctrl+R"), binding("panel.stop", "Escape")],
         {"panel.run": ("Ctrl+Shift+R", "F9"), "panel.stop": (), "ghost.run": ("F1",)},
     )
@@ -240,3 +240,39 @@ def test_a_condition_that_cannot_be_called_is_refused() -> None:
     """Refuse a condition that is not a function."""
     with pytest.raises(ValueError, match="condition"):
         shortcut("Left", title="Back", when=cast("Any", "ready"))
+
+
+def test_the_holder_of_a_key_is_another_command_in_the_same_place() -> None:
+    """Find the other command holding a key where a binding acts, and none elsewhere."""
+    run = Binding("panel.run", "Run", ("Ctrl+R",), None, None)
+    restart = Binding("controller.restart", "Restart", ("F5",), None, None)
+    refresh = Binding("panel.refresh", "Refresh", ("F5",), "panel", None)
+
+    found = [
+        holder([run, restart, refresh], run, "F5"),
+        holder([run, restart, refresh], refresh, "F5"),
+        holder([run, restart, refresh], run, "Ctrl+R"),
+    ]
+
+    assert found == [restart, None, None]
+
+
+def test_a_saved_key_wins_over_an_earlier_default_and_is_only_noted() -> None:
+    """Settle saved commands first, so a saved key beats an earlier default, and note that conflict apart."""
+    resolved, problems, notes = resolved_shortcuts(
+        [
+            binding("panel.run", "Ctrl+R"),
+            binding("controller.restart", "Ctrl+R"),
+            binding("panel.walk", "F1"),
+        ],
+        {"panel.run": (), "panel.walk": ("Ctrl+R",)},
+        saved={"panel.run", "panel.walk"},
+    )
+
+    assert [(b.command, b.keys) for b in resolved] == [
+        ("panel.run", ()),
+        ("controller.restart", ()),
+        ("panel.walk", ("Ctrl+R",)),
+    ]
+    assert problems == []
+    assert notes == ["Ctrl+R: kept on panel.walk, taken from controller.restart"]

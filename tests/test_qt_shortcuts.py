@@ -13,7 +13,11 @@ from qtpy.QtGui import QAction, QKeySequence
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
+    QKeySequenceEdit,
+    QLabel,
     QLineEdit,
+    QMessageBox,
+    QPushButton,
     QTableWidget,
     QTreeWidget,
     QTreeWidgetItem,
@@ -212,6 +216,13 @@ class TreeWalkerApp(QtSession):
     walker: AsView[Walker]
 
 
+class PanelWalkerApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "panel-walker-session"}
+
+    panel: AsView[Panel]
+    walker: AsView[Walker]
+
+
 class Recorder:
     """Presenter providing the list the commands record into."""
 
@@ -271,6 +282,42 @@ def rows(dialog: ShortcutsDialog, group: str) -> list[list[str]]:
         ]
         for row in range(table.rowCount())
     ]
+
+
+def edit_key(
+    dialog: ShortcutsDialog, title: str, column: int, key: Any, modifier: Any = None
+) -> None:
+    """Double-click *title*'s key cell in *column* and press *key* in its editor."""
+    table = dialog.findChild(QTableWidget)
+    assert table is not None
+    row = next(
+        r
+        for r in range(table.rowCount())
+        if (item := table.item(r, 0)) is not None and item.text() == title
+    )
+    table.cellDoubleClicked.emit(row, column)
+    editor = table.cellWidget(row, column)
+    assert isinstance(editor, QKeySequenceEdit)
+    key_click(editor, key, modifier)
+
+
+def answer(
+    monkeypatch: pytest.MonkeyPatch, button: QMessageBox.StandardButton
+) -> list[str]:
+    """Answer each question the dialog asks with *button*, and return what it asked."""
+    asked: list[str] = []
+
+    def exec_(prompt: QMessageBox) -> int:
+        # shown and active, as a real prompt is, so the key editor loses focus
+        prompt.show()
+        prompt.activateWindow()
+        QApplication.processEvents()
+        asked.append(prompt.text())
+        prompt.close()
+        return int(button)
+
+    monkeypatch.setattr(QMessageBox, "exec", exec_)
+    return asked
 
 
 def test_a_window_key_runs_its_method_from_anywhere(
@@ -558,3 +605,221 @@ def test_a_view_key_that_is_off_still_keeps_the_window_key_out_of_its_view(
 
     assert ran == []
     assert not tree.top.isExpanded()
+
+
+def test_a_saved_key_moves_a_command_at_once_and_a_reset_moves_it_back(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Run a command from its new key and not its old one, and from the old one after a reset."""
+    ran: list[str] = []
+    app = build(KeysApp, {"views": {"panel": {"ran": ran}}})
+    other = app.views["other"]
+    assert isinstance(other, Other)
+
+    app.set_shortcuts({"panel.run": ["F9"]})
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
+    after_old = list(ran)
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+    after_new = list(ran)
+    app.reset_shortcuts()
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
+
+    assert (after_old, after_new, ran) == ([], ["run"], ["run", "run"])
+
+
+def test_a_saved_key_moves_a_session_file_action_in_the_registry(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Give a session file action its saved key in the keybinding registry, dropping the old one."""
+    action = {
+        "id": "keys.plain",
+        "title": "Plain",
+        "callback": "mock_bundle.menu_callbacks:note",
+    }
+    app = build(KeysApp, {"actions": [action], "shortcuts": {"keys.plain": "F8"}})
+
+    app.set_shortcuts({"keys.plain": ["F9"]})
+    moved = app.model.keybindings.get_keybinding("keys.plain")
+    app.set_shortcuts({"keys.plain": []})
+
+    assert moved is not None
+    assert str(moved.keybinding) == "F9"
+    assert app.model.keybindings.get_keybinding("keys.plain") is None
+
+
+def test_an_edited_view_key_still_wins_inside_its_view(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep a view key moved onto the window's key winning while its view has focus."""
+    ran: list[str] = []
+    app = build(KeysApp, {"views": {"panel": {"ran": ran}}})
+    panel, other = app.views["panel"], app.views["other"]
+    assert isinstance(panel, Panel)
+    assert isinstance(other, Other)
+
+    app.set_shortcuts({"panel.refresh": ["Ctrl+R"]})
+    key_click(panel.edit, QtNamespace.Key.Key_R, CTRL)
+    key_click(other.edit, QtNamespace.Key.Key_R, CTRL)
+
+    assert ran == ["refresh", "run"]
+
+
+def test_the_open_list_shows_a_saved_key(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show a key saved while the list is open."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    app.set_shortcuts({"panel.run": ["F9"]})
+
+    assert rows(dialog, "Window")[0][1] == native("F9")
+
+
+def test_a_key_pressed_in_the_list_rebinds_its_command_and_is_saved(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Bind a command to the key pressed in its cell, show it, and save it."""
+    ran: list[str] = []
+    app = build(KeysApp, {"views": {"panel": {"ran": ran}}})
+    other = app.views["other"]
+    assert isinstance(other, Other)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 2, QtNamespace.Key.Key_F9)
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+
+    assert rows(dialog, "Window")[0][1:3] == [native("Ctrl+R"), native("F9")]
+    assert app.settings.get("shortcuts") == {"panel.run": ["Ctrl+R", "F9"]}
+    assert ran == ["run"]
+
+
+def test_backspace_in_a_key_cell_clears_that_key(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Clear a command's key with Backspace, leaving it unbound."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 1, QtNamespace.Key.Key_Backspace)
+
+    assert rows(dialog, "Window")[0][1] == "unbound"
+    assert app.settings.get("shortcuts") == {"panel.run": []}
+
+
+@pytest.mark.parametrize(
+    ("button", "keys"),
+    [
+        (QMessageBox.StandardButton.Yes, {"panel.run": ("Left",), "walker.walk": ()}),
+        (
+            QMessageBox.StandardButton.No,
+            {"panel.run": ("Ctrl+R",), "walker.walk": ("Left",)},
+        ),
+    ],
+    ids=["moved", "kept"],
+)
+def test_a_taken_key_moves_only_when_the_user_agrees(
+    qapp: QApplication,
+    build: BuildSession,
+    monkeypatch: pytest.MonkeyPatch,
+    button: QMessageBox.StandardButton,
+    keys: dict[str, tuple[str, ...]],
+) -> None:
+    """Ask before taking a key another window command holds, and move it only on yes."""
+    app = build(PanelWalkerApp)
+    asked = answer(monkeypatch, button)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 1, QtNamespace.Key.Key_Left)
+
+    bound = {b.command: b.keys for b in app.resolve_shortcuts()}
+    assert asked == ["Already used by Walk; move it here?"]
+    assert {c: bound[c] for c in keys} == keys
+
+
+def test_a_key_qt_cannot_bind_is_refused_in_the_list(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Say why a captured key is refused, and keep the command's key."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 1, QtNamespace.Key.Key_PageUp)
+
+    problem = dialog.findChild(QLabel, "shortcut-problem")
+    assert problem is not None
+    assert "PageUp" in problem.text()
+    assert rows(dialog, "Window")[0][1] == native("Ctrl+R")
+    assert "shortcuts" not in app.settings
+
+
+def test_reset_in_the_list_puts_the_defaults_back(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put every changed key back to its default from the list's reset button."""
+    app = build(KeysApp)
+    app.set_shortcuts({"panel.run": ["F9"]})
+    dialog = opened(app)
+
+    button = dialog.findChild(QPushButton, "reset-shortcuts")
+    assert button is not None
+    button.click()
+
+    assert rows(dialog, "Window")[0][1] == native("Ctrl+R")
+    assert app.settings.get("shortcuts") == {}
+
+
+def test_a_saved_key_moves_a_menu_action_off_its_old_key(
+    qapp: QApplication, build: BuildSession, executed: list[str]
+) -> None:
+    """Show and run a menu action from its saved key, and no longer from the old one."""
+    action = {
+        "id": "keys.tool",
+        "title": "Tool",
+        "callback": "mock_bundle.menu_callbacks:note",
+        "menus": [{"id": WINDOW_MENU}],
+        "keybindings": [{"primary": "F9"}],
+    }
+    app = build(
+        RecordingApp,
+        {"actions": [action], "presenters": {"recorder": {"record": executed}}},
+    )
+    other = app.views["other"]
+    assert isinstance(other, Other)
+
+    app.set_shortcuts({"keys.tool": ["F8"]})
+    key_click(other.edit, QtNamespace.Key.Key_F9)
+    after_old = len(executed)
+    key_click(other.edit, QtNamespace.Key.Key_F8)
+    menu = app.main_window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    entry = menu.findAction("keys.tool")
+
+    assert isinstance(entry, QAction)
+    assert entry.shortcut().toString() == "F8"
+    assert (after_old, len(executed)) == (0, 1)
+
+
+def test_a_command_the_window_cannot_bind_refuses_a_saved_key(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Refuse a key for a command the window holds no action for, saving nothing."""
+    app = build(MenuThingApp)
+
+    with pytest.raises(ValueError, match="thing.thing"):
+        app.set_shortcuts({"thing.thing": ["F6"]})
+
+    assert "shortcuts" not in app.settings
+
+
+def test_a_key_cell_left_as_it_was_saves_nothing(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Save nothing when Backspace clears a key cell that holds no key."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 2, QtNamespace.Key.Key_Backspace)
+
+    assert "shortcuts" not in app.settings

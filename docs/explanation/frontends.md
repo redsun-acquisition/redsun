@@ -78,8 +78,9 @@ says why the session decides and not the view.
 
 Keyboard shortcuts work the other way round: each component marks the
 methods its keys run, and the session collects them, settles two components
-asking for one key, and lets the session file change them. The frontend
-binds the result, anywhere in its window or only while a view has focus.
+asking for one key, and lets the session file change them, then the keys the
+user saved from the window. The frontend binds the result, anywhere in its
+window or only while a view has focus.
 [ADR 29](decisions/0029-keyboard-shortcuts-are-declared-by-components.md)
 says why.
 

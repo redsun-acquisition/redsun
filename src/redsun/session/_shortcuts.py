@@ -11,7 +11,7 @@ from ..view._shortcut import shortcuts
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping, Sequence
 
-__all__ = ["Binding", "candidates", "resolved_shortcuts"]
+__all__ = ["Binding", "candidates", "holder", "resolved_shortcuts"]
 
 
 @dataclass(frozen=True)
@@ -65,13 +65,17 @@ def candidates(
 
 
 def resolved_shortcuts(
-    candidates: Sequence[Binding], overrides: Mapping[str, tuple[str, ...]]
-) -> tuple[list[Binding], list[str]]:
-    """Return *candidates* with *overrides* applied and conflicts settled, and a line per change.
+    candidates: Sequence[Binding],
+    overrides: Mapping[str, tuple[str, ...]],
+    saved: Collection[str] = (),
+) -> tuple[list[Binding], list[str], list[str]]:
+    """Return *candidates* with *overrides* applied and conflicts settled, a line per change, and a line per change *saved* caused.
 
     An override replaces a command's keys, an empty one unbinding it. Within
     one place, the whole window or one view, a key already taken by an
-    earlier binding is removed from the later one.
+    earlier binding is removed from the later one. The commands in *saved*
+    count first, so a key the user saved stays with them; a conflict
+    involving one of them is reported in the last list, not the second.
     """
     known = {binding.command for binding in candidates}
     problems = [
@@ -79,9 +83,14 @@ def resolved_shortcuts(
         for command in overrides
         if command not in known
     ]
-    resolved: list[Binding] = []
+    notes: list[str] = []
+    order = sorted(
+        range(len(candidates)), key=lambda i: candidates[i].command not in saved
+    )
+    resolved: dict[int, Binding] = {}
     taken: dict[tuple[str | None, str], str] = {}
-    for binding in candidates:
+    for index in order:
+        binding = candidates[index]
         keys = overrides.get(binding.command, binding.keys)
         kept = []
         for key in keys:
@@ -91,8 +100,25 @@ def resolved_shortcuts(
                 kept.append(key)
                 continue
             place = f" in {binding.view}" if binding.view else ""
-            problems.append(
-                f"{key}{place}: kept on {owner}, taken from {binding.command}"
-            )
-        resolved.append(replace(binding, keys=tuple(kept)))
-    return resolved, problems
+            line = f"{key}{place}: kept on {owner}, taken from {binding.command}"
+            (notes if {owner, binding.command} & set(saved) else problems).append(line)
+        resolved[index] = replace(binding, keys=tuple(kept))
+    return [resolved[index] for index in range(len(candidates))], problems, notes
+
+
+def holder(bindings: Sequence[Binding], binding: Binding, key: str) -> Binding | None:
+    """Return the other binding holding *key* where *binding* acts, or `None`.
+
+    Two bindings act in the same place when both act in the whole window, or
+    both in one view.
+    """
+    return next(
+        (
+            other
+            for other in bindings
+            if other.command != binding.command
+            and other.view == binding.view
+            and key in other.keys
+        ),
+        None,
+    )
