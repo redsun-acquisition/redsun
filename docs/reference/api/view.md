@@ -10,6 +10,24 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Window layout
+
+::: redsun.WindowLayout
+    options:
+      show_root_heading: true
+
+::: redsun.Row
+    options:
+      show_root_heading: true
+
+::: redsun.Column
+    options:
+      show_root_heading: true
+
+::: redsun.Tabs
+    options:
+      show_root_heading: true
+
 ## Qt widgets
 
 ::: redsun.view.qt.utils

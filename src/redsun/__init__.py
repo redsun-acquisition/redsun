@@ -75,7 +75,7 @@ from redsun.session import (
     Serves,
     Session,
 )
-from redsun.view import Placement
+from redsun.view import Column, Placement, Row, Tabs, WindowLayout
 
 from ._hooks import (
     ConfiguresApplication,
@@ -104,6 +104,7 @@ __all__ = [
     "BuildError",
     "BuildableSession",
     "CallbackType",
+    "Column",
     "ComponentNotBuilt",
     "ConfigurationError",
     "ConfigurationInUse",
@@ -131,11 +132,14 @@ __all__ = [
     "Placement",
     "PlanEntry",
     "PluginError",
+    "Row",
     "Serializable",
     "Serves",
     "Session",
     "SessionConfig",
     "Settings",
+    "Tabs",
+    "WindowLayout",
     "WiringError",
     "WrapsBuild",
     "__version__",
