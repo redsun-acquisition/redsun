@@ -5721,7 +5721,9 @@ in your project's development dependencies, not in what it needs to run.</p>
 <p>For a session with a window, install one of the two Qt extras. <code>pyqt</code> and
 <code>pyside</code> install the PyQt6 and PySide6
 <a href="../../explanation/glossary/#qt-binding">bindings</a>, and <code>redsun</code> works with
-either through <code>qtpy</code>. A <a href="../run-without-a-gui/">headless session</a>, with no
+either through <code>qtpy</code>. <code>pyside</code> installs only PySide6's essential modules, so
+a project that needs one of its add-on modules, such as QtCharts or
+QtMultimedia, adds <code>pyside6</code> to its own dependencies. A <a href="../run-without-a-gui/">headless session</a>, with no
 window, needs neither.</p>
 <div class="admonition warning">
 <p class="admonition-title">The <code>tiled</code> extra on Python 3.14</p>
