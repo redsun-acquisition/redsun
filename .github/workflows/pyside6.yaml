@@ -1,0 +1,20 @@
+name: PySide6
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    name: Test
+    uses: ./.github/workflows/test-binding.yaml
+    with:
+      binding: pyside6
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
