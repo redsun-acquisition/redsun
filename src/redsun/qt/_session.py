@@ -409,7 +409,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     __slots__ = (
         "_action_bindings",
+        "_broken_conditions",
         "_close_guard",
+        "_conditional_actions",
         "_default_state",
         "_main_window",
         "_model",
@@ -456,6 +458,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._shortcuts_dialog: ShortcutsDialog | None = None
         self._window_actions: list[tuple[QAction, tuple[str, ...]]] = []
         self._view_keys: dict[QWidget, set[str]] = {}
+        self._conditional_actions: list[tuple[QAction, str, Callable[[], bool]]] = []
+        self._broken_conditions: set[str] = set()
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -809,6 +813,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             bound.append(binding)
         window_actions: list[tuple[QAction, tuple[str, ...]]] = []
         view_keys: dict[QWidget, set[str]] = {}
+        conditional: list[tuple[QAction, str, Callable[[], bool]]] = []
         for binding in bound:
             host_widget = hosts.get(binding.command)
             if host_widget is None or not binding.keys:
@@ -826,19 +831,26 @@ class QtSession(DesktopSession[QMainWindow], Session):
                 )
                 view_keys.setdefault(host_widget, set()).update(binding.keys)
             host_widget.addAction(action)
+            if binding.when is not None:
+                conditional.append((action, binding.command, binding.when))
         self._window_actions = window_actions
         self._view_keys = view_keys
-        if view_keys and window_actions:
-            self.app.focusChanged.connect(self._yield_shadowed_keys)
-            self.on_release(self._stop_yielding_keys)
+        self._conditional_actions = conditional
+        if conditional or (view_keys and window_actions):
+            self.app.focusChanged.connect(self._follow_focus)
+            self.on_release(self._stop_following_focus)
+            self._follow_focus(None, self.app.focusWidget())
         return bound
 
-    def _yield_shadowed_keys(self, _old: QWidget | None, new: QWidget | None) -> None:
-        """Take from the window's keys those the view holding the focus binds itself.
+    def _follow_focus(self, _old: QWidget | None, new: QWidget | None) -> None:
+        """Turn each conditional key on or off, and take from the window's keys those the focused view binds.
 
         Qt fires neither of two shortcuts on one key in reach of the focus, so
-        while a view has focus its own key is the only one left.
+        while a view has focus its own key is the only one left, on or off; a
+        key that is off leaves the key press to the focused widget.
         """
+        for action, command, when in self._conditional_actions:
+            action.setEnabled(self._holds(command, when))
         shadowed: set[str] = set()
         widget = new
         while widget is not None:
@@ -849,9 +861,22 @@ class QtSession(DesktopSession[QMainWindow], Session):
         for action, keys in self._window_actions:
             action.setShortcuts([QKeySequence(k) for k in keys if k not in shadowed])
 
-    def _stop_yielding_keys(self) -> None:
+    def _holds(self, command: str, when: Callable[[], bool]) -> bool:
+        """Return whether *when* holds; one that raises counts as false, logged once."""
+        try:
+            return bool(when())
+        except Exception:
+            # an exception leaving a Qt slot aborts the application under pyqt6
+            if command not in self._broken_conditions:
+                self._broken_conditions.add(command)
+                logger.exception(
+                    "%s: its condition raised, so its key stays off", command
+                )
+            return False
+
+    def _stop_following_focus(self) -> None:
         """Disconnect from the focus changes of the application."""
-        self.app.focusChanged.disconnect(self._yield_shadowed_keys)
+        self.app.focusChanged.disconnect(self._follow_focus)
 
     def _run_command(self, command: str) -> None:
         """Run *command*, so a key and a menu entry run it the same way."""
