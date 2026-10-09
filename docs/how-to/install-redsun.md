@@ -134,7 +134,9 @@ in your project's development dependencies, not in what it needs to run.
 For a session with a window, install one of the two Qt extras. `pyqt` and
 `pyside` install the PyQt6 and PySide6
 [bindings](../explanation/glossary.md#qt-binding), and `redsun` works with
-either through `qtpy`. A [headless session](run-without-a-gui.md), with no
+either through `qtpy`. `pyside` installs only PySide6's essential modules, so
+a project that needs one of its add-on modules, such as QtCharts or
+QtMultimedia, adds `pyside6` to its own dependencies. A [headless session](run-without-a-gui.md), with no
 window, needs neither.
 
 !!! warning "The `tiled` extra on Python 3.14"

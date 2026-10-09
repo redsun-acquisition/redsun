@@ -109,6 +109,15 @@ group holds no binding: `[tool.uv] default-groups` adds `pyqt` to a plain
 `uv run`, and CI's pyside6 jobs pass `--no-default-groups`, so they run without
 PyQt6 installed, as a `redsun[pyside]` user does.
 
+The pyside6 side depends on `pyside6-essentials`, not the whole `pyside6`
+(`pyproject.toml` says why). The pyside6 workflow also runs the suite once on
+the oldest version `redsun` accepts, layered over the lock with
+`uv run --with`; that floor, in `pyside6.yaml`, moves with the lower bound in
+`pyproject.toml`. Removing `pyside6` from an existing environment deletes files
+`pyside6-essentials` ships too, so after that change an environment updated in
+place reports no Qt binding: rebuild it (`uv run tox -r -e tests-pyside`, or
+`uv sync --reinstall-package pyside6-essentials`).
+
 pyside6 aborts the process when a widget is destroyed off the GUI thread, and
 Python's garbage collection runs on whichever thread happens to allocate. So
 a running `QtSession` turns automatic collection off and collects on a GUI

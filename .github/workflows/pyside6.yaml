@@ -16,5 +16,7 @@ jobs:
     uses: ./.github/workflows/test-binding.yaml
     with:
       binding: pyside6
+      # moves with the pyside extra's lower bound in pyproject.toml
+      floor: pyside6-essentials==6.10.2 shiboken6==6.10.2
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
