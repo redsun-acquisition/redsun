@@ -50,7 +50,10 @@ dev = [
     { include-group = "ome-zarr" },
     { include-group = "profile" },
     "mypy>=2.3.1",
-    "pytest>=9.1.1",
+    # pytest 9.1.0 and 9.1.1 lose a package's conftest fixtures when its files
+    # are named on the command line with another path between them
+    # (pytest-dev/pytest#14971); drop the exclusions once a release fixes it
+    "pytest>=9.0.3,!=9.1.0,!=9.1.1",
     "pytest-env>=1.7.1",
     "types-pyyaml>=6.0.12.20260906",
     "griffe-fieldz>=0.5.0",
