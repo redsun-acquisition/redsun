@@ -317,8 +317,8 @@ def test_two_pva_services_answer_on_the_loopback(
     launch_pva: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
     """Bind two PVA services to the loopback and list it in the address list."""
-    first = launch_pva("first", "SIM:FIRST", 1.0)
-    second = launch_pva("second", "SIM:SECOND", 2.0)
+    first = launch_pva("first", "SDK:FIRST", 1.0)
+    second = launch_pva("second", "SDK:SECOND", 2.0)
     first.start()
     second.start()
 
@@ -326,8 +326,8 @@ def test_two_pva_services_answer_on_the_loopback(
     assert messages(service_log, logging.DEBUG).count("interface 127.0.0.1") == 2
     assert "unable to bind" not in service_log.text
     with Context("pva") as client:
-        assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
-        assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
+        assert float(client.get("SDK:FIRST", timeout=10.0)) == 1.0
+        assert float(client.get("SDK:SECOND", timeout=10.0)) == 2.0
 
 
 @pytest.mark.parametrize(
