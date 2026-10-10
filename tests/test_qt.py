@@ -61,6 +61,7 @@ from redsun.qt import (
     ToolBarItem,
     attach,
 )
+from tests.sdk.helpers import kept_under
 
 pytestmark = pytest.mark.qt
 
@@ -216,20 +217,14 @@ class CommandApp(QtSession):
 
 
 SLOT_RAISES = """
-import sys
 from collections.abc import Iterator
 
 from psygnal import Signal
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QWidget
 
-import redsun._settings
-import redsun.log
 from redsun import AsPresenter, AsView, Link, Placement, slot
 from redsun.qt import Dock, QtSession
-
-redsun._settings.user_config_dir = lambda *a, **k: sys.argv[1]
-redsun.log.user_data_dir = lambda *a, **k: sys.argv[1]
 
 
 class Ticker:
@@ -702,12 +697,14 @@ def test_the_session_holds_the_application_it_runs_on(
     assert app.app is QApplication.instance()
 
 
-def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
+def test_a_session_that_makes_its_own_application_keeps_it_alive(
+    tmp_path: Path,
+) -> None:
     """Keep alive a QApplication the session created, run in a separate process."""
     # Run in a subprocess: the suite's `qapp` fixture holds an application for the
     # whole run and Qt allows one per process, so this path cannot be reached here.
     result = subprocess.run(
-        [sys.executable, "-c", BUILDS_ITS_OWN],
+        [sys.executable, "-c", kept_under(tmp_path) + BUILDS_ITS_OWN],
         capture_output=True,
         text=True,
         check=False,
@@ -716,6 +713,7 @@ def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
     # hold is collected between build steps, and Qt then aborts the process at the
     # next widget rather than raising.
     assert result.returncode == 0, result.stdout + result.stderr
+    assert list(tmp_path.rglob("*.log")), "the session logged outside tmp_path"
 
 
 def test_an_exception_in_a_slot_is_logged_and_the_window_carries_on(
@@ -725,7 +723,7 @@ def test_an_exception_in_a_slot_is_logged_and_the_window_carries_on(
     # Run in a subprocess: the exception has to reach the Qt event loop, which only
     # `run` starts.
     result = subprocess.run(
-        [sys.executable, "-c", SLOT_RAISES, str(tmp_path)],
+        [sys.executable, "-c", kept_under(tmp_path) + SLOT_RAISES],
         capture_output=True,
         text=True,
         check=False,
@@ -734,6 +732,7 @@ def test_an_exception_in_a_slot_is_logged_and_the_window_carries_on(
     assert result.returncode == 0, output
     assert "the panel failed" in output
     assert "still running" in output
+    assert list(tmp_path.rglob("*.log")), "the session logged outside tmp_path"
 
 
 def test_shutdown_destroys_the_widgets_the_session_built(
