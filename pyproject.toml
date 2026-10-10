@@ -59,6 +59,7 @@ dev = [
     "fastcs[epicspva]>=0.14.2",
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
+    "pytest-xdist>=3.8.0",
 ]
 docs = [
     "markdown-d2>=0.4.2",
@@ -308,12 +309,12 @@ commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 [tool.tox.env.tests-pyqt]
 dependency_groups = ["dev", "pyqt"]
 set_env = { QT_API = "pyqt6" }
-commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
+commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-pyside]
 dependency_groups = ["dev", "pyside"]
 set_env = { QT_API = "pyside6" }
-commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
+commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]
 dependency_groups = ["dev", "docs", "pyqt"]

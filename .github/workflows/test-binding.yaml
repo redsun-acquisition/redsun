@@ -82,7 +82,7 @@ jobs:
         env:
           QT_API: ${{ inputs.binding }}
         run: |
-            uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} coverage run -p -m pytest --color=yes
+            uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} coverage run -p -m pytest --color=yes -n auto --dist loadfile
         shell: bash
 
       - name: Upload coverage data
@@ -132,7 +132,7 @@ jobs:
           print('running on', os.environ['FLOOR'])
           sys.exit(f'not the floor versions: {wrong}' if wrong else 0)
           "
-          uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} $with pytest -q --color=yes
+          uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} $with pytest -q --color=yes -n auto --dist loadfile
 
   upload_coverage:
     name: Upload coverage
