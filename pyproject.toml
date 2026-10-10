@@ -50,7 +50,10 @@ dev = [
     { include-group = "ome-zarr" },
     { include-group = "profile" },
     "mypy>=2.3.1",
-    "pytest>=9.1.1",
+    # pytest 9.1.0 and 9.1.1 lose a package's conftest fixtures when its files
+    # are named on the command line with another path between them
+    # (pytest-dev/pytest#14971); lift the cap once a release fixes it
+    "pytest>=9.0.3,<9.1",
     "pytest-env>=1.7.1",
     "types-pyyaml>=6.0.12.20260906",
     "griffe-fieldz>=0.5.0",
@@ -59,6 +62,7 @@ dev = [
     "fastcs[epicspva]>=0.14.2",
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
+    "pytest-xdist>=3.8.0",
 ]
 docs = [
     "markdown-d2>=0.4.2",
@@ -308,12 +312,12 @@ commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 [tool.tox.env.tests-pyqt]
 dependency_groups = ["dev", "pyqt"]
 set_env = { QT_API = "pyqt6" }
-commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
+commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-pyside]
 dependency_groups = ["dev", "pyside"]
 set_env = { QT_API = "pyside6" }
-commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
+commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]
 dependency_groups = ["dev", "docs", "pyqt"]

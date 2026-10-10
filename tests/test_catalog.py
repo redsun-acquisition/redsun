@@ -14,7 +14,7 @@ from redsun import AsPresenter, Session
 from redsun.catalog import CatalogAddress
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator, Iterator
     from pathlib import Path
 
     from redsun.testing import BuildSession
@@ -53,38 +53,67 @@ class OptionalApp(Session):
     optional: AsPresenter[MaybeCatalogReader]
 
 
+class SharedCatalogApp(Session):
+    holder: AsPresenter[AddressHolder]
+    optional: AsPresenter[MaybeCatalogReader]
+
+
+@pytest.fixture(scope="module")
+def catalog_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Return the data folder of the catalog the reading tests share."""
+    return tmp_path_factory.mktemp("shared-catalog")
+
+
+@pytest.fixture(scope="module")
+def catalog_app(catalog_root: Path) -> Generator[SharedCatalogApp, None, None]:
+    """Build one session with a catalog for the tests that only read from it.
+
+    Starting a catalog takes seconds, so the tests that change nothing share
+    one. The folders are patched here: the per-test fixtures doing it run
+    after a module's fixtures.
+    """
+    with pytest.MonkeyPatch.context() as patch:
+        for target in (
+            "redsun.path_provider.user_data_dir",
+            "redsun.log.user_data_dir",
+            "redsun._settings.user_config_dir",
+        ):
+            patch.setattr(target, lambda *a, **k: str(catalog_root))
+        app = SharedCatalogApp(CATALOG).build()
+        try:
+            yield app
+        finally:
+            app.shutdown()
+
+
 def test_a_component_reaches_the_catalog_by_its_address(
-    build: BuildSession, data_directory: Path
+    catalog_app: SharedCatalogApp, catalog_root: Path
 ) -> None:
     """Start a catalog in the session directory and give a component its address."""
-    app = build(AddressApp, CATALOG)
-
-    assert (data_directory / "catalog-session" / "catalog" / "catalog.db").is_file()
-    assert list(from_uri(app.holder.address.uri)) == []
+    assert (catalog_root / "catalog-session" / "catalog" / "catalog.db").is_file()
+    assert list(from_uri(catalog_app.holder.address.uri)) == []
 
 
-@pytest.mark.parametrize(
-    ("config", "has_address"),
-    [(CATALOG, True), ({"session": "catalog-session"}, False)],
-    ids=["with-catalog", "without"],
-)
-def test_an_optional_address_is_none_without_a_catalog(
-    build: BuildSession, config: dict[str, Any], has_address: bool
+def test_an_optional_address_is_given_with_a_catalog(
+    catalog_app: SharedCatalogApp,
 ) -> None:
-    """Give an optional catalog address only when the session starts a catalog."""
-    app = build(OptionalApp, config)
+    """Give an optional catalog address when the session starts a catalog."""
+    assert isinstance(catalog_app.optional.address, CatalogAddress)
 
-    assert isinstance(app.optional.address, CatalogAddress) is has_address
+
+def test_an_optional_address_is_none_without_a_catalog(build: BuildSession) -> None:
+    """Give no optional catalog address when the session starts no catalog."""
+    app = build(OptionalApp, {"session": "catalog-session"})
+
+    assert app.optional.address is None
 
 
 def test_the_root_cannot_move_while_the_catalog_runs(
-    build: BuildSession, tmp_path: Path
+    catalog_app: SharedCatalogApp, tmp_path: Path
 ) -> None:
     """Refuse to move the storage root while the catalog runs."""
-    app = build(OptionalApp, CATALOG)
-
     with pytest.raises(RuntimeError, match="catalog"):
-        app.path_provider.set_base_dir(tmp_path / "elsewhere")
+        catalog_app.path_provider.set_base_dir(tmp_path / "elsewhere")
 
 
 def test_shutdown_stops_the_server(build: BuildSession) -> None:

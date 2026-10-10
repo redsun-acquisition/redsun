@@ -144,7 +144,7 @@ uv run tox -e mypy-pyqt
 | --- | --- |
 | `lint` | `prek run --all-files`: the [commit checks](#checks-before-each-commit) |
 | `mypy-pyqt` / `mypy-pyside` | `mypy` against that Qt binding |
-| `tests-pyqt` / `tests-pyside` | `pytest -q` under that Qt binding |
+| `tests-pyqt` / `tests-pyside` | `pytest -q -n auto --dist loadfile` under that Qt binding |
 | `docs` | `zensical build` then the cross-reference check |
 
 ### Only some tests
@@ -169,6 +169,49 @@ uv run pytest tests/sdk/ -x
 ```
 
 Tests marked `@pytest.mark.qt` are skipped when there's no display.
+
+`tox` and CI split the tests across your CPU cores with `pytest-xdist`, which
+starts one worker process per core and keeps every test of a file in the same
+worker. A plain `uv run pytest` runs in one process. Ask `tox` for one
+process too when you want a debugger, or when a failure is hard to read in
+the workers' output:
+
+```bash
+uv run tox -e tests-pyqt -- -n 0 tests/test_container.py
+```
+
+Each launched service asks the system for a free network port. In a parallel
+run two workers can, rarely, be handed the same one, and a service then fails
+to become ready in one of the service test files. Run that file again before
+looking for another cause.
+
+### Garbage collection in the tests
+
+A test run turns Python's automatic garbage collection off and collects once
+after each test file. You need to know this because it changes what a test
+can rely on.
+
+The reason is `pyside6`. Python collects on whichever thread happens to
+create an object, and `redsun` runs a background thread for its event loop.
+If a collection there frees a widget, `pyside6` ends the whole process. With
+automatic collection off, nothing is freed on that thread, and the
+collection after each file runs on the main thread, where it's safe. The
+fixtures doing this are
+[`no_automatic_collection`][redsun.testing.no_automatic_collection] and
+[`collect_after_module`][redsun.testing.collect_after_module].
+
+What it means for a test you write:
+
+- When your test checks that an object in a reference cycle was freed, call
+  `gc.collect()` in the test first. An object in no cycle is still freed the
+  moment nothing refers to it.
+- When your test turns automatic collection on or off, restore the state you
+  found before the test ends, not a fixed one. A test that leaves it on fails
+  with a message that says so
+  ([`keep_automatic_collection_off`][redsun.testing.keep_automatic_collection_off]).
+- A widget your test leaves in a reference cycle stays until the end of the
+  file. Close what you open, so a later test that looks at the application's
+  windows doesn't find yours.
 
 ### Tests that need a container
 

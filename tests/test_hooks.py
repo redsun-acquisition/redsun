@@ -150,6 +150,10 @@ class Unanswerable:
         self.name = name
 
 
+class StyledApp(QtSession):
+    configure_application: AsHook[MockStyle]
+
+
 @pytest.fixture
 def log() -> list[str]:
     """Return what the hook providers record, in order."""
@@ -171,11 +175,7 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
     build: BuildSession,
 ) -> None:
     """Run a hook at the hook point named by its attribute."""
-
-    class App(QtSession):
-        configure_application: AsHook[MockStyle]
-
-    app = build(App)
+    app = build(StyledApp)
     installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.seen == [qapp]
 
@@ -494,18 +494,14 @@ def test_create_application_is_consulted_only_with_none_running(
     build: BuildSession,
 ) -> None:
     """Call the `create_application` hook only when no QApplication is running."""
-
-    class App(QtSession):
-        configure_application: AsHook[MockStyle]
-
     founding = {"provider": f"{__name__}:Founder", "kwargs": {"app": qapp}}
     config = {"hooks": {"create_application": founding}}
-    first = build(App, config)
+    first = build(StyledApp, config)
     unused = cast("Founder", first.hooks[QtHook.CREATE_APPLICATION])
     first.shutdown()
 
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
-    second = build(App, config)
+    second = build(StyledApp, config)
     founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION])
     styler = cast("MockStyle", second.hooks[QtHook.CONFIGURE_APPLICATION])
 

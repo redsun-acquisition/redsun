@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import gc
 import weakref
 
 import pytest
@@ -18,6 +17,7 @@ from qtpy.QtWidgets import (
 from superqt import QCollapsible
 
 from redsun.view.qt._icons import set_collapsible_icons, set_icon, set_item_icon
+from tests.sdk.helpers import automatic_collection
 
 pytestmark = pytest.mark.qt
 
@@ -136,15 +136,12 @@ def test_a_button_with_an_icon_is_freed_without_a_collection(
     qapp: QApplication,
 ) -> None:
     """Free a button given an icon as soon as nothing refers to it, with no collection."""
-    gc.disable()
-    try:
+    with automatic_collection(False):
         button = QPushButton()
         set_icon(button, "play", "Run the plan")
         ref = weakref.ref(button)
         del button
         freed = ref() is None
-    finally:
-        gc.enable()
 
     assert freed
 
