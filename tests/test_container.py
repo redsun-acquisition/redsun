@@ -1012,6 +1012,10 @@ class RenamedBrokenApp(Session):
         yield self.speaker.sig_said, self.listener.hear
 
 
+class Instrument(Session):
+    """A session naming itself nothing."""
+
+
 class MisfiledApp(Session):
     config: ClassVar[Mapping[str, Any]] = {"presenters": {"ctrl": {"gain": 2.0}}}
 
@@ -1417,10 +1421,6 @@ def test_a_session_is_named_after_its_class_when_it_says_nothing(
     build: BuildSession,
 ) -> None:
     """Name a session after its class when its configuration gives no name."""
-
-    class Instrument(Session):
-        """A session naming itself nothing."""
-
     app = build(Instrument)
     assert app.name == "Instrument"
 
@@ -1629,10 +1629,6 @@ def test_two_components_taking_each_others_values_both_build(
 
 def test_a_session_knows_what_it_is_called() -> None:
     """Read the session name from the configuration or the class, before the build."""
-
-    class Instrument(Session):
-        """A session naming itself nothing."""
-
     assert Instrument().name == "Instrument"
     assert Instrument({"session": "morning-run"}).name == "morning-run"
 
