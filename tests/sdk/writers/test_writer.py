@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -11,9 +12,55 @@ import pytest
 
 from redsun.writers import Writer, WriterError
 from redsun.writers._base import root_attributes as attributes
+from redsun.writers._placement import placement
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from numpy.typing import NDArray
+
+    from redsun.writers._base import Stream
+    from redsun.writers._placement import Placement
+
+
+class ReportsClosing:
+    """A stream that records its store when it closes, and otherwise is the real one."""
+
+    def __init__(self, stream: Stream, store: Path, closed: list[Path]) -> None:
+        self._stream = stream
+        self._store = store
+        self._closed = closed
+
+    def append(self, data_key: str, data: NDArray[Any]) -> None:
+        self._stream.append(data_key, data)
+
+    def node(self, data_key: str) -> Path:
+        return self._stream.node(data_key)
+
+    def close(self) -> None:
+        self._closed.append(self._store)
+        self._stream.close()
+
+
+@pytest.fixture
+def closed(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """Return the list a writer's streams add their store to as each closes."""
+    stores: list[Path] = []
+
+    def reporting(uri: str, mimetype: str, data_key: str) -> Placement | None:
+        placed = placement(uri, mimetype, data_key)
+        if placed is None:
+            return None
+        opening = placed.open_stream
+        return replace(
+            placed,
+            open_stream=lambda arrays: ReportsClosing(
+                opening(arrays), placed.path, stores
+            ),
+        )
+
+    monkeypatch.setattr("redsun.writers._writer.placement", reporting)
+    return stores
 
 
 def shape_of(path: Path) -> list[int]:
@@ -299,7 +346,7 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
 
 
 def test_a_second_store_for_a_source_leaves_the_first_stream_open(
-    tmp_path: Path,
+    tmp_path: Path, closed: list[Path]
 ) -> None:
     """Keep a run's streams to two stores open until the run stops."""
     writer = Writer()
@@ -310,12 +357,14 @@ def test_a_second_store_for_a_source_leaves_the_first_stream_open(
     writer.append("det_filtered", np.ones((4, 4), np.uint16))
     run(writer, second, "application/x-zarr", start=False)
     writer.append("det_filtered", np.ones((4, 4), np.uint16))
+    before_the_stop = list(closed)
 
-    # acquire-zarr writes an array's metadata only when its stream closes
-    assert not (first / "det_filtered" / "zarr.json").exists()
     writer(
         "stop",
         {"uid": "stop-1", "run_start": "run-1", "time": 1.0, "exit_status": "success"},
     )
+
+    assert before_the_stop == []
+    assert set(closed) == {first, second}
     assert shape_of(first / "det_filtered") == [1, 4, 4]
     assert shape_of(second / "det_filtered") == [1, 4, 4]
