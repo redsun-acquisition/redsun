@@ -46,16 +46,18 @@ def main() -> int:
     print(f"identity {identity()}", flush=True)
     if options.select:
         stop_on_request()
-        ready()
         waiting, _ = os.pipe()
+        # ready is inside the block, here and below: the session may ask to
+        # stop as soon as it reads the ready line, before this thread waits
         try:
+            ready()
             select.select([waiting], [], [])
         except KeyboardInterrupt:
             pass
     elif options.blocking:
         stop_on_request()
-        ready()
         try:
+            ready()
             while True:
                 time.sleep(0.05)
         except KeyboardInterrupt:

@@ -168,6 +168,10 @@ def stop_on_request() -> None:
 
     For a server whose `run` blocks: it shuts down as it would on Ctrl+C.
     Does nothing when no session launched the process.
+
+    The request can come as soon as the session reads the ready text, so a
+    service that prints it with [`ready`][redsun.services.ready] and handles
+    the interrupt itself calls `ready` inside the block that handles it.
     """
     if identity() is not None:
         threading.Thread(target=interrupt_when_stdin_closes, daemon=True).start()
