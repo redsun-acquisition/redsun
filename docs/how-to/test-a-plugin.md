@@ -43,6 +43,14 @@ queued for another thread. A session whose configuration names its own
 asks for it, so these fixtures never reach a project that only installs
 `redsun`.
 
+The fixtures also turn Python's automatic garbage collection off for the
+whole run and collect once after each test file, because `pyside6` ends the
+process when a widget is freed on a background thread. So a test that checks
+an object was freed calls `gc.collect()` itself, and a test that turns
+automatic collection on turns it off again before it ends.
+[Garbage collection in the tests](contribute.md#garbage-collection-in-the-tests)
+explains why.
+
 !!! warning "A session built in a wider fixture isn't covered"
 
     The fixtures run for each test, so they don't cover a session built in a
