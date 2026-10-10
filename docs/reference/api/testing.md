@@ -14,5 +14,6 @@ icon: lucide/code
         - data_directory
         - config_home
         - empty_emission_queue
-        - collect_qt_garbage
+        - no_automatic_collection
+        - collect_after_module
         - start_service

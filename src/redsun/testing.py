@@ -3,7 +3,8 @@
 A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
-emissions it left queued, and collect a Qt test's garbage on the main thread.
+emissions it left queued, and turn automatic garbage collection off for the
+run, collecting after each test module on the main thread.
 On Windows under Qt's `offscreen` platform, they also point Qt at the system
 fonts, which that platform otherwise lacks.
 The module defines no `qapp`, so it combines with `pytest-qt`.
@@ -39,11 +40,12 @@ __all__ = [
     "BuildSession",
     "StartService",
     "build",
-    "collect_qt_garbage",
+    "collect_after_module",
     "config_home",
     "data_directory",
     "empty_emission_queue",
     "log_directory",
+    "no_automatic_collection",
     "start_service",
 ]
 
@@ -162,17 +164,46 @@ def pytest_configure(config: pytest.Config) -> None:
         os.environ.setdefault("QT_QPA_FONTDIR", str(fonts))
 
 
-@pytest.fixture(autouse=True)
-def collect_qt_garbage(request: pytest.FixtureRequest) -> Generator[None, None, None]:
-    """Collect after each test using `qapp`, on the main thread.
+@pytest.fixture(scope="session", autouse=True)
+def no_automatic_collection() -> Generator[None, None, None]:
+    """Turn Python's automatic garbage collection off for the whole run.
 
-    A widget the test left in a reference cycle would otherwise be freed by
-    the next collection, which a later test may run on another thread;
-    `pyside6` aborts when a widget is destroyed off the GUI thread.
+    Python collects on whichever thread allocates, a background event loop
+    included, and `pyside6` aborts when a widget is destroyed off the GUI
+    thread. With automatic collection off no thread collects by itself;
+    `collect_after_module` collects on the main thread instead. A test that
+    needs an object freed calls `gc.collect()` itself, and one that turns
+    automatic collection on turns it off again before it ends.
+    """
+    found = gc.isenabled()
+    gc.disable()
+    yield
+    if found:
+        gc.enable()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def collect_after_module(
+    no_automatic_collection: None,
+) -> Generator[None, None, None]:
+    """Collect once after the last test of each module, on the main thread.
+
+    Raises
+    ------
+    RuntimeError
+        If a test of the module left automatic collection on; it is turned
+        off again first, so later modules stay safe.
     """
     yield
-    if "qapp" in request.fixturenames:
-        gc.collect()
+    left_on = gc.isenabled()
+    gc.disable()
+    gc.collect()
+    if left_on:
+        raise RuntimeError(
+            "a test of this module left automatic garbage collection on; "
+            "restore the state the test found, since a collection on another "
+            "thread can destroy a widget there and abort pyside6"
+        )
 
 
 @pytest.fixture(autouse=True)

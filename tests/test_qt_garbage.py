@@ -11,6 +11,7 @@ import pytest
 from qtpy.QtCore import QCoreApplication, QEvent, QTimer
 
 from redsun.qt import QtSession
+from tests.sdk.helpers import automatic_collection
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -57,12 +58,9 @@ def test_shutdown_leaves_automatic_collection_as_it_found_it(
     qapp: QApplication, build: BuildSession, before: bool
 ) -> None:
     """Turn automatic collection back on at shutdown only if it was on before the build."""
-    (gc.enable if before else gc.disable)()
-    try:
+    with automatic_collection(before):
         build(EmptyApp).shutdown()
         after = gc.isenabled()
-    finally:
-        gc.enable()
 
     assert after is before
 
@@ -71,14 +69,34 @@ def test_shutdown_frees_the_sessions_cycles_on_the_gui_thread(
     qapp: QApplication, build: BuildSession
 ) -> None:
     """Free the cycles left when a session shuts down, on the GUI thread, before collection is automatic again."""
-    app = build(EmptyApp)
     freed: list[int] = []
-    cycle = Cycle()
-    weakref.finalize(cycle, lambda: freed.append(threading.get_ident()))
-    del cycle
+    with automatic_collection(True):
+        app = build(EmptyApp)
+        cycle = Cycle()
+        weakref.finalize(cycle, lambda: freed.append(threading.get_ident()))
+        del cycle
 
-    app.shutdown()
+        app.shutdown()
 
+    assert freed == [threading.main_thread().ident]
+
+
+def test_shutdown_collects_nothing_when_collection_was_already_off(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Leave the session's cycles to whoever turned automatic collection off before it."""
+    freed: list[int] = []
+    with automatic_collection(False):
+        app = build(EmptyApp)
+        cycle = Cycle()
+        weakref.finalize(cycle, lambda: freed.append(threading.get_ident()))
+        del cycle
+
+        app.shutdown()
+        after_shutdown = list(freed)
+        gc.collect()
+
+    assert after_shutdown == []
     assert freed == [threading.main_thread().ident]
 
 
