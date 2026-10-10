@@ -5191,10 +5191,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#redsun.testing.collect_qt_garbage" class="md-nav__link">
+  <a href="#redsun.testing.no_automatic_collection" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;collect_qt_garbage
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;no_automatic_collection
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.testing.collect_after_module" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;collect_after_module
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.testing.keep_automatic_collection_off" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;keep_automatic_collection_off
       </span>
     </span>
   </a>
@@ -5707,10 +5729,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#redsun.testing.collect_qt_garbage" class="md-nav__link">
+  <a href="#redsun.testing.no_automatic_collection" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;collect_qt_garbage
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;no_automatic_collection
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.testing.collect_after_module" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;collect_after_module
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.testing.keep_automatic_collection_off" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;keep_automatic_collection_off
       </span>
     </span>
   </a>
@@ -5890,7 +5934,8 @@
 <p>A suite loads them with <code>-p redsun.testing</code>, in <code>addopts</code> or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its <code>tmp_path</code>, drop the <code>psygnal</code>
-emissions it left queued, and collect a Qt test's garbage on the main thread.
+emissions it left queued, and turn automatic garbage collection off for the
+run, collecting after each test module on the main thread.
 On Windows under Qt's <code>offscreen</code> platform, they also point Qt at the system
 fonts, which that platform otherwise lacks.
 The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</code>.</p>
@@ -6176,22 +6221,94 @@ interpreter.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="redsun.testing.collect_qt_garbage" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">collect_qt_garbage</span>
+<h2 id="redsun.testing.no_automatic_collection" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">no_automatic_collection</span>
 
 
-<a href="#redsun.testing.collect_qt_garbage" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">collect_qt_garbage</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">request</span><span class="p">:</span> <span class="n">FixtureRequest</span><span class="p">,</span>
+<a href="#redsun.testing.no_automatic_collection" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">no_automatic_collection</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Turn Python's automatic garbage collection off for the whole run.</p>
+<p>Python collects on whichever thread allocates, a background event loop
+included, and <code>pyside6</code> aborts when a widget is destroyed off the GUI
+thread. With automatic collection off no thread collects by itself;
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;collect_after_module&lt;/span&gt;" href="./#redsun.testing.collect_after_module"><code>collect_after_module</code></a> collects on
+the main thread instead. A test that needs an object in a reference cycle
+freed calls <code>gc.collect()</code> itself.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="redsun.testing.collect_after_module" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">collect_after_module</span>
+
+
+<a href="#redsun.testing.collect_after_module" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">collect_after_module</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">no_automatic_collection</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Collect after each test using <code>qapp</code>, on the main thread.</p>
-<p>A widget the test left in a reference cycle would otherwise be freed by
-the next collection, which a later test may run on another thread;
-<code>pyside6</code> aborts when a widget is destroyed off the GUI thread.</p>
+        <p>Collect once after the last test of each module, on the main thread.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="redsun.testing.keep_automatic_collection_off" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">keep_automatic_collection_off</span>
+
+
+<a href="#redsun.testing.keep_automatic_collection_off" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">keep_automatic_collection_off</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">no_automatic_collection</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Fail a test that left automatic garbage collection on.</p>
+<p>A test that turns it on, or off and then on again, restores the state it
+found before it ends. Nothing is collected here: the state is only read.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the test, or a session it left for <code>build</code> to shut down, turned
+automatic collection on; it is turned off again first, so the tests
+after it stay safe.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

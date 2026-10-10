@@ -5538,6 +5538,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#garbage-collection-in-the-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Garbage collection in the tests
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tests-that-need-a-container" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6177,6 +6188,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#garbage-collection-in-the-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Garbage collection in the tests
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tests-that-need-a-container" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6781,7 +6803,7 @@ of them and builds the docs. Run one environment with <code>-e</code>:</p>
 </tr>
 <tr>
 <td><code>tests-pyqt</code> / <code>tests-pyside</code></td>
-<td><code>pytest -q</code> under that Qt binding</td>
+<td><code>pytest -q -n auto --dist loadfile</code> under that Qt binding</td>
 </tr>
 <tr>
 <td><code>docs</code></td>
@@ -6804,14 +6826,50 @@ of them and builds the docs. Run one environment with <code>-e</code>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/sdk/<span class="w"> </span>-x
 </span></code></pre></div>
 <p>Tests marked <code>@pytest.mark.qt</code> are skipped when there's no display.</p>
+<p><code>tox</code> and CI split the tests across your CPU cores with <code>pytest-xdist</code>, which
+starts one worker process per core and keeps every test of a file in the same
+worker. A plain <code>uv run pytest</code> runs in one process. Ask <code>tox</code> for one
+process too when you want a debugger, or when a failure is hard to read in
+the workers' output:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>tests-pyqt<span class="w"> </span>--<span class="w"> </span>-n<span class="w"> </span><span class="m">0</span><span class="w"> </span>tests/test_container.py
+</span></code></pre></div>
+<p>Each launched service asks the system for a free network port. In a parallel
+run two workers can, rarely, be handed the same one, and a service then fails
+to become ready in one of the service test files. Run that file again before
+looking for another cause.</p>
+<h3 id="garbage-collection-in-the-tests">Garbage collection in the tests<a class="headerlink" href="#garbage-collection-in-the-tests" title="Permanent link">&para;</a></h3>
+<p>A test run turns Python's automatic garbage collection off and collects once
+after each test file. You need to know this because it changes what a test
+can rely on.</p>
+<p>The reason is <code>pyside6</code>. Python collects on whichever thread happens to
+create an object, and <code>redsun</code> runs a background thread for its event loop.
+If a collection there frees a widget, <code>pyside6</code> ends the whole process. With
+automatic collection off, nothing is freed on that thread, and the
+collection after each file runs on the main thread, where it's safe. The
+fixtures doing this are
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;no_automatic_collection&lt;/span&gt;" href="../../reference/api/testing/#redsun.testing.no_automatic_collection"><code>no_automatic_collection</code></a> and
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;collect_after_module&lt;/span&gt;" href="../../reference/api/testing/#redsun.testing.collect_after_module"><code>collect_after_module</code></a>.</p>
+<p>What it means for a test you write:</p>
+<ul>
+<li>When your test checks that an object in a reference cycle was freed, call
+  <code>gc.collect()</code> in the test first. An object in no cycle is still freed the
+  moment nothing refers to it.</li>
+<li>When your test turns automatic collection on or off, restore the state you
+  found before the test ends, not a fixed one. A test that leaves it on fails
+  with a message that says so
+  (<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;keep_automatic_collection_off&lt;/span&gt;" href="../../reference/api/testing/#redsun.testing.keep_automatic_collection_off"><code>keep_automatic_collection_off</code></a>).</li>
+<li>A widget your test leaves in a reference cycle stays until the end of the
+  file. Close what you open, so a later test that looks at the application's
+  windows doesn't find yours.</li>
+</ul>
 <h3 id="tests-that-need-a-container">Tests that need a container<a class="headerlink" href="#tests-that-need-a-container" title="Permanent link">&para;</a></h3>
 <p>Tests marked <code>@pytest.mark.compose</code> talk to an
 <a href="../../explanation/glossary/#ioc"><abbr title="Input/output controller. The EPICS server program that offers values, most often read from hardware it controls.">IOC</abbr></a> in a container started from
 <code>tests/compose/compose.yaml</code>. They're skipped unless <code>REDSUN_COMPOSE</code> is set,
 so the rest of the suite needs no container runtime. With Docker running:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>tests/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>--detach<span class="w"> </span>--wait
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nv">REDSUN_COMPOSE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>compose
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>tests/compose/compose.yaml<span class="w"> </span>down
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>tests/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>--detach<span class="w"> </span>--wait
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">REDSUN_COMPOSE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>compose
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>tests/compose/compose.yaml<span class="w"> </span>down
 </span></code></pre></div>
 <p>The <abbr title="Input/output controller. The EPICS server program that offers values, most often read from hardware it controls.">IOC</abbr> listens on <code>127.0.0.1</code> port 5064, the default
 <a href="../../explanation/glossary/#channel-access">Channel Access</a> port, so stop any
@@ -6820,7 +6878,7 @@ other <abbr title="Input/output controller. The EPICS server program that offers
 <p><code>mypy</code> checks the tests in strict mode along with the sources. <code>redsun</code>
 supports <code>pyqt6</code> and <code>pyside6</code>, whose type stubs disagree on some signatures,
 so both are checked:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>mypy-pyqt,mypy-pyside
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>mypy-pyqt,mypy-pyside
 </span></code></pre></div>
 <p>Each environment installs only its own binding and sets <code>QT_API</code>, which
 selects the branches <code>qtpy</code> shows the type checker. A green <code>mypy-pyqt</code> says
@@ -6833,8 +6891,8 @@ neither binding has on its own and can miss errors CI catches. Run the
 </div>
 <h3 id="coverage-report">Coverage report<a class="headerlink" href="#coverage-report" title="Permanent link">&para;</a></h3>
 <p><code>pyproject.toml</code> configures the coverage sources:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>uv<span class="w"> </span>run<span class="w"> </span>coverage<span class="w"> </span>run<span class="w"> </span>-m<span class="w"> </span>pytest
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>run<span class="w"> </span>coverage<span class="w"> </span>html
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>coverage<span class="w"> </span>run<span class="w"> </span>-m<span class="w"> </span>pytest
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>uv<span class="w"> </span>run<span class="w"> </span>coverage<span class="w"> </span>html
 </span></code></pre></div>
 <p>Open <code>htmlcov/index.html</code> in a browser.</p>
 <h2 id="checks-before-each-commit">Checks before each commit<a class="headerlink" href="#checks-before-each-commit" title="Permanent link">&para;</a></h2>
@@ -6844,15 +6902,15 @@ every commit once you install them, in <code>uv run tox -e lint</code>, and in C
 <code>prek</code> and <code>ruff</code> are in the <code>lint</code> dependency group, which <code>dev</code> includes.</p>
 <h3 id="turn-on-the-git-hook">Turn on the git hook<a class="headerlink" href="#turn-on-the-git-hook" title="Permanent link">&para;</a></h3>
 <p>Once per clone, from the project root:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>install
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>install
 </span></code></pre></div>
 <p>This writes <code>.git/hooks/pre-commit</code>, so from then on <code>git commit</code> runs the hooks
 on the staged files and stops the commit if one fails.</p>
 <h3 id="run-the-checks-by-hand">Run the checks by hand<a class="headerlink" href="#run-the-checks-by-hand" title="Permanent link">&para;</a></h3>
 <p>To run every hook on every file, without committing:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w">                         </span><span class="c1"># staged files only</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w"> </span>--all-files<span class="w">             </span><span class="c1"># every tracked file, as CI does</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w"> </span>ruff-check<span class="w"> </span>--all-files<span class="w">  </span><span class="c1"># a single hook</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w">                         </span><span class="c1"># staged files only</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w"> </span>--all-files<span class="w">             </span><span class="c1"># every tracked file, as CI does</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w"> </span>ruff-check<span class="w"> </span>--all-files<span class="w">  </span><span class="c1"># a single hook</span>
 </span></code></pre></div>
 <h3 id="what-gets-checked">What gets checked<a class="headerlink" href="#what-gets-checked" title="Permanent link">&para;</a></h3>
 <table>
@@ -6912,7 +6970,7 @@ removing anything from it.</p>
 you write.</p>
 <h3 id="build-and-preview-the-site">Build and preview the site<a class="headerlink" href="#build-and-preview-the-site" title="Permanent link">&para;</a></h3>
 <p>From the project root:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>docs
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>docs
 </span></code></pre></div>
 <p>This builds the site, then runs <code>scripts/check_xrefs.py</code>, which reports every
 cross-reference that resolves to nothing. <code>zensical build</code> alone passes with
@@ -6920,17 +6978,17 @@ such references, so prefer the <code>tox</code> environment, which also installs
 docs need from <code>uv.lock</code>.</p>
 <p>Zensical is in the <code>docs</code> dependency group, which <code>dev</code> doesn't include, so a
 command that runs it directly names the group:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>zensical<span class="w"> </span>build<span class="w">     </span><span class="c1"># build only, no cross-reference check</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>zensical<span class="w"> </span>build<span class="w">     </span><span class="c1"># build only, no cross-reference check</span>
 </span></code></pre></div>
 <p>The site lands in <code>site/</code>. Serve it locally with:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>zensical<span class="w"> </span>serve
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>zensical<span class="w"> </span>serve
 </span></code></pre></div>
 <p>The server listens on <code>http://localhost:8000</code> and rebuilds on every change.</p>
 <h3 id="pictures-of-example-windows">Pictures of example windows<a class="headerlink" href="#pictures-of-example-windows" title="Permanent link">&para;</a></h3>
 <p>A tutorial's code lives in a script next to its page, such as
 <code>docs/tutorials/first_session.py</code>, and the page pulls each step from it. The
 build runs the script and saves a picture of the window it opens:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>python<span class="w"> </span>scripts/screenshots.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>python<span class="w"> </span>scripts/screenshots.py
 </span></code></pre></div>
 <p><code>uv run tox -e docs</code> runs this first. If you serve the site with <code>zensical
 serve</code>, run it once yourself, or the tutorial shows a missing image. The
@@ -6942,18 +7000,18 @@ moment and needs a display, which CI provides with a virtual one.</p>
 <h4 id="zensical-is-not-found"><code>zensical</code> is not found<a class="headerlink" href="#zensical-is-not-found" title="Permanent link">&para;</a></h4>
 <p><code>uv run zensical</code> without <code>--group docs</code> fails with
 <code>Failed to spawn: zensical</code>. Add the flag, or install the group once:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev<span class="w"> </span>--group<span class="w"> </span>docs
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev<span class="w"> </span>--group<span class="w"> </span>docs
 </span></code></pre></div>
 <h4 id="port-already-in-use">Port already in use<a class="headerlink" href="#port-already-in-use" title="Permanent link">&para;</a></h4>
 <p>Pick another port:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>zensical<span class="w"> </span>serve<span class="w"> </span>--dev-addr<span class="w"> </span>localhost:8080
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>zensical<span class="w"> </span>serve<span class="w"> </span>--dev-addr<span class="w"> </span>localhost:8080
 </span></code></pre></div>
 <h2 id="commit-messages-and-pull-requests">Commit messages and pull requests<a class="headerlink" href="#commit-messages-and-pull-requests" title="Permanent link">&para;</a></h2>
 <p>Commit messages, issue titles and pull requests all follow one form, so the
 history reads the same everywhere.</p>
 <h3 id="commit-messages">Commit messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h3>
 <p>The first line follows <a href="https://www.conventionalcommits.org">Conventional Commits</a>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>type(scope): summary
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>type(scope): summary
 </span></code></pre></div>
 <ul>
 <li><code>type</code> is one of <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>ci</code>, <code>chore</code>.
@@ -6964,10 +7022,10 @@ history reads the same everywhere.</p>
 </ul>
 <p>A commit that does several things gets a body of short bullets, each one
 imperative:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>refactor(session): read each session file once
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>- merge the sources before validating them
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>- log the files in the order they are layered
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>refactor(session): read each session file once
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>- merge the sources before validating them
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>- log the files in the order they are layered
 </span></code></pre></div>
 <p>Write what changed in plain words, so someone who hasn't seen the diff
 understands it.</p>
@@ -6983,9 +7041,9 @@ changelog doesn't use it: what users read comes from the
 <a href="#changelog-entries">changelog entries</a> the pull request adds.</p>
 <p>The description is a list of one-line bullets in the imperative, one per
 change a reviewer can see, with no headers:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">-</span><span class="w"> </span>Add <span class="sb">`strict`</span> to the session file
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="k">-</span><span class="w"> </span>Stop a session whose component fails to build when <span class="sb">`strict`</span> is set
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="k">-</span><span class="w"> </span>Rename <span class="sb">`MyMotor.go`</span> to <span class="sb">`MyMotor.move`</span>, which existing code must follow
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="k">-</span><span class="w"> </span>Add <span class="sb">`strict`</span> to the session file
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="k">-</span><span class="w"> </span>Stop a session whose component fails to build when <span class="sb">`strict`</span> is set
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="k">-</span><span class="w"> </span>Rename <span class="sb">`MyMotor.go`</span> to <span class="sb">`MyMotor.move`</span>, which existing code must follow
 </span></code></pre></div>
 <p>A change that existing code must follow says so in its bullet. Leave out tests,
 coverage and the checks you ran: CI reports them on the pull request.</p>
@@ -7035,15 +7093,15 @@ to its pull request.</p>
 </table>
 <p><code>towncrier</code> writes the file for you. Keep the text in single quotes, so the
 shell leaves its backticks alone:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>create<span class="w"> </span><span class="m">412</span>.fixed.md<span class="w"> </span>--content<span class="w"> </span><span class="s1">'A link that `wire` and `wiring:` both name is made once.'</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>create<span class="w"> </span><span class="m">412</span>.fixed.md<span class="w"> </span>--content<span class="w"> </span><span class="s1">'A link that `wire` and `wiring:` both name is made once.'</span>
 </span></code></pre></div>
 <p>A second change of the same kind in one pull request goes in <code>412.fixed.2.md</code>.</p>
 <p>An entry says what changed, in a line or two, and names what a user would
 type to reach it: a name <code>redsun</code> exports as it is, such as <code>WindowLayout</code>,
 and any other with its module, such as <code>redsun.aio.run_coro</code>. It doesn't say why: that belongs in the pull request or in
 a <a href="../../explanation/decisions/">decision record</a>.</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>Good: Add <span class="sb">`timeout=`</span> to <span class="sb">`run_coro`</span>, which cancels the coroutine when the wait ends without a result.
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>Bad:  Improve run_coro.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>Good: Add <span class="sb">`timeout=`</span> to <span class="sb">`run_coro`</span>, which cancels the coroutine when the wait ends without a result.
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>Bad:  Improve run_coro.
 </span></code></pre></div>
 <p>A change to something not released yet gets no entry of its own. Edit the
 entry that added it instead, so the release says what users get.</p>
@@ -7101,7 +7159,7 @@ and tutorial steps are the exception: they say what the reader does, such as
 "Declare the device".</p>
 <p>The first time a page uses a technical word, link it to its entry in the
 <a href="../../explanation/glossary/">glossary</a>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>A [<span class="nt">layer</span>](<span class="na">../explanation/glossary.md#layer</span>) is built after the one before it.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>A [<span class="nt">layer</span>](<span class="na">../explanation/glossary.md#layer</span>) is built after the one before it.
 </span></code></pre></div>
 <p>If the glossary doesn't have the word yet, add it there first. Acronyms such
 as <abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> also go in <code>includes/abbreviations.md</code>, which shows them as tooltips on
@@ -7123,7 +7181,7 @@ block, before "What you built".</p>
 <p>The tutorial scripts are type checked with the rest of the code, by
 <code>uv run tox -e mypy-pyqt,mypy-pyside</code>.</p>
 <h3 id="checking-your-changes">Checking your changes<a class="headerlink" href="#checking-your-changes" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>docs
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>docs
 </span></code></pre></div>
 <p>This builds the site, then checks that every cross-reference found its
 target, every included script was read, and every link to a part of a page
@@ -7198,25 +7256,25 @@ run and click <strong>Re-run failed jobs</strong>.</p>
 <h3 id="from-a-clone">From a clone<a class="headerlink" href="#from-a-clone" title="Permanent link">&para;</a></h3>
 <p>When Actions isn't available, the same release works by hand. On an
 up-to-date <code>main</code>, write the section with the version and today's date:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.15.0
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>build<span class="w"> </span>--yes<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.15.0<span class="w"> </span>--date<span class="w"> </span><span class="m">12</span>-10-2026
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>git<span class="w"> </span>pull
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.15.0
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>uv<span class="w"> </span>run<span class="w"> </span>towncrier<span class="w"> </span>build<span class="w"> </span>--yes<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.15.0<span class="w"> </span>--date<span class="w"> </span><span class="m">12</span>-10-2026
 </span></code></pre></div>
 <p><code>towncrier</code> collects the files in <code>changelog.d/</code> into the section, deletes
 them, and stages both changes. Commit them, push the branch and open the pull
 request:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"docs: write the 0.15.0 changelog"</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.15.0
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--base<span class="w"> </span>main<span class="w"> </span>--label<span class="w"> </span>skip-changelog<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: write the 0.15.0 changelog"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Writes the changelog section for 0.15.0."</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"docs: write the 0.15.0 changelog"</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.15.0
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--base<span class="w"> </span>main<span class="w"> </span>--label<span class="w"> </span>skip-changelog<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: write the 0.15.0 changelog"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Writes the changelog section for 0.15.0."</span>
 </span></code></pre></div>
 <p>Once it's merged, tag the merge commit and push the tag:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.15.0
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.15.0
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>git<span class="w"> </span>pull
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.15.0
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.15.0
 </span></code></pre></div>
 <p>The release run then creates the GitHub release itself.</p>
 <h3 id="release-candidates">Release candidates<a class="headerlink" href="#release-candidates" title="Permanent link">&para;</a></h3>
