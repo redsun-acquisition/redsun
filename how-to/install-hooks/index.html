@@ -18,7 +18,7 @@
         <link rel="prev" href="../write-a-frontend/">
       
       
-        <link rel="next" href="../add-menu-actions/">
+        <link rel="next" href="../choose-a-style/">
       
       
         
@@ -1769,6 +1769,8 @@
       
         
       
+        
+      
     
     
     
@@ -1977,6 +1979,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#use-a-provider-redsun-ships" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Use a provider <code>redsun</code> ships
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pass-constructor-arguments" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2046,6 +2059,35 @@
   
 </nav>
       
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../choose-a-style/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-palette" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to choose a style
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3495,6 +3537,8 @@
       
         
       
+        
+      
     
     
     
@@ -4321,6 +4365,33 @@
     
   
   29. Keyboard shortcuts are declared by components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  30. napari's styling is copied until napari publishes it
 
     
   </span>
@@ -5528,6 +5599,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#use-a-provider-redsun-ships" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Use a provider <code>redsun</code> ships
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pass-constructor-arguments" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5691,6 +5773,8 @@
       
         
       
+        
+      
     
     
     
@@ -5743,7 +5827,8 @@ point.</p>
 </div>
 <div class="tabbed-block">
 <p>Name the provider in the <code>hooks</code> section, under the name of the hook
-point, with the path to import it from.</p>
+point, with the path to import it from, or with its short name when
+<code>redsun</code> ships it.</p>
 </div>
 </div>
 </div>
@@ -5835,26 +5920,51 @@ same attribute.</p>
 </div>
 </div>
 </div>
-<h2 id="pass-constructor-arguments">Pass constructor arguments<a class="headerlink" href="#pass-constructor-arguments" title="Permanent link">&para;</a></h2>
+<h2 id="use-a-provider-redsun-ships">Use a provider <code>redsun</code> ships<a class="headerlink" href="#use-a-provider-redsun-ships" title="Permanent link">&para;</a></h2>
+<p><code>redsun</code> ships providers you can install without writing your own. A session
+file names one by a short name instead of a class path, and the
+<a href="../../reference/session-file/#hooks">session file reference</a> lists the names.
+<a href="../choose-a-style/">Choose a style</a> shows one of them in use.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Session class</label><label for="__tabbed_3_2">Session file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt.styles.napari</span><span class="w"> </span><span class="kn">import</span> <span class="n">NapariStyle</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsHook</span><span class="p">,</span> <span class="n">Declare</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">configure_application</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsHook</span><span class="p">[</span><span class="n">DarkTheme</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">accent</span><span class="o">=</span><span class="s2">"#d47f4c"</span><span class="p">)]</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">configure_application</span><span class="p">:</span> <span class="n">AsHook</span><span class="p">[</span><span class="n">NapariStyle</span><span class="p">]</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napari</span>
+</span></code></pre></div>
+<p>The name alone is short for <code>provider: napari</code>, which you write out when
+you pass <code>kwargs</code>. A name stands for one <abbr title="A named point in a session's life, such as the build or the closing of the window, at which the session calls one of your objects.">hook point</abbr> only, so writing the
+same name at two points is refused like two identical entries.</p>
+</div>
+</div>
+</div>
+<h2 id="pass-constructor-arguments">Pass constructor arguments<a class="headerlink" href="#pass-constructor-arguments" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Session class</label><label for="__tabbed_4_2">Session file</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsHook</span><span class="p">,</span> <span class="n">Declare</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">configure_application</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsHook</span><span class="p">[</span><span class="n">DarkTheme</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">accent</span><span class="o">=</span><span class="s2">"#d47f4c"</span><span class="p">)]</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
 <p>Arguments go under <code>kwargs</code>, never beside <code>provider</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">hooks</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.theme:DarkTheme"</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">kwargs</span><span class="p">:</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">accent</span><span class="p">:</span><span class="w"> </span><span class="s">"#d47f4c"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.theme:DarkTheme"</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">kwargs</span><span class="p">:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">accent</span><span class="p">:</span><span class="w"> </span><span class="s">"#d47f4c"</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -5862,27 +5972,27 @@ same attribute.</p>
 <h2 id="serve-more-than-one-hook-point">Serve more than one <abbr title="A named point in a session's life, such as the build or the closing of the window, at which the session calls one of your objects.">hook point</abbr><a class="headerlink" href="#serve-more-than-one-hook-point" title="Permanent link">&para;</a></h2>
 <p>A provider that keeps something between two points is installed at both as
 one object, so the state it keeps is shared.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Session class</label><label for="__tabbed_4_2">Session file</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Session class</label><label for="__tabbed_5_2">Session file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p><code>Serves</code> lists the points, and the attribute name is then free:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serves</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtHook</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">theme</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="n">AsHook</span><span class="p">[</span><span class="n">DarkTheme</span><span class="p">],</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="n">Serves</span><span class="p">(</span><span class="n">QtHook</span><span class="o">.</span><span class="n">CONFIGURE_APPLICATION</span><span class="p">,</span> <span class="n">QtHook</span><span class="o">.</span><span class="n">CONFIGURE_MAIN_VIEW</span><span class="p">),</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="p">]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serves</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtHook</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">theme</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="n">AsHook</span><span class="p">[</span><span class="n">DarkTheme</span><span class="p">],</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="n">Serves</span><span class="p">(</span><span class="n">QtHook</span><span class="o">.</span><span class="n">CONFIGURE_APPLICATION</span><span class="p">,</span> <span class="n">QtHook</span><span class="o">.</span><span class="n">CONFIGURE_MAIN_VIEW</span><span class="p">),</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="p">]</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
 <p>Anchor the entry and alias it:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">hooks</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;theme</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.theme:DarkTheme"</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">configure_main_view</span><span class="p">:</span><span class="w"> </span><span class="nv">*theme</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;theme</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.theme:DarkTheme"</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">configure_main_view</span><span class="p">:</span><span class="w"> </span><span class="nv">*theme</span>
 </span></code></pre></div>
 <p><code>&amp;theme</code> names the entry and <code>*theme</code> reuses it, so both keys hold one
 provider. Two separate entries with the same provider and arguments are
@@ -5895,38 +6005,38 @@ refused, since the file cannot say whether you meant one object or two.</p>
 manager that the session enters before the first build step and closes after
 the last. The session calls what the manager yields with each step's name as
 the step starts:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtGui</span><span class="w"> </span><span class="kn">import</span> <span class="n">QPixmap</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">QSplashScreen</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="nd">@contextmanager</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
-</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
-</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>            <span class="k">yield</span> <span class="n">report</span>
-</span><span id="__span-7-26"><a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>        <span class="k">finally</span><span class="p">:</span>
-</span><span id="__span-7-27"><a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtGui</span><span class="w"> </span><span class="kn">import</span> <span class="n">QPixmap</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">QSplashScreen</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>    <span class="nd">@contextmanager</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>
+</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>            <span class="k">yield</span> <span class="n">report</span>
+</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Check the image in the constructor, because a missing file gives an empty
 <code>QPixmap</code> instead of an error, and a splash that shows nothing.</p>
 <p>The steps reported are the members of <code>BuildStep</code>, in order:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuildStep</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuildStep</span>
 </span></code></pre></div>
 <p>Size a progress bar from <code>len(BuildStep)</code> rather than counting by hand, so
 it stays right when the steps change. Each step is reported when it starts,
@@ -5935,14 +6045,14 @@ even when the build fails.</p>
 <h2 id="undo-what-a-hook-did">Undo what a hook did<a class="headerlink" href="#undo-what-a-hook-did" title="Permanent link">&para;</a></h2>
 <p>Give the provider a <code>shutdown</code> method. The session calls it when it shuts
 down, once per provider however many points it serves, the last built first:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span> <span class="o">=</span> <span class="n">app</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_previous</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">styleSheet</span><span class="p">()</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>        <span class="n">app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_previous</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span> <span class="o">=</span> <span class="n">app</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_previous</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">styleSheet</span><span class="p">()</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>        <span class="n">app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">"..."</span><span class="p">)</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_previous</span><span class="p">)</span>
 </span></code></pre></div>
 <p>A <code>during_build</code> provider needs none: its context manager closes what it
 opened.</p>
@@ -5982,6 +6092,10 @@ raised as <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-
 <tr>
 <td><code>hooks.x.name: Extra inputs are not permitted</code></td>
 <td>an argument was written beside <code>provider</code> instead of under <code>kwargs</code></td>
+</tr>
+<tr>
+<td><code>unknown hook provider 'x'; built-in names: ...</code></td>
+<td>the short name is not one <code>redsun</code> ships; check its spelling against the list</td>
 </tr>
 <tr>
 <td><code>hook provider 'p' is named twice, at 'a' and at 'b', with the same keys</code></td>
@@ -6060,13 +6174,13 @@ raised as <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-
         
         
           
-          <a href="../add-menu-actions/" class="md-footer__link md-footer__link--next" aria-label="Next: How to add menu actions to a Qt session">
+          <a href="../choose-a-style/" class="md-footer__link md-footer__link--next" aria-label="Next: How to choose a style">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How to add menu actions to a Qt session
+                How to choose a style
               </div>
             </div>
             <div class="md-footer__button md-icon">

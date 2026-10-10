@@ -160,6 +160,15 @@
       "description": "Services by id.",
       "title": "Services",
       "type": "object"
+    },
+    "hooks": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Hook provider classes by the short name a session file gives them.",
+      "title": "Hooks",
+      "type": "object"
     }
   },
   "title": "PluginManifest",

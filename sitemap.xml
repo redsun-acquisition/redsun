@@ -103,6 +103,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
       </url>
       <url>
@@ -146,6 +149,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/change-a-setting-while-a-plan-runs/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/choose-a-style/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/choose-plan-inputs/</loc>

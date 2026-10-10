@@ -382,7 +382,7 @@
       "description": "One provider of the `hooks` section, and every hook point it serves.",
       "properties": {
         "provider": {
-          "description": "The provider's class, as `module:ClassName`.",
+          "description": "The provider's class, as `module:ClassName`, or a built-in provider's short name.",
           "title": "Provider",
           "type": "string"
         },
@@ -640,7 +640,14 @@
         {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/HookEntry"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/HookEntry"
+              }
+            ]
           }
         },
         {

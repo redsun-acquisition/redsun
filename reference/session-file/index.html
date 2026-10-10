@@ -1750,6 +1750,8 @@
       
         
       
+        
+      
     
     
     
@@ -1869,6 +1871,35 @@
     
   
   How to install hooks
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/choose-a-style/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-palette" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to choose a style
 
     
   </span>
@@ -3316,6 +3347,8 @@
       
         
       
+        
+      
     
     
     
@@ -4142,6 +4175,33 @@
     
   
   29. Keyboard shortcuts are declared by components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  30. napari's styling is copied until napari publishes it
 
     
   </span>
@@ -6198,7 +6258,8 @@ session and the method its shortcut runs.</p>
 on macOS. A key two commands ask for in the same place stays with the first,
 and the change is logged, or refused when <code>strict</code> is set.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
-<p><code>hooks</code> maps a <abbr title="A named point in a session's life, such as the build or the closing of the window, at which the session calls one of your objects.">hook point</abbr> to an entry.</p>
+<p><code>hooks</code> maps a <abbr title="A named point in a session's life, such as the build or the closing of the window, at which the session calls one of your objects.">hook point</abbr> to an entry. An entry is a mapping with the keys
+below, or the short name of a provider <code>redsun</code> ships, written alone.</p>
 <table>
 <thead>
 <tr>
@@ -6213,7 +6274,7 @@ and the change is logged, or refused when <code>strict</code> is set.</p>
 <td><code>provider</code></td>
 <td>text</td>
 <td>required</td>
-<td>the class of the provider, as <code>module:ClassName</code></td>
+<td>the class of the provider, as <code>module:ClassName</code>, or the short name of a provider <code>redsun</code> ships</td>
 </tr>
 <tr>
 <td><code>kwargs</code></td>
@@ -6223,6 +6284,26 @@ and the change is logged, or refused when <code>strict</code> is set.</p>
 </tr>
 </tbody>
 </table>
+<p>The providers <code>redsun</code> ships, by short name:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Hook point</th>
+<th>Provider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>napari</code></td>
+<td><code>configure_application</code></td>
+<td><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;NapariStyle&lt;/span&gt;" href="../api/qt/#redsun.qt.styles.napari.NapariStyle"><code>NapariStyle</code></a>, <code>napari</code>'s look, dark or light as the colour scheme reads</td>
+</tr>
+</tbody>
+</table>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napari</span>
+</span></code></pre></div>
 
 
 
