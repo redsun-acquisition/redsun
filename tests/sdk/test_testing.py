@@ -88,10 +88,18 @@ TURNS_COLLECTION_ON = """
 import gc
 
 
+def test_before():
+    assert not gc.isenabled()
+
+
 def test_turns_collection_on():
     gc.enable()
+
+
+def test_after():
+    assert not gc.isenabled()
 """
-"""A test turning automatic collection on and leaving it on."""
+"""Three tests, the second turning automatic collection on and leaving it on."""
 
 
 def test_a_session_keeps_its_settings_under_tmp_path(
@@ -161,11 +169,16 @@ def test_a_modules_cycles_are_collected_when_it_ends(
     result.assert_outcomes(passed=2)
 
 
-def test_a_module_leaving_collection_on_is_refused(pytester: pytest.Pytester) -> None:
-    """Fail a module whose test left automatic collection on, and turn it off again."""
-    pytester.makepyfile(test_first=TURNS_COLLECTION_ON, test_second=COLLECTION_IS_OFF)
+def test_a_test_leaving_collection_on_is_refused(pytester: pytest.Pytester) -> None:
+    """Fail the test that left automatic collection on, and run the next with it off."""
+    pytester.makepyfile(TURNS_COLLECTION_ON)
 
     result = pytester.runpytest("-p", "redsun.testing")
 
-    result.assert_outcomes(passed=2, errors=1)
-    result.stdout.fnmatch_lines(["*left automatic garbage collection on*"])
+    result.assert_outcomes(passed=3, errors=1)
+    result.stdout.fnmatch_lines(
+        [
+            "*left automatic garbage collection on*",
+            "ERROR *::test_turns_collection_on*",
+        ]
+    )

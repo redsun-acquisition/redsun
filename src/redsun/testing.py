@@ -44,6 +44,7 @@ __all__ = [
     "config_home",
     "data_directory",
     "empty_emission_queue",
+    "keep_automatic_collection_off",
     "log_directory",
     "no_automatic_collection",
     "start_service",
@@ -171,9 +172,9 @@ def no_automatic_collection() -> Generator[None, None, None]:
     Python collects on whichever thread allocates, a background event loop
     included, and `pyside6` aborts when a widget is destroyed off the GUI
     thread. With automatic collection off no thread collects by itself;
-    `collect_after_module` collects on the main thread instead. A test that
-    needs an object freed calls `gc.collect()` itself, and one that turns
-    automatic collection on turns it off again before it ends.
+    [`collect_after_module`][redsun.testing.collect_after_module] collects on
+    the main thread instead. A test that needs an object in a reference cycle
+    freed calls `gc.collect()` itself.
     """
     found = gc.isenabled()
     gc.disable()
@@ -186,23 +187,34 @@ def no_automatic_collection() -> Generator[None, None, None]:
 def collect_after_module(
     no_automatic_collection: None,
 ) -> Generator[None, None, None]:
-    """Collect once after the last test of each module, on the main thread.
+    """Collect once after the last test of each module, on the main thread."""
+    yield
+    gc.collect()
+
+
+@pytest.fixture(autouse=True)
+def keep_automatic_collection_off(
+    no_automatic_collection: None,
+) -> Generator[None, None, None]:
+    """Fail a test that left automatic garbage collection on.
+
+    A test that turns it on, or off and then on again, restores the state it
+    found before it ends. Nothing is collected here: the state is only read.
 
     Raises
     ------
     RuntimeError
-        If a test of the module left automatic collection on; it is turned
-        off again first, so later modules stay safe.
+        If the test, or a session it left for `build` to shut down, turned
+        automatic collection on; it is turned off again first, so the tests
+        after it stay safe.
     """
     yield
-    left_on = gc.isenabled()
-    gc.disable()
-    gc.collect()
-    if left_on:
+    if gc.isenabled():
+        gc.disable()
         raise RuntimeError(
-            "a test of this module left automatic garbage collection on; "
-            "restore the state the test found, since a collection on another "
-            "thread can destroy a widget there and abort pyside6"
+            "this test left automatic garbage collection on; restore the "
+            "state the test found, since a collection on another thread can "
+            "destroy a widget there and abort pyside6"
         )
 
 
