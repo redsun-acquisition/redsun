@@ -6718,6 +6718,9 @@ nothing: standard input may be closed from the start there.</p>
         <p>Raise <code>SIGINT</code> in this process once the session asks it to stop.</p>
 <p>For a server whose <code>run</code> blocks: it shuts down as it would on Ctrl+C.
 Does nothing when no session launched the process.</p>
+<p>The request can come as soon as the session reads the ready text, so a
+service that prints it with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;ready&lt;/span&gt;" href="./#redsun.services.ready"><code>ready</code></a> and handles
+the interrupt itself calls <code>ready</code> inside the block that handles it.</p>
 
 
     </div>
