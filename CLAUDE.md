@@ -86,8 +86,9 @@ uv run tox -e mypy-pyqt,mypy-pyside
 | `tests-pyqt` / `tests-pyside` | `pytest -q -n auto --dist loadfile` under that binding |
 | `docs` | `zensical build`, `scripts/check_xrefs.py`, then a `towncrier` draft |
 
-tox and CI run the tests with `pytest-xdist`, one file per worker; a plain
-`uv run pytest` is one process, and so is `uv run tox -e tests-pyqt -- -n 0`.
+tox and CI run the tests with `pytest-xdist`, every test of a file on the
+same worker; a plain `uv run pytest` is one process, and so is
+`uv run tox -e tests-pyqt -- -n 0`.
 
 **Run what the change can break, not the whole matrix.** A change confined to
 `docs/` (pages, ADRs, changelogs, `zensical.toml`) or to `changelog.d/` can
@@ -128,7 +129,8 @@ thread timer (`redsun.qt._garbage`, the approach pyqtgraph's
 `GarbageCollector` takes). A test run turns automatic collection off for its
 whole length (`redsun.testing.no_automatic_collection`) and collects after
 each test module on the main thread (`collect_after_module`), so no widget a
-test leaves in a cycle is freed on the loop thread.
+test leaves in a cycle is freed on the loop thread;
+`keep_automatic_collection_off` fails a test that leaves it on.
 
 `scripts/mypy_qt.py` is what the two `mypy-*` environments call. `qtpy mypy-args` prints
 the `--always-true` / `--always-false` flags for the selected binding, and
@@ -329,7 +331,9 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 - **A test that checks an object was freed calls `gc.collect()` itself**:
   automatic collection is off during a run. A test that turns it on or off
   restores the state it found (`tests.sdk.helpers.automatic_collection`); a
-  module that leaves it on fails after its last test.
+  test that leaves it on fails (`keep_automatic_collection_off`). A script a
+  test runs in a child process starts with `tests.sdk.helpers.kept_under`,
+  which keeps its session's logs, settings and data under `tmp_path`.
 - **A module-scoped fixture is for something costly that tests only read**,
   such as the catalog server in `tests/test_catalog.py`. It patches the
   settings, log and data folders itself, since the per-test fixtures doing

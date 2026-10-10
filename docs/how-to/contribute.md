@@ -180,6 +180,11 @@ the workers' output:
 uv run tox -e tests-pyqt -- -n 0 tests/test_container.py
 ```
 
+Each launched service asks the system for a free network port. In a parallel
+run two workers can, rarely, be handed the same one, and a service then fails
+to become ready in one of the service test files. Run that file again before
+looking for another cause.
+
 ### Garbage collection in the tests
 
 A test run turns Python's automatic garbage collection off and collects once
@@ -197,14 +202,16 @@ fixtures doing this are
 
 What it means for a test you write:
 
-- When your test checks that an object was freed, call `gc.collect()` in the
-  test first. Nothing else will free it before the test ends.
-- When your test turns automatic collection on, turn it off again before the
-  test ends. Restore the state you found, not a fixed one. A file that leaves
-  it on fails after its last test, with a message that says so.
-- A widget your test leaves alive stays until the end of the file. Close what
-  you open, so a later test that looks at the application's windows doesn't
-  find yours.
+- When your test checks that an object in a reference cycle was freed, call
+  `gc.collect()` in the test first. An object in no cycle is still freed the
+  moment nothing refers to it.
+- When your test turns automatic collection on or off, restore the state you
+  found before the test ends, not a fixed one. A test that leaves it on fails
+  with a message that says so
+  ([`keep_automatic_collection_off`][redsun.testing.keep_automatic_collection_off]).
+- A widget your test leaves in a reference cycle stays until the end of the
+  file. Close what you open, so a later test that looks at the application's
+  windows doesn't find yours.
 
 ### Tests that need a container
 
