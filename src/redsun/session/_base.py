@@ -86,7 +86,7 @@ from ._factories import (
 )
 from ._frontend import Frontend
 from ._layout import resolved_layout
-from ._plugins import installed, load_providers
+from ._plugins import hook_class_path, installed, load_providers
 from ._profile import open_profile
 from ._protocols import (
     AttachableComponent,
@@ -554,8 +554,9 @@ class Session(BuildableSession):
         ------
         HookError
             If both name one point, *groups* name a point this class does not
-            call or one provider twice with the same keys, a provider cannot
-            be built, or one does not implement the protocol its point calls.
+            call, a short name `redsun` does not list, or one provider twice
+            with the same keys, a provider cannot be built, or one does not
+            implement the protocol its point calls.
         """
         points = self.hook_points
         owner = type(self).__name__
@@ -568,6 +569,14 @@ class Session(BuildableSession):
                 built[id(declaration)] = provider
             declared[moment] = provider
 
+        # a short name becomes its class path first, so the check for one
+        # provider named twice sees the same provider however it was named
+        groups = [
+            group
+            if ":" in group.provider
+            else group.model_copy(update={"provider": hook_class_path(group.provider)})
+            for group in groups
+        ]
         refuse_unknown_points(groups, points, owner)
         refuse_ambiguous(groups)
         configured = resolve_hooks(groups)

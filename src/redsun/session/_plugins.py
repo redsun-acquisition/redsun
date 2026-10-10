@@ -4,7 +4,7 @@ import logging
 from functools import cache
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from redsun.errors import PluginError
+from redsun.errors import HookError, PluginError
 
 from .._manifest import PluginManifest, discover, import_class
 
@@ -141,6 +141,21 @@ def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
     """
     paths: dict[str, str] = getattr(manifest(plugin_name), group)
     return listed_item(paths, plugin_name, plugin_id, group)
+
+
+def hook_class_path(name: str) -> str:
+    """Return the class path of the hook provider `redsun` lists as *name*.
+
+    Raises
+    ------
+    HookError
+        If `redsun` lists no hook provider by that name.
+    """
+    hooks = manifest("redsun").hooks
+    if name not in hooks:
+        known = ", ".join(sorted(hooks)) or "none"
+        raise HookError(f"unknown hook provider {name!r}; built-in names: {known}")
+    return hooks[name]
 
 
 def listed_item(

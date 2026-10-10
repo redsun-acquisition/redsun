@@ -123,6 +123,9 @@ class PluginManifest(BaseModel, extra="forbid", use_attribute_docstrings=True):
     services: dict[str, ServiceEntry] = {}
     """Services by id."""
 
+    hooks: dict[str, ClassPath] = {}
+    """Hook provider classes by the short name a session file gives them."""
+
 
 def discover() -> dict[str, PluginManifest]:
     """Read every installed manifest, by entry point name.

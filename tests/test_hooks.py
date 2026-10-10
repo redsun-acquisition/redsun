@@ -25,6 +25,7 @@ from redsun import (
     Session,
 )
 from redsun.qt import Dock, QtHook, QtSession
+from redsun.qt.styles.napari import NapariStyle
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -368,6 +369,42 @@ def test_two_equal_entries_are_not_one_provider() -> None:
 
     with pytest.raises(HookError, match="named twice"):
         App().build()
+
+
+@pytest.mark.parametrize(
+    "entry", ["napari", {"provider": "napari"}], ids=["bare-name", "provider"]
+)
+def test_a_short_name_installs_the_built_in_provider(
+    qapp: QApplication,
+    build: BuildSession,
+    unstyled: None,
+    entry: str | dict[str, str],
+) -> None:
+    """Install the built-in provider an entry names by its short name, alone or as `provider`."""
+    hooks = build(QtSession, {"hooks": {"configure_application": entry}}).hooks
+
+    assert isinstance(hooks[QtHook.CONFIGURE_APPLICATION], NapariStyle)
+
+
+@pytest.mark.parametrize(
+    "other",
+    ["napari", "redsun.qt.styles.napari:NapariStyle"],
+    ids=["short-name", "class-path"],
+)
+def test_one_short_name_at_two_points_is_named_twice(other: str) -> None:
+    """Refuse a short name at two points, or with its class path, as one provider named twice."""
+    hooks = {"configure_application": "napari", "configure_main_view": other}
+
+    with pytest.raises(HookError, match="named twice"):
+        QtSession({"hooks": hooks}).build()
+
+
+def test_an_unknown_short_name_is_refused_with_the_names_there_are() -> None:
+    """Refuse a short name the manifest does not list, naming the ones it does."""
+    hooks = {"configure_application": "nope"}
+
+    with pytest.raises(HookError, match=r"unknown hook provider 'nope'.*napari"):
+        QtSession({"hooks": hooks}).build()
 
 
 @pytest.mark.parametrize(

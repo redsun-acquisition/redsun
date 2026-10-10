@@ -24,6 +24,7 @@ Every key is optional. A key that is not in this table is refused.
 | `views` | mapping | empty | view classes, by id |
 | `providers` | mapping | empty | classes that share values with the components, by id |
 | `services` | mapping | empty | [services](#services) a session can launch, by id |
+| `hooks` | mapping | empty | hook provider classes, by the short name a session file gives them; only `redsun`'s own manifest is read |
 
 A class is written `module:ClassName`.
 

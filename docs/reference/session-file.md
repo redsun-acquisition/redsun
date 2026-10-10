@@ -220,9 +220,21 @@ and the change is logged, or refused when `strict` is set.
 
 ## Hooks
 
-`hooks` maps a hook point to an entry.
+`hooks` maps a hook point to an entry. An entry is a mapping with the keys
+below, or the short name of a provider `redsun` ships, written alone.
 
 | Key | Type | Default | Holds |
 | --- | --- | --- | --- |
-| `provider` | text | required | the class of the provider, as `module:ClassName` |
+| `provider` | text | required | the class of the provider, as `module:ClassName`, or the short name of a provider `redsun` ships |
 | `kwargs` | mapping | empty | the arguments the provider is made with |
+
+The providers `redsun` ships, by short name:
+
+| Name | Hook point | Provider |
+| --- | --- | --- |
+| `napari` | `configure_application` | [`NapariStyle`][redsun.qt.styles.napari.NapariStyle], `napari`'s look, dark or light as the colour scheme reads |
+
+```yaml
+hooks:
+  configure_application: napari
+```

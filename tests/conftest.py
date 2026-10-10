@@ -66,6 +66,18 @@ def qapp() -> QApplication:
 
 
 @pytest.fixture
+def unstyled(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[None, None, None]:
+    """Write a style's files under `tmp_path`, and leave the application unstyled."""
+    monkeypatch.setattr(
+        "redsun.qt.styles.napari.user_cache_dir", lambda *a, **k: str(tmp_path)
+    )
+    yield
+    qapp.setStyleSheet("")
+
+
+@pytest.fixture
 def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     """Let a launched service import `mock_pkg`, and restore the CA address list.
 

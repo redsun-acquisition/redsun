@@ -7,3 +7,5 @@ views:
   lights: "redsun.view.qt.builtins:LightView"
   logs: "redsun.view.qt.builtins:LogView"
   positioner: "redsun.view.qt.builtins:PositionerView"
+hooks:
+  napari: "redsun.qt.styles.napari:NapariStyle"
