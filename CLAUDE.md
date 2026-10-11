@@ -11,6 +11,8 @@ redsun/
 |   |-- __init__.py            what a component author imports: Session, AsDevice, ...
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
+|   |-- _cli.py                the redsun command: --version, --example
+|   |-- examples/              ExampleApp, every built-in component over simulated devices
 |   |-- plugins.yaml           manifest of the built-in views
 |   |-- session/               Session, declarations, build steps, plugin loading
 |   |-- qt/                    QtSession, placements, actions, colour scheme

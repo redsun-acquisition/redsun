@@ -39,8 +39,7 @@ class ExampleApp(QtSession):
     """Every built-in component in one window, over simulated devices.
 
     A stage with two axes, a focus axis, a laser and an LED stand in for
-    hardware, and one plan walks the focus. Nothing is written or moved
-    outside the process.
+    hardware, so nothing outside the process moves. One plan walks the focus.
     """
 
     config: ClassVar[dict[str, Any]] = {"session": "redsun-example", "strict": True}

@@ -24,6 +24,11 @@ release notes.
 - [Hook points](hook-points.md): the moments a session calls its hook
   providers at, their order, and what a failure does
 
+### Command line
+
+- [The `redsun` command](command-line.md): its options, the example session
+  it opens, and its exit codes
+
 ### Environment
 
 - [Environment variables](environment.md): what a session sets for its

@@ -154,4 +154,14 @@ python -c "import redsun; print(redsun.__version__)"
 
 If `redsun` is installed, this prints its version.
 
+If you installed a window extra, open the example session, which holds every
+built-in component over simulated devices:
+
+```bash
+redsun --example
+```
+
+[The `redsun` command](../reference/command-line.md) lists what else it
+takes.
+
 To change `redsun` itself, see [How to contribute](contribute.md).
