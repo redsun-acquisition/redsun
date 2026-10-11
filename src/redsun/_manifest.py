@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("redsun")
 
 ENTRY_POINT_GROUP: Final = "redsun.plugins"
+OWN_PLUGIN: Final = "redsun"
+"""The plugin holding what `redsun` itself ships, short hook names included."""
 
 
 def class_path(value: str) -> str:
@@ -161,6 +163,15 @@ def discover() -> dict[str, PluginManifest]:
                 plugin.name,
                 path,
                 manifest.name,
+            )
+            continue
+        if manifest.hooks and plugin.name != OWN_PLUGIN:
+            logger.error(
+                'Plugin "%s" manifest %s has a hooks section and was skipped: '
+                "only redsun ships short hook names. Name the provider by its "
+                "class path, module:ClassName, in the session.",
+                plugin.name,
+                plugin.value,
             )
             continue
         manifests[plugin.name] = manifest

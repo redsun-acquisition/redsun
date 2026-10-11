@@ -189,11 +189,17 @@ def refuse_ambiguous(
             ):
                 first = ", ".join(repr(moment) for moment in other.moments)
                 second = ", ".join(repr(moment) for moment in spec.moments)
+                share = (
+                    "Anchor the entry and alias it"
+                    if ":" in spec.provider
+                    else "Write it once as a mapping, anchored, and alias it "
+                    f"(&name {{provider: {spec.provider}}}, then *name)"
+                )
                 raise HookError(
                     f"hook provider {spec.provider!r} is named twice, at "
-                    f"{first} and at {second}, with the same keys. Anchor the "
-                    "entry and alias it to share one provider, or give the two "
-                    "different keys to build two."
+                    f"{first} and at {second}, with the same keys. {share} to "
+                    "share one provider, or give the two different keys to "
+                    "build two."
                 )
         seen.append(spec)
 

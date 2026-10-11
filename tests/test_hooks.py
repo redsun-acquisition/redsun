@@ -652,6 +652,14 @@ def test_one_short_name_at_two_points_is_named_twice(other: str) -> None:
         QtSession({"hooks": hooks}).build()
 
 
+def test_a_short_name_named_twice_is_shown_as_written() -> None:
+    """Show a short name named twice as it was written, with the form that shares one provider."""
+    hooks = {"configure_application": "napari", "configure_main_view": "napari"}
+
+    with pytest.raises(HookError, match=r"'napari' is named twice.*provider: napari"):
+        QtSession({"hooks": hooks}).build()
+
+
 def test_an_unknown_short_name_is_refused_with_the_names_there_are() -> None:
     """Refuse a short name the manifest does not list, naming the ones it does."""
     hooks = {"configure_application": "nope"}

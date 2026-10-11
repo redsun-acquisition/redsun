@@ -277,6 +277,32 @@ def test_a_plugin_whose_manifest_is_invalid_is_left_out(
     assert "widgets: Extra inputs are not permitted" in caplog.text
 
 
+def test_a_plugin_manifest_with_hooks_is_left_out(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """Leave out a plugin whose manifest ships short hook names, saying how to name its provider."""
+    manifest = "hooks:" + chr(10) + '  fancy: "bad_bundle.style:Fancy"' + chr(10)
+    (tmp_path / "redsun.yaml").write_text(manifest)
+    entry = mock.Mock(spec=EntryPoint)
+    entry.name = "bad-bundle"
+    entry.value = "redsun.yaml"
+
+    class BadApp(Session):
+        config: ClassVar[dict[str, object]] = {
+            "presenters": {"ctrl": {"plugin_name": "bad-bundle", "plugin_id": "x"}}
+        }
+
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=[entry]),
+        mock.patch("redsun._manifest.files", return_value=tmp_path),
+    ):
+        app = build(BadApp)
+
+    assert dict(app.presenters) == {}
+    assert "only redsun ships short hook names" in caplog.text
+    assert "module:ClassName" in caplog.text
+
+
 def test_from_config_refuses_a_session_that_names_itself_nothing() -> None:
     """Refuse a configuration with no session name."""
     with pytest.raises(ConfigurationError, match="must name itself"):

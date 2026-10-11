@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from redsun.errors import HookError, PluginError
 
-from .._manifest import PluginManifest, discover, import_class
+from .._manifest import OWN_PLUGIN, PluginManifest, discover, import_class
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -165,7 +165,7 @@ def hook_class_path(name: str) -> str:
     HookError
         If `redsun` lists no hook provider by that name.
     """
-    hooks = manifest("redsun").hooks
+    hooks = manifest(OWN_PLUGIN).hooks
     if name not in hooks:
         known = ", ".join(sorted(hooks)) or "none"
         raise HookError(f"unknown hook provider {name!r}; built-in names: {known}")
