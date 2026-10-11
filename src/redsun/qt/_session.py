@@ -551,18 +551,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
         Raises
         ------
         HookError
-            If a `create_application` hook returns anything but a
-            `QApplication`.
+            If the `create_application` provider could not be built, or
+            returns anything but a `QApplication`.
         """
         super().start_runtime()
+        self._refuse_failed_creator()
         creators = self.hooks[QtHook.CREATE_APPLICATION]
-        for failure in self._failed_hooks.values():
-            if QtHook.CREATE_APPLICATION in failure.points:
-                raise HookError(
-                    f"the provider of {QtHook.CREATE_APPLICATION.value!r} failed, "
-                    "and a session does not start on another application: "
-                    f"{failure.reason}"
-                ) from failure.reason
         if QApplication.instance() is None and creators:
             creator = cast("CreatesApplication[QApplication]", creators[0])
             qt_app = creator.create_application(sys.argv)
@@ -1101,12 +1095,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ticked "don't ask again". Otherwise the prompt offers Save, Discard and
         Cancel.
         """
-        for confirmer in self.hooks[QtHook.CONFIRM_CLOSE]:
+        confirmers = self.hooks[QtHook.CONFIRM_CLOSE]
+        if confirmers:
             try:
-                return cast("ConfirmsClose", confirmer).confirm_close()
+                return cast("ConfirmsClose", confirmers[0]).confirm_close()
             except Exception as e:  # noqa: BLE001 - reported by skip_hook
                 # the session's own rule answers, now and at every later close
-                self.skip_hook(confirmer, QtHook.CONFIRM_CLOSE, e)
+                self.skip_hook(confirmers[0], QtHook.CONFIRM_CLOSE, e)
         if not self.has_changes() or not self.settings.get(ASK_ON_CLOSE, True):
             return True
         return self._ask_about_changes()
@@ -1242,24 +1237,60 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _span(self) -> Generator[Callable[[str], None], None, None]:
         """Open every `during_build` provider's span in order, and report each step to them.
 
-        A provider that raises, opening its span or being told a step, is
-        skipped and told nothing more; a span it opened is still left.
+        A provider that raises, opening its span, being told a step or
+        leaving its span, is skipped and told nothing more; a span it opened
+        is still left.
         """
+        reporters: dict[int, Callable[[str], None]] = {}
         with ExitStack() as stack:
-            reporters: dict[int, Callable[[str], None]] = {}
+            self.call_hooks(
+                QtHook.DURING_BUILD, partial(self._open_span, stack, reporters)
+            )
+            yield partial(self._report_step, reporters)
 
-            def open_span(provider: Any) -> None:
-                span = provider.during_build(self.app)
-                reporters[id(provider)] = stack.enter_context(span)
+    def _open_span(
+        self,
+        stack: ExitStack,
+        reporters: dict[int, Callable[[str], None]],
+        provider: Any,
+    ) -> None:
+        """Enter *provider*'s span, keep its reporter, and have *stack* leave it."""
+        span = provider.during_build(self.app)
+        reporters[id(provider)] = span.__enter__()
+        stack.push(partial(self._leave_span, provider, span))
 
-            def report(step: str) -> None:
-                self.call_hooks(
-                    QtHook.DURING_BUILD,
-                    lambda provider: reporters[id(provider)](step),
-                )
+    def _leave_span(self, provider: object, span: Any, *raised: Any) -> bool:
+        """Leave *span*, skipping *provider* if leaving raises."""
+        try:
+            return bool(span.__exit__(*raised))
+        except Exception as e:  # noqa: BLE001 - reported by skip_hook
+            self.skip_hook(provider, QtHook.DURING_BUILD, e)
+            return False
 
-            self.call_hooks(QtHook.DURING_BUILD, open_span)
-            yield report
+    def _report_step(
+        self, reporters: dict[int, Callable[[str], None]], step: str
+    ) -> None:
+        """Tell every `during_build` provider still standing that *step* starts."""
+        self.call_hooks(
+            QtHook.DURING_BUILD, lambda provider: reporters[id(provider)](step)
+        )
+
+    def _refuse_failed_creator(self) -> None:
+        """Stop the build if the `create_application` provider could not be built.
+
+        Raises
+        ------
+        HookError
+            If it failed: a session told which application to run on does not
+            start on another.
+        """
+        for failure in self._failed_hooks:
+            if QtHook.CREATE_APPLICATION in failure.points:
+                raise HookError(
+                    f"the provider of {QtHook.CREATE_APPLICATION.value!r} failed, "
+                    "and a session does not start on another application: "
+                    f"{failure.reason}"
+                ) from failure.reason
 
     def show(self) -> None:
         """Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.

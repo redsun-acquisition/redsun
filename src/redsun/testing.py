@@ -246,7 +246,7 @@ def keep_application_as_found(
     ------
     RuntimeError
         If the three differ after the test from before it; the stylesheet is
-        put back first, so the tests after it start from what this one found.
+        put back first, so it does not style the tests after this one.
     """
     if "qapp" not in request.fixturenames:
         yield

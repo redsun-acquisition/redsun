@@ -281,8 +281,7 @@ def test_a_plugin_manifest_with_hooks_is_left_out(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """Leave out a plugin whose manifest ships short hook names, saying how to name its provider."""
-    manifest = "hooks:" + chr(10) + '  fancy: "bad_bundle.style:Fancy"' + chr(10)
-    (tmp_path / "redsun.yaml").write_text(manifest)
+    (tmp_path / "redsun.yaml").write_text('hooks:\n  fancy: "bad_bundle.style:Fancy"\n')
     entry = mock.Mock(spec=EntryPoint)
     entry.name = "bad-bundle"
     entry.value = "redsun.yaml"

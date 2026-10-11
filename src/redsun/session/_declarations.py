@@ -768,7 +768,8 @@ def read_hooks(
     Raises
     ------
     HookError
-        If a declaration is not a class, or names a point *cls* does not call.
+        If a declaration is not a class, names a point *cls* does not call, or
+        names one point twice.
     """
     found: dict[str, list[HookDeclaration]] = {}
     for attr, hint in hints(cls).items():
@@ -787,6 +788,8 @@ def read_hooks(
                 served = marker.moments
             elif isinstance(marker, Declare):
                 kwargs = marker.kwargs
+        if len(set(served)) < len(served):
+            raise HookError(f"{where} names a hook point twice in Serves")
         declaration = HookDeclaration(target, served, kwargs)
         for moment in served:
             if moment not in points:

@@ -61,8 +61,8 @@ class NapariStyle:
         """Apply napari's theme for the current colour scheme, and again on each change."""
         self._app = app
         self._previous = app.styleSheet()
-        # files are written here, where a failure stops the build, rather than
-        # in the slot a scheme change calls
+        # files are written here, where a failure is caught and the style
+        # skipped, rather than in the slot a scheme change calls
         cache = Path(user_cache_dir("redsun", appauthor=False)) / "napari-style"
         sized = {} if self._font_size is None else {"font_size": f"{self._font_size}pt"}
         self._sheets = {

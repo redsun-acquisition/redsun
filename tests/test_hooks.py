@@ -18,6 +18,7 @@ from redsun import (
     AsPresenter,
     AsView,
     BuildError,
+    ConfigurationError,
     ConfiguresApplication,
     Declare,
     HookError,
@@ -153,9 +154,9 @@ class Breaks:
 
 
 class Unbuildable:
-    """Cannot be constructed."""
+    """Cannot be constructed, whatever it is given."""
 
-    def __init__(self) -> None:
+    def __init__(self, **_: object) -> None:
         raise RuntimeError("no licence found")
 
     def configure_application(self, app: QApplication) -> None:
@@ -194,6 +195,18 @@ class BrokenSplash:
             yield report
         finally:
             self.log.append("broken exit")
+
+
+class StuckSplash:
+    """Serves `during_build` with a span that raises as it closes."""
+
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        yield self.log.append
+        raise RuntimeError("splash would not close")
 
 
 class AlwaysRefuses:
@@ -412,14 +425,21 @@ def test_a_provider_missing_the_method_is_refused() -> None:
 def test_a_points_providers_run_in_order_the_class_first(
     qapp: QApplication, build: BuildSession
 ) -> None:
-    """Run every provider of a point: the class's in declaration order, then the file's as listed."""
+    """Run every provider of a point: a base class's, its subclass's in declaration order, then the file's as listed."""
 
-    class App(QtSession):
-        configure_main_view: Annotated[AsHook[Signs], Declare(note="class first")]
+    class Base(QtSession):
+        configure_main_view: Annotated[AsHook[Signs], Declare(note="base")]
+
+    class App(Base):
         second: Annotated[
             AsHook[Signs],
             Serves(QtHook.CONFIGURE_MAIN_VIEW),
-            Declare(note="class second"),
+            Declare(note="subclass first"),
+        ]
+        third: Annotated[
+            AsHook[Signs],
+            Serves(QtHook.CONFIGURE_MAIN_VIEW),
+            Declare(note="subclass second"),
         ]
 
     listed = [
@@ -428,7 +448,7 @@ def test_a_points_providers_run_in_order_the_class_first(
     ]
     app = build(App, {"hooks": {"configure_main_view": listed}})
 
-    order = ["class first", "class second", "file first", "file second"]
+    order = ["base", "subclass first", "subclass second", "file first", "file second"]
     assert app.main_window.property("notes") == order
     installed = app.hooks[QtHook.CONFIGURE_MAIN_VIEW]
     assert [cast("Signs", provider).note for provider in installed] == order
@@ -498,6 +518,60 @@ def test_a_failed_application_provider_stops_the_build(qapp: QApplication) -> No
 
     with pytest.raises(HookError, match="create_application"):
         QtSession({"hooks": hooks}).build()
+
+
+def test_a_failed_application_provider_is_not_hidden_by_another_failure(
+    qapp: QApplication,
+) -> None:
+    """Stop the build on a failed `create_application` provider when another of its class failed too."""
+    hooks = {
+        "create_application": {"provider": f"{__name__}:Unbuildable"},
+        "configure_application": {
+            "provider": f"{__name__}:Unbuildable",
+            "kwargs": {"other": True},
+        },
+    }
+
+    with pytest.raises(HookError, match="create_application"):
+        QtSession({"hooks": hooks}).build()
+
+
+def test_a_span_that_fails_to_close_is_skipped_and_the_build_finishes(
+    qapp: QApplication,
+    build: BuildSession,
+    log: list[str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Finish the build when a `during_build` span raises as it closes, logging the provider as skipped."""
+    hooks = {
+        "during_build": {"provider": f"{__name__}:StuckSplash", "kwargs": {"log": log}}
+    }
+
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        app = build(QtSession, {"hooks": hooks})
+
+    assert "report" in log
+    assert "splash would not close" in caplog.text
+    assert app.hooks[QtHook.DURING_BUILD] == ()
+
+
+def test_an_entry_listed_twice_at_one_point_is_refused(log: list[str]) -> None:
+    """Refuse one provider listed twice at one hook point, in the file or on the class."""
+    shared = {
+        "provider": f"{__name__}:Notes",
+        "kwargs": {"note": "twice", "log": log},
+    }
+
+    class Twice(QtSession):
+        pair: Annotated[
+            AsHook[MockStyle],
+            Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_APPLICATION),
+        ]
+
+    with pytest.raises(ConfigurationError, match="twice"):
+        QtSession({"hooks": {"configure_application": [shared, shared]}}).build()
+    with pytest.raises(HookError, match="twice"):
+        Twice().build()
 
 
 def test_a_strict_session_stops_on_a_skipped_hook(

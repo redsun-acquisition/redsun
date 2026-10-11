@@ -31,6 +31,7 @@ __all__ = [
 AppT_co = TypeVar("AppT_co", covariant=True)
 AppT_contra = TypeVar("AppT_contra", contravariant=True)
 ViewT_contra = TypeVar("ViewT_contra", contravariant=True)
+T = TypeVar("T")
 
 logger = logging.getLogger("redsun")
 
@@ -50,6 +51,9 @@ class Many:
 @dataclass(frozen=True)
 class HookFailure:
     """Why a hook provider was skipped, and the points it was to serve."""
+
+    name: str
+    """The provider's class name, or the name a file entry gave it."""
 
     points: tuple[str, ...]
     """The hook points the provider was installed at, or declared for."""
@@ -150,9 +154,9 @@ class WrapsBuild(Protocol[AppT_contra]):
     The one hook point that is a span, not a moment: a splash screen appears
     before anything is built, reports progress, and closes once the window is
     on screen. The point takes any number of providers: their spans are
-    opened in order and left in reverse. One that raises, opening its span or
-    being told a step, is logged and told nothing more, and a span it opened
-    is still left.
+    opened in order and left in reverse. One that raises, opening its span,
+    being told a step or leaving its span, is logged and told nothing more,
+    and a span it opened is still left.
     """
 
     @abstractmethod
@@ -191,7 +195,8 @@ def refuse_ambiguous(
     """Refuse two separate entries naming one provider with the same keys.
 
     *same* turns a provider's name into what it stands for, so a short name
-    and the class path behind it count as one provider.
+    and the class path behind it count as one provider. It is called on every
+    name, so a name it refuses is refused here.
 
     Raises
     ------
@@ -199,28 +204,29 @@ def refuse_ambiguous(
         If two entries are identical, since the file cannot say whether they
         mean one shared provider or two.
     """
-    seen: list[HookGroup] = []
+    seen: list[tuple[str, HookGroup]] = []
     for spec in specs:
-        for other in seen:
-            if (
-                same(spec.provider) == same(other.provider)
-                and spec.kwargs == other.kwargs
-            ):
-                first = ", ".join(repr(moment) for moment in other.moments)
-                second = ", ".join(repr(moment) for moment in spec.moments)
-                share = (
-                    "Anchor the entry and alias it"
-                    if ":" in spec.provider
-                    else "Write it once as a mapping, anchored, and alias it "
-                    f"(&name {{provider: {spec.provider}}}, then *name)"
-                )
-                raise HookError(
-                    f"hook provider {spec.provider!r} is named twice, at "
-                    f"{first} and at {second}, with the same keys. {share} to "
-                    "share one provider, or give the two different keys to "
-                    "build two."
-                )
-        seen.append(spec)
+        stands_for = same(spec.provider)
+        for other_stands_for, other in seen:
+            if stands_for == other_stands_for and spec.kwargs == other.kwargs:
+                raise HookError(named_twice(other, spec))
+        seen.append((stands_for, spec))
+
+
+def named_twice(first: HookGroup, second: HookGroup) -> str:
+    """Return the message for one provider named by two separate entries."""
+    share = (
+        "Anchor the entry and alias it"
+        if ":" in second.provider
+        else "Write it once as a mapping, anchored, and alias it "
+        f"(&name {{provider: {second.provider}}}, then *name)"
+    )
+    return (
+        f"hook provider {second.provider!r} is named twice, at "
+        f"{', '.join(map(repr, first.moments))} and at "
+        f"{', '.join(map(repr, second.moments))}, with the same keys. {share} "
+        "to share one provider, or give the two different keys to build two."
+    )
 
 
 def entries_by_point(groups: Sequence[HookGroup]) -> dict[str, list[HookGroup]]:
@@ -299,9 +305,9 @@ def provider_from_file(spec: HookGroup, path: str) -> object:
         ) from e
 
 
-def distinct(objects: Iterable[object]) -> tuple[object, ...]:
+def distinct(objects: Iterable[T]) -> tuple[T, ...]:
     """Return *objects* without repeats, by identity, in first-seen order."""
-    seen: dict[int, object] = {}
+    seen: dict[int, T] = {}
     for obj in objects:
         seen.setdefault(id(obj), obj)
     return tuple(seen.values())
@@ -362,6 +368,11 @@ def group_hook_entries(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
             key: object = id(entry) if shared else (moment, position)
             fields = entry if shared else {"provider": entry}
             group = groups.setdefault(key, {**fields, "moments": (), "positions": ()})
+            if moment in group["moments"]:
+                raise ValueError(
+                    f"hooks entry {moment!r} lists one provider twice; a "
+                    "provider serves a hook point once"
+                )
             group["moments"] += (moment,)
             group["positions"] += (position,)
     return list(groups.values())
