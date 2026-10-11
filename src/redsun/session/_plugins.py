@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from redsun.errors import HookError, PluginError
 
-from .._manifest import PluginManifest, discover, import_class
+from .._manifest import OWN_PLUGIN, PluginManifest, discover, import_class
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -143,6 +143,20 @@ def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
     return listed_item(paths, plugin_name, plugin_id, group)
 
 
+def class_path_of(name: str) -> str:
+    """Return the class path a hook provider's name stands for.
+
+    A class path stands for itself, and a short name for the provider
+    `redsun` lists under it.
+
+    Raises
+    ------
+    HookError
+        If *name* is a short name `redsun` does not list.
+    """
+    return name if ":" in name else hook_class_path(name)
+
+
 def hook_class_path(name: str) -> str:
     """Return the class path of the hook provider `redsun` lists as *name*.
 
@@ -151,7 +165,7 @@ def hook_class_path(name: str) -> str:
     HookError
         If `redsun` lists no hook provider by that name.
     """
-    hooks = manifest("redsun").hooks
+    hooks = manifest(OWN_PLUGIN).hooks
     if name not in hooks:
         known = ", ".join(sorted(hooks)) or "none"
         raise HookError(f"unknown hook provider {name!r}; built-in names: {known}")

@@ -66,15 +66,11 @@ def qapp() -> QApplication:
 
 
 @pytest.fixture
-def unstyled(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> Generator[None, None, None]:
-    """Write a style's files under `tmp_path`, and leave the application unstyled."""
+def unstyled(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Write a style's files under `tmp_path`, away from the user's cache folder."""
     monkeypatch.setattr(
         "redsun.qt.styles.napari.user_cache_dir", lambda *a, **k: str(tmp_path)
     )
-    yield
-    qapp.setStyleSheet("")
 
 
 @pytest.fixture

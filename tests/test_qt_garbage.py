@@ -44,8 +44,9 @@ def test_a_cycle_is_collected_on_the_gui_thread(
     weakref.finalize(cycle, lambda: freed.append(threading.get_ident()))
     del cycle
     automatic = gc.isenabled()
-    # enough new objects for the first generation to pass its threshold
-    junk: list[dict[str, int]] = [{} for _ in range(gc.get_threshold()[0] + 1)]
+    # enough new objects for the first generation to stay past its threshold:
+    # every object freed before the collector's next check lowers the count
+    junk: list[dict[str, int]] = [{} for _ in range(gc.get_threshold()[0] * 3)]
 
     assert wait_until(lambda: bool(freed))
     assert not automatic

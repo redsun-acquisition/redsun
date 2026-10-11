@@ -13,8 +13,8 @@ the session builds.
 
 A hook acts at one of a fixed set of moments, called
 [hook points](../explanation/glossary.md#hook-point). Each point is named after
-the method the session calls on your provider, and a session has one provider
-for each point at most.
+the method the session calls on your provider. Some points take one
+provider and others take several, as the table below says.
 
 You can install a provider from the session class or from the session file.
 Every example below shows both, as tabs, and picking a tab switches every tab
@@ -33,13 +33,13 @@ on the site to the same choice.
 
 ## Pick a hook point
 
-| point | receives | runs | protocol |
-| --- | --- | --- | --- |
-| `create_application` | `argv` | first, and only when no `QApplication` exists yet | [`CreatesApplication`][redsun.CreatesApplication] |
-| `configure_application` | the application | before any view is made | [`ConfiguresApplication`][redsun.ConfiguresApplication] |
-| `during_build` | the application | around the build steps | [`WrapsBuild`][redsun.WrapsBuild] |
-| `configure_main_view` | the main window | when the window is made, before it is shown | [`ConfiguresMainView`][redsun.ConfiguresMainView] |
-| `confirm_close` | nothing | when the window is asked to close | [`ConfirmsClose`][redsun.ConfirmsClose] |
+| point | receives | runs | providers | protocol |
+| --- | --- | --- | --- | --- |
+| `create_application` | `argv` | first, and only when no `QApplication` exists yet | one | [`CreatesApplication`][redsun.CreatesApplication] |
+| `configure_application` | the application | before any view is made | several | [`ConfiguresApplication`][redsun.ConfiguresApplication] |
+| `during_build` | the application | around the build steps | several | [`WrapsBuild`][redsun.WrapsBuild] |
+| `configure_main_view` | the main window | when the window is made, before it is shown | several | [`ConfiguresMainView`][redsun.ConfiguresMainView] |
+| `confirm_close` | nothing | when the window is asked to close | one | [`ConfirmsClose`][redsun.ConfirmsClose] |
 
 A provider serves a point by having the method of its protocol. It may
 inherit from the protocol too, which lets a type checker hold it to the
@@ -150,6 +150,44 @@ file names one by a short name instead of a class path, and the
           accent: "#d47f4c"
     ```
 
+## Install several at one point
+
+A point that takes several providers calls them one after another, so a style
+and a provider of your own can both act on the application.
+
+=== "Session class"
+
+    The attribute named after the point declares one provider. Give every
+    further one a name of its own and say which point it serves:
+
+    ```python
+    from typing import Annotated
+
+    from redsun import AsHook, Serves
+    from redsun.qt import QtHook, QtSession
+
+
+    class MyApp(QtSession):
+        configure_application: AsHook[DarkTheme]
+        icon: Annotated[AsHook[AppIcon], Serves(QtHook.CONFIGURE_APPLICATION)]
+    ```
+
+=== "Session file"
+
+    List the providers under the point:
+
+    ```yaml
+    hooks:
+      configure_application:
+        - provider: "mylab.theme:DarkTheme"
+        - provider: "mylab.theme:AppIcon"
+    ```
+
+`AppIcon` here is a second provider with a `configure_application` method.
+The providers of the class run first, in the order they are declared, and
+then those of the file, in the order of the list. A point that takes one
+provider refuses a second, wherever it was named.
+
 ## Serve more than one hook point
 
 A provider that keeps something between two points is installed at both as
@@ -239,7 +277,8 @@ even when the build fails.
 
 ## Undo what a hook did
 
-Give the provider a `shutdown` method. The session calls it when it shuts
+A provider puts back what it changed, so that nothing of it outlives the
+session. Give it a `shutdown` method. The session calls it when it shuts
 down, once per provider however many points it serves, the last built first:
 
 ```python
@@ -258,27 +297,46 @@ opened.
 
 ## Read a failure
 
-A wrong hook raises [`HookError`][redsun.HookError] and names the point. In a
-session file, an entry of the wrong shape is found when the file is read and
-raised as [`ConfigurationError`][redsun.ConfigurationError], located as
-`hooks.<point>.<key>`.
+A provider that fails doesn't stop the session, but a mistake in how you
+declared it does.
+
+When a provider can't be built, or its hook method raises, the session logs
+the error, skips the provider at every point it serves, and carries on. The
+build summary lists it as `Hooks skipped: DarkTheme (configure_application)`,
+and a skipped provider gets no `shutdown` call. A provider whose constructor
+raised is logged as `cannot construct hook provider 'X' ...`.
+
+Two cases stop the build instead. A `create_application` provider that
+fails stops it, because the session can't run on another application. And
+with `strict: true` in the session file, every skipped provider stops it.
+
+A wrong declaration raises [`HookError`][redsun.HookError] and names the
+point. In a session file, an entry of the wrong shape is found when the file
+is read and raised as [`ConfigurationError`][redsun.ConfigurationError],
+located as `hooks.<point>.<key>`.
 
 | message | cause |
 | --- | --- |
 | `MyApp.x declares a hook at 'x', which is not a hook point MyApp calls; ...` | the attribute name is not a point this session calls |
 | `hooks key 'x' is not a hook point MyApp calls; ...` | the same, in the file |
 | `hook provider 'X' at 'y' does not implement Z` | the method is missing or misspelled |
-| `cannot construct hook provider 'X' ...` | the constructor refused the arguments |
+| `the provider of 'create_application' failed, and a session does not start on another application: ...` | the provider of that point could not be built |
 | `hooks.x.provider: Field required` | `provider` is missing from the file entry |
 | `hooks.x.name: Extra inputs are not permitted` | an argument was written beside `provider` instead of under `kwargs` |
 | `unknown hook provider 'x'; built-in names: ...` | the short name is not one `redsun` ships; check its spelling against the list |
 | `hook provider 'p' is named twice, at 'a' and at 'b', with the same keys` | two identical entries; anchor one, or change the arguments |
-| `hook point(s) 'x' are named both on MyApp and in the configuration` | the class and the file both name the point; remove one |
+| `hooks entry 'x' lists one provider twice` | one entry was aliased twice in the list of a point; list it once |
+| `hook point 'x' takes one provider, and MyApp and its configuration name 2 between them` | the point takes one provider; remove all but one |
 
 ## See also
 
-- [Frontends](../explanation/frontends.md#hook-points) lists the points.
+- [Hook points](../reference/hook-points.md) lists the points, the order
+  providers run in, and what a provider owes the session.
+- [Frontends](../explanation/frontends.md#hook-points) shows the points in
+  the life of a Qt session.
 - [ADR 10](../explanation/decisions/0010-toolkit-hook-points.md) records why
-  the points are what they are.
+  the points are what they are, and
+  [ADR 31](../explanation/decisions/0031-hook-points-take-several-providers.md)
+  why a point takes several providers and a failing one is skipped.
 - [Wire components together](wire-components.md) connects components, which
   hooks do not do.

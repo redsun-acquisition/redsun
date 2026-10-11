@@ -11,6 +11,8 @@ from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from dataclasses import replace
 from enum import StrEnum
+from functools import partial
+from itertools import chain
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -57,11 +59,16 @@ from .._config import (
     validate_session,
 )
 from .._hooks import (
+    HookFailure,
     HookGroup,
+    Many,
     distinct,
+    entries_by_point,
+    provider_from_file,
     refuse_ambiguous,
+    refuse_crowded,
+    refuse_misfits,
     refuse_unknown_points,
-    resolve_hooks,
 )
 from .._settings import Settings
 from ..injection._provides import constant, register_shared, shared_keys
@@ -86,7 +93,7 @@ from ._factories import (
 )
 from ._frontend import Frontend
 from ._layout import resolved_layout
-from ._plugins import hook_class_path, installed, load_providers
+from ._plugins import class_path_of, installed, load_providers
 from ._profile import open_profile
 from ._protocols import (
     AttachableComponent,
@@ -249,6 +256,7 @@ class Session(BuildableSession):
         "_declarations",
         "_devices",
         "_failed",
+        "_failed_hooks",
         "_failed_services",
         "_file",
         "_hooks",
@@ -267,6 +275,7 @@ class Session(BuildableSession):
         "_shared",
         "_shared_values",
         "_shortcut_overrides",
+        "_skipped_hooks",
         "_storage",
         "_store",
         "_transport",
@@ -291,8 +300,11 @@ class Session(BuildableSession):
     ask for by type. A provider has no name, no layer and no wiring.
     """
 
-    hook_points: ClassVar[Mapping[str, type]] = {}
+    hook_points: ClassVar[Mapping[str, type | Many]] = {}
     """The points this session calls a hook at, by the protocol each demands.
+
+    A point takes one provider, or any number when its protocol is wrapped in
+    [`Many`][redsun.Many].
 
     Empty here: every hook point belongs to a toolkit, so a toolkit session
     such as `redsun.qt.QtSession` names its own.
@@ -349,7 +361,7 @@ class Session(BuildableSession):
         self._window_layout: WindowLayout | None = None
         self._shortcut_overrides: dict[str, tuple[str, ...]] = {}
         self._reported_saved_shortcuts: set[str] = set()
-        self._hooks: dict[str, object] | None = None
+        self._hooks: dict[str, tuple[object, ...]] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
@@ -361,6 +373,8 @@ class Session(BuildableSession):
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
+        self._failed_hooks: list[HookFailure] = []
+        self._skipped_hooks: set[int] = set()
         self._answered: set[str] = set()
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
@@ -529,75 +543,137 @@ class Session(BuildableSession):
         return self._file
 
     @property
-    def hooks(self) -> Mapping[str, object]:
-        """The hook provider this session installs at each point, built once.
+    def hooks(self) -> Mapping[str, tuple[object, ...]]:
+        """The hook providers this session installs at each point it calls, built once.
 
-        A subclass firing a point calls this rather than resolving again, so
-        that every point of one build acts on one set of providers. A provider
-        with a `shutdown` method is shut down with the session, once however
-        many points it serves, the last built first.
+        Every point is there, with its providers in the order they run: those
+        the class declares, then those the configuration lists. A provider
+        that failed is no longer among them. A subclass firing a point reads
+        this rather than resolving again, so that every point of one build
+        acts on one set of providers. A provider with a `shutdown` method is
+        shut down with the session, once however many points it serves, the
+        last built first.
 
         Raises
         ------
         HookError
-            If a point is claimed by more than one provider, a provider cannot
+            If a point taking one provider is given several, a provider cannot
             be built, or one does not implement the protocol its point calls.
         """
         if self._hooks is None:
             self._hooks = self._resolve_hooks(self._configuration().hooks)
         return self._hooks
 
-    def _resolve_hooks(self, groups: list[HookGroup]) -> dict[str, object]:
-        """Build the providers this class declares and *groups* name.
+    def _resolve_hooks(self, groups: list[HookGroup]) -> dict[str, tuple[object, ...]]:
+        """Build the providers this class declares and *groups* name, by hook point.
 
         Raises
         ------
         HookError
-            If both name one point, *groups* name a point this class does not
-            call, a short name `redsun` does not list, or one provider twice
-            with the same keys, a provider cannot be built, or one does not
-            implement the protocol its point calls.
+            If *groups* name a point this class does not call, a short name
+            `redsun` does not list, or one provider twice with the same keys,
+            a point taking one provider is given several, a provider cannot
+            be built, or one does not implement the protocol its point calls.
         """
         points = self.hook_points
         owner = type(self).__name__
-        built: dict[int, object] = {}
-        declared: dict[str, object] = {}
-        for moment, declaration in read_hooks(type(self), points).items():
-            provider = built.get(id(declaration))
-            if provider is None:
-                provider = provider_from_class(declaration, owner)
-                built[id(declaration)] = provider
-            declared[moment] = provider
-
-        # a short name becomes its class path first, so the check for one
-        # provider named twice sees the same provider however it was named
-        groups = [
-            group
-            if ":" in group.provider
-            else group.model_copy(update={"provider": hook_class_path(group.provider)})
-            for group in groups
-        ]
         refuse_unknown_points(groups, points, owner)
-        refuse_ambiguous(groups)
-        configured = resolve_hooks(groups)
-        both = sorted(declared.keys() & configured.keys())
-        if both:
-            named = ", ".join(repr(moment) for moment in both)
-            raise HookError(
-                f"hook point(s) {named} are named both on {owner} and in the "
-                "configuration; a hook point takes one provider, so drop one "
-                "of the two"
+        refuse_ambiguous(groups, class_path_of)
+        declared = read_hooks(type(self), points)
+        listed = entries_by_point(groups)
+        sources = {
+            moment: (*declared.get(moment, ()), *listed.get(moment, ()))
+            for moment in points
+        }
+        refuse_crowded(sources, points, owner)
+        built = {
+            id(source): self._build_hook(source, owner)
+            for source in distinct(chain.from_iterable(sources.values()))
+        }
+        resolved = {
+            moment: tuple(
+                built[id(source)] for source in named if built[id(source)] is not None
             )
-
-        resolved = {**declared, **configured}
-        for moment, provider in resolved.items():
-            protocol = points[moment]
-            if not isinstance(provider, protocol):
-                raise HookError(
-                    f"hook provider {type(provider).__name__!r} at {moment!r} "
-                    f"does not implement {protocol.__name__}"
-                )
+            for moment, named in sources.items()
+        }
+        refuse_misfits(resolved, points)
         return resolved
+
+    def _build_hook(
+        self, source: HookDeclaration | HookGroup, owner: str
+    ) -> object | None:
+        """Construct the provider a class declaration or a file entry names.
+
+        One that cannot be imported or constructed is logged and recorded as
+        skipped, and `None` stands in for it.
+        """
+        try:
+            match source:
+                case HookDeclaration():
+                    return provider_from_class(source, owner)
+                case HookGroup():
+                    return provider_from_file(source, class_path_of(source.provider))
+        except HookError as e:
+            match source:
+                case HookDeclaration():
+                    name = source.cls.__name__
+                case HookGroup():
+                    name = source.provider
+            logger.error("Hook provider %s is skipped: %s", name, e, exc_info=e)
+            self._failed_hooks.append(HookFailure(name, tuple(source.moments), e))
+            return None
+
+    def skip_hook(self, provider: object, point: str, reason: BaseException) -> None:
+        """Drop *provider* from every hook point after it failed at *point*.
+
+        The failure is logged with its traceback and listed in the build
+        summary. The provider is called at no later point and is not shut
+        down, so what it changed before it failed stays. A frontend calls
+        this where it calls a hook point itself;
+        [`call_hooks`][redsun.Session.call_hooks] does it for a point whose
+        providers return nothing.
+        """
+        if self._was_skipped(provider):
+            return
+        name = type(provider).__name__
+        served = tuple(
+            moment
+            for moment, installed in self.hooks.items()
+            if any(other is provider for other in installed)
+        )
+        logger.error(
+            "Hook provider %s failed at '%s' and is skipped; it is not shut down, "
+            "so what it changed before stays",
+            name,
+            point,
+            exc_info=reason,
+        )
+        self._failed_hooks.append(HookFailure(name, served or (point,), reason))
+        self._skipped_hooks.add(id(provider))
+        self._hooks = {
+            moment: tuple(other for other in installed if other is not provider)
+            for moment, installed in self.hooks.items()
+        }
+
+    def _was_skipped(self, provider: object) -> bool:
+        """Return whether *provider* failed at a hook point and was dropped."""
+        return id(provider) in self._skipped_hooks
+
+    def call_hooks(self, point: str, call: Callable[[Any], None]) -> None:
+        """Call *call* with each provider installed at *point*, in order.
+
+        A provider for which *call* raises is skipped, as
+        [`skip_hook`][redsun.Session.skip_hook] describes, and the next one
+        is called.
+        """
+        for hook in self.hooks[point]:
+            # the tuple was read before a provider skipped in this loop left it
+            if self._was_skipped(hook):
+                continue
+            try:
+                call(hook)
+            except Exception as e:  # noqa: BLE001 - reported by skip_hook
+                self.skip_hook(hook, point, e)
 
     @property
     def name(self) -> str:
@@ -739,9 +815,10 @@ class Session(BuildableSession):
         """Merge the sources, install the hooks, read the declarations, open the logs."""
         installed.cache_clear()
         config = self._configuration()
-        if self.hooks:
+        installed_at = [point for point, providers in self.hooks.items() if providers]
+        if installed_at:
             logger.debug("Hooks installed at:")
-            for point in self.hooks:
+            for point in installed_at:
                 logger.debug("  - %s", point)
         else:
             logger.debug("No hooks installed")
@@ -781,8 +858,8 @@ class Session(BuildableSession):
         self._wiring.path_provider = self._path_provider
         self._open_logs(self._path_provider)
         # registered after the logs, so a provider's teardown is still logged
-        for hook in distinct(self.hooks.values()):
-            self._register_teardown(hook)
+        for hook in distinct(chain.from_iterable(self.hooks.values())):
+            self._register_teardown(hook, unless=partial(self._was_skipped, hook))
 
     def window_layout(self) -> WindowLayout | None:
         """Return the layout this session's window starts with, or `None` to place each view where it asks.
@@ -1155,19 +1232,22 @@ class Session(BuildableSession):
         ------
         BuildError
             If the configuration sets `strict` and a component could not be
-            built or set up, naming each one and why.
+            built or set up, or a hook provider was skipped, naming each one
+            and why.
         """
         summary = self._summarise_build()
-        if not (self._failed or self._not_set_up):
+        missing = [*self._failed.items(), *self._not_set_up.items()]
+        skipped = [(failure.name, failure.reason) for failure in self._failed_hooks]
+        if not (missing or skipped):
             logger.info(summary)
             return
         logger.warning(summary)
         if self._configuration().strict:
             reasons = "\n".join(
-                f"  {name}: {reason}"
-                for name, reason in {**self._failed, **self._not_set_up}.items()
+                f"  {name}: {reason}" for name, reason in (*missing, *skipped)
             )
-            raise BuildError(f"A strict session is missing components:\n{reasons}")
+            what = "components or hooks" if skipped else "components"
+            raise BuildError(f"A strict session is missing {what}:\n{reasons}")
 
     def _summarise_build(self) -> str:
         """Return what the build made, counted against what was declared.
@@ -1192,6 +1272,12 @@ class Session(BuildableSession):
                     for name, reason in names.items()
                 )
                 summary += f"\n{heading}: {named}"
+        if self._failed_hooks:
+            skipped = ", ".join(
+                f"{failure.name} ({', '.join(failure.points)})"
+                for failure in self._failed_hooks
+            )
+            summary += f"\nHooks skipped: {skipped}"
         named_services = {d.service for d in self._declarations.values()}
         used = {
             d.service for d in self._declarations.values() if d.instance is not None
@@ -1252,6 +1338,8 @@ class Session(BuildableSession):
         self._hooks = None
         self._devices.clear()
         self._failed.clear()
+        self._failed_hooks.clear()
+        self._skipped_hooks.clear()
         self._answered.clear()
         self._callbacks.clear()
         self._not_set_up.clear()
@@ -1995,26 +2083,21 @@ class Session(BuildableSession):
             return (declaration.name,)
         return (declaration.name, declaration.attribute)
 
-    def _register_teardown(self, component: object) -> None:
+    def _register_teardown(
+        self, component: object, unless: Callable[[], bool] | None = None
+    ) -> None:
         """Hand the session's own teardown to the one owner of it.
 
         A component that declares `shutdown` is finalized without having to
-        ask for it; one that does not needs no teardown at all.
+        ask for it; one that does not needs no teardown at all. With *unless*,
+        the teardown is left out when it answers true at shutdown.
         """
         if not isinstance(component, HasShutdown):
             return
-        shutdown = component.shutdown
-        # both protocols name one method, so only the function says which it is
-        if not inspect.iscoroutinefunction(shutdown):
-            self.on_release(shutdown)
-            return
-
-        async_shutdown = cast("HasAsyncShutdown", component).shutdown
-
-        def close() -> None:
-            run_coro(async_shutdown())
-
-        self.on_release(close)
+        close = shutdown_call(component)
+        self.on_release(
+            close if unless is None else partial(call_unless, unless, close)
+        )
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.
@@ -2279,6 +2362,22 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
     return resolved
 
 
+def shutdown_call(component: HasShutdown) -> Callable[[], None]:
+    """Return a plain call shutting *component* down, whether its `shutdown` is a coroutine or not."""
+    shutdown = component.shutdown
+    # both protocols name one method, so only the function says which it is
+    if not inspect.iscoroutinefunction(shutdown):
+        return shutdown
+    async_shutdown = cast("HasAsyncShutdown", component).shutdown
+    return lambda: run_coro(async_shutdown())
+
+
+def call_unless(unless: Callable[[], bool], call: Callable[[], None]) -> None:
+    """Call *call* unless *unless* answers true."""
+    if not unless():
+        call()
+
+
 def provider_from_class(declaration: HookDeclaration, owner: str) -> object:
     """Construct the provider *declaration* names.
 
@@ -2290,7 +2389,7 @@ def provider_from_class(declaration: HookDeclaration, owner: str) -> object:
     named = ", ".join(repr(moment) for moment in declaration.moments)
     try:
         return declaration.cls(**declaration.kwargs)
-    except TypeError as e:
+    except Exception as e:
         raise HookError(
             f"cannot construct hook provider {declaration.cls.__name__!r} "
             f"declared on {owner} at {named} with "

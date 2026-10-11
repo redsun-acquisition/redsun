@@ -79,6 +79,44 @@ own, call `psygnal.emit_queued()` from a timer of that loop instead.
   `super().start_runtime()` first, which sets the backend that coroutine slots
   run on.
 
+## Call hook points
+
+A [hook point](../explanation/glossary.md#hook-point) is a moment of your
+toolkit at which a user's provider may act, such as "the application
+exists". List yours in `hook_points`, each with the protocol a provider
+must satisfy. A point takes one provider, or any number when you wrap its
+protocol in [`Many`][redsun.Many]:
+
+```python
+from typing import ClassVar, Protocol, runtime_checkable
+
+from redsun import Many, Session
+
+
+@runtime_checkable
+class ConfiguresScreen(Protocol):
+    def configure_screen(self, screen: Screen) -> None: ...
+
+
+class ConsoleSession(Session):
+    hook_points: ClassVar = {"configure_screen": Many(ConfiguresScreen)}
+
+    def start_runtime(self) -> None:
+        super().start_runtime()
+        screen = Screen()
+        self.call_hooks(
+            "configure_screen", lambda provider: provider.configure_screen(screen)
+        )
+```
+
+[`call_hooks`][redsun.Session.call_hooks] calls every provider at the point,
+in order. A provider that raises is logged and skipped, and the next one is
+called. Where you use what a provider returns, read
+[`hooks`][redsun.Session.hooks] yourself, and hand a provider that raised to
+[`skip_hook`][redsun.Session.skip_hook].
+[Hook points](../reference/hook-points.md) lists the rules a session keeps
+for its providers.
+
 ## Write a view for it
 
 A view subclasses the base class of its placement and names the placement:

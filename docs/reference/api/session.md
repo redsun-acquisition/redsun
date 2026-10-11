@@ -139,6 +139,10 @@ are described above, with [`Session`][redsun.Session].
     options:
       show_root_heading: true
 
+::: redsun.Many
+    options:
+      show_root_heading: true
+
 ::: redsun.Layer
     options:
       show_root_heading: true

@@ -35,12 +35,13 @@ import logging
 import sys
 import weakref
 from collections.abc import Mapping  # noqa: TC003
-from contextlib import nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import partial
 from typing import (
     TYPE_CHECKING,
+    Any,
     ClassVar,
     Final,
     Literal,
@@ -82,6 +83,7 @@ from .._hooks import (
     ConfiguresMainView,
     ConfirmsClose,
     CreatesApplication,
+    Many,
     WrapsBuild,
 )
 from ..session._base import Session
@@ -102,7 +104,7 @@ from ._color_scheme import (
 from ._garbage import GarbageCollector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Generator, Iterator, Sequence
     from contextlib import AbstractContextManager
     from pathlib import Path
     from types import TracebackType
@@ -439,11 +441,11 @@ class QtSession(DesktopSession[QMainWindow], Session):
     on the GUI thread; while the event loop doesn't run, nothing is collected.
     """
 
-    hook_points: ClassVar[Mapping[str, type]] = {
+    hook_points: ClassVar[Mapping[str, type | Many]] = {
         QtHook.CREATE_APPLICATION: CreatesApplication,
-        QtHook.CONFIGURE_APPLICATION: ConfiguresApplication,
-        QtHook.DURING_BUILD: WrapsBuild,
-        QtHook.CONFIGURE_MAIN_VIEW: ConfiguresMainView,
+        QtHook.CONFIGURE_APPLICATION: Many(ConfiguresApplication),
+        QtHook.DURING_BUILD: Many(WrapsBuild),
+        QtHook.CONFIGURE_MAIN_VIEW: Many(ConfiguresMainView),
         QtHook.CONFIRM_CLOSE: ConfirmsClose,
     }
 
@@ -549,13 +551,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
         Raises
         ------
         HookError
-            If a `create_application` hook returns anything but a
-            `QApplication`.
+            If the `create_application` provider could not be built, or
+            returns anything but a `QApplication`.
         """
         super().start_runtime()
-        hooks = self.hooks
-        creator = hooks.get(QtHook.CREATE_APPLICATION)
-        if QApplication.instance() is None and isinstance(creator, CreatesApplication):
+        self._refuse_failed_creator()
+        creators = self.hooks[QtHook.CREATE_APPLICATION]
+        if QApplication.instance() is None and creators:
+            creator = cast("CreatesApplication[QApplication]", creators[0])
             qt_app = creator.create_application(sys.argv)
             if not isinstance(qt_app, QApplication):
                 raise HookError(
@@ -587,9 +590,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
         ColorSchemeMode.from_config(self._configuration().color_scheme).apply()
 
-        configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
-        if isinstance(configurer, ConfiguresApplication):
-            configurer.configure_application(qt_app)
+        self.call_hooks(
+            QtHook.CONFIGURE_APPLICATION,
+            lambda provider: provider.configure_application(qt_app),
+        )
 
     def _forget_application(self) -> None:
         """Destroy the application by name, freeing the name for the next session."""
@@ -655,9 +659,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
             bar.addPermanentWidget(FailuresButton(failures))
         # before the hook, so the menus it builds show the actions' keys
         self._shortcut_bindings = self._bind_shortcuts(views)
-        dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
-        if isinstance(dresser, ConfiguresMainView):
-            dresser.configure_main_view(window)
+        self.call_hooks(
+            QtHook.CONFIGURE_MAIN_VIEW,
+            lambda provider: provider.configure_main_view(window),
+        )
         self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()
@@ -1090,9 +1095,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ticked "don't ask again". Otherwise the prompt offers Save, Discard and
         Cancel.
         """
-        confirmer = self.hooks.get(QtHook.CONFIRM_CLOSE)
-        if isinstance(confirmer, ConfirmsClose):
-            return confirmer.confirm_close()
+        confirmers = self.hooks[QtHook.CONFIRM_CLOSE]
+        if confirmers:
+            try:
+                return cast("ConfirmsClose", confirmers[0]).confirm_close()
+            except Exception as e:  # noqa: BLE001 - reported by skip_hook
+                # the session's own rule answers, now and at every later close
+                self.skip_hook(confirmers[0], QtHook.CONFIRM_CLOSE, e)
         if not self.has_changes() or not self.settings.get(ASK_ON_CLOSE, True):
             return True
         return self._ask_about_changes()
@@ -1220,10 +1229,68 @@ class QtSession(DesktopSession[QMainWindow], Session):
         build. The `runtime` step has run by now, so the `QApplication` a
         hook is handed exists.
         """
-        hook = self.hooks.get(QtHook.DURING_BUILD)
-        if isinstance(hook, WrapsBuild):
-            return hook.during_build(self.app)
+        if self.hooks[QtHook.DURING_BUILD]:
+            return self._span()
         return nullcontext(self._report)
+
+    @contextmanager
+    def _span(self) -> Generator[Callable[[str], None], None, None]:
+        """Open every `during_build` provider's span in order, and report each step to them.
+
+        A provider that raises, opening its span, being told a step or
+        leaving its span, is skipped and told nothing more; a span it opened
+        is still left.
+        """
+        reporters: dict[int, Callable[[str], None]] = {}
+        with ExitStack() as stack:
+            self.call_hooks(
+                QtHook.DURING_BUILD, partial(self._open_span, stack, reporters)
+            )
+            yield partial(self._report_step, reporters)
+
+    def _open_span(
+        self,
+        stack: ExitStack,
+        reporters: dict[int, Callable[[str], None]],
+        provider: Any,
+    ) -> None:
+        """Enter *provider*'s span, keep its reporter, and have *stack* leave it."""
+        span = provider.during_build(self.app)
+        reporters[id(provider)] = span.__enter__()
+        stack.push(partial(self._leave_span, provider, span))
+
+    def _leave_span(self, provider: object, span: Any, *raised: Any) -> bool:
+        """Leave *span*, skipping *provider* if leaving raises."""
+        try:
+            return bool(span.__exit__(*raised))
+        except Exception as e:  # noqa: BLE001 - reported by skip_hook
+            self.skip_hook(provider, QtHook.DURING_BUILD, e)
+            return False
+
+    def _report_step(
+        self, reporters: dict[int, Callable[[str], None]], step: str
+    ) -> None:
+        """Tell every `during_build` provider still standing that *step* starts."""
+        self.call_hooks(
+            QtHook.DURING_BUILD, lambda provider: reporters[id(provider)](step)
+        )
+
+    def _refuse_failed_creator(self) -> None:
+        """Stop the build if the `create_application` provider could not be built.
+
+        Raises
+        ------
+        HookError
+            If it failed: a session told which application to run on does not
+            start on another.
+        """
+        for failure in self._failed_hooks:
+            if QtHook.CREATE_APPLICATION in failure.points:
+                raise HookError(
+                    f"the provider of {QtHook.CREATE_APPLICATION.value!r} failed, "
+                    "and a session does not start on another application: "
+                    f"{failure.reason}"
+                ) from failure.reason
 
     def show(self) -> None:
         """Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.

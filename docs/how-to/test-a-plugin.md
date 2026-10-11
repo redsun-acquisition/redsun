@@ -68,6 +68,12 @@ for your tests:
 [Garbage collection in the tests](contribute.md#garbage-collection-in-the-tests)
 gives the reason.
 
+The fixtures also check the Qt application after every test that asks for
+the `qapp` fixture. If the test left the application's stylesheet, style or
+font changed, it fails. This is how you find a
+[hook provider](install-hooks.md) that doesn't put back in `shutdown` what it
+changed.
+
 !!! warning "A session built in a wider fixture isn't covered"
 
     The folder fixtures run for each test, so they don't cover a session built

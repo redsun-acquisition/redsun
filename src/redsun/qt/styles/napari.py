@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,9 +29,30 @@ class NapariStyle:
     Both themes' icons are written to the user's cache folder when the
     session builds. At shutdown the application gets back the stylesheet it
     had before.
+
+    Parameters
+    ----------
+    font_size
+        The stylesheet's base font size in points; `None` keeps napari's own
+        size for the platform.
+
+    Raises
+    ------
+    ValueError
+        If *font_size* is not a positive whole number.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, font_size: int | None = None) -> None:
+        if font_size is not None and (
+            isinstance(font_size, bool)
+            or not isinstance(font_size, int)
+            or font_size < 1
+        ):
+            raise ValueError(
+                "font_size must be a positive whole number of points, "
+                f"got {font_size!r}"
+            )
+        self._font_size = font_size
         self._app: QApplication | None = None
         self._previous = ""
         self._sheets: dict[str, str] = {}
@@ -39,11 +61,14 @@ class NapariStyle:
         """Apply napari's theme for the current colour scheme, and again on each change."""
         self._app = app
         self._previous = app.styleSheet()
-        # files are written here, where a failure stops the build, rather than
-        # in the slot a scheme change calls
+        # files are written here, where a failure is caught and the style
+        # skipped, rather than in the slot a scheme change calls
         cache = Path(user_cache_dir("redsun", appauthor=False)) / "napari-style"
+        sized = {} if self._font_size is None else {"font_size": f"{self._font_size}pt"}
         self._sheets = {
-            theme.name: stylesheet(theme, write_icons(theme, cache / theme.name))
+            theme.name: stylesheet(
+                replace(theme, **sized), write_icons(theme, cache / theme.name)
+            )
             for theme in (DARK, LIGHT)
         }
         hints = QGuiApplication.styleHints()

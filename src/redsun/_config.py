@@ -726,15 +726,15 @@ def session_file_schema() -> dict[str, Any]:
         "additionalProperties": {"$ref": "#/$defs/ComponentEntry"},
     }
     groups = schema["$defs"].pop("HookGroup")
-    del groups["properties"]["moments"]
-    groups["required"].remove("moments")
+    for filled_in in ("moments", "positions"):
+        del groups["properties"][filled_in]
+        groups["required"].remove(filled_in)
     groups["title"] = "HookEntry"
     schema["$defs"]["HookEntry"] = groups
+    entry = {"anyOf": [{"type": "string"}, {"$ref": "#/$defs/HookEntry"}]}
     properties["hooks"] = {
         "type": "object",
-        "additionalProperties": {
-            "anyOf": [{"type": "string"}, {"$ref": "#/$defs/HookEntry"}]
-        },
+        "additionalProperties": {"anyOf": [entry, {"type": "array", "items": entry}]},
     }
     for section in (*EMPTY_AS_MAPPING, "hooks", "pairs"):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}

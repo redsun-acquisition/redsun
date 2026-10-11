@@ -46,6 +46,46 @@ pictures for check boxes, arrows and other small controls. The buttons of the
 built-in views keep `redsun`'s own icons, which take the theme's text colour,
 so they are light in the dark theme and dark in the light one.
 
+## Set the font size
+
+The style uses napari's font size, 9 points, or 12 on macOS. Give
+`font_size` to choose your own, in points:
+
+=== "Session class"
+
+    ```python
+    from typing import Annotated
+
+    from redsun import AsHook, Declare
+    from redsun.qt.styles.napari import NapariStyle
+
+
+    class MyApp(QtSession):
+        configure_application: Annotated[AsHook[NapariStyle], Declare(font_size=10)]
+    ```
+
+=== "Session file"
+
+    ```yaml
+    hooks:
+      configure_application:
+        provider: napari
+        kwargs:
+          font_size: 10
+    ```
+
+## Use it beside a provider of your own
+
+`configure_application` takes several providers, so the style doesn't use
+the point up. List it with yours, and they run in the order you list them:
+
+```yaml
+hooks:
+  configure_application:
+    - napari
+    - provider: "mylab.app:MyIcon"
+```
+
 ## Switch between dark and light
 
 The style follows the session's colour scheme, so it has a dark and a light

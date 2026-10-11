@@ -220,8 +220,11 @@ and the change is logged, or refused when `strict` is set.
 
 ## Hooks
 
-`hooks` maps a hook point to an entry. An entry is a mapping with the keys
-below, or the short name of a provider `redsun` ships, written alone.
+`hooks` maps a hook point to an entry, or to a list of entries at a point
+that takes several providers. An entry is a mapping with the keys below, or
+the short name of a provider `redsun` ships, written alone.
+[Hook points](hook-points.md) says which points take several, and in what
+order they run.
 
 | Key | Type | Default | Holds |
 | --- | --- | --- | --- |

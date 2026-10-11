@@ -82,6 +82,7 @@ from ._hooks import (
     ConfiguresMainView,
     ConfirmsClose,
     CreatesApplication,
+    Many,
     WrapsBuild,
 )
 from ._settings import Settings
@@ -128,6 +129,7 @@ __all__ = [
     "Launch",
     "Layer",
     "Link",
+    "Many",
     "NamedComponent",
     "Placement",
     "PlanEntry",

@@ -6,6 +6,10 @@ Date: 2026-08-29
 
 Accepted
 
+Its "one provider per point" is superseded, for the points whose answer the
+session does not act on, by
+[31. Hook points take several providers and tolerate one that fails](0031-hook-points-take-several-providers.md).
+
 Supersedes the build phase registry and the two container hook points of
 [8. Container hooks and the build phase registry](0008-container-hooks-and-the-phase-registry.md).
 The rest of that record stands: hook points are still named by the method they
