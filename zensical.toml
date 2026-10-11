@@ -134,6 +134,7 @@ nav = [
                 "explanation/decisions/0028-a-session-declares-its-first-window-layout.md",
                 "explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components.md",
                 "explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it.md",
+                "explanation/decisions/0031-hook-points-take-several-providers.md",
         ]},
     ]},
     { "Reference" = [
@@ -143,6 +144,7 @@ nav = [
             "reference/session-file.md",
             "reference/plugin-manifest.md",
         ]},
+        "reference/hook-points.md",
         "reference/environment.md",
         "reference/log-files.md",
         { "API" = [

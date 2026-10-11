@@ -85,7 +85,11 @@ def known_points(moments: Iterable[str]) -> str:
 
 @runtime_checkable
 class CreatesApplication(Protocol[AppT_co]):
-    """Supplies the toolkit's application object instead of the container."""
+    """Supplies the toolkit's application object instead of the container.
+
+    The point takes one provider. If it cannot be built, the build stops: a
+    session told which application to run on does not start on another.
+    """
 
     @abstractmethod
     def create_application(self, argv: list[str]) -> AppT_co:
@@ -95,7 +99,12 @@ class CreatesApplication(Protocol[AppT_co]):
 
 @runtime_checkable
 class ConfiguresApplication(Protocol[AppT_contra]):
-    """Adjusts the application before any view is constructed."""
+    """Adjusts the application before any view is constructed.
+
+    The point takes any number of providers, called in order. One that
+    raises is logged and skipped. What a provider changes on the application
+    it puts back in a `shutdown` method.
+    """
 
     @abstractmethod
     def configure_application(self, app: AppT_contra) -> None:
@@ -105,7 +114,12 @@ class ConfiguresApplication(Protocol[AppT_contra]):
 
 @runtime_checkable
 class ConfiguresMainView(Protocol[ViewT_contra]):
-    """Adjusts the main window after it is built and before it is shown."""
+    """Adjusts the main window after it is built and before it is shown.
+
+    The point takes any number of providers, called in order. One that
+    raises is logged and skipped. What a provider changes outside the window
+    it puts back in a `shutdown` method.
+    """
 
     @abstractmethod
     def configure_main_view(self, view: ViewT_contra) -> None:
@@ -118,7 +132,9 @@ class ConfirmsClose(Protocol):
     """Decides whether the session may close, and can refuse.
 
     The session acts on this point's answer, where it only tells the other
-    points what happened. `False` leaves the session running.
+    points what happened. `False` leaves the session running. The point takes
+    one provider. If it raises, it is logged and skipped, and the session
+    decides by its own rule.
     """
 
     @abstractmethod
@@ -133,7 +149,10 @@ class WrapsBuild(Protocol[AppT_contra]):
 
     The one hook point that is a span, not a moment: a splash screen appears
     before anything is built, reports progress, and closes once the window is
-    on screen.
+    on screen. The point takes any number of providers: their spans are
+    opened in order and left in reverse. One that raises, opening its span or
+    being told a step, is logged and told nothing more, and a span it opened
+    is still left.
     """
 
     @abstractmethod

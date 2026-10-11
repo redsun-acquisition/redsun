@@ -19,6 +19,11 @@ release notes.
 - [Plugin manifest](plugin-manifest.md): every key of the manifest of a
   plugin
 
+### Hook points
+
+- [Hook points](hook-points.md): the moments a session calls its hook
+  providers at, their order, and what a failure does
+
 ### Environment
 
 - [Environment variables](environment.md): what a session sets for its

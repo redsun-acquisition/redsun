@@ -170,6 +170,14 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   session runs with what it has, and the `devices`/`presenters`/`views`
   mappings can be shorter than what was declared.
   Rationale: `docs/explanation/decisions/0011-tolerating-a-component-that-fails-to-build.md`.
+- **A hook point takes one provider, or several when its protocol is wrapped
+  in `Many`.** Providers run in order, the class's first, then the session
+  file's. One that cannot be built or whose hook raises is logged and skipped
+  (`Session.skip_hook`, `call_hooks`); a failed `create_application` provider
+  stops the build. What a provider changes on the application it undoes in
+  `shutdown`, which `redsun.testing.keep_application_as_found` checks for
+  tests using `qapp`.
+  Rationale: `docs/explanation/decisions/0031-hook-points-take-several-providers.md`.
 - Components conform by shape, never by inheritance: `NamedComponent`,
   `AttachableComponent`, `HasSetup` and `HasShutdown` are protocols checked on
   the built instance.
