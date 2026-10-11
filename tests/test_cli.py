@@ -7,6 +7,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from qtpy.QtWidgets import QTabWidget
 
 from redsun._cli import main, styles
 from redsun.errors import BuildError, HookError
@@ -49,6 +50,19 @@ def test_the_example_builds_every_component_under_each_style(
     assert len(installed) == (0 if style is None else 1)
     assert not session.unconnected
     assert list(session.acquisition.plans) == ["walk"]
+
+
+@pytest.mark.qt
+def test_the_example_shows_its_logs_as_a_tab_of_the_centre(
+    qapp: QApplication, build: BuildSession, tmp_path: Path
+) -> None:
+    """Put the log view in the centre of the window as a tab, and dock the other views."""
+    session = build(ExampleApp, {"storage": {"base_dir": str(tmp_path)}})
+
+    centre = session.main_window.centralWidget()
+
+    assert isinstance(centre, QTabWidget)
+    assert [centre.tabText(index) for index in range(centre.count())] == ["logs"]
 
 
 def test_the_plan_locks_its_motor_and_pauses_after_each_move() -> None:

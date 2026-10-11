@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import Iterator  # noqa: TC003
 from typing import Any, ClassVar
 
-from redsun import AsDevice, AsPresenter, AsView, Link, links_between
+from redsun import (
+    AsDevice,
+    AsPresenter,
+    AsView,
+    Link,
+    Tabs,
+    WindowLayout,
+    links_between,
+)
 from redsun.presenter import (  # noqa: TC001
     AcquisitionPresenter,
     LightPresenter,
@@ -59,6 +67,10 @@ class ExampleApp(QtSession):
     positioner_view: AsView[PositionerView]
     lights_view: AsView[LightView]
     logs: AsView[LogView]
+
+    def window_layout(self) -> WindowLayout:
+        """Return the layout the example starts with: the logs as a tab of the centre, the other views docked around it."""
+        return WindowLayout({"center": Tabs("logs")})
 
     def wire(self) -> Iterator[Link]:
         """Link each view to its presenter, and the devices a plan holds to the views that lock them."""
