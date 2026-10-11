@@ -85,12 +85,15 @@ def is_saved_position(item: object) -> TypeGuard[dict[str, Any]]:
         and isinstance(item.get("device"), str)
         and isinstance(item.get("positions"), dict)
         and all(
-            isinstance(axis, str)
-            and isinstance(value, (int, float))
-            and not isinstance(value, bool)
+            isinstance(axis, str) and is_number(value)
             for axis, value in item["positions"].items()
         )
     )
+
+
+def is_number(value: object) -> bool:
+    """Tell whether *value* is a number, which a boolean is not."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def numbers(values: object) -> dict[str, float]:
@@ -100,9 +103,27 @@ def numbers(values: object) -> dict[str, float]:
     return {
         key: float(value)
         for key, value in values.items()
-        if isinstance(key, str)
-        and isinstance(value, (int, float))
-        and not isinstance(value, bool)
+        if isinstance(key, str) and is_number(value)
+    }
+
+
+def context_keys(positioner: DescribesAxes) -> dict[str, list[str]]:
+    """Return, by device, the configuration keys given in the units of an axis' position.
+
+    An offset or a resolution in position units changes where a saved
+    position puts the axis.
+    """
+    descriptors = positioner.configuration.descriptors
+    return {
+        device: [
+            key
+            for info in axes.values()
+            if info.readback.units is not None
+            for key in info.configuration
+            if key in descriptors
+            and descriptors[key].get("units") == info.readback.units
+        ]
+        for device, axes in positioner.axes.items()
     }
 
 
@@ -226,6 +247,11 @@ class PositionerView(QtW.QWidget, Loggable):
         self._interval.setValue(repeat_interval)
 
         self._devices = QtW.QVBoxLayout()
+        self._build_saved_section(undo_delay)
+        self._build_tabs()
+
+    def _build_saved_section(self, undo_delay: int) -> None:
+        """Build the list of saved positions, and the row undoing a removal, shown for *undo_delay* milliseconds."""
         self._saved = QCollapsible("Saved positions", self)
         set_collapsible_icons(self._saved)
         self._undo_row = QtW.QWidget(self)
@@ -247,6 +273,9 @@ class PositionerView(QtW.QWidget, Loggable):
         self._entry_layout = QtW.QVBoxLayout(self._entry_list)
         self._saved.addWidget(self._undo_row)
         self._saved.addWidget(self._entry_list)
+
+    def _build_tabs(self) -> None:
+        """Build the Motors, Configuration and Advanced tabs."""
         motors = QtW.QWidget(self)
         motors_layout = QtW.QVBoxLayout(motors)
         motors_layout.addLayout(self._devices)
@@ -281,6 +310,22 @@ class PositionerView(QtW.QWidget, Loggable):
         stored = settings.get(self._key("repeat_interval"))
         if isinstance(stored, int) and not isinstance(stored, bool):
             self._interval.setValue(stored)
+        self._build_groups(positioner)
+        self._interval.valueChanged.connect(self._set_repeat_interval)
+        self._interval.sliderReleased.connect(self._store_repeat_interval)
+        readings = positioner.configuration.readings
+        self._values = {key: reading["value"] for key, reading in readings.items()}
+        self._context_keys = context_keys(positioner)
+        self._configuration_tab = ConfigurationTab(positioner.configuration, self)
+        self._configuration_tab.sig_configure.connect(self.sig_configure.emit)
+        self._configuration.addWidget(self._configuration_tab)
+        self._entries = self._read_saved(settings)
+        self._show_entries()
+        # the window sizes the view from hints it kept from before the groups
+        self._scroll.updateGeometry()
+
+    def _build_groups(self, positioner: DescribesAxes) -> None:
+        """Build the controls of each device *positioner* describes."""
         for device, axes in positioner.axes.items():
             group = self.group_class(
                 device,
@@ -294,44 +339,23 @@ class PositionerView(QtW.QWidget, Loggable):
             group.sig_move.connect(self.sig_move.emit)
             group.sig_move_to.connect(self.sig_move_to.emit)
             group.sig_stop.connect(self.sig_stop_device.emit)
+            group.sig_save.connect(self._save)
             self._groups[device] = group
             self._devices.addWidget(group)
-        self._interval.valueChanged.connect(self._set_repeat_interval)
-        self._interval.sliderReleased.connect(self._store_repeat_interval)
-        descriptors = positioner.configuration.descriptors
-        readings = positioner.configuration.readings
-        self._values = {key: reading["value"] for key, reading in readings.items()}
-        # an offset or a resolution in position units changes where a saved
-        # position puts the axis
-        self._context_keys = {
-            device: [
-                key
-                for info in axes.values()
-                if info.readback.units is not None
-                for key in info.configuration
-                if key in descriptors
-                and descriptors[key].get("units") == info.readback.units
-            ]
-            for device, axes in positioner.axes.items()
-        }
-        self._configuration_tab = ConfigurationTab(positioner.configuration, self)
-        self._configuration_tab.sig_configure.connect(self.sig_configure.emit)
-        self._configuration.addWidget(self._configuration_tab)
-        for group in self._groups.values():
-            group.sig_save.connect(self._save)
-        stored_positions = settings.get(self._key("saved_positions"), [])
-        if not isinstance(stored_positions, list):
+
+    def _read_saved(self, settings: Settings) -> list[SavedPosition]:
+        """Return the saved positions *settings* holds, logging those left out as not well formed."""
+        stored = settings.get(self._key("saved_positions"), [])
+        if not isinstance(stored, list):
             self.logger.warning(
                 "Ignoring saved positions that are not a list; the next save replaces them"
             )
-        self._entries, skipped = saved_positions(stored_positions)
+        entries, skipped = saved_positions(stored)
         if skipped:
             self.logger.warning(
                 f"Skipping {skipped} saved positions that are not well formed"
             )
-        self._show_entries()
-        # the window sizes the view from hints it kept from before the groups
-        self._scroll.updateGeometry()
+        return entries
 
     @slot(signal="sig_readback")
     def update_readback(self, device: str, axis: str, value: float) -> None:
@@ -475,9 +499,9 @@ class PositionerView(QtW.QWidget, Loggable):
                     {
                         "name": entry["name"],
                         "device": entry["device"],
-                        "positions": dict(entry["positions"].items()),
+                        "positions": dict(entry["positions"]),
                         **(
-                            {"context": dict(entry["context"].items())}
+                            {"context": dict(entry["context"])}
                             if "context" in entry
                             else {}
                         ),

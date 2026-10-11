@@ -614,11 +614,11 @@ class Session(BuildableSession):
                 case HookGroup():
                     return provider_from_file(source, class_path_of(source.provider))
         except HookError as e:
-            match source:
-                case HookDeclaration():
-                    name = source.cls.__name__
-                case HookGroup():
-                    name = source.provider
+            name = (
+                source.cls.__name__
+                if isinstance(source, HookDeclaration)
+                else source.provider
+            )
             logger.error("Hook provider %s is skipped: %s", name, e, exc_info=e)
             self._failed_hooks.append(HookFailure(name, tuple(source.moments), e))
             return None
@@ -815,13 +815,7 @@ class Session(BuildableSession):
         """Merge the sources, install the hooks, read the declarations, open the logs."""
         installed.cache_clear()
         config = self._configuration()
-        installed_at = [point for point, providers in self.hooks.items() if providers]
-        if installed_at:
-            logger.debug("Hooks installed at:")
-            for point in installed_at:
-                logger.debug("  - %s", point)
-        else:
-            logger.debug("No hooks installed")
+        self._log_hooks()
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
         self._window_layout = self._declared_layout(config)
@@ -834,6 +828,31 @@ class Session(BuildableSession):
         components = self._components()
         self._refuse_component_values(components)
         self._check_layers(components)
+        self._read_services(config)
+        self._open_storage(config)
+        # registered after the logs, so a provider's teardown is still logged
+        for hook in distinct(chain.from_iterable(self.hooks.values())):
+            if isinstance(hook, HasShutdown):
+                self.on_release(partial(self._shut_down_hook, hook))
+
+    def _log_hooks(self) -> None:
+        """Log the hook points a provider is installed at."""
+        installed_at = [point for point, providers in self.hooks.items() if providers]
+        if not installed_at:
+            logger.debug("No hooks installed")
+            return
+        logger.debug("Hooks installed at:")
+        for point in installed_at:
+            logger.debug("  - %s", point)
+
+    def _read_services(self, config: SessionFile) -> None:
+        """Make the services the class and *config* declare, and hold each as an attribute.
+
+        Raises
+        ------
+        TypeError
+            If a service shares its name with a component.
+        """
         self._transport = config.transport or CHANNEL_ACCESS
         self._services = read_services(type(self), config.services, self._transport)
         clash = sorted(self._services.keys() & self._declarations.keys())
@@ -847,6 +866,9 @@ class Session(BuildableSession):
         for name, attribute in service_attributes(type(self)).items():
             if name in self._services and not hasattr(type(self), attribute):
                 setattr(self, attribute, self._services[name])
+
+    def _open_storage(self, config: SessionFile) -> None:
+        """Make the path provider *config* describes, and open the logs under it."""
         self._storage = StorageConfig() if config.storage is None else config.storage
         if self._storage.catalog is not None:
             require_tiled()
@@ -857,9 +879,6 @@ class Session(BuildableSession):
         )
         self._wiring.path_provider = self._path_provider
         self._open_logs(self._path_provider)
-        # registered after the logs, so a provider's teardown is still logged
-        for hook in distinct(chain.from_iterable(self.hooks.values())):
-            self._register_teardown(hook, unless=partial(self._was_skipped, hook))
 
     def window_layout(self) -> WindowLayout | None:
         """Return the layout this session's window starts with, or `None` to place each view where it asks.
@@ -906,10 +925,9 @@ class Session(BuildableSession):
             If the configuration sets `strict` and the layout names such a view.
         """
         placements: dict[str, Placement | None] = {
-            name: declaration.placement
+            declaration.name: declaration.placement
             or getattr(declaration.instance, "placement", None)
-            for name, declaration in self._declarations.items()
-            if declaration.kind is Layer.VIEW
+            for declaration in self._view_declarations()
         }
         layout, dropped = resolved_layout(
             self._window_layout, placements, self.frontend
@@ -935,27 +953,24 @@ class Session(BuildableSession):
         overrides: dict[str, tuple[str, ...]] = {}
         problems: list[str] = []
         for command, given in config.shortcuts.items():
-            keys = (
-                ()
-                if given is None
-                else (given,)
-                if isinstance(given, str)
-                else tuple(given)
-            )
-            for key in keys:
-                problems += [
-                    f"shortcuts.{command}: {line}"
-                    for line in self.frontend.key_problems(key)
-                ]
-            if not problems:
-                overrides[command] = tuple(
-                    self.frontend.canonical_key(key) for key in keys
-                )
+            overrides[command], refusals = self._read_keys(as_keys(given))
+            problems += [f"shortcuts.{command}: {line}" for line in refusals]
         if problems:
             raise ConfigurationError(
                 [label(source) for source in self._sources()], problems
             )
         return overrides
+
+    def _read_keys(self, keys: Iterable[str]) -> tuple[tuple[str, ...], list[str]]:
+        """Return the keys of *keys* the frontend reads, as it writes them, and why it refuses the others."""
+        readable: list[str] = []
+        refusals: list[str] = []
+        for key in keys:
+            problems = self.frontend.key_problems(key)
+            refusals += problems
+            if not problems:
+                readable.append(self.frontend.canonical_key(key))
+        return tuple(readable), refusals
 
     def resolve_shortcuts(self, extra: Sequence[Binding] = ()) -> list[Binding]:
         """Return the keys the window binds: what the components declare, then *extra*, settled.
@@ -1000,15 +1015,9 @@ class Session(BuildableSession):
         found, problems = candidates(components, views=set(self.views))
         checked = []
         for binding in [*found, *extra]:
-            keys = []
-            for key in binding.keys:
-                refusals = self.frontend.key_problems(key)
-                problems += [
-                    f"{binding.command}: {line}; left out" for line in refusals
-                ]
-                if not refusals:
-                    keys.append(self.frontend.canonical_key(key))
-            checked.append(replace(binding, keys=tuple(keys)))
+            keys, refusals = self._read_keys(binding.keys)
+            problems += [f"{binding.command}: {line}; left out" for line in refusals]
+            checked.append(replace(binding, keys=keys))
         saved, notes = self._saved_shortcuts({binding.command for binding in checked})
         resolved, settled, moved = resolved_shortcuts(
             checked, {**self._shortcut_overrides, **saved}, saved
@@ -1033,16 +1042,12 @@ class Session(BuildableSession):
             if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
                 notes.append(f"{command}: saved keys {keys!r} are not a list of keys")
                 continue
-            refusals = [
-                f"{command}: {line}"
-                for key in keys
-                for line in self.frontend.key_problems(key)
-            ]
+            readable, refusals = self._read_keys(keys)
             if refusals:
                 # a half-read entry would unbind what the user meant to keep
-                notes += refusals
+                notes += [f"{command}: {line}" for line in refusals]
                 continue
-            saved[command] = tuple(self.frontend.canonical_key(k) for k in keys)
+            saved[command] = readable
         return saved, notes
 
     def _note_saved_shortcuts(self, notes: Sequence[str]) -> None:
@@ -1072,6 +1077,7 @@ class Session(BuildableSession):
             If the session is not built yet.
         """
         problems: list[str] = []
+        written: dict[str, JsonValue] = {}
         for command, keys in changes.items():
             # a string is a sequence of one-letter keys, never what was meant
             if isinstance(keys, str):
@@ -1079,16 +1085,11 @@ class Session(BuildableSession):
                 continue
             if len(keys) > 2:
                 problems.append(f"{command}: {len(keys)} keys, at most two")
-            for key in keys:
-                problems += [
-                    f"{command}: {line}" for line in self.frontend.key_problems(key)
-                ]
+            readable, refusals = self._read_keys(keys)
+            problems += [f"{command}: {line}" for line in refusals]
+            written[command] = [*readable]
         if problems:
             raise ValueError("; ".join(problems))
-        written: dict[str, JsonValue] = {
-            command: [self.frontend.canonical_key(key) for key in keys]
-            for command, keys in changes.items()
-        }
         stored = self.settings.get(SAVED_SHORTCUTS, {})
         kept = stored if isinstance(stored, dict) else {}
         self.settings.set(SAVED_SHORTCUTS, {**kept, **written})
@@ -1316,7 +1317,8 @@ class Session(BuildableSession):
 
     def _stop_profile(self) -> None:
         """Stop the profile and write it, named after this session."""
-        if self._profile is None:
+        # registered only where a profile exists; this narrows the type
+        if self._profile is None:  # pragma: no cover
             return
         # the configuration may be unreadable; the profile still needs a name
         name = self._file.session if self._file is not None else None
@@ -1541,6 +1543,10 @@ class Session(BuildableSession):
         """Undo every connection and subscription made through this session."""
         self._wiring.undo()
 
+    def _view_declarations(self) -> list[Declaration]:
+        """Return the declarations of the views, built or not, in the order they are declared."""
+        return [d for d in self._declarations.values() if d.kind is Layer.VIEW]
+
     def _components(self) -> list[Declaration]:
         return [
             d
@@ -1572,47 +1578,73 @@ class Session(BuildableSession):
         TypeError
             If a `setup` asks for something nothing in the session declares.
         """
-        store = self._store
-        if store is None:
-            raise RuntimeError("The registry step has to run before a component is")
+        store = self._require_store()
         components = self._components()
         built = {d.name: d.instance for d in components if d.instance is not None}
         for declaration in components:
-            instance = declaration.instance
-            if instance is None or not issubclass(declaration.cls, HasSetup):
+            if declaration.instance is None or not issubclass(
+                declaration.cls, HasSetup
+            ):
                 continue
-            params = get_setup_params(declaration.cls)
-            questions = {
-                pname: shape
-                for pname, hint in params.items()
-                if (shape := shape_of(hint)) is not None
-            }
-            reason: BaseException | None = self._not_built(
-                store,
-                f"{declaration.name}.setup",
-                {p: h for p, h in params.items() if p not in questions},
+            reason = self._call_setup(declaration, store, built)
+            if reason is not None:
+                self._not_set_up[declaration.name] = reason
+                logger.warning(
+                    "Failed to set up %s '%s': %s",
+                    declaration.kind,
+                    declaration.name,
+                    reason,
+                )
+
+    def _require_store(self) -> Store:
+        """Return the store the registry step opened.
+
+        Raises
+        ------
+        RuntimeError
+            If the registry step has not run yet.
+        """
+        if self._store is None:
+            raise RuntimeError(
+                "The registry step has to run before a component is built or set up"
             )
-            if reason is None:
-                try:
-                    answers = self._answers_for(declaration, questions, built)
-                except NoAnswer as e:
-                    reason = TypeError(str(e))
-            if reason is None:
-                try:
-                    # `as_protocol` cannot take the generic `HasSetup`, which
-                    # mypy refuses as a type form; the class was checked above
-                    ready = cast("HasSetup[...]", instance)
-                    store.inject(setup_call(ready, declaration.name, answers))()
-                    continue
-                except Exception as e:  # noqa: BLE001 - a setup must not abort the app
-                    reason = e
-            self._not_set_up[declaration.name] = reason
-            logger.warning(
-                "Failed to set up %s '%s': %s",
-                declaration.kind,
-                declaration.name,
-                reason,
-            )
+        return self._store
+
+    def _call_setup(
+        self, declaration: Declaration, store: Store, built: Mapping[str, object]
+    ) -> BaseException | None:
+        """Run the `setup` of the component *declaration* built, and return why it could not run, if so.
+
+        Raises
+        ------
+        TypeError
+            If the `setup` asks for something nothing in the session declares.
+        """
+        params = get_setup_params(declaration.cls)
+        questions = {
+            pname: shape
+            for pname, hint in params.items()
+            if (shape := shape_of(hint)) is not None
+        }
+        reason = self._not_built(
+            store,
+            f"{declaration.name}.setup",
+            {p: h for p, h in params.items() if p not in questions},
+        )
+        if reason is not None:
+            return reason
+        try:
+            answers = self._answers_for(declaration, questions, built)
+        except NoAnswer as e:
+            return TypeError(str(e))
+        try:
+            # `as_protocol` cannot take the generic `HasSetup`, which mypy
+            # refuses as a type form; the caller checked the class
+            ready = cast("HasSetup[...]", declaration.instance)
+            store.inject(setup_call(ready, declaration.name, answers))()
+        except Exception as e:  # noqa: BLE001 - a setup must not abort the app
+            return e
+        return None
 
     def _answers_for(
         self,
@@ -1680,9 +1712,7 @@ class Session(BuildableSession):
         RuntimeError
             If the registry step has not opened the store yet.
         """
-        store = self._store
-        if store is None:
-            raise RuntimeError("The registry step has to run before a component is")
+        store = self._require_store()
         declarations = [d for d in self._components() if d.kind is layer]
         view_arguments = self.view_arguments if layer is Layer.VIEW else {}
         for declaration in declarations:
@@ -2077,27 +2107,25 @@ class Session(BuildableSession):
         Its name, and the attribute it was declared under where the two differ
         and the session does not answer that attribute itself.
         """
-        if declaration.attribute == declaration.name:
-            return (declaration.name,)
-        if hasattr(type(self), declaration.attribute):
+        if declaration.attribute == declaration.name or hasattr(
+            type(self), declaration.attribute
+        ):
             return (declaration.name,)
         return (declaration.name, declaration.attribute)
 
-    def _register_teardown(
-        self, component: object, unless: Callable[[], bool] | None = None
-    ) -> None:
+    def _register_teardown(self, component: object) -> None:
         """Hand the session's own teardown to the one owner of it.
 
         A component that declares `shutdown` is finalized without having to
-        ask for it; one that does not needs no teardown at all. With *unless*,
-        the teardown is left out when it answers true at shutdown.
+        ask for it; one that does not needs no teardown at all.
         """
-        if not isinstance(component, HasShutdown):
-            return
-        close = shutdown_call(component)
-        self.on_release(
-            close if unless is None else partial(call_unless, unless, close)
-        )
+        if isinstance(component, HasShutdown):
+            self.on_release(shutdown_call(component))
+
+    def _shut_down_hook(self, hook: HasShutdown) -> None:
+        """Shut *hook* down, unless it failed at a hook point and was skipped."""
+        if not self._was_skipped(hook):
+            shutdown_call(hook)()
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.
@@ -2362,6 +2390,13 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
     return resolved
 
 
+def as_keys(given: str | Sequence[str] | None) -> tuple[str, ...]:
+    """Return the keys a session file gives a command: none, one, or a list."""
+    if given is None:
+        return ()
+    return (given,) if isinstance(given, str) else tuple(given)
+
+
 def shutdown_call(component: HasShutdown) -> Callable[[], None]:
     """Return a plain call shutting *component* down, whether its `shutdown` is a coroutine or not."""
     shutdown = component.shutdown
@@ -2370,12 +2405,6 @@ def shutdown_call(component: HasShutdown) -> Callable[[], None]:
         return shutdown
     async_shutdown = cast("HasAsyncShutdown", component).shutdown
     return lambda: run_coro(async_shutdown())
-
-
-def call_unless(unless: Callable[[], bool], call: Callable[[], None]) -> None:
-    """Call *call* unless *unless* answers true."""
-    if not unless():
-        call()
 
 
 def provider_from_class(declaration: HookDeclaration, owner: str) -> object:

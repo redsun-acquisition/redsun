@@ -12,11 +12,6 @@ Extending the system
 --------------------
 For a new annotation shape, write a predicate and a factory and insert the pair
 at the right priority in `WIDGET_FACTORY_MAP`.
-
-Unresolvable annotations
-------------------------
-`create_param_widget` raises `RuntimeError` if every entry fails, instead of
-falling back silently.
 """
 
 from __future__ import annotations
@@ -61,11 +56,6 @@ def is_literal_choices(p: ParamDescription) -> bool:
     Device parameters carry choices too, and match an earlier entry.
     """
     return p.choices is not None
-
-
-def always(p: ParamDescription) -> bool:
-    """Match anything."""
-    return True
 
 
 def make_dummy(p: ParamDescription) -> mgw.Widget:
@@ -126,7 +116,6 @@ WIDGET_FACTORY_MAP: list[tuple[WidgetPredicate, WidgetFactory]] = [
     (is_multiselect_device, make_device_sequence_edit),
     (is_singleselect_device, make_singleselect_device),
     (is_literal_choices, make_literal_combobox),
-    (always, make_value_widget),
 ]
 
 
@@ -134,11 +123,8 @@ def create_param_widget(param: ParamDescription) -> mgw.Widget:
     """Create a `magicgui` widget for *param*.
 
     Only the predicates are guarded: a factory raising is a bug and propagates.
-
-    Raises
-    ------
-    RuntimeError
-        If every entry in `WIDGET_FACTORY_MAP` fails.
+    A parameter no entry of `WIDGET_FACTORY_MAP` matches gets the widget
+    `create_value_widget` builds.
     """
     for predicate, factory in WIDGET_FACTORY_MAP:
         try:
@@ -147,8 +133,4 @@ def create_param_widget(param: ParamDescription) -> mgw.Widget:
             continue
         if matched:
             return factory(param)
-    raise RuntimeError(
-        f"No widget factory matched parameter {param.name!r} "
-        f"(annotation: {param.annotation!r}). "
-        f"This is a bug - create_plan_spec should have caught this."
-    )
+    return make_value_widget(param)

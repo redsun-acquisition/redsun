@@ -174,9 +174,10 @@ class ShortcutsDialog(QDialog):
             keys[index] = key
         else:
             keys.append(key)
-        if tuple(dict.fromkeys(keys)) == binding.keys:
+        new = tuple(dict.fromkeys(keys))
+        if new == binding.keys:
             return
-        changes = {binding.command: tuple(dict.fromkeys(keys))}
+        changes = {binding.command: new}
         other = None if key in CLEARING else holder(self._bindings, binding, key)
         if other is not None:
             if not self._agree(f"Already used by {other.title}; move it here?"):

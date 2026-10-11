@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from redsun.utils.devices import AxisInfo
 
 DEFAULT_PRECISION = 2
-"""Decimals shown for an axis whose descriptor gives no precision."""
+"""Decimals shown for a value whose descriptor gives no precision."""
 
 LIMIT = 1e9
 """Largest step or target magnitude the controls accept."""
@@ -98,60 +98,12 @@ class AxisRow(QtW.QWidget):
             QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
         )
 
-        self.buttons: list[QtW.QToolButton] = []
-        for sign, label in ((-1.0, "minus"), (1.0, "plus")):
-            direction = "down" if sign < 0 else "up"
-            button = tool_button(label, f"Step {axis} {direction}", self)
-            button.setObjectName(f"{label}:{axis}")
-            button.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
-            button.setFixedWidth(button.sizeHint().height())
-            button.installEventFilter(self)
-            button.setAutoRepeat(True)
-            button.setAutoRepeatDelay(repeat_delay)
-            button.setAutoRepeatInterval(repeat_interval)
-            # a held button emits pressed at each repeat and nothing on
-            # release, where clicked would add one step more
-            button.pressed.connect(
-                lambda s=sign: self.sig_step.emit(s * self.step_size())
-            )
-            self.buttons.append(button)
-
-        centre = QtCore.Qt.AlignmentFlag.AlignCenter
-        self.box: QtW.QComboBox | QtW.QDoubleSpinBox
-        if step_box == "spinbox":
-            self.box = QtW.QDoubleSpinBox(self)
-            self.box.setLocale(QtCore.QLocale.c())
-            decimals = max(
-                0,
-                *(
-                    -int(Decimal(repr(step)).normalize().as_tuple().exponent)
-                    for step in steps
-                ),
-            )
-            self.box.setDecimals(decimals)
-            self.box.setRange(min(steps), max(steps))
-            self.box.setStepType(QtW.QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
-            self.box.setValue(self.step)
-            self.box.setAlignment(centre)
-            # its hint makes room for the widest size in range beside its arrows
-            self.box.setFixedWidth(self.box.sizeHint().width())
-        else:
-            self.box = QtW.QComboBox(self)
-            self.box.setEditable(True)
-            self.box.setInsertPolicy(QtW.QComboBox.InsertPolicy.NoInsert)
-            self.box.addItems([f"{step:g}" for step in steps])
-            for index in range(self.box.count()):
-                self.box.setItemData(
-                    index, centre, QtCore.Qt.ItemDataRole.TextAlignmentRole
-                )
-            self.box.setCurrentIndex(self.box.findText(f"{self.step:g}"))
-            self.box.setValidator(number_validator(0.0, LIMIT, self.box))
-            if (edit := self.box.lineEdit()) is not None:
-                edit.setAlignment(centre)
-            # the box would otherwise claim room for its arrow and frame at
-            # their widest, more than a narrow dock has; a fixed width, unlike
-            # an ignored size policy, still reserves its column in the grid
-            self.box.setFixedWidth(self.fontMetrics().horizontalAdvance("0.001") + 32)
+        self.buttons = self._make_step_buttons(axis, repeat_delay, repeat_interval)
+        self.box: QtW.QComboBox | QtW.QDoubleSpinBox = (
+            self._make_spin_box(steps)
+            if step_box == "spinbox"
+            else self._make_combo_box(steps)
+        )
         self.box.setObjectName(f"step:{axis}")
         self.box.setAccessibleName(f"{axis} step size")
         self.box.setToolTip("Step size")
@@ -186,6 +138,67 @@ class AxisRow(QtW.QWidget):
         grid.addWidget(self.target, 1, 3, 1, 2)
         grid.addWidget(self.go_button, 1, 5)
         grid.setColumnStretch(3, 1)
+
+    def _make_step_buttons(
+        self, axis: str, repeat_delay: int, repeat_interval: int
+    ) -> list[QtW.QToolButton]:
+        """Return the buttons stepping *axis* down and up, repeating while held."""
+        buttons = []
+        for sign, label, direction in ((-1.0, "minus", "down"), (1.0, "plus", "up")):
+            button = tool_button(label, f"Step {axis} {direction}", self)
+            button.setObjectName(f"{label}:{axis}")
+            button.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
+            button.setFixedWidth(button.sizeHint().height())
+            button.installEventFilter(self)
+            button.setAutoRepeat(True)
+            button.setAutoRepeatDelay(repeat_delay)
+            button.setAutoRepeatInterval(repeat_interval)
+            # a held button emits pressed at each repeat and nothing on
+            # release, where clicked would add one step more
+            button.pressed.connect(
+                lambda s=sign: self.sig_step.emit(s * self.step_size())
+            )
+            buttons.append(button)
+        return buttons
+
+    def _make_spin_box(self, steps: Sequence[float]) -> QtW.QDoubleSpinBox:
+        """Return a number box taking a step size within the range of *steps*."""
+        box = QtW.QDoubleSpinBox(self)
+        box.setLocale(QtCore.QLocale.c())
+        decimals = max(
+            0,
+            *(
+                -int(Decimal(repr(step)).normalize().as_tuple().exponent)
+                for step in steps
+            ),
+        )
+        box.setDecimals(decimals)
+        box.setRange(min(steps), max(steps))
+        box.setStepType(QtW.QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
+        box.setValue(self.step)
+        box.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        # its hint makes room for the widest size in range beside its arrows
+        box.setFixedWidth(box.sizeHint().width())
+        return box
+
+    def _make_combo_box(self, steps: Sequence[float]) -> QtW.QComboBox:
+        """Return a list of the step sizes in *steps*, which takes a typed size too."""
+        centre = QtCore.Qt.AlignmentFlag.AlignCenter
+        box = QtW.QComboBox(self)
+        box.setEditable(True)
+        box.setInsertPolicy(QtW.QComboBox.InsertPolicy.NoInsert)
+        box.addItems([f"{step:g}" for step in steps])
+        for index in range(box.count()):
+            box.setItemData(index, centre, QtCore.Qt.ItemDataRole.TextAlignmentRole)
+        box.setCurrentIndex(box.findText(f"{self.step:g}"))
+        box.setValidator(number_validator(0.0, LIMIT, box))
+        if (edit := box.lineEdit()) is not None:
+            edit.setAlignment(centre)
+        # the box would otherwise claim room for its arrow and frame at
+        # their widest, more than a narrow dock has; a fixed width, unlike
+        # an ignored size policy, still reserves its column in the grid
+        box.setFixedWidth(self.fontMetrics().horizontalAdvance("0.001") + 32)
+        return box
 
     def format_value(self, value: float) -> str:
         """Return *value* with this axis' decimals."""
@@ -350,7 +363,6 @@ class PositionerGroup(QtW.QGroupBox):
         self._state.setAccessibleName(f"{device} state")
         layout.addWidget(self._state)
 
-        self._step_buttons: list[QtW.QToolButton] = []
         self._rows: dict[str, AxisRow] = {}
         for axis, info in axes.items():
             row = AxisRow(
@@ -365,7 +377,6 @@ class PositionerGroup(QtW.QGroupBox):
             row.sig_refused.connect(self.show_message)
             self._rows[axis] = row
             self._controls.extend(row.controls)
-            self._step_buttons.extend(row.buttons)
             layout.addWidget(row)
 
     @property
@@ -429,5 +440,6 @@ class PositionerGroup(QtW.QGroupBox):
 
     def set_repeat_interval(self, milliseconds: int) -> None:
         """Repeat every step button at *milliseconds* while held."""
-        for button in self._step_buttons:
-            button.setAutoRepeatInterval(milliseconds)
+        for row in self._rows.values():
+            for button in row.buttons:
+                button.setAutoRepeatInterval(milliseconds)

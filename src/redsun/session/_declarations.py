@@ -37,7 +37,7 @@ from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
 
     from .._config import ComponentEntry, SessionFile
     from .._hooks import Many
@@ -682,10 +682,7 @@ def read(
 def service_attributes(cls: type) -> dict[str, str]:
     """Return the attribute each service *cls* annotates is declared under, by name."""
     found: dict[str, str] = {}
-    for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_marked(hint, ServiceMark):
-            continue
-        _, metadata, _ = split(hint)
+    for attr, _, metadata in marked(cls, ServiceMark):
         _, name = names_of(attr, metadata)
         found[name] = attr
     return found
@@ -713,10 +710,7 @@ def read_services(
     """
     found: dict[str, Service] = {}
     read_keys: set[str] = set()
-    for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_marked(hint, ServiceMark):
-            continue
-        _, metadata, _ = split(hint)
+    for attr, _, metadata in marked(cls, ServiceMark):
         where = f"{cls.__qualname__}.{attr}"
         cfg_key, name = names_of(attr, metadata)
         given: Launch | Attach | None = None
@@ -772,10 +766,7 @@ def read_hooks(
         names one point twice.
     """
     found: dict[str, list[HookDeclaration]] = {}
-    for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_marked(hint, Hook):
-            continue
-        target, metadata, _ = split(hint)
+    for attr, target, metadata in marked(cls, Hook):
         where = f"{cls.__qualname__}.{attr}"
         if not isinstance(target, type):
             raise HookError(
@@ -958,6 +949,14 @@ def names_of(attr: str, metadata: Iterable[object]) -> tuple[str, str]:
         elif isinstance(marker, Alias):
             name = marker.name
     return cfg_key, name
+
+
+def marked(cls: type, marker: type) -> Iterator[tuple[str, Any, tuple[Any, ...]]]:
+    """Yield the attribute, type and option markers of each public annotation of *cls* carrying *marker*."""
+    for attr, hint in hints(cls).items():
+        if not attr.startswith("_") and is_marked(hint, marker):
+            target, metadata, _ = split(hint)
+            yield attr, target, metadata
 
 
 def is_marked(hint: Any, marker: type) -> bool:

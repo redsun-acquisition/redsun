@@ -154,17 +154,8 @@ def class_path_of(name: str) -> str:
     HookError
         If *name* is a short name `redsun` does not list.
     """
-    return name if ":" in name else hook_class_path(name)
-
-
-def hook_class_path(name: str) -> str:
-    """Return the class path of the hook provider `redsun` lists as *name*.
-
-    Raises
-    ------
-    HookError
-        If `redsun` lists no hook provider by that name.
-    """
+    if ":" in name:
+        return name
     hooks = manifest(OWN_PLUGIN).hooks
     if name not in hooks:
         known = ", ".join(sorted(hooks)) or "none"

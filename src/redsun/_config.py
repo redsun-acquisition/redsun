@@ -39,10 +39,14 @@ from redsun.view import Column, Row, Tabs, WindowLayout
 
 from ._hooks import HookGroup, group_hook_entries
 from ._manifest import problem_lines
-from .view._layout import layout_problems, split_problems, tabs_problems
+from .view._layout import (
+    layout_problems,
+    refuse_problems,
+    split_problems,
+    tabs_problems,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
     from importlib.metadata import EntryPoint
 
     from pydantic_core import InitErrorDetails
@@ -239,39 +243,25 @@ def pairs_joined(earlier: Sequence[Any], later: Sequence[Any]) -> list[Any]:
     return joined
 
 
-def load(
-    declared: Source | Sequence[Source] | None,
-    required: Collection[str] = frozenset(),
-) -> dict[str, Any]:
+def load(declared: Source | Sequence[Source] | None) -> dict[str, Any]:
     """Read what *declared* names in order, laying each over the last.
 
     One source or several, so a caller with a single file hands it over as it
-    is. *required* is checked against the merged mapping rather than against
-    each source, so a source layered under another may carry a fragment.
+    is.
 
     Raises
     ------
     ValueError
         If two sources disagree about the session's identity.
-    KeyError
-        If the merged mapping is missing a required key.
     """
-    ordered = as_sources(declared)
     data: dict[str, Any] = {}
-    for source in ordered:
+    for source in as_sources(declared):
         overlay = read(source)
         refuse_identity_conflict(data, overlay, source)
         earlier, later = data.get("pairs"), overlay.get("pairs")
         data = merge_config(data, overlay)
         if is_list_like(earlier) and (later is None or is_list_like(later)):
             data["pairs"] = pairs_joined(earlier, later or ())
-    missing = set(required) - data.keys()
-    if missing:
-        named = ", ".join(label(source) for source in ordered) or "no sources"
-        raise KeyError(
-            f"Configuration ({named}) is missing required keys: "
-            f"{', '.join(sorted(missing))}"
-        )
     return data
 
 
@@ -431,9 +421,7 @@ class RowEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     @model_validator(mode="after")
     def fits(self) -> RowEntry:
         """Refuse sizes that do not give one positive weight per child, and an empty row."""
-        problems = split_problems(len(self.row), self.sizes)
-        if problems:
-            raise ValueError("; ".join(problems))
+        refuse_problems(split_problems(len(self.row), self.sizes))
         return self
 
 
@@ -449,9 +437,7 @@ class ColumnEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     @model_validator(mode="after")
     def fits(self) -> ColumnEntry:
         """Refuse sizes that do not give one positive weight per child, and an empty column."""
-        problems = split_problems(len(self.column), self.sizes)
-        if problems:
-            raise ValueError("; ".join(problems))
+        refuse_problems(split_problems(len(self.column), self.sizes))
         return self
 
 
@@ -467,9 +453,7 @@ class TabsEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     @model_validator(mode="after")
     def fits(self) -> TabsEntry:
         """Refuse empty tabs, and a current tab that is not one of them."""
-        problems = tabs_problems(self.tabs, self.current)
-        if problems:
-            raise ValueError("; ".join(problems))
+        refuse_problems(tabs_problems(self.tabs, self.current))
         return self
 
 
@@ -478,11 +462,11 @@ def node_kind(value: object) -> str:
     match value:
         case str():
             return "node:name"
-        case RowEntry():
+        case RowEntry():  # pragma: no cover - reached only when a model is serialised
             return "node:row"
-        case ColumnEntry():
+        case ColumnEntry():  # pragma: no cover - as for a row
             return "node:column"
-        case TabsEntry():
+        case TabsEntry():  # pragma: no cover - as for a row
             return "node:tabs"
         case Mapping():
             kinds = [kind for kind in ("row", "column", "tabs") if kind in value]
@@ -524,7 +508,7 @@ def node_of(entry: NodeEntry) -> Node:
         case TabsEntry(tabs=names, current=current):
             return Tabs(*names, current=current)
     # validation refuses any other node before this reads it
-    raise TypeError(f"{entry!r} is no layout node")
+    raise TypeError(f"{entry!r} is no layout node")  # pragma: no cover
 
 
 class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
@@ -542,21 +526,16 @@ class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     @model_validator(mode="after")
     def fits(self) -> LayoutEntry:
         """Refuse a view placed twice and a share outside (0, 1)."""
-        problems = layout_problems(
-            {region: node_of(entry) for region, entry in self.regions.items()},
-            self.sizes,
-        )
-        if problems:
-            raise ValueError("; ".join(problems))
+        refuse_problems(layout_problems(self.nodes(), self.sizes))
         return self
+
+    def nodes(self) -> dict[str, Node]:
+        """Return the layout node each region's entry writes."""
+        return {region: node_of(entry) for region, entry in self.regions.items()}
 
     def to_layout(self) -> WindowLayout:
         """Return the layout this entry writes."""
-        return WindowLayout(
-            {region: node_of(entry) for region, entry in self.regions.items()},
-            self.sizes,
-            self.hidden,
-        )
+        return WindowLayout(self.nodes(), self.sizes, self.hidden)
 
 
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
@@ -781,20 +760,22 @@ def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDet
         data["services"] = services
     if isinstance(data.get("storage"), Mapping):
         data["storage"] = with_empty_catalog(data["storage"])
-    hooks = data.get("hooks")
+    # before anything is copied: entries a YAML anchor shares are known only
+    # by being one object
+    data["hooks"], refused = grouped_hooks(data.get("hooks"))
+    return data, problems + refused
+
+
+def grouped_hooks(
+    hooks: object,
+) -> tuple[list[dict[str, Any]], list[InitErrorDetails]]:
+    """Return the entries of a `hooks` section, one per provider, and what stops that."""
     if hooks is None:
-        data["hooks"] = []
-    elif not isinstance(hooks, Mapping):
-        data["hooks"] = []
-        problems.append(
-            refusal(("hooks",), "'hooks' must be a mapping of hook points to entries")
-        )
-    else:
-        # before anything is copied: entries a YAML anchor shares are known
-        # only by being one object
-        try:
-            data["hooks"] = group_hook_entries(hooks)
-        except ValueError as e:
-            data["hooks"] = []
-            problems.append(refusal(("hooks",), str(e)))
-    return data, problems
+        return [], []
+    if not isinstance(hooks, Mapping):
+        message = "'hooks' must be a mapping of hook points to entries"
+        return [], [refusal(("hooks",), message)]
+    try:
+        return group_hook_entries(hooks), []
+    except ValueError as e:
+        return [], [refusal(("hooks",), str(e))]

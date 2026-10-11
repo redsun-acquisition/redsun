@@ -118,7 +118,6 @@ class AcquisitionView(QtW.QWidget, Loggable):
                 ),
                 plan_callbacks=acquisition.plan_callbacks.get(plan, ()),
                 available_callbacks=acquisition.callbacks,
-                attached_callbacks=None,
             )
             failure = QtW.QLabel(widget.group_box)
             failure.setObjectName(f"failure:{plan}")
@@ -229,7 +228,9 @@ class AcquisitionView(QtW.QWidget, Loggable):
         if self._running is not None:
             self.sig_stop.emit()
             return
-        plan = self._chooser.currentText()
+        self._launch(self._chooser.currentText())
+
+    def _launch(self, plan: str) -> None:
         widget = self.plan_widgets[plan]
         self.sig_launch.emit(plan, widget.parameters, tuple(widget.attached_callbacks))
 
@@ -239,9 +240,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
         if toggled:
             # the presenter reports the start; until then the button shows Run
             widget.toggle(False)
-            self.sig_launch.emit(
-                plan, widget.parameters, tuple(widget.attached_callbacks)
-            )
+            self._launch(plan)
         else:
             self.sig_stop.emit()
 

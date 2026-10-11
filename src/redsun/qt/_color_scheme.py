@@ -45,11 +45,6 @@ class ColorSchemeMode(StrEnum):
         """
         return cls(declared) if declared is not None else cls(cls.SYSTEM)
 
-    @property
-    def glyph(self) -> str:
-        """A character standing for this mode in plain text; the control shows an icon."""
-        return GLYPHS[self]
-
     def apply(self) -> None:
         """Ask the platform for this scheme, or stop asking under `SYSTEM`.
 
@@ -59,7 +54,7 @@ class ColorSchemeMode(StrEnum):
             If no application exists yet to carry a colour scheme.
         """
         hints = QGuiApplication.styleHints()
-        if hints is None:
+        if hints is None:  # pragma: no cover - only pyqt6's annotation says None
             raise RuntimeError(
                 "a colour scheme belongs to an application, and none is running"
             )
@@ -85,12 +80,6 @@ ICONS: dict[ColorSchemeMode, str] = {
     ColorSchemeMode.DARK: "weather-night",
 }
 """The icon the control shows while each mode is asked for."""
-
-GLYPHS: dict[ColorSchemeMode, str] = {
-    ColorSchemeMode.SYSTEM: "\u25d0",
-    ColorSchemeMode.LIGHT: "\u2600",
-    ColorSchemeMode.DARK: "\u263e",
-}
 
 
 class ColorSchemeButton(QToolButton):
@@ -130,7 +119,7 @@ class ColorSchemeButton(QToolButton):
             If *window* refuses a toolbar.
         """
         bar = window.addToolBar(cls.TOOLBAR)
-        if bar is None:
+        if bar is None:  # pragma: no cover - only pyqt6's annotation says None
             raise RuntimeError(f"{type(window).__name__} refused a toolbar")
         bar.setObjectName(cls.TOOLBAR)
         bar.setMovable(False)

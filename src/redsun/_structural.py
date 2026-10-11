@@ -105,7 +105,8 @@ def signature_problems(cls: type, protocol: type) -> tuple[str, ...]:
     found: list[str] = []
     for name in sorted(methods(protocol)):
         wanted = call_signature(protocol, name)
-        if wanted is None:
+        # methods() lists only names with a signature; this narrows the type
+        if wanted is None:  # pragma: no cover
             continue
         if defined(cls, name) is MISSING:
             found.append(f"{name!r} is missing")

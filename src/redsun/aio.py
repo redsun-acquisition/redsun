@@ -137,7 +137,7 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
                 self._tasks.add(task)
                 task.add_done_callback(self._tasks.discard)
                 task.add_done_callback(self._log_slot_exception)
-        except asyncio.CancelledError:
+        except asyncio.CancelledError:  # pragma: no cover - the loop stopped
             self.logger.debug("Dispatch cancelled")
         except QueueShutDown:
             self.logger.debug("Dispatch queue shut down")
