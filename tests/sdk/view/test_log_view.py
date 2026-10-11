@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -576,6 +577,26 @@ def test_a_palette_change_redraws_what_is_on_screen(
         assert view.colors[logging.ERROR] in rendered(view)
     finally:
         qapp.setPalette(original)
+
+
+def test_a_view_deleted_before_its_redraw_raises_nothing(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Drop the redraw a palette change asked for when the view is deleted before it runs."""
+    raised: list[BaseException] = []
+    monkeypatch.setattr(
+        sys, "excepthook", lambda kind, error, trace: raised.append(error)
+    )
+    parent = QWidget()
+    view = LogView("logs", parent)
+
+    view.setPalette(with_base(view.palette(), DARK))
+    view.close()
+    parent.deleteLater()
+    QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete.value)
+    qapp.processEvents()
+
+    assert raised == []
 
 
 def test_a_stylesheet_on_the_console_class_sets_the_colours(
