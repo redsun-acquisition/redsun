@@ -265,7 +265,8 @@ class RunEngine(BlueskyRunEngine):
         future: Future[R] = Future()
 
         def run() -> None:
-            if not future.set_running_or_notify_cancel():
+            # a cancel between the thread's start and this line cannot be forced
+            if not future.set_running_or_notify_cancel():  # pragma: no cover
                 return
             try:
                 future.set_result(call())

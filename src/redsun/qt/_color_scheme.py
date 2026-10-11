@@ -59,7 +59,7 @@ class ColorSchemeMode(StrEnum):
             If no application exists yet to carry a colour scheme.
         """
         hints = QGuiApplication.styleHints()
-        if hints is None:
+        if hints is None:  # pragma: no cover - only pyqt6's annotation says None
             raise RuntimeError(
                 "a colour scheme belongs to an application, and none is running"
             )
@@ -130,7 +130,7 @@ class ColorSchemeButton(QToolButton):
             If *window* refuses a toolbar.
         """
         bar = window.addToolBar(cls.TOOLBAR)
-        if bar is None:
+        if bar is None:  # pragma: no cover - only pyqt6's annotation says None
             raise RuntimeError(f"{type(window).__name__} refused a toolbar")
         bar.setObjectName(cls.TOOLBAR)
         bar.setMovable(False)

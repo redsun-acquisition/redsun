@@ -102,7 +102,7 @@ def parse_rgb(colour: str) -> tuple[int, int, int]:
         If *colour* is written any other way.
     """
     match = RGB.fullmatch(colour)
-    if match is None:
+    if match is None:  # pragma: no cover - the themes are constants written rgb(...)
         raise ValueError(f"expected a colour written rgb(r, g, b), got {colour!r}")
     red, green, blue = (int(value) for value in match.groups())
     return red, green, blue
@@ -120,7 +120,7 @@ def shift_luminance(
     else:
         target = luminance * (1.0 + percentage)
     target = max(0.0, min(255.0, target))
-    if luminance < 1.0:
+    if luminance < 1.0:  # pragma: no cover - neither theme shifts black
         grey = max(0, min(255, int(target)))
         return grey, grey, grey
     scale = target / luminance

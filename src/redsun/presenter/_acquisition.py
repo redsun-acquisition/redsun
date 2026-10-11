@@ -234,7 +234,7 @@ class AcquisitionPresenter(Loggable):
         try:
             self._engine.request_pause(defer=True)
         # bluesky's TransitionError, raised when the plan ended since the check
-        except RuntimeError as error:
+        except RuntimeError as error:  # pragma: no cover - a race that cannot be forced
             self.logger.warning(f"Not pausing: {error}")
 
     @slot(signal="sig_resume")

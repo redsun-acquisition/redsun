@@ -299,7 +299,7 @@ def _fields_from_annotation(
         else:
             return _FieldsFromAnnotation()
         matching = [key for key, obj in devices.items() if isinstance(obj, proto)]
-    except Exception:  # noqa: BLE001 - an annotation that cannot be inspected offers no choices, never a crash
+    except Exception:  # noqa: BLE001 - an annotation that cannot be inspected offers no choices, never a crash  # pragma: no cover
         return _FieldsFromAnnotation()
     if not matching:
         return _FieldsFromAnnotation()

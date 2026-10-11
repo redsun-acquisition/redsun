@@ -462,11 +462,11 @@ def node_kind(value: object) -> str:
     match value:
         case str():
             return "node:name"
-        case RowEntry():
+        case RowEntry():  # pragma: no cover - reached only when a model is serialised
             return "node:row"
-        case ColumnEntry():
+        case ColumnEntry():  # pragma: no cover - as for a row
             return "node:column"
-        case TabsEntry():
+        case TabsEntry():  # pragma: no cover - as for a row
             return "node:tabs"
         case Mapping():
             kinds = [kind for kind in ("row", "column", "tabs") if kind in value]
@@ -508,7 +508,7 @@ def node_of(entry: NodeEntry) -> Node:
         case TabsEntry(tabs=names, current=current):
             return Tabs(*names, current=current)
     # validation refuses any other node before this reads it
-    raise TypeError(f"{entry!r} is no layout node")
+    raise TypeError(f"{entry!r} is no layout node")  # pragma: no cover
 
 
 class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):

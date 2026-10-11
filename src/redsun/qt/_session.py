@@ -362,7 +362,8 @@ class Qt(Frontend):
         """Return why *key* is not one app-model reads, or nothing."""
         try:
             parsed = KeyBinding.validate(key)
-        except (TypeError, ValueError) as error:
+        # app-model raises only for a key that is not text
+        except (TypeError, ValueError) as error:  # pragma: no cover
             return [f"{key!r} is not a key: {error}"]
         # app-model reads some names it does not know without an error, such
         # as "Ctrl+Period" as "Ctrl+", leaving no key in the combination
@@ -1600,7 +1601,8 @@ def add_menu_item(window: QMainWindow, action: QAction, placement: MenuItem) -> 
         If the window has no menu bar.
     """
     bar = window.menuBar()
-    if bar is None:
+    # Qt makes a menu bar on demand; only pyqt6's annotation says None
+    if bar is None:  # pragma: no cover
         raise TypeError(f"{type(window).__name__} has no menu bar to add a menu to")
     # found by object name rather than through QAction.menu(), which the two
     # bindings type differently: QMenu under pyqt6, QObject under pyside6

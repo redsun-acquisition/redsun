@@ -1317,7 +1317,8 @@ class Session(BuildableSession):
 
     def _stop_profile(self) -> None:
         """Stop the profile and write it, named after this session."""
-        if self._profile is None:
+        # registered only where a profile exists; this narrows the type
+        if self._profile is None:  # pragma: no cover
             return
         # the configuration may be unreadable; the profile still needs a name
         name = self._file.session if self._file is not None else None
