@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from .._config import ComponentEntry, SessionFile
+    from .._hooks import Many
     from ..services._service import ArgValue
     from ._protocols import NamedComponent
 
@@ -755,8 +756,10 @@ def read_services(
     return found
 
 
-def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclaration]:
-    """Collect the hook declarations of *cls*, by the point each serves.
+def read_hooks(
+    cls: type, points: Mapping[str, type | Many]
+) -> dict[str, list[HookDeclaration]]:
+    """Collect the hook declarations of *cls*, by the point each serves, in declaration order.
 
     The attribute name is the point; a `Serves` marker names them instead, and
     naming several is how one provider instance serves several. `Declare`
@@ -765,10 +768,9 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
     Raises
     ------
     HookError
-        If a declaration is not a class, names a point *cls* does not call, or
-        two declarations claim one point.
+        If a declaration is not a class, or names a point *cls* does not call.
     """
-    found: dict[str, HookDeclaration] = {}
+    found: dict[str, list[HookDeclaration]] = {}
     for attr, hint in hints(cls).items():
         if attr.startswith("_") or not is_marked(hint, Hook):
             continue
@@ -792,13 +794,7 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
                     f"{where} declares a hook at {moment!r}, which is not a "
                     f"hook point {cls.__name__} calls; {known_points(points)}"
                 )
-            claimed = found.get(moment)
-            if claimed is not None:
-                raise HookError(
-                    f"{where} and {claimed.cls.__name__} both claim the hook "
-                    f"point {moment!r}; a hook point takes one provider"
-                )
-            found[moment] = declaration
+            found.setdefault(moment, []).append(declaration)
     return found
 
 

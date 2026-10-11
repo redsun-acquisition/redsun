@@ -143,6 +143,20 @@ def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
     return listed_item(paths, plugin_name, plugin_id, group)
 
 
+def class_path_of(name: str) -> str:
+    """Return the class path a hook provider's name stands for.
+
+    A class path stands for itself, and a short name for the provider
+    `redsun` lists under it.
+
+    Raises
+    ------
+    HookError
+        If *name* is a short name `redsun` does not list.
+    """
+    return name if ":" in name else hook_class_path(name)
+
+
 def hook_class_path(name: str) -> str:
     """Return the class path of the hook provider `redsun` lists as *name*.
 

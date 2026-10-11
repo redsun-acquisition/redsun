@@ -11,6 +11,7 @@ from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from dataclasses import replace
 from enum import StrEnum
+from itertools import chain
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -58,10 +59,14 @@ from .._config import (
 )
 from .._hooks import (
     HookGroup,
+    Many,
     distinct,
+    entries_by_point,
+    provider_from_file,
     refuse_ambiguous,
+    refuse_crowded,
+    refuse_misfits,
     refuse_unknown_points,
-    resolve_hooks,
 )
 from .._settings import Settings
 from ..injection._provides import constant, register_shared, shared_keys
@@ -86,7 +91,7 @@ from ._factories import (
 )
 from ._frontend import Frontend
 from ._layout import resolved_layout
-from ._plugins import hook_class_path, installed, load_providers
+from ._plugins import class_path_of, installed, load_providers
 from ._profile import open_profile
 from ._protocols import (
     AttachableComponent,
@@ -291,8 +296,11 @@ class Session(BuildableSession):
     ask for by type. A provider has no name, no layer and no wiring.
     """
 
-    hook_points: ClassVar[Mapping[str, type]] = {}
+    hook_points: ClassVar[Mapping[str, type | Many]] = {}
     """The points this session calls a hook at, by the protocol each demands.
+
+    A point takes one provider, or any number when its protocol is wrapped in
+    [`Many`][redsun.Many].
 
     Empty here: every hook point belongs to a toolkit, so a toolkit session
     such as `redsun.qt.QtSession` names its own.
@@ -349,7 +357,7 @@ class Session(BuildableSession):
         self._window_layout: WindowLayout | None = None
         self._shortcut_overrides: dict[str, tuple[str, ...]] = {}
         self._reported_saved_shortcuts: set[str] = set()
-        self._hooks: dict[str, object] | None = None
+        self._hooks: dict[str, tuple[object, ...]] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
@@ -529,75 +537,65 @@ class Session(BuildableSession):
         return self._file
 
     @property
-    def hooks(self) -> Mapping[str, object]:
-        """The hook provider this session installs at each point, built once.
+    def hooks(self) -> Mapping[str, tuple[object, ...]]:
+        """The hook providers this session installs at each point it calls, built once.
 
-        A subclass firing a point calls this rather than resolving again, so
-        that every point of one build acts on one set of providers. A provider
-        with a `shutdown` method is shut down with the session, once however
-        many points it serves, the last built first.
+        Every point is there, with its providers in the order they run: those
+        the class declares, then those the configuration lists. A subclass
+        firing a point reads this rather than resolving again, so that every
+        point of one build acts on one set of providers. A provider with a
+        `shutdown` method is shut down with the session, once however many
+        points it serves, the last built first.
 
         Raises
         ------
         HookError
-            If a point is claimed by more than one provider, a provider cannot
+            If a point taking one provider is given several, a provider cannot
             be built, or one does not implement the protocol its point calls.
         """
         if self._hooks is None:
             self._hooks = self._resolve_hooks(self._configuration().hooks)
         return self._hooks
 
-    def _resolve_hooks(self, groups: list[HookGroup]) -> dict[str, object]:
-        """Build the providers this class declares and *groups* name.
+    def _resolve_hooks(self, groups: list[HookGroup]) -> dict[str, tuple[object, ...]]:
+        """Build the providers this class declares and *groups* name, by hook point.
 
         Raises
         ------
         HookError
-            If both name one point, *groups* name a point this class does not
-            call, a short name `redsun` does not list, or one provider twice
-            with the same keys, a provider cannot be built, or one does not
-            implement the protocol its point calls.
+            If *groups* name a point this class does not call, a short name
+            `redsun` does not list, or one provider twice with the same keys,
+            a point taking one provider is given several, a provider cannot
+            be built, or one does not implement the protocol its point calls.
         """
         points = self.hook_points
         owner = type(self).__name__
-        built: dict[int, object] = {}
-        declared: dict[str, object] = {}
-        for moment, declaration in read_hooks(type(self), points).items():
-            provider = built.get(id(declaration))
-            if provider is None:
-                provider = provider_from_class(declaration, owner)
-                built[id(declaration)] = provider
-            declared[moment] = provider
-
-        # a short name becomes its class path first, so the check for one
-        # provider named twice sees the same provider however it was named
-        groups = [
-            group
-            if ":" in group.provider
-            else group.model_copy(update={"provider": hook_class_path(group.provider)})
-            for group in groups
-        ]
         refuse_unknown_points(groups, points, owner)
-        refuse_ambiguous(groups)
-        configured = resolve_hooks(groups)
-        both = sorted(declared.keys() & configured.keys())
-        if both:
-            named = ", ".join(repr(moment) for moment in both)
-            raise HookError(
-                f"hook point(s) {named} are named both on {owner} and in the "
-                "configuration; a hook point takes one provider, so drop one "
-                "of the two"
-            )
-
-        resolved = {**declared, **configured}
-        for moment, provider in resolved.items():
-            protocol = points[moment]
-            if not isinstance(provider, protocol):
-                raise HookError(
-                    f"hook provider {type(provider).__name__!r} at {moment!r} "
-                    f"does not implement {protocol.__name__}"
-                )
+        refuse_ambiguous(groups, class_path_of)
+        declared = read_hooks(type(self), points)
+        listed = entries_by_point(groups)
+        sources = {
+            moment: (*declared.get(moment, ()), *listed.get(moment, ()))
+            for moment in points
+        }
+        refuse_crowded(sources, points, owner)
+        built = {
+            id(source): self._build_hook(source, owner)
+            for source in distinct(chain.from_iterable(sources.values()))
+        }
+        resolved = {
+            moment: tuple(built[id(source)] for source in named)
+            for moment, named in sources.items()
+        }
+        refuse_misfits(resolved, points)
         return resolved
+
+    def _build_hook(self, source: object, owner: str) -> object:
+        """Construct the provider a class declaration or a file entry names."""
+        if isinstance(source, HookDeclaration):
+            return provider_from_class(source, owner)
+        entry = cast("HookGroup", source)
+        return provider_from_file(entry, class_path_of(entry.provider))
 
     @property
     def name(self) -> str:
@@ -739,9 +737,10 @@ class Session(BuildableSession):
         """Merge the sources, install the hooks, read the declarations, open the logs."""
         installed.cache_clear()
         config = self._configuration()
-        if self.hooks:
+        installed_at = [point for point, providers in self.hooks.items() if providers]
+        if installed_at:
             logger.debug("Hooks installed at:")
-            for point in self.hooks:
+            for point in installed_at:
                 logger.debug("  - %s", point)
         else:
             logger.debug("No hooks installed")
@@ -781,7 +780,7 @@ class Session(BuildableSession):
         self._wiring.path_provider = self._path_provider
         self._open_logs(self._path_provider)
         # registered after the logs, so a provider's teardown is still logged
-        for hook in distinct(self.hooks.values()):
+        for hook in distinct(chain.from_iterable(self.hooks.values())):
             self._register_teardown(hook)
 
     def window_layout(self) -> WindowLayout | None:

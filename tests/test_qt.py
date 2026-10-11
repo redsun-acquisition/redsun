@@ -1011,7 +1011,7 @@ def test_a_hook_answers_the_close_in_place_of_the_prompt(
     shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
     assert session.main_window.close()
-    hook = cast("AlwaysCloses", session.hooks[QtHook.CONFIRM_CLOSE])
+    hook = cast("AlwaysCloses", session.hooks[QtHook.CONFIRM_CLOSE][0])
     assert hook.asked == 1
     assert shown == []
 

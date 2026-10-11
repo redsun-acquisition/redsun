@@ -35,7 +35,7 @@ import logging
 import sys
 import weakref
 from collections.abc import Mapping  # noqa: TC003
-from contextlib import nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import partial
@@ -82,6 +82,7 @@ from .._hooks import (
     ConfiguresMainView,
     ConfirmsClose,
     CreatesApplication,
+    Many,
     WrapsBuild,
 )
 from ..session._base import Session
@@ -102,7 +103,7 @@ from ._color_scheme import (
 from ._garbage import GarbageCollector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Generator, Iterator, Sequence
     from contextlib import AbstractContextManager
     from pathlib import Path
     from types import TracebackType
@@ -439,11 +440,11 @@ class QtSession(DesktopSession[QMainWindow], Session):
     on the GUI thread; while the event loop doesn't run, nothing is collected.
     """
 
-    hook_points: ClassVar[Mapping[str, type]] = {
+    hook_points: ClassVar[Mapping[str, type | Many]] = {
         QtHook.CREATE_APPLICATION: CreatesApplication,
-        QtHook.CONFIGURE_APPLICATION: ConfiguresApplication,
-        QtHook.DURING_BUILD: WrapsBuild,
-        QtHook.CONFIGURE_MAIN_VIEW: ConfiguresMainView,
+        QtHook.CONFIGURE_APPLICATION: Many(ConfiguresApplication),
+        QtHook.DURING_BUILD: Many(WrapsBuild),
+        QtHook.CONFIGURE_MAIN_VIEW: Many(ConfiguresMainView),
         QtHook.CONFIRM_CLOSE: ConfirmsClose,
     }
 
@@ -553,9 +554,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
             `QApplication`.
         """
         super().start_runtime()
-        hooks = self.hooks
-        creator = hooks.get(QtHook.CREATE_APPLICATION)
-        if QApplication.instance() is None and isinstance(creator, CreatesApplication):
+        creators = self.hooks[QtHook.CREATE_APPLICATION]
+        if QApplication.instance() is None and creators:
+            creator = cast("CreatesApplication[QApplication]", creators[0])
             qt_app = creator.create_application(sys.argv)
             if not isinstance(qt_app, QApplication):
                 raise HookError(
@@ -587,9 +588,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
         ColorSchemeMode.from_config(self._configuration().color_scheme).apply()
 
-        configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
-        if isinstance(configurer, ConfiguresApplication):
-            configurer.configure_application(qt_app)
+        for configurer in self.hooks[QtHook.CONFIGURE_APPLICATION]:
+            cast(
+                "ConfiguresApplication[QApplication]", configurer
+            ).configure_application(qt_app)
 
     def _forget_application(self) -> None:
         """Destroy the application by name, freeing the name for the next session."""
@@ -655,9 +657,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
             bar.addPermanentWidget(FailuresButton(failures))
         # before the hook, so the menus it builds show the actions' keys
         self._shortcut_bindings = self._bind_shortcuts(views)
-        dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
-        if isinstance(dresser, ConfiguresMainView):
-            dresser.configure_main_view(window)
+        for dresser in self.hooks[QtHook.CONFIGURE_MAIN_VIEW]:
+            cast("ConfiguresMainView[QMainWindow]", dresser).configure_main_view(window)
         self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()
@@ -1090,9 +1091,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ticked "don't ask again". Otherwise the prompt offers Save, Discard and
         Cancel.
         """
-        confirmer = self.hooks.get(QtHook.CONFIRM_CLOSE)
-        if isinstance(confirmer, ConfirmsClose):
-            return confirmer.confirm_close()
+        confirmers = self.hooks[QtHook.CONFIRM_CLOSE]
+        if confirmers:
+            return cast("ConfirmsClose", confirmers[0]).confirm_close()
         if not self.has_changes() or not self.settings.get(ASK_ON_CLOSE, True):
             return True
         return self._ask_about_changes()
@@ -1220,10 +1221,27 @@ class QtSession(DesktopSession[QMainWindow], Session):
         build. The `runtime` step has run by now, so the `QApplication` a
         hook is handed exists.
         """
-        hook = self.hooks.get(QtHook.DURING_BUILD)
-        if isinstance(hook, WrapsBuild):
-            return hook.during_build(self.app)
-        return nullcontext(self._report)
+        providers = self.hooks[QtHook.DURING_BUILD]
+        return self._span(providers) if providers else nullcontext(self._report)
+
+    @contextmanager
+    def _span(
+        self, providers: tuple[object, ...]
+    ) -> Generator[Callable[[str], None], None, None]:
+        """Open every provider's span in order, and report each step to all of them."""
+        with ExitStack() as stack:
+            reporters = [
+                stack.enter_context(
+                    cast("WrapsBuild[QApplication]", provider).during_build(self.app)
+                )
+                for provider in providers
+            ]
+
+            def report(step: str) -> None:
+                for reporter in reporters:
+                    reporter(step)
+
+            yield report
 
     def show(self) -> None:
         """Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.

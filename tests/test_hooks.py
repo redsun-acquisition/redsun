@@ -113,6 +113,44 @@ class NotAHook:
     """Declares none of the methods any point calls."""
 
 
+class Notes:
+    """Writes its note to the list it is handed when the application is configured."""
+
+    def __init__(self, note: str, log: list[str]) -> None:
+        self.note = note
+        self.log = log
+
+    def configure_application(self, app: QApplication) -> None:
+        self.log.append(self.note)
+
+
+class Signs:
+    """Adds its note to the `notes` the main window carries."""
+
+    def __init__(self, note: str) -> None:
+        self.note = note
+
+    def configure_main_view(self, view: QMainWindow) -> None:
+        view.setProperty("notes", [*(view.property("notes") or []), self.note])
+
+
+class AlwaysRefuses:
+    """Answers the close question with a refusal."""
+
+    def confirm_close(self) -> bool:
+        return False
+
+
+class Answers:
+    """Answers the close question with what it was built with."""
+
+    def __init__(self, answer: bool = True) -> None:
+        self.answer = answer
+
+    def confirm_close(self) -> bool:
+        return self.answer
+
+
 class ClosingPair(MockBoth):  # type: ignore[misc]
     """Serves two points, and records its shutdown."""
 
@@ -176,7 +214,8 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
 ) -> None:
     """Run a hook at the hook point named by its attribute."""
     app = build(StyledApp)
-    installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    (provider,) = app.hooks[QtHook.CONFIGURE_APPLICATION]
+    installed = cast("MockStyle", provider)
     assert installed.seen == [qapp]
 
 
@@ -212,7 +251,8 @@ def test_a_provider_may_inherit_the_protocol_of_its_point(
         configure_application: AsHook[Heir]
 
     app = build(App)
-    installed = cast("Heir", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    (provider,) = app.hooks[QtHook.CONFIGURE_APPLICATION]
+    installed = cast("Heir", provider)
     assert installed.seen == [qapp]
 
 
@@ -226,7 +266,8 @@ def test_declare_carries_the_providers_arguments(
         configure_application: Annotated[AsHook[MockStyle], Declare(style="dark")]
 
     app = build(App)
-    installed = cast("MockStyle", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    (provider,) = app.hooks[QtHook.CONFIGURE_APPLICATION]
+    installed = cast("MockStyle", provider)
     assert installed.style == "dark"
 
 
@@ -244,7 +285,9 @@ def test_one_annotation_serves_several_points(
 
     app = build(App)
     hooks = app.hooks
-    assert hooks[QtHook.CONFIGURE_APPLICATION] is hooks[QtHook.CONFIGURE_MAIN_VIEW]
+    (styled,) = hooks[QtHook.CONFIGURE_APPLICATION]
+    (branded,) = hooks[QtHook.CONFIGURE_MAIN_VIEW]
+    assert styled is branded
     assert app.main_window.windowTitle() == "branded"
 
 
@@ -277,10 +320,10 @@ def test_two_declarations_may_not_claim_one_point() -> None:
     """Refuse two declarations claiming the same hook point."""
 
     class App(QtSession):
-        first: Annotated[AsHook[MockStyle], Serves(QtHook.CONFIGURE_APPLICATION)]
-        second: Annotated[AsHook[MockBoth], Serves(QtHook.CONFIGURE_APPLICATION)]
+        first: Annotated[AsHook[Answers], Serves(QtHook.CONFIRM_CLOSE)]
+        second: Annotated[AsHook[AlwaysRefuses], Serves(QtHook.CONFIRM_CLOSE)]
 
-    with pytest.raises(HookError, match="both claim the hook point"):
+    with pytest.raises(HookError, match="takes one provider"):
         App().build()
 
 
@@ -302,6 +345,49 @@ def test_a_provider_missing_the_method_is_refused() -> None:
 
     with pytest.raises(HookError, match="does not implement ConfiguresApplication"):
         App().build()
+
+
+def test_a_points_providers_run_in_order_the_class_first(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Run every provider of a point: the class's in declaration order, then the file's as listed."""
+
+    class App(QtSession):
+        configure_main_view: Annotated[AsHook[Signs], Declare(note="class first")]
+        second: Annotated[
+            AsHook[Signs],
+            Serves(QtHook.CONFIGURE_MAIN_VIEW),
+            Declare(note="class second"),
+        ]
+
+    listed = [
+        {"provider": f"{__name__}:Signs", "kwargs": {"note": note}}
+        for note in ("file first", "file second")
+    ]
+    app = build(App, {"hooks": {"configure_main_view": listed}})
+
+    order = ["class first", "class second", "file first", "file second"]
+    assert app.main_window.property("notes") == order
+    installed = app.hooks[QtHook.CONFIGURE_MAIN_VIEW]
+    assert [cast("Signs", provider).note for provider in installed] == order
+
+
+def test_a_session_maps_every_point_it_calls(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Map every hook point to its providers, none included."""
+    assert build(QtSession).hooks == {point: () for point in QtHook}
+
+
+def test_a_point_taking_one_provider_refuses_a_second() -> None:
+    """Refuse a second provider at a point whose answer the session uses."""
+    listed = [
+        {"provider": f"{__name__}:Answers"},
+        {"provider": f"{__name__}:Answers", "kwargs": {"answer": False}},
+    ]
+
+    with pytest.raises(HookError, match="takes one provider"):
+        QtSession({"hooks": {"confirm_close": listed}}).build()
 
 
 def test_the_configuration_names_a_provider(
@@ -328,14 +414,12 @@ def test_one_point_may_not_be_named_twice_over() -> None:
     """Refuse a hook point named both on the class and in the configuration."""
 
     class App(QtSession):
-        configure_main_view: AsHook[MockBranding]
+        confirm_close: AsHook[Answers]
         config: ClassVar[dict[str, Any]] = {
-            "hooks": {
-                "configure_main_view": {"provider": "mock_bundle.hooks:MockBranding"}
-            }
+            "hooks": {"confirm_close": {"provider": f"{__name__}:Answers"}}
         }
 
-    with pytest.raises(HookError, match="named both on App and in the configuration"):
+    with pytest.raises(HookError, match="takes one provider"):
         App().build()
 
 
@@ -353,7 +437,9 @@ def test_an_entry_two_points_share_is_one_provider(
 
     hooks = build(App).hooks
 
-    assert hooks["configure_application"] is hooks["configure_main_view"]
+    (styled,) = hooks["configure_application"]
+    (branded,) = hooks["configure_main_view"]
+    assert styled is branded
 
 
 def test_two_equal_entries_are_not_one_provider() -> None:
@@ -383,7 +469,8 @@ def test_a_short_name_installs_the_built_in_provider(
     """Install the built-in provider an entry names by its short name, alone or as `provider`."""
     hooks = build(QtSession, {"hooks": {"configure_application": entry}}).hooks
 
-    assert isinstance(hooks[QtHook.CONFIGURE_APPLICATION], NapariStyle)
+    (installed,) = hooks[QtHook.CONFIGURE_APPLICATION]
+    assert isinstance(installed, NapariStyle)
 
 
 @pytest.mark.parametrize(
@@ -497,13 +584,13 @@ def test_create_application_is_consulted_only_with_none_running(
     founding = {"provider": f"{__name__}:Founder", "kwargs": {"app": qapp}}
     config = {"hooks": {"create_application": founding}}
     first = build(StyledApp, config)
-    unused = cast("Founder", first.hooks[QtHook.CREATE_APPLICATION])
+    unused = cast("Founder", first.hooks[QtHook.CREATE_APPLICATION][0])
     first.shutdown()
 
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
     second = build(StyledApp, config)
-    founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION])
-    styler = cast("MockStyle", second.hooks[QtHook.CONFIGURE_APPLICATION])
+    founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION][0])
+    styler = cast("MockStyle", second.hooks[QtHook.CONFIGURE_APPLICATION][0])
 
     assert unused.seen == []
     assert founder.seen == [sys.argv]
