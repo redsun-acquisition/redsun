@@ -112,8 +112,10 @@ def test_the_font_size_sets_the_stylesheets_base_size(
     sheet = qapp.styleSheet()
 
     assert "font-size: 14pt;" in sheet
-    assert "font-size: 15.0pt;" in sheet
+    # one step above the base: 15.0pt, or 15.33pt on macOS, which scales steps
+    assert re.search(r"font-size: 15\.\d+pt;", sheet)
     assert "font-size: 9pt;" not in sheet
+    assert "font-size: 12pt;" not in sheet
 
 
 @pytest.mark.parametrize("font_size", [0, -3, 9.5, "9", True])
