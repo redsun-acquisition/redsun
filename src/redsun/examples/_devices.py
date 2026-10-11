@@ -6,7 +6,6 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 import bluesky.plan_stubs as bps
-from bluesky.protocols import Movable  # noqa: TC002
 from bluesky.utils import MsgGenerator  # noqa: TC002
 from ophyd_async.core import (
     DeviceMap,
@@ -19,12 +18,17 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
+from redsun.engine.plan_stubs import lock_wrapper
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from event_model import DataKey
 
     from redsun import PlanEntry
+
+PAUSE = 0.5
+"""Seconds the walk waits after each move, so a run lasts long enough to watch, pause or stop."""
 
 
 class Axis(StandardReadable, StandardMovable[float]):
@@ -96,8 +100,17 @@ class Plans:
         return {"walk": {"plan": self.walk}}
 
     def walk(
-        self, motor: Movable[float], steps: int = 3, size: float = 1.0
+        self, motor: Axis, steps: int = 3, size: float = 1.0
     ) -> MsgGenerator[None]:
-        """Move *motor* by *size* *steps* times."""
-        for step in range(1, steps + 1):
-            yield from bps.mv(motor, step * size)
+        """Send *motor* to *size*, then to twice *size*, and so on *steps* times, pausing after each move.
+
+        The motor stays locked while the plan runs.
+        """
+        yield from lock_wrapper(strides(motor, steps, size), motor)
+
+
+def strides(motor: Axis, steps: int, size: float) -> MsgGenerator[None]:
+    """Yield the moves of a walk, and the pause after each."""
+    for step in range(1, steps + 1):
+        yield from bps.mv(motor, step * size)
+        yield from bps.sleep(PAUSE)

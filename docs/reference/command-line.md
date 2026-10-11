@@ -24,7 +24,9 @@ The example is a [`QtSession`][redsun.qt.QtSession] holding every component
 `redsun` ships: the acquisition, positioner, lights and log views, with
 their presenters. A stage with two axes, a focus axis, a laser and an LED
 stand in for hardware, so nothing outside the process moves. One plan,
-`walk`, steps the focus.
+`walk`, sends the focus to a few positions in turn with a pause after each,
+and holds it locked while it runs. The session class and the function
+making its configuration are in `redsun.examples`.
 
 The example needs a Qt binding, which the `pyqt` and `pyside` extras install.
 Without one the command says which extra to install and exits with 1. It
