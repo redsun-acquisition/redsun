@@ -5,13 +5,15 @@ from __future__ import annotations
 import gc
 from typing import TYPE_CHECKING
 
+import pytest
+
 from redsun import Session
 from tests.sdk.helpers import automatic_collection
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import pytest
+    from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
 
@@ -102,6 +104,28 @@ def test_after():
 """Three tests, the second turning automatic collection on and leaving it on."""
 
 
+THE_SUITES_QAPP = """
+import pytest
+from qtpy.QtWidgets import QApplication
+
+
+@pytest.fixture
+def qapp():
+    return QApplication.instance()
+"""
+"""A `qapp` fixture handing out the application the outer run holds."""
+
+STYLES_THE_APPLICATION = """
+def test_styles_the_application(qapp):
+    qapp.setStyleSheet("QLabel { color: red; }")
+
+
+def test_after(qapp):
+    assert qapp.styleSheet() == ""
+"""
+"""Two tests, the first leaving a stylesheet on the application."""
+
+
 def test_a_session_keeps_its_settings_under_tmp_path(
     tmp_path: Path, build: BuildSession
 ) -> None:
@@ -182,3 +206,22 @@ def test_a_test_leaving_collection_on_is_refused(pytester: pytest.Pytester) -> N
             "ERROR *::test_turns_collection_on*",
         ]
     )
+
+
+@pytest.mark.qt
+def test_a_test_leaving_the_application_changed_is_refused(
+    qapp: QApplication, pytester: pytest.Pytester
+) -> None:
+    """Fail the test that left the application's stylesheet changed, and put it back."""
+    pytester.makeconftest(THE_SUITES_QAPP)
+    pytester.makepyfile(STYLES_THE_APPLICATION)
+
+    result = pytester.runpytest("-p", "redsun.testing")
+    left = qapp.styleSheet()
+    qapp.setStyleSheet("")
+
+    result.assert_outcomes(passed=2, errors=1)
+    result.stdout.fnmatch_lines(
+        ["*left the application changed*", "ERROR *::test_styles_the_application*"]
+    )
+    assert left == ""

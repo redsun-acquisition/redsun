@@ -4,7 +4,8 @@ A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and turn automatic garbage collection off for the
-run, collecting after each test module on the main thread.
+run, collecting after each test module on the main thread. A test using `qapp`
+that leaves the application's stylesheet, style or font changed fails.
 On Windows under Qt's `offscreen` platform, they also point Qt at the system
 fonts, which that platform otherwise lacks.
 The module defines no `qapp`, so it combines with `pytest-qt`.
@@ -32,6 +33,8 @@ from .services._transports import CHANNEL_ACCESS, TRANSPORTS
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
+    from qtpy.QtWidgets import QApplication
+
     from redsun.session import Launch
 
     from ._config import Source
@@ -44,6 +47,7 @@ __all__ = [
     "config_home",
     "data_directory",
     "empty_emission_queue",
+    "keep_application_as_found",
     "keep_automatic_collection_off",
     "log_directory",
     "no_automatic_collection",
@@ -216,6 +220,53 @@ def keep_automatic_collection_off(
             "state the test found, since a collection on another thread can "
             "destroy a widget there and abort pyside6"
         )
+
+
+def application_state(app: QApplication) -> tuple[str, str, str]:
+    """Return *app*'s stylesheet, style name and font."""
+    style = app.style()
+    return (
+        app.styleSheet(),
+        style.objectName() if style is not None else "",
+        app.font().toString(),
+    )
+
+
+@pytest.fixture(autouse=True)
+def keep_application_as_found(
+    request: pytest.FixtureRequest,
+) -> Generator[None, None, None]:
+    """Fail a test using `qapp` that left the application's stylesheet, style or font changed.
+
+    A hook provider undoes in `shutdown` what it changed on the application,
+    and a test that changes it by hand puts it back. A test that does not ask
+    for the `qapp` fixture is not checked.
+
+    Raises
+    ------
+    RuntimeError
+        If the three differ after the test from before it; the stylesheet is
+        put back first, so the tests after it start from what this one found.
+    """
+    if "qapp" not in request.fixturenames:
+        yield
+        return
+    app: QApplication = request.getfixturevalue("qapp")
+    before = application_state(app)
+    yield
+    after = application_state(app)
+    if after == before:
+        return
+    app.setStyleSheet(before[0])
+    names = ("stylesheet", "style", "font")
+    changed = [
+        name for name, was, now in zip(names, before, after, strict=True) if was != now
+    ]
+    raise RuntimeError(
+        f"this test left the application changed ({', '.join(changed)}); a hook "
+        "provider undoes its work in shutdown, and a test that changes the "
+        "application puts it back"
+    )
 
 
 @pytest.fixture(autouse=True)

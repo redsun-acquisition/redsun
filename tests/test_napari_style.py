@@ -77,14 +77,17 @@ def test_shutdown_restores_the_stylesheet_and_stops_following(
     qapp: QApplication, build: BuildSession, unstyled: None
 ) -> None:
     """Restore the application's own stylesheet at shutdown, and ignore later scheme changes."""
-    qapp.setStyleSheet("QLabel { color: red; }")
     hints = QGuiApplication.styleHints()
     assert hints is not None
+    qapp.setStyleSheet("QLabel { color: red; }")
+    try:
+        build(StyledApp).shutdown()
+        hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
+        restored = qapp.styleSheet()
+    finally:
+        qapp.setStyleSheet("")
 
-    build(StyledApp).shutdown()
-    hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
-
-    assert qapp.styleSheet() == "QLabel { color: red; }"
+    assert restored == "QLabel { color: red; }"
 
 
 def test_both_themes_icons_are_written_when_the_session_builds(
