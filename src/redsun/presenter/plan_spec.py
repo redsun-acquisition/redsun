@@ -21,7 +21,6 @@ from pathlib import Path
 from types import NoneType
 from typing import (
     TYPE_CHECKING,
-    Annotated,
     Any,
     ForwardRef,
     Literal,
@@ -347,9 +346,7 @@ def _extract_action_meta(
         and bool(args)
         and _is_action_type(args[0])
     )
-    is_union_containing_action = any(
-        _is_action_type(arg) for arg in args if arg is not type(None)
-    )
+    is_union_containing_action = any(_is_action_type(arg) for arg in args)
 
     if not (is_action_type or is_sequence_action or is_union_containing_action):
         raise TypeError(
@@ -492,96 +489,137 @@ def create_plan_spec(
     func_obj: cabc.Callable[..., cabc.Generator[Any, Any, Any]] = getattr(
         plan, "__func__", plan
     )
+    plan_name = func_obj.__name__
 
     if not inspect.isgeneratorfunction(func_obj):
-        raise TypeError(f"Plan {func_obj.__name__!r} must be a generator function.")
+        raise TypeError(f"Plan {plan_name!r} must be a generator function.")
 
     sig = signature(func_obj)
     type_hints, unresolved = _resolve_annotations(func_obj)
+    _check_return(plan_name, type_hints, unresolved)
 
-    if "return" in unresolved:
-        raise UnresolvableAnnotationError(
-            func_obj.__name__, "return", unresolved["return"]
+    params: list[ParamDescription] = []
+    for name, param in _iterate_signature(sig):
+        if name in unresolved:
+            raise UnresolvableAnnotationError(plan_name, name, unresolved[name])
+        annotated = type_hints.get(name, param.annotation)
+        params.append(
+            _describe(
+                plan_name, param, Any if annotated is _empty else annotated, devices
+            )
         )
+    _refuse_repeated_actions(plan_name, params)
+
+    marked = getattr(func_obj, "__continuous__", None)
+
+    return PlanSpec(
+        name=plan_name,
+        docs=inspect.getdoc(func_obj) or "No documentation available.",
+        parameters=params,
+        continuous=marked is not None,
+        pausable=marked is not None and marked.pausable,
+    )
+
+
+def _check_return(
+    plan_name: str, type_hints: Mapping[str, Any], unresolved: Mapping[str, str]
+) -> None:
+    """Refuse a plan whose return annotation is missing, unresolved or not a `MsgGenerator`.
+
+    Raises
+    ------
+    TypeError
+        If the return type is missing or is not a `Generator`.
+    UnresolvableAnnotationError
+        If the return annotation names something missing at runtime.
+    """
+    if "return" in unresolved:
+        raise UnresolvableAnnotationError(plan_name, "return", unresolved["return"])
 
     return_type = type_hints.get("return", None)
-
     if return_type is None:
-        raise TypeError(
-            f"Plan {func_obj.__name__!r} must have a return type annotation."
-        )
+        raise TypeError(f"Plan {plan_name!r} must have a return type annotation.")
 
     ret_origin = get_origin(return_type)
-    is_generator = ret_origin is not None and safe_issubclass(
-        ret_origin, cabc.Generator
-    )
-    if not is_generator:
+    if ret_origin is None or not safe_issubclass(ret_origin, cabc.Generator):
         raise TypeError(
-            f"Plan {func_obj.__name__!r} must have a MsgGenerator return type; "
+            f"Plan {plan_name!r} must have a MsgGenerator return type; "
             f"got {return_type!r}."
         )
 
-    params: list[ParamDescription] = []
 
-    for name, param in _iterate_signature(sig):
-        if name in unresolved:
-            raise UnresolvableAnnotationError(func_obj.__name__, name, unresolved[name])
+def _describe(
+    plan_name: str,
+    param: Parameter,
+    annotated: Any,
+    devices: Mapping[str, OADevice],
+) -> ParamDescription:
+    """Return the description of *param*, annotated as *annotated*.
 
-        raw_ann: Any = type_hints.get(name, param.annotation)
-        if raw_ann is _empty:
-            raw_ann = Any
+    Raises
+    ------
+    UnresolvableAnnotationError
+        If no view can build a control for the annotation, and the parameter
+        has no default to fall back on.
+    ValueError
+        If the parameter's default breaks its own limits.
+    """
+    ann = unwrap(annotated)
+    actions_meta = _extract_action_meta(param, ann)
+    pkind = ParamKind(param.kind)
 
-        if get_origin(raw_ann) is Annotated:
-            ann_args = get_args(raw_ann)
-            ann: Any = ann_args[0] if ann_args else Any
-        else:
-            ann = raw_ann
+    # Action parameters never get a widget, so they skip dispatch
+    if actions_meta is not None:
+        fields = _FieldsFromAnnotation()
+    else:
+        fields = _fields_from_annotation(ann, pkind, devices)
 
-        actions_meta = _extract_action_meta(param, ann)
+    shown = (
+        actions_meta is not None
+        or pkind is ParamKind.VAR_KEYWORD
+        or fields.choices is not None
+        or _can_show(ann)
+    )
+    # refuse now: failing here is clearer than a broken control or a
+    # crash once the plan runs
+    if not shown and param.default is _empty:
+        raise UnresolvableAnnotationError(plan_name, param.name, ann)
 
-        pkind = ParamKind(param.kind)
-
-        # Action parameters never get a widget, so they skip dispatch
-        if actions_meta is not None:
-            fields = _FieldsFromAnnotation()
-        else:
-            fields = _fields_from_annotation(ann, pkind, devices)
-
-        shown = (
-            actions_meta is not None
-            or pkind is ParamKind.VAR_KEYWORD
-            or fields.choices is not None
-            or _can_show(ann)
+    description = ParamDescription(
+        name=param.name,
+        kind=pkind,
+        annotation=ann,
+        default=param.default,
+        choices=fields.choices,
+        multiselect=fields.multiselect,
+        hidden=not shown,
+        actions=actions_meta,
+        device_proto=fields.device_proto,
+        annotated=annotated,
+    )
+    broken = (
+        description.problems(param.default)
+        if param.default is not _empty and shown
+        else []
+    )
+    if broken:
+        raise ValueError(
+            f"Plan {plan_name!r}: the default of {param.name!r} breaks its "
+            f"own limits: {'; '.join(broken)}"
         )
-        # refuse now: failing here is clearer than a broken control or a
-        # crash once the plan runs
-        if not shown and param.default is _empty:
-            raise UnresolvableAnnotationError(func_obj.__name__, name, ann)
+    return description
 
-        description = ParamDescription(
-            name=name,
-            kind=pkind,
-            annotation=ann,
-            default=param.default,
-            choices=fields.choices,
-            multiselect=fields.multiselect,
-            hidden=not shown,
-            actions=actions_meta,
-            device_proto=fields.device_proto,
-            annotated=raw_ann,
-        )
-        broken = (
-            description.problems(param.default)
-            if param.default is not _empty and shown
-            else []
-        )
-        if broken:
-            raise ValueError(
-                f"Plan {func_obj.__name__!r}: the default of {name!r} breaks its "
-                f"own limits: {'; '.join(broken)}"
-            )
-        params.append(description)
 
+def _refuse_repeated_actions(
+    plan_name: str, params: Sequence[ParamDescription]
+) -> None:
+    """Refuse a plan declaring two actions of one name.
+
+    Raises
+    ------
+    ValueError
+        Naming every action declared more than once.
+    """
     declared = [
         action.name
         for description in params
@@ -595,20 +633,10 @@ def create_plan_spec(
     twice = sorted({name for name in declared if declared.count(name) > 1})
     if twice:
         raise ValueError(
-            f"plan {func_obj.__name__!r} declares more than one action named "
+            f"plan {plan_name!r} declares more than one action named "
             f"{', '.join(repr(name) for name in twice)}; a name tells the "
             "actions of a plan apart"
         )
-
-    marked = getattr(func_obj, "__continuous__", None)
-
-    return PlanSpec(
-        name=func_obj.__name__,
-        docs=inspect.getdoc(func_obj) or "No documentation available.",
-        parameters=params,
-        continuous=marked is not None,
-        pausable=marked is not None and marked.pausable,
-    )
 
 
 def collect_arguments(

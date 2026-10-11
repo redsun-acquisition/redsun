@@ -388,26 +388,16 @@ class PositionerPresenter(Loggable):
             if axis_info is None:
                 del self._axes[device][name]
                 continue
-            if configuration is not None:
-                axis_info = dataclasses.replace(
-                    axis_info, configuration=tuple(configuration.descriptors)
-                )
-            info.setdefault(device, {})[name] = axis_info
+            info.setdefault(device, {})[name] = dataclasses.replace(
+                axis_info,
+                stoppable=axis_info.stoppable
+                or isinstance(self.devices.get(device), Stoppable),
+                configuration=axis_info.configuration
+                if configuration is None
+                else tuple(configuration.descriptors),
+            )
         self._axes = {device: axes for device, axes in self._axes.items() if axes}
-        stoppable = {
-            device
-            for device in self._axes
-            if isinstance(self.devices.get(device), Stoppable)
-        }
-        return {
-            device: {
-                name: dataclasses.replace(axis_info, stoppable=True)
-                if device in stoppable
-                else axis_info
-                for name, axis_info in axes.items()
-            }
-            for device, axes in info.items()
-        }
+        return info
 
     async def _follow_axis(
         self, device: str, name: str, axis: Axis

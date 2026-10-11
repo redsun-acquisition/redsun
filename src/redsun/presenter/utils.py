@@ -12,6 +12,8 @@ from typing import Any, TypeVar, get_args, get_origin
 
 from ophyd_async.core import Device as OADevice
 
+from ._shapes import safe_issubclass
+
 __all__ = [
     "device_class",
     "get_choice_list",
@@ -75,17 +77,6 @@ def _is_device_annotation(ann: Any) -> bool:
     return isinstance(ann, type) and getattr(ann, "_is_runtime_protocol", False)
 
 
-def _origin_subclasses(ann: Any, base: type) -> bool:
-    """Return True if *ann* is a generic alias whose origin subclasses *base*."""
-    origin = get_origin(ann)
-    if origin is None:
-        return False
-    try:
-        return issubclass(origin, base)
-    except TypeError:
-        return False
-
-
 def _single_device_arg(ann: Any) -> bool:
     """Return True if *ann* takes exactly one parameter and it is a device."""
     args = get_args(ann)
@@ -100,7 +91,7 @@ def issequence(ann: Any) -> bool:
     `str` and `bytes` are sequences, but not generic aliases
     (`get_origin(str)` is `None`), so they are excluded.
     """
-    return _origin_subclasses(ann, Sequence)
+    return safe_issubclass(get_origin(ann), Sequence)
 
 
 def isdevicesequence(ann: Any) -> bool:
@@ -110,7 +101,7 @@ def isdevicesequence(ann: Any) -> bool:
 
 def isdeviceset(ann: Any) -> bool:
     """Return True if *ann* is `Set[T]` (or `AbstractSet[T]`, `FrozenSet[T]`) where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
-    return _origin_subclasses(ann, AbstractSet) and _single_device_arg(ann)
+    return safe_issubclass(get_origin(ann), AbstractSet) and _single_device_arg(ann)
 
 
 def isdevice(ann: Any) -> bool:
