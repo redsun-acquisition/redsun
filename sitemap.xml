@@ -106,6 +106,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0031-hook-points-take-several-providers/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
       </url>
       <url>
@@ -308,6 +311,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/environment/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/hook-points/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/log-files/</loc>

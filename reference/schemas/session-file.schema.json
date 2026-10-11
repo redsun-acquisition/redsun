@@ -642,10 +642,27 @@
           "additionalProperties": {
             "anyOf": [
               {
-                "type": "string"
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/HookEntry"
+                  }
+                ]
               },
               {
-                "$ref": "#/$defs/HookEntry"
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/HookEntry"
+                    }
+                  ]
+                }
               }
             ]
           }

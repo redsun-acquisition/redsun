@@ -371,6 +371,8 @@
       
         
       
+        
+      
     
     
     
@@ -3349,6 +3351,8 @@
       
         
       
+        
+      
     
     
     
@@ -4214,6 +4218,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0031-hook-points-take-several-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  31. Hook points take several providers and tolerate one that fails
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4244,6 +4275,8 @@
       
         
           
+        
+      
         
       
         
@@ -4479,6 +4512,35 @@
   
   
     <li class="md-nav__item">
+      <a href="../../hook-points/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-anchor" viewBox="0 0 24 24"><path d="M12 6v16M19 13l2-1a9 9 0 0 1-18 0l2 1M9 11h6"/><circle cx="12" cy="4" r="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Hook points
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../environment/" class="md-nav__link">
         
   
@@ -4591,10 +4653,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="">
             
   
   
@@ -4612,8 +4674,8 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="true">
-            <label class="md-nav__title" for="__nav_5_6">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_5_7">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -5224,6 +5286,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.testing.keep_application_as_found" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;keep_application_as_found
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.testing.start_service" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5368,10 +5441,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_8" >
         
           
-          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_8" id="__nav_5_8_label" tabindex="">
             
   
   
@@ -5389,8 +5462,8 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_5_7">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5_8">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -5762,6 +5835,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.testing.keep_application_as_found" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;keep_application_as_found
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.testing.start_service" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5818,6 +5902,8 @@
       
         
           
+        
+      
         
       
         
@@ -5935,7 +6021,8 @@
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its <code>tmp_path</code>, drop the <code>psygnal</code>
 emissions it left queued, and turn automatic garbage collection off for the
-run, collecting after each test module on the main thread.
+run, collecting after each test module on the main thread. A test using <code>qapp</code>
+that leaves the application's stylesheet, style or font changed fails.
 On Windows under Qt's <code>offscreen</code> platform, they also point Qt at the system
 fonts, which that platform otherwise lacks.
 The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</code>.</p>
@@ -6304,6 +6391,55 @@ found before it ends. Nothing is collected here: the state is only read.</p>
                 <p>If the test, or a session it left for <code>build</code> to shut down, turned
 automatic collection on; it is turned off again first, so the tests
 after it stay safe.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="redsun.testing.keep_application_as_found" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">keep_application_as_found</span>
+
+
+<a href="#redsun.testing.keep_application_as_found" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">keep_application_as_found</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">request</span><span class="p">:</span> <span class="n">FixtureRequest</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Fail a test using <code>qapp</code> that left the application's stylesheet, style or font changed.</p>
+<p>A hook provider undoes in <code>shutdown</code> what it changed on the application,
+and a test that changes it by hand puts it back. A test that does not ask
+for the <code>qapp</code> fixture is not checked.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the three differ after the test from before it; the stylesheet is
+put back first, so it does not style the tests after this one.</p>
               </div>
             </td>
           </tr>

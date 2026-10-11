@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/reference/">
       
       
-        <link rel="prev" href="../explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it/">
+        <link rel="prev" href="../explanation/decisions/0031-hook-points-take-several-providers/">
       
       
         <link rel="next" href="../explanation/glossary/">
@@ -357,6 +357,8 @@
       
         
           
+        
+      
         
       
         
@@ -3349,6 +3351,8 @@
       
         
       
+        
+      
     
     
     
@@ -4214,6 +4218,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/decisions/0031-hook-points-take-several-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  31. Hook points take several providers and tolerate one that fails
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4244,6 +4275,8 @@
       
         
           
+        
+      
         
       
         
@@ -4479,6 +4512,35 @@
   
   
     <li class="md-nav__item">
+      <a href="./hook-points/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-anchor" viewBox="0 0 24 24"><path d="M12 6v16M19 13l2-1a9 9 0 0 1-18 0l2 1M9 11h6"/><circle cx="12" cy="4" r="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Hook points
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="./environment/" class="md-nav__link">
         
   
@@ -4589,10 +4651,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="">
             
   
   
@@ -4610,8 +4672,8 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_5_6">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5_7">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -5151,10 +5213,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_8" >
         
           
-          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_8" id="__nav_5_8_label" tabindex="">
             
   
   
@@ -5172,8 +5234,8 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_5_7">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5_8">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -5412,6 +5474,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hook-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hook points
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#environment" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5515,6 +5588,8 @@
       
         
       
+        
+      
     
     
     
@@ -5559,6 +5634,11 @@ release notes.</p>
 <li><a href="session-file/">Session file</a>: every key of a session file</li>
 <li><a href="plugin-manifest/">Plugin manifest</a>: every key of the manifest of a
   plugin</li>
+</ul>
+<h3 id="hook-points">Hook points<a class="headerlink" href="#hook-points" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="hook-points/">Hook points</a>: the moments a session calls its hook
+  providers at, their order, and what a failure does</li>
 </ul>
 <h3 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h3>
 <ul>
@@ -5741,7 +5821,7 @@ release notes.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 30. napari&#x27;s styling is copied until napari publishes it">
+          <a href="../explanation/decisions/0031-hook-points-take-several-providers/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 31. Hook points take several providers and tolerate one that fails">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -5751,7 +5831,7 @@ release notes.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                30. napari's styling is copied until napari publishes it
+                31. Hook points take several providers and tolerate one that fails
               </div>
             </div>
           </a>
