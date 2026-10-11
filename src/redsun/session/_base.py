@@ -925,10 +925,9 @@ class Session(BuildableSession):
             If the configuration sets `strict` and the layout names such a view.
         """
         placements: dict[str, Placement | None] = {
-            name: declaration.placement
+            declaration.name: declaration.placement
             or getattr(declaration.instance, "placement", None)
-            for name, declaration in self._declarations.items()
-            if declaration.kind is Layer.VIEW
+            for declaration in self._view_declarations()
         }
         layout, dropped = resolved_layout(
             self._window_layout, placements, self.frontend
@@ -1542,6 +1541,10 @@ class Session(BuildableSession):
     def disconnect_all(self) -> None:
         """Undo every connection and subscription made through this session."""
         self._wiring.undo()
+
+    def _view_declarations(self) -> list[Declaration]:
+        """Return the declarations of the views, built or not, in the order they are declared."""
+        return [d for d in self._declarations.values() if d.kind is Layer.VIEW]
 
     def _components(self) -> list[Declaration]:
         return [

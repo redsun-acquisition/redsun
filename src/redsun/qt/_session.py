@@ -68,6 +68,7 @@ from qtpy.QtWidgets import (
     QFileDialog,
     QMainWindow,
     QMenu,
+    QMenuBar,
     QMessageBox,
     QSplitter,
     QTabWidget,
@@ -194,7 +195,7 @@ class Dock(Placement):
     """Name of the docks it is tabbed with on the same edge; `None` for none."""
 
     def __post_init__(self) -> None:
-        if self.area not in get_args(Area):
+        if self.area not in EDGE_NAMES:
             raise ValueError(
                 f"Dock({self.area!r}) names no edge of the window; "
                 f"use one of {', '.join(get_args(Area))}"
@@ -556,18 +557,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """
         super().start_runtime()
         self._refuse_failed_creator()
-        creators = self.hooks[QtHook.CREATE_APPLICATION]
-        if QApplication.instance() is None and creators:
-            creator = cast("CreatesApplication[QApplication]", creators[0])
-            qt_app = creator.create_application(sys.argv)
-            if not isinstance(qt_app, QApplication):
-                raise HookError(
-                    f"hook provider {type(creator).__name__!r} at "
-                    f"{QtHook.CREATE_APPLICATION.value!r} returned "
-                    f"{type(qt_app).__name__}, not a QApplication"
-                )
-        else:
-            qt_app = application()
+        qt_app = self._make_application()
         # the session holds it: nothing else does, and a collected
         # QApplication takes the next widget built with it
         self._qt_app = qt_app
@@ -594,6 +584,27 @@ class QtSession(DesktopSession[QMainWindow], Session):
             QtHook.CONFIGURE_APPLICATION,
             lambda provider: provider.configure_application(qt_app),
         )
+
+    def _make_application(self) -> QApplication:
+        """Return the application the `create_application` provider makes, or else the running one or a new one.
+
+        Raises
+        ------
+        HookError
+            If the provider returns anything but a `QApplication`.
+        """
+        creators = self.hooks[QtHook.CREATE_APPLICATION]
+        if QApplication.instance() is not None or not creators:
+            return application()
+        creator = cast("CreatesApplication[QApplication]", creators[0])
+        qt_app = creator.create_application(sys.argv)
+        if not isinstance(qt_app, QApplication):
+            raise HookError(
+                f"hook provider {type(creator).__name__!r} at "
+                f"{QtHook.CREATE_APPLICATION.value!r} returned "
+                f"{type(qt_app).__name__}, not a QApplication"
+            )
+        return qt_app
 
     def _forget_application(self) -> None:
         """Destroy the application by name, freeing the name for the next session."""
@@ -658,7 +669,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         if failures and bar is not None:
             bar.addPermanentWidget(FailuresButton(failures))
         # before the hook, so the menus it builds show the actions' keys
-        self._shortcut_bindings = self._bind_shortcuts(views)
+        self._bind_shortcuts(views)
         self.call_hooks(
             QtHook.CONFIGURE_MAIN_VIEW,
             lambda provider: provider.configure_main_view(window),
@@ -675,23 +686,20 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """
         built = self.views
         views: dict[str, AttachableComponent] = {}
-        for name, declaration in self.declarations.items():
-            if declaration.kind is not Layer.VIEW:
-                continue
+        for declaration in self._view_declarations():
+            name, placement = declaration.name, declaration.placement
             if name in built:
                 views[name] = built[name]
-                continue
-            placement = declaration.placement
-            if name in self._failed and isinstance(placement, (Dock, Central)):
+            elif name in self._failed and isinstance(placement, (Dock, Central)):
                 views[name] = FailedView(name, self._failed[name], placement)
         return views
 
     def _declared_placements(self) -> dict[str, Placement]:
         """Return, by name, the placement each view's declaration chose."""
         return {
-            name: declaration.placement
-            for name, declaration in self.declarations.items()
-            if declaration.kind is Layer.VIEW and declaration.placement is not None
+            declaration.name: declaration.placement
+            for declaration in self._view_declarations()
+            if declaration.placement is not None
         }
 
     def restore_layout(self) -> None:
@@ -757,9 +765,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         not.
         """
         placements: dict[str, Placement | None] = {
-            name: declaration.placement
-            for name, declaration in self.declarations.items()
-            if declaration.kind is Layer.VIEW
+            declaration.name: declaration.placement
+            for declaration in self._view_declarations()
         }
         layout, _ = resolved_layout(self._window_layout, placements, self.frontend)
         declared = self._window_layout or WindowLayout()
@@ -781,9 +788,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             "window.center", centre_state(self._main_window, self._shown_layout)
         )
 
-    def _bind_shortcuts(
-        self, views: Mapping[str, AttachableComponent]
-    ) -> list[Binding]:
+    def _bind_shortcuts(self, views: Mapping[str, AttachableComponent]) -> None:
         """Register each component's command and its action, then bind the settled keys.
 
         A component's command is registered here, with an action on the window,
@@ -793,53 +798,64 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """
         resolved = self.resolve_shortcuts(self._action_bindings)
         for binding in resolved:
-            if binding.run is None:
-                continue
-            try:
-                self.on_release(
-                    self.model.register_action(
-                        Action(
-                            id=binding.command,
-                            title=binding.title,
-                            callback=binding.run,
-                        )
-                    )
-                )
-            except ValueError:
-                logger.warning(
-                    "%s: another command has this id, so its keys stay unbound",
-                    binding.command,
-                )
-                self._unbindable.add(binding.command)
-                continue
-            host = self.main_window if binding.view is None else views.get(binding.view)
-            if not isinstance(host, QWidget):
-                if binding.keys:
-                    logger.warning(
-                        "%s: view %r is not a widget, so its keys stay unbound",
-                        binding.command,
-                        binding.view,
-                    )
-                self._unbindable.add(binding.command)
-                continue
-            action = QAction(binding.title, host)
-            action.setObjectName(binding.command)
-            action.triggered.connect(partial(self._run_command, binding.command))
-            action.setShortcutContext(
-                QtNamespace.ShortcutContext.WindowShortcut
-                if binding.view is None
-                else QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
-            )
-            host.addAction(action)
-            self._command_actions[binding.command] = (action, host)
+            if self._register_command(binding):
+                self._add_key_action(binding, views)
         self.on_release(self._drop_action_keys)
         if self._command_actions:
             self.app.focusChanged.connect(self._follow_focus)
             self.on_release(self._stop_following_focus)
-        return self._apply_shortcuts(resolved)
+        self._apply_shortcuts(resolved)
 
-    def _apply_shortcuts(self, resolved: Sequence[Binding]) -> list[Binding]:
-        """Put the settled keys on the commands' actions and in the registry, and return the bindings as bound."""
+    def _register_command(self, binding: Binding) -> bool:
+        """Register the command a component's *binding* runs, and return whether it was registered.
+
+        A session file's action is registered already. A command id another
+        command has is logged, and the command left without keys.
+        """
+        if binding.run is None:
+            return False
+        action = Action(id=binding.command, title=binding.title, callback=binding.run)
+        try:
+            self.on_release(self.model.register_action(action))
+        except ValueError:
+            logger.warning(
+                "%s: another command has this id, so its keys stay unbound",
+                binding.command,
+            )
+            self._unbindable.add(binding.command)
+            return False
+        return True
+
+    def _add_key_action(
+        self, binding: Binding, views: Mapping[str, AttachableComponent]
+    ) -> None:
+        """Add the action carrying the keys of *binding* to the window, or to its view.
+
+        A view that is no widget is logged, and the command left without keys.
+        """
+        host = self.main_window if binding.view is None else views.get(binding.view)
+        if not isinstance(host, QWidget):
+            if binding.keys:
+                logger.warning(
+                    "%s: view %r is not a widget, so its keys stay unbound",
+                    binding.command,
+                    binding.view,
+                )
+            self._unbindable.add(binding.command)
+            return
+        action = QAction(binding.title, host)
+        action.setObjectName(binding.command)
+        action.triggered.connect(partial(self._run_command, binding.command))
+        action.setShortcutContext(
+            QtNamespace.ShortcutContext.WindowShortcut
+            if binding.view is None
+            else QtNamespace.ShortcutContext.WidgetWithChildrenShortcut
+        )
+        host.addAction(action)
+        self._command_actions[binding.command] = (action, host)
+
+    def _apply_shortcuts(self, resolved: Sequence[Binding]) -> None:
+        """Put the settled keys on the commands' actions and in the registry, and keep the bindings as bound."""
         self._drop_action_keys()
         bound: list[Binding] = []
         window_actions: list[tuple[QAction, tuple[str, ...]]] = []
@@ -851,22 +867,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
                 continue
             bound.append(binding)
             if binding.run is None:
-                for key in binding.keys:
-                    disposer = self.model.keybindings.register_keybinding_rule(
-                        binding.command, KeyBindingRule(primary=key)
-                    )
-                    if disposer is not None:
-                        self._action_key_disposers.append(disposer)
-                # a menu or toolbar entry read its key when it was built; app-model
-                # shares the entry between them and parents it to the application
-                entries = {
-                    entry
-                    for widget in self.main_window.findChildren(QWidget)
-                    for entry in widget.actions()
-                    if entry.objectName() == binding.command
-                }
-                for entry in entries:
-                    entry.setShortcuts([QKeySequence(key) for key in binding.keys])
+                self._bind_action_keys(binding)
                 continue
             action, host = self._command_actions[binding.command]
             action.setShortcuts([QKeySequence(key) for key in binding.keys])
@@ -884,7 +885,25 @@ class QtSession(DesktopSession[QMainWindow], Session):
             self._follow_focus(None, self.app.focusWidget())
         if self._shortcuts_dialog is not None:
             self._shortcuts_dialog.set_bindings(bound)
-        return bound
+
+    def _bind_action_keys(self, binding: Binding) -> None:
+        """Register the keys of a session file's action, and show them on its menu and toolbar entries."""
+        for key in binding.keys:
+            disposer = self.model.keybindings.register_keybinding_rule(
+                binding.command, KeyBindingRule(primary=key)
+            )
+            if disposer is not None:
+                self._action_key_disposers.append(disposer)
+        # a menu or toolbar entry read its key when it was built; app-model
+        # shares the entry between them and parents it to the application
+        entries = {
+            entry
+            for widget in self.main_window.findChildren(QWidget)
+            for entry in widget.actions()
+            if entry.objectName() == binding.command
+        }
+        for entry in entries:
+            entry.setShortcuts([QKeySequence(key) for key in binding.keys])
 
     def _drop_action_keys(self) -> None:
         """Take the session file actions' keys out of the keybinding registry."""
@@ -911,12 +930,17 @@ class QtSession(DesktopSession[QMainWindow], Session):
                 )
             )
         super().set_shortcuts(changes)
-        self._apply_shortcuts(self._settle_shortcuts(self._action_bindings)[0])
+        self._rebind()
 
     def reset_shortcuts(self) -> None:
         """Forget the user's keys, then put the defaults back on the window's commands."""
         super().reset_shortcuts()
-        self._apply_shortcuts(self._settle_shortcuts(self._action_bindings)[0])
+        self._rebind()
+
+    def _rebind(self) -> None:
+        """Settle the keys again, and move them onto the window's commands."""
+        resolved, _ = self._settle_shortcuts(self._action_bindings)
+        self._apply_shortcuts(resolved)
 
     def _follow_focus(self, _old: QWidget | None, new: QWidget | None) -> None:
         """Turn each conditional key on or off, and take from the window's keys those the focused view binds.
@@ -966,10 +990,26 @@ class QtSession(DesktopSession[QMainWindow], Session):
         The docks are those of *views*, and those added since *earlier* was
         taken that have an object name no other dock has. A dock a view adds
         by itself gets no toggle. A session with no dock gets no "Reset
-        layout", and one with neither docks nor shortcuts no such menu. A menu bar that already shows `WINDOW_MENU` gets no second one.
-        The views placed in a menu named Window move into this one, above the
-        toggles.
+        layout", and one with neither docks nor shortcuts no such menu. A menu
+        bar that already shows `WINDOW_MENU` gets no second one. The views
+        placed in a menu named Window move into this one, above the toggles.
         """
+        window = self.main_window
+        docks = self._toggled_docks(views, earlier)
+        if not docks and not self._shortcut_bindings:
+            return
+        self.on_release(self.model.register_actions(self._window_menu_actions(docks)))
+        bar = window.menuBar()
+        if bar is None or window.findChild(QModelMenu, WINDOW_MENU) is not None:
+            return
+        menu = QModelMenu(WINDOW_MENU, self.model, "Window", window)
+        bar.addMenu(menu)
+        self._adopt_placed_items(bar, menu)
+
+    def _toggled_docks(
+        self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]
+    ) -> dict[str, QDockWidget]:
+        """Return, by name, the docks the Window menu shows or hides: those of *views*, then the named ones added since *earlier*."""
         window = self.main_window
         docks = {
             name: dock
@@ -981,8 +1021,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
             name = dock.objectName()
             if dock not in earlier and name and name not in docks:
                 docks[name] = dock
-        if not docks and not self._shortcut_bindings:
-            return
+        return docks
+
+    def _window_menu_actions(
+        self, docks: Mapping[str, QDockWidget]
+    ) -> list[Action[[], None]]:
+        """Return the Window menu's entries: a toggle per dock, then "Reset layout" and "Keyboard shortcuts" where they apply."""
         actions = [dock_toggle(self.name, dock) for dock in docks.values()]
         if docks:
             actions.append(
@@ -1002,14 +1046,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
                     menus=[MenuRule(id=WINDOW_MENU, group="3_shortcuts")],
                 )
             )
-        self.on_release(self.model.register_actions(actions))
-        bar = window.menuBar()
-        if bar is None or window.findChild(QModelMenu, WINDOW_MENU) is not None:
-            return
-        menu = QModelMenu(WINDOW_MENU, self.model, "Window", window)
-        bar.addMenu(menu)
+        return actions
+
+    def _adopt_placed_items(self, bar: QMenuBar, menu: QModelMenu) -> None:
+        """Move the entries of a menu the views placed under "Window" into *menu*, above its own."""
         # findChildren, since pyqt6 types findChild as never returning None
-        placed = window.findChildren(QMenu, "Window", options=DIRECT_CHILDREN)
+        placed = self.main_window.findChildren(QMenu, "Window", options=DIRECT_CHILDREN)
         if not placed:
             return
         bar.removeAction(placed[0].menuAction())
@@ -1417,36 +1459,14 @@ def attach(
         Qt.check_placement(view, asked[name], f"view {name!r}")
     if layout is None:
         layout, _ = resolved_layout(None, dict(asked), Qt)
+    refuse_mismatch(layout, asked)
     placed = set(layout.names)
-    unknown = [name for name in layout.names if name not in views]
-    if unknown:
-        raise ValueError(
-            f"the window layout names {', '.join(map(repr, unknown))}, which "
-            "are not among the views to attach"
-        )
-    missing = [
-        name
-        for name, placement in asked.items()
-        if Qt.region_of(placement) is not None and name not in placed
-    ]
-    if missing:
-        raise ValueError(
-            f"the window layout leaves out {', '.join(map(repr, missing))}, "
-            "which ask for a dock or the centre"
-        )
     widgets = {
         name: named(name, view, QWidget)
         for name, view in views.items()
         if name in placed
     }
-    docks: dict[str, QDockWidget] = {}
-    for region, node in layout.regions.items():
-        if region == "center":
-            window.setCentralWidget(central_widget(node, widgets))
-            continue
-        made = {name: make_dock(window, name, widgets[name]) for name in names_in(node)}
-        add_docks(window, region, node, made)
-        docks.update(made)
+    docks = place_regions(window, layout, widgets)
     for name in layout.hidden:
         if name in docks:
             docks[name].hide()
@@ -1460,6 +1480,49 @@ def attach(
                 add_menu_item(window, named(name, view, QAction), item)
             case ToolBarItem() as item:
                 add_toolbar_item(window, named(name, view, QAction), item)
+
+
+def refuse_mismatch(layout: WindowLayout, asked: Mapping[str, Placement]) -> None:
+    """Refuse a layout that does not place the views of *asked*, given with the placement each asks for.
+
+    Raises
+    ------
+    ValueError
+        If *layout* names a view that is not among them, or leaves out one
+        that asks for a dock or the centre.
+    """
+    unknown = [name for name in layout.names if name not in asked]
+    if unknown:
+        raise ValueError(
+            f"the window layout names {', '.join(map(repr, unknown))}, which "
+            "are not among the views to attach"
+        )
+    placed = set(layout.names)
+    missing = [
+        name
+        for name, placement in asked.items()
+        if Qt.region_of(placement) is not None and name not in placed
+    ]
+    if missing:
+        raise ValueError(
+            f"the window layout leaves out {', '.join(map(repr, missing))}, "
+            "which ask for a dock or the centre"
+        )
+
+
+def place_regions(
+    window: QMainWindow, layout: WindowLayout, widgets: Mapping[str, QWidget]
+) -> dict[str, QDockWidget]:
+    """Fill the centre and the edges of *window* as *layout* says, and return the docks made, by name."""
+    docks: dict[str, QDockWidget] = {}
+    for region, node in layout.regions.items():
+        if region == "center":
+            window.setCentralWidget(central_widget(node, widgets))
+            continue
+        made = {name: make_dock(window, name, widgets[name]) for name in names_in(node)}
+        add_docks(window, region, node, made)
+        docks.update(made)
+    return docks
 
 
 # taken as 'object' rather than 'AttachableComponent': narrowing a protocol
@@ -1519,10 +1582,9 @@ def spread(
         case Split(children=children):
             if type(node) is not natural:
                 window.setDockNestingEnabled(True)
-            orientation = HORIZONTAL if isinstance(node, Row) else VERTICAL
             firsts = [docks[next(names_in(child))] for child in children]
             for before, after in itertools.pairwise(firsts):
-                window.splitDockWidget(before, after, orientation)
+                window.splitDockWidget(before, after, orientation_of(node))
             for child, first in zip(children, firsts, strict=True):
                 spread(window, area, natural, child, first, docks)
         case _:
@@ -1571,19 +1633,29 @@ def central_widget(node: Node, widgets: Mapping[str, QWidget]) -> QWidget:
     match node:
         case str():
             return widgets[node]
-        case Tabs(names=names, current=current):
+        case Tabs(names=names):
             tabs = QTabWidget()
             for name in names:
                 tabs.addTab(widgets[name], name)
-            tabs.setCurrentIndex(names.index(current) if current else 0)
+            tabs.setCurrentIndex(current_index(node))
             return tabs
         case Split(children=children):
-            splitter = QSplitter(HORIZONTAL if isinstance(node, Row) else VERTICAL)
+            splitter = QSplitter(orientation_of(node))
             for child in children:
                 splitter.addWidget(central_widget(child, widgets))
             return splitter
         case _:
             assert_never(node)
+
+
+def orientation_of(node: Split) -> QtNamespace.Orientation:
+    """Return the direction *node* lines its children up in."""
+    return HORIZONTAL if isinstance(node, Row) else VERTICAL
+
+
+def current_index(node: Tabs) -> int:
+    """Return the position of the tab *node* shows on top."""
+    return node.names.index(node.current) if node.current else 0
 
 
 def shares(count: int, sizes: Sequence[float] | None) -> list[float]:
@@ -1648,18 +1720,15 @@ def fit_docks(
         for name, w, h in extents(node, width, height)
         if name in docks
     ]
-    window.resizeDocks(
-        [dock for dock, _, _ in sized], [w for _, w, _ in sized], HORIZONTAL
-    )
-    window.resizeDocks(
-        [dock for dock, _, _ in sized], [h for _, _, h in sized], VERTICAL
-    )
+    resized = [dock for dock, _, _ in sized]
+    window.resizeDocks(resized, [w for _, w, _ in sized], HORIZONTAL)
+    window.resizeDocks(resized, [h for _, _, h in sized], VERTICAL)
 
 
 def fit_centre(node: Node, widget: QWidget | None) -> None:
     """Give each splitter of the centre its weights, and each tab group its current tab."""
     if isinstance(node, Tabs) and isinstance(widget, QTabWidget):
-        widget.setCurrentIndex(node.names.index(node.current) if node.current else 0)
+        widget.setCurrentIndex(current_index(node))
     elif isinstance(node, Split) and isinstance(widget, QSplitter):
         total = sum(widget.sizes())
         widget.setSizes(
