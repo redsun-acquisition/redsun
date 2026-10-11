@@ -17,6 +17,7 @@ from redsun import (
     AsHook,
     AsPresenter,
     AsView,
+    BuildError,
     ConfiguresApplication,
     Declare,
     HookError,
@@ -132,6 +133,67 @@ class Signs:
 
     def configure_main_view(self, view: QMainWindow) -> None:
         view.setProperty("notes", [*(view.property("notes") or []), self.note])
+
+
+class Breaks:
+    """Raises at `configure_application`, and records every call it gets."""
+
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
+
+    def configure_application(self, app: QApplication) -> None:
+        self.log.append("breaks at the application")
+        raise RuntimeError("no stylesheet today")
+
+    def configure_main_view(self, view: QMainWindow) -> None:
+        self.log.append("breaks at the window")
+
+    def shutdown(self) -> None:
+        self.log.append("breaks shut down")
+
+
+class Unbuildable:
+    """Cannot be constructed."""
+
+    def __init__(self) -> None:
+        raise RuntimeError("no licence found")
+
+    def configure_application(self, app: QApplication) -> None:
+        """Never reached."""
+
+    def create_application(self, argv: list[str]) -> QApplication:
+        raise AssertionError("never built")
+
+
+class CannotAnswer:
+    """Raises when asked whether the session may close, recording that it was asked."""
+
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
+
+    def confirm_close(self) -> bool:
+        self.log.append("asked")
+        raise RuntimeError("no answer")
+
+
+class BrokenSplash:
+    """Serves `during_build` with a reporter that raises, recording its span."""
+
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        self.log.append("broken enter")
+
+        def report(step: str) -> None:
+            self.log.append(f"broken {step}")
+            raise RuntimeError("no progress bar")
+
+        try:
+            yield report
+        finally:
+            self.log.append("broken exit")
 
 
 class AlwaysRefuses:
@@ -388,6 +450,110 @@ def test_a_point_taking_one_provider_refuses_a_second() -> None:
 
     with pytest.raises(HookError, match="takes one provider"):
         QtSession({"hooks": {"confirm_close": listed}}).build()
+
+
+def test_a_provider_that_raises_is_skipped_and_the_rest_run(
+    qapp: QApplication,
+    build: BuildSession,
+    log: list[str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Skip a provider whose hook raises: log it, run the others, and call it nowhere else."""
+    broken = {"provider": f"{__name__}:Breaks", "kwargs": {"log": log}}
+    after = {
+        "provider": f"{__name__}:Notes",
+        "kwargs": {"note": "after it", "log": log},
+    }
+    hooks = {"configure_application": [broken, after], "configure_main_view": broken}
+
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        app = build(QtSession, {"hooks": hooks})
+        at_the_application = app.hooks[QtHook.CONFIGURE_APPLICATION]
+        at_the_window = app.hooks[QtHook.CONFIGURE_MAIN_VIEW]
+        app.shutdown()
+
+    assert log == ["breaks at the application", "after it"]
+    assert [type(provider) for provider in at_the_application] == [Notes]
+    assert at_the_window == ()
+    assert "no stylesheet today" in caplog.text
+    assert "Hooks skipped: Breaks" in caplog.text
+
+
+def test_a_provider_that_cannot_be_built_is_skipped(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a provider of a point taking several when it cannot be constructed."""
+    hooks = {"configure_application": {"provider": f"{__name__}:Unbuildable"}}
+
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        app = build(QtSession, {"hooks": hooks})
+
+    assert app.hooks[QtHook.CONFIGURE_APPLICATION] == ()
+    assert "no licence found" in caplog.text
+
+
+def test_a_failed_application_provider_stops_the_build(qapp: QApplication) -> None:
+    """Stop the build when the provider of `create_application` cannot be built."""
+    hooks = {"create_application": {"provider": f"{__name__}:Unbuildable"}}
+
+    with pytest.raises(HookError, match="create_application"):
+        QtSession({"hooks": hooks}).build()
+
+
+def test_a_strict_session_stops_on_a_skipped_hook(
+    qapp: QApplication, log: list[str]
+) -> None:
+    """Stop a strict build that skipped a hook provider, naming it."""
+    hooks = {
+        "configure_application": {
+            "provider": f"{__name__}:Breaks",
+            "kwargs": {"log": log},
+        }
+    }
+
+    with pytest.raises(BuildError, match="Breaks"):
+        QtSession({"strict": True, "hooks": hooks}).build()
+
+
+def test_a_close_provider_that_raises_gives_way_to_the_sessions_own_rule(
+    qapp: QApplication,
+    build: BuildSession,
+    log: list[str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log a `confirm_close` provider that raises, close by the session's own rule, and ask it no more."""
+    hooks = {
+        "confirm_close": {
+            "provider": f"{__name__}:CannotAnswer",
+            "kwargs": {"log": log},
+        }
+    }
+    app = build(QtSession, {"hooks": hooks})
+
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        closed = app.main_window.close()
+
+    assert closed
+    assert log == ["asked"]
+    assert "no answer" in caplog.text
+    assert app.hooks[QtHook.CONFIRM_CLOSE] == ()
+
+
+def test_a_span_whose_reporter_raises_is_left_and_reported_to_no_more(
+    qapp: QApplication, build: BuildSession, log: list[str]
+) -> None:
+    """Finish the build when a `during_build` reporter raises: report to it no more, and still leave its span."""
+    listed = [
+        {"provider": f"{__name__}:BrokenSplash", "kwargs": {"log": log}},
+        {"provider": f"{__name__}:Splash", "kwargs": {"log": log}},
+    ]
+
+    build(QtSession, {"hooks": {"during_build": listed}})
+
+    broken = [entry for entry in log if entry.startswith("broken")]
+    assert broken == ["broken enter", "broken services", "broken exit"]
+    assert "report" in log
+    assert log.count("exit") == 1
 
 
 def test_the_configuration_names_a_provider(

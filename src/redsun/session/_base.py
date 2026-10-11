@@ -11,6 +11,7 @@ from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from dataclasses import replace
 from enum import StrEnum
+from functools import partial
 from itertools import chain
 from pathlib import Path
 from typing import (
@@ -58,6 +59,7 @@ from .._config import (
     validate_session,
 )
 from .._hooks import (
+    HookFailure,
     HookGroup,
     Many,
     distinct,
@@ -254,6 +256,7 @@ class Session(BuildableSession):
         "_declarations",
         "_devices",
         "_failed",
+        "_failed_hooks",
         "_failed_services",
         "_file",
         "_hooks",
@@ -272,6 +275,7 @@ class Session(BuildableSession):
         "_shared",
         "_shared_values",
         "_shortcut_overrides",
+        "_skipped_hooks",
         "_storage",
         "_store",
         "_transport",
@@ -369,6 +373,8 @@ class Session(BuildableSession):
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
+        self._failed_hooks: dict[str, HookFailure] = {}
+        self._skipped_hooks: set[int] = set()
         self._answered: set[str] = set()
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
@@ -584,18 +590,81 @@ class Session(BuildableSession):
             for source in distinct(chain.from_iterable(sources.values()))
         }
         resolved = {
-            moment: tuple(built[id(source)] for source in named)
+            moment: tuple(
+                built[id(source)] for source in named if built[id(source)] is not None
+            )
             for moment, named in sources.items()
         }
         refuse_misfits(resolved, points)
         return resolved
 
-    def _build_hook(self, source: object, owner: str) -> object:
-        """Construct the provider a class declaration or a file entry names."""
+    def _build_hook(self, source: object, owner: str) -> object | None:
+        """Construct the provider a class declaration or a file entry names.
+
+        One that cannot be imported or constructed is logged and recorded as
+        skipped, and `None` stands in for it.
+
+        Raises
+        ------
+        HookError
+            If a file entry gives a short name `redsun` does not list.
+        """
         if isinstance(source, HookDeclaration):
-            return provider_from_class(source, owner)
-        entry = cast("HookGroup", source)
-        return provider_from_file(entry, class_path_of(entry.provider))
+            name = source.cls.__name__
+            build = partial(provider_from_class, source, owner)
+        else:
+            entry = cast("HookGroup", source)
+            name = entry.provider
+            build = partial(provider_from_file, entry, class_path_of(name))
+        try:
+            return build()
+        except HookError as e:
+            logger.error("Hook provider %s is skipped: %s", name, e, exc_info=e)
+            moments = cast("HookDeclaration | HookGroup", source).moments
+            self._failed_hooks[name] = HookFailure(tuple(moments), e)
+            return None
+
+    def skip_hook(self, provider: object, point: str, reason: BaseException) -> None:
+        """Drop *provider* from every hook point after it failed at *point*.
+
+        The failure is logged with its traceback and listed in the build
+        summary. The provider is called at no later point and is not shut
+        down. A frontend calls this where it calls a hook point itself;
+        [`call_hooks`][redsun.Session.call_hooks] does it for a point whose
+        providers return nothing.
+        """
+        name = type(provider).__name__
+        served = tuple(
+            moment
+            for moment, installed in self.hooks.items()
+            if any(other is provider for other in installed)
+        )
+        logger.error(
+            "Hook provider %s failed at %r and is skipped", name, point, exc_info=reason
+        )
+        self._failed_hooks[name] = HookFailure(served or (point,), reason)
+        self._skipped_hooks.add(id(provider))
+        self._hooks = {
+            moment: tuple(other for other in installed if other is not provider)
+            for moment, installed in self.hooks.items()
+        }
+
+    def _was_skipped(self, provider: object) -> bool:
+        """Return whether *provider* failed at a hook point and was dropped."""
+        return id(provider) in self._skipped_hooks
+
+    def call_hooks(self, point: str, call: Callable[[Any], None]) -> None:
+        """Call *call* with each provider installed at *point*, in order.
+
+        A provider for which *call* raises is skipped, as
+        [`skip_hook`][redsun.Session.skip_hook] describes, and the next one
+        is called.
+        """
+        for hook in self.hooks[point]:
+            try:
+                call(hook)
+            except Exception as e:  # noqa: BLE001 - reported by skip_hook
+                self.skip_hook(hook, point, e)
 
     @property
     def name(self) -> str:
@@ -781,7 +850,7 @@ class Session(BuildableSession):
         self._open_logs(self._path_provider)
         # registered after the logs, so a provider's teardown is still logged
         for hook in distinct(chain.from_iterable(self.hooks.values())):
-            self._register_teardown(hook)
+            self._register_teardown(hook, unless=partial(self._was_skipped, hook))
 
     def window_layout(self) -> WindowLayout | None:
         """Return the layout this session's window starts with, or `None` to place each view where it asks.
@@ -1157,16 +1226,18 @@ class Session(BuildableSession):
             built or set up, naming each one and why.
         """
         summary = self._summarise_build()
-        if not (self._failed or self._not_set_up):
+        missing = {**self._failed, **self._not_set_up}
+        skipped = {name: failure.reason for name, failure in self._failed_hooks.items()}
+        if not (missing or skipped):
             logger.info(summary)
             return
         logger.warning(summary)
         if self._configuration().strict:
             reasons = "\n".join(
-                f"  {name}: {reason}"
-                for name, reason in {**self._failed, **self._not_set_up}.items()
+                f"  {name}: {reason}" for name, reason in {**missing, **skipped}.items()
             )
-            raise BuildError(f"A strict session is missing components:\n{reasons}")
+            what = "components or hooks" if skipped else "components"
+            raise BuildError(f"A strict session is missing {what}:\n{reasons}")
 
     def _summarise_build(self) -> str:
         """Return what the build made, counted against what was declared.
@@ -1191,6 +1262,12 @@ class Session(BuildableSession):
                     for name, reason in names.items()
                 )
                 summary += f"\n{heading}: {named}"
+        if self._failed_hooks:
+            skipped = ", ".join(
+                f"{name} ({', '.join(failure.points)})"
+                for name, failure in self._failed_hooks.items()
+            )
+            summary += f"\nHooks skipped: {skipped}"
         named_services = {d.service for d in self._declarations.values()}
         used = {
             d.service for d in self._declarations.values() if d.instance is not None
@@ -1251,6 +1328,8 @@ class Session(BuildableSession):
         self._hooks = None
         self._devices.clear()
         self._failed.clear()
+        self._failed_hooks.clear()
+        self._skipped_hooks.clear()
         self._answered.clear()
         self._callbacks.clear()
         self._not_set_up.clear()
@@ -1994,26 +2073,36 @@ class Session(BuildableSession):
             return (declaration.name,)
         return (declaration.name, declaration.attribute)
 
-    def _register_teardown(self, component: object) -> None:
+    def _register_teardown(
+        self, component: object, unless: Callable[[], bool] | None = None
+    ) -> None:
         """Hand the session's own teardown to the one owner of it.
 
         A component that declares `shutdown` is finalized without having to
-        ask for it; one that does not needs no teardown at all.
+        ask for it; one that does not needs no teardown at all. With *unless*,
+        the teardown is left out when it answers true at shutdown.
         """
         if not isinstance(component, HasShutdown):
             return
         shutdown = component.shutdown
         # both protocols name one method, so only the function says which it is
-        if not inspect.iscoroutinefunction(shutdown):
-            self.on_release(shutdown)
+        if inspect.iscoroutinefunction(shutdown):
+            async_shutdown = cast("HasAsyncShutdown", component).shutdown
+
+            def close() -> None:
+                run_coro(async_shutdown())
+
+        else:
+            close = shutdown
+        if unless is None:
+            self.on_release(close)
             return
 
-        async_shutdown = cast("HasAsyncShutdown", component).shutdown
+        def close_unless() -> None:
+            if not unless():
+                close()
 
-        def close() -> None:
-            run_coro(async_shutdown())
-
-        self.on_release(close)
+        self.on_release(close_unless)
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.
@@ -2289,7 +2378,7 @@ def provider_from_class(declaration: HookDeclaration, owner: str) -> object:
     named = ", ".join(repr(moment) for moment in declaration.moments)
     try:
         return declaration.cls(**declaration.kwargs)
-    except TypeError as e:
+    except Exception as e:
         raise HookError(
             f"cannot construct hook provider {declaration.cls.__name__!r} "
             f"declared on {owner} at {named} with "

@@ -47,6 +47,17 @@ class Many:
     """The protocol every provider at the point satisfies."""
 
 
+@dataclass(frozen=True)
+class HookFailure:
+    """Why a hook provider was skipped, and the points it was to serve."""
+
+    points: tuple[str, ...]
+    """The hook points the provider was installed at, or declared for."""
+
+    reason: BaseException
+    """What it raised."""
+
+
 def point_protocol(point: type | Many) -> type:
     """Return the protocol a provider at *point* satisfies."""
     return point.protocol if isinstance(point, Many) else point
@@ -256,7 +267,7 @@ def provider_from_file(spec: HookGroup, path: str) -> object:
         raise HookError(f"cannot import hook provider {spec.provider!r}: {e}") from e
     try:
         return imported(**spec.kwargs)
-    except TypeError as e:
+    except Exception as e:
         raise HookError(
             f"cannot construct hook provider {spec.provider!r} with "
             f"{sorted(spec.kwargs)}: {e}"

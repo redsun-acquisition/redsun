@@ -41,6 +41,7 @@ from enum import StrEnum
 from functools import partial
 from typing import (
     TYPE_CHECKING,
+    Any,
     ClassVar,
     Final,
     Literal,
@@ -555,6 +556,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """
         super().start_runtime()
         creators = self.hooks[QtHook.CREATE_APPLICATION]
+        for failure in self._failed_hooks.values():
+            if QtHook.CREATE_APPLICATION in failure.points:
+                raise HookError(
+                    f"the provider of {QtHook.CREATE_APPLICATION.value!r} failed, "
+                    "and a session does not start on another application: "
+                    f"{failure.reason}"
+                ) from failure.reason
         if QApplication.instance() is None and creators:
             creator = cast("CreatesApplication[QApplication]", creators[0])
             qt_app = creator.create_application(sys.argv)
@@ -588,10 +596,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
         ColorSchemeMode.from_config(self._configuration().color_scheme).apply()
 
-        for configurer in self.hooks[QtHook.CONFIGURE_APPLICATION]:
-            cast(
-                "ConfiguresApplication[QApplication]", configurer
-            ).configure_application(qt_app)
+        self.call_hooks(
+            QtHook.CONFIGURE_APPLICATION,
+            lambda provider: provider.configure_application(qt_app),
+        )
 
     def _forget_application(self) -> None:
         """Destroy the application by name, freeing the name for the next session."""
@@ -657,8 +665,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
             bar.addPermanentWidget(FailuresButton(failures))
         # before the hook, so the menus it builds show the actions' keys
         self._shortcut_bindings = self._bind_shortcuts(views)
-        for dresser in self.hooks[QtHook.CONFIGURE_MAIN_VIEW]:
-            cast("ConfiguresMainView[QMainWindow]", dresser).configure_main_view(window)
+        self.call_hooks(
+            QtHook.CONFIGURE_MAIN_VIEW,
+            lambda provider: provider.configure_main_view(window),
+        )
         self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()
@@ -1091,9 +1101,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ticked "don't ask again". Otherwise the prompt offers Save, Discard and
         Cancel.
         """
-        confirmers = self.hooks[QtHook.CONFIRM_CLOSE]
-        if confirmers:
-            return cast("ConfirmsClose", confirmers[0]).confirm_close()
+        for confirmer in self.hooks[QtHook.CONFIRM_CLOSE]:
+            try:
+                return cast("ConfirmsClose", confirmer).confirm_close()
+            except Exception as e:  # noqa: BLE001 - reported by skip_hook
+                # the session's own rule answers, now and at every later close
+                self.skip_hook(confirmer, QtHook.CONFIRM_CLOSE, e)
         if not self.has_changes() or not self.settings.get(ASK_ON_CLOSE, True):
             return True
         return self._ask_about_changes()
@@ -1221,26 +1234,31 @@ class QtSession(DesktopSession[QMainWindow], Session):
         build. The `runtime` step has run by now, so the `QApplication` a
         hook is handed exists.
         """
-        providers = self.hooks[QtHook.DURING_BUILD]
-        return self._span(providers) if providers else nullcontext(self._report)
+        if self.hooks[QtHook.DURING_BUILD]:
+            return self._span()
+        return nullcontext(self._report)
 
     @contextmanager
-    def _span(
-        self, providers: tuple[object, ...]
-    ) -> Generator[Callable[[str], None], None, None]:
-        """Open every provider's span in order, and report each step to all of them."""
+    def _span(self) -> Generator[Callable[[str], None], None, None]:
+        """Open every `during_build` provider's span in order, and report each step to them.
+
+        A provider that raises, opening its span or being told a step, is
+        skipped and told nothing more; a span it opened is still left.
+        """
         with ExitStack() as stack:
-            reporters = [
-                stack.enter_context(
-                    cast("WrapsBuild[QApplication]", provider).during_build(self.app)
-                )
-                for provider in providers
-            ]
+            reporters: dict[int, Callable[[str], None]] = {}
+
+            def open_span(provider: Any) -> None:
+                span = provider.during_build(self.app)
+                reporters[id(provider)] = stack.enter_context(span)
 
             def report(step: str) -> None:
-                for reporter in reporters:
-                    reporter(step)
+                self.call_hooks(
+                    QtHook.DURING_BUILD,
+                    lambda provider: reporters[id(provider)](step),
+                )
 
+            self.call_hooks(QtHook.DURING_BUILD, open_span)
             yield report
 
     def show(self) -> None:
