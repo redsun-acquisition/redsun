@@ -10489,30 +10489,9 @@ unchecks or moves a callback.</p>
     <div class="doc doc-contents ">
 
         <p>Create a <code>magicgui</code> widget for <em>param</em>.</p>
-<p>Only the predicates are guarded: a factory raising is a bug and propagates.</p>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If every entry in <code>WIDGET_FACTORY_MAP</code> fails.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+<p>Only the predicates are guarded: a factory raising is a bug and propagates.
+A parameter no entry of <code>WIDGET_FACTORY_MAP</code> matches gets the widget
+<code>create_value_widget</code> builds.</p>
 
 
     </div>
