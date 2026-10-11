@@ -1585,7 +1585,7 @@ class Session(BuildableSession):
                 declaration.cls, HasSetup
             ):
                 continue
-            reason = self._set_up(declaration, store, built)
+            reason = self._call_setup(declaration, store, built)
             if reason is not None:
                 self._not_set_up[declaration.name] = reason
                 logger.warning(
@@ -1609,7 +1609,7 @@ class Session(BuildableSession):
             )
         return self._store
 
-    def _set_up(
+    def _call_setup(
         self, declaration: Declaration, store: Store, built: Mapping[str, object]
     ) -> BaseException | None:
         """Run the `setup` of the component *declaration* built, and return why it could not run, if so.
