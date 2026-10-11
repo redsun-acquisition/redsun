@@ -8,7 +8,7 @@ Accepted
 
 Supersedes "one provider per point" of
 [10. Toolkit hook points](0010-toolkit-hook-points.md) for the points whose
-providers return nothing. The rest of that record stands: a
+answer the session does not act on. The rest of that record stands: a
 [hook](../glossary.md#hook) never changes what the session builds, and every
 [hook point](../glossary.md#hook-point) belongs to a toolkit.
 
@@ -125,8 +125,11 @@ Other options were rejected:
 
 - `Session.hooks` changed shape, which breaks code that read one provider
   from it.
-- A frontend written before this record keeps working: its points are
-  written as protocols alone, so each still takes one provider.
+- A frontend written before this record declares its points as before, each
+  still taking one provider, but it now reads a tuple where it calls one.
+  Code such as `hook = self.hooks.get(point)` followed by a check of its
+  type finds a tuple and calls nothing, without an error. It becomes
+  `(provider,) = self.hooks[point]`, or a call to `Session.call_hooks`.
 - A frontend calls a point with `Session.call_hooks`, which skips a provider
   that raises, or reads `Session.hooks` and reports a failure with
   `Session.skip_hook`.

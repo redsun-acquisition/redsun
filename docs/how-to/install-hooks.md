@@ -303,7 +303,8 @@ declared it does.
 When a provider can't be built, or its hook method raises, the session logs
 the error, skips the provider at every point it serves, and carries on. The
 build summary lists it as `Hooks skipped: DarkTheme (configure_application)`,
-and a skipped provider gets no `shutdown` call.
+and a skipped provider gets no `shutdown` call. A provider whose constructor
+raised is logged as `cannot construct hook provider 'X' ...`.
 
 Two cases stop the build instead. A `create_application` provider that
 fails stops it, because the session can't run on another application. And
@@ -319,11 +320,12 @@ located as `hooks.<point>.<key>`.
 | `MyApp.x declares a hook at 'x', which is not a hook point MyApp calls; ...` | the attribute name is not a point this session calls |
 | `hooks key 'x' is not a hook point MyApp calls; ...` | the same, in the file |
 | `hook provider 'X' at 'y' does not implement Z` | the method is missing or misspelled |
-| `cannot construct hook provider 'X' ...` | the constructor raised; logged, and the provider is skipped |
+| `the provider of 'create_application' failed, and a session does not start on another application: ...` | the provider of that point could not be built |
 | `hooks.x.provider: Field required` | `provider` is missing from the file entry |
 | `hooks.x.name: Extra inputs are not permitted` | an argument was written beside `provider` instead of under `kwargs` |
 | `unknown hook provider 'x'; built-in names: ...` | the short name is not one `redsun` ships; check its spelling against the list |
 | `hook provider 'p' is named twice, at 'a' and at 'b', with the same keys` | two identical entries; anchor one, or change the arguments |
+| `hooks entry 'x' lists one provider twice` | one entry was aliased twice in the list of a point; list it once |
 | `hook point 'x' takes one provider, and MyApp and its configuration name 2 between them` | the point takes one provider; remove all but one |
 
 ## See also

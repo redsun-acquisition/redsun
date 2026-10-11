@@ -50,12 +50,15 @@ its hook method raises.
 | Where | What the session does |
 | --- | --- |
 | a point that takes several providers | logs the error, skips the provider at every point it serves, and lists it in the build summary as "Hooks skipped" |
-| a `during_build` provider told a build step | the same, and closes the context manager it opened |
+| a `during_build` provider opening its context manager, told a build step, or closing it | the same, and still closes a context manager it opened |
 | `create_application` | stops the build |
 | `confirm_close` | logs the error, and decides by its own rule, as with no provider |
 
 A skipped provider gets no `shutdown` call, so a change it made before it
 failed stays. The log names the provider and the point it failed at.
+
+A provider that serves `create_application` and another point, and cannot be
+built, stops the build: the stricter rule of its points applies.
 
 With `strict: true` in the session file, a skipped provider stops the build
 at the `report` step, as a component that failed does.
