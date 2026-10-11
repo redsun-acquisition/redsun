@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Final, Literal, get_args
 
 from platformdirs import user_data_dir
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 ProfileKind = Literal["start", "run"]
 """What a session profiles: its start, up to its window, or its whole run."""
 
-PROFILE_KINDS: Final = ("start", "run")
+PROFILE_KINDS: Final = get_args(ProfileKind)
 """The values `Session` accepts for `profile`."""
 
 logger = logging.getLogger("redsun")

@@ -11,7 +11,7 @@ import logging
 import math
 from collections.abc import Iterable, Mapping
 from types import NoneType
-from typing import Any, Literal, get_args, get_origin
+from typing import Any, Literal, TypeVar, get_args, get_origin
 
 import annotated_types as at
 from magicgui import widgets as mgw
@@ -32,6 +32,8 @@ from ...presenter._shapes import (
 )
 
 logger = logging.getLogger("redsun")
+
+T = TypeVar("T")
 
 INT_RANGE = (-(2**31), 2**31 - 1)
 """The range of a Qt spin box for integers."""
@@ -350,7 +352,50 @@ class Row(mgw.Container[Widget]):
         self.margins = (0, 0, 0, 0)
 
 
-class SequenceEdit(ValuedContainerWidget[Any]):
+class RowsEdit(ValuedContainerWidget[T]):
+    """Rows, each removable, and a button adding one.
+
+    The add button is disabled while the rows reach *max_items*.
+    """
+
+    def __init__(self, name: str, max_items: int | None) -> None:
+        self._max_items = max_items
+        self._add = mgw.PushButton(text="+")
+        super().__init__(name=name, labels=False, widgets=[self._add])
+        self.margins = (0, 0, 0, 0)
+        self._rows: list[Row] = []
+        self._add.changed.connect(lambda _: self._add_row(self._edits()))
+
+    def _edits(self) -> list[Any]:
+        """Return the widgets of a new row."""
+        raise NotImplementedError
+
+    def _add_row(self, edits: list[Any]) -> None:
+        row = Row(edits)
+        row.remove_button.changed.connect(lambda _: self._remove(row))
+        for edit in edits:
+            edit.changed.connect(lambda _: self.changed.emit(self.value))
+        self._rows.append(row)
+        self._insert_widget(len(self._rows) - 1, row)
+        self._limit()
+        self.changed.emit(self.value)
+
+    def _remove(self, row: Row) -> None:
+        index = self._rows.index(row)
+        self._rows.pop(index)
+        self._pop_widget(index)
+        self._limit()
+        self.changed.emit(self.value)
+
+    def _clear(self) -> None:
+        while self._rows:
+            self._remove(self._rows[-1])
+
+    def _limit(self) -> None:
+        self._add.enabled = self._max_items is None or len(self._rows) < self._max_items
+
+
+class SequenceEdit(RowsEdit[Any]):
     """Rows of one element type, each removable, and a button adding one.
 
     Returns a `list`, `tuple`, `set` or `frozenset`, as the annotation names;
@@ -365,36 +410,14 @@ class SequenceEdit(ValuedContainerWidget[Any]):
         name: str = "",
         max_items: int | None = None,
     ) -> None:
-        self._max_items = max_items
         self._element = get_args(ann)[0]
         self._built = container_type(ann)
-        self._add = mgw.PushButton(text="+")
-        super().__init__(name=name, labels=False, widgets=[self._add])
-        self.margins = (0, 0, 0, 0)
-        self._rows: list[Row] = []
-        self._add.changed.connect(lambda _: self._append())
+        super().__init__(name, max_items)
         for item in [] if value is Undefined else value:
-            self._append(item)
+            self._add_row(self._edits(item))
 
-    def _append(self, item: Any = Undefined) -> None:
-        edit = create_value_widget(self._element, item)
-        row = Row([edit])
-        row.remove_button.changed.connect(lambda _: self._remove(row))
-        edit.changed.connect(lambda _: self.changed.emit(self.value))
-        self._rows.append(row)
-        self._insert_widget(len(self._rows) - 1, row)
-        self._limit()
-        self.changed.emit(self.value)
-
-    def _remove(self, row: Row) -> None:
-        index = self._rows.index(row)
-        self._rows.pop(index)
-        self._pop_widget(index)
-        self._limit()
-        self.changed.emit(self.value)
-
-    def _limit(self) -> None:
-        self._add.enabled = self._max_items is None or len(self._rows) < self._max_items
+    def _edits(self, item: Any = Undefined) -> list[Any]:
+        return [create_value_widget(self._element, item)]
 
     def get_value(self) -> Any:
         """Return the rows' values in the built-in the annotation names."""
@@ -403,10 +426,9 @@ class SequenceEdit(ValuedContainerWidget[Any]):
 
     def set_value(self, value: Iterable[Any]) -> None:
         """Replace every row by one per item of *value*."""
-        while self._rows:
-            self._remove(self._rows[-1])
+        self._clear()
         for item in value:
-            self._append(item)
+            self._add_row(self._edits(item))
 
     @property
     def problems(self) -> list[str]:
@@ -418,7 +440,7 @@ class SequenceEdit(ValuedContainerWidget[Any]):
         ]
 
 
-class MappingEdit(ValuedContainerWidget[dict[Any, Any]]):
+class MappingEdit(RowsEdit[dict[Any, Any]]):
     """Key and value rows, each removable, and a button adding one.
 
     A key that repeats another is reported in `problems`. The add button is
@@ -432,37 +454,16 @@ class MappingEdit(ValuedContainerWidget[dict[Any, Any]]):
         name: str = "",
         max_items: int | None = None,
     ) -> None:
-        self._max_items = max_items
         self._key, self._value = get_args(ann)
-        self._add = mgw.PushButton(text="+")
-        super().__init__(name=name, labels=False, widgets=[self._add])
-        self.margins = (0, 0, 0, 0)
-        self._rows: list[Row] = []
-        self._add.changed.connect(lambda _: self._append())
+        super().__init__(name, max_items)
         for key, item in ({} if value is Undefined else dict(value)).items():
-            self._append(key, item)
+            self._add_row(self._edits(key, item))
 
-    def _append(self, key: Any = Undefined, item: Any = Undefined) -> None:
-        key_edit = create_value_widget(self._key, key)
-        value_edit = create_value_widget(self._value, item)
-        row = Row([key_edit, value_edit])
-        row.remove_button.changed.connect(lambda _: self._remove(row))
-        key_edit.changed.connect(lambda _: self.changed.emit(self.value))
-        value_edit.changed.connect(lambda _: self.changed.emit(self.value))
-        self._rows.append(row)
-        self._insert_widget(len(self._rows) - 1, row)
-        self._limit()
-        self.changed.emit(self.value)
-
-    def _remove(self, row: Row) -> None:
-        index = self._rows.index(row)
-        self._rows.pop(index)
-        self._pop_widget(index)
-        self._limit()
-        self.changed.emit(self.value)
-
-    def _limit(self) -> None:
-        self._add.enabled = self._max_items is None or len(self._rows) < self._max_items
+    def _edits(self, key: Any = Undefined, item: Any = Undefined) -> list[Any]:
+        return [
+            create_value_widget(self._key, key),
+            create_value_widget(self._value, item),
+        ]
 
     def _repeated(self) -> set[Any]:
         keys = [row.edits[0].value for row in self._rows]
@@ -474,10 +475,9 @@ class MappingEdit(ValuedContainerWidget[dict[Any, Any]]):
 
     def set_value(self, value: Mapping[Any, Any]) -> None:
         """Replace every row by one per entry of *value*."""
-        while self._rows:
-            self._remove(self._rows[-1])
+        self._clear()
         for key, item in value.items():
-            self._append(key, item)
+            self._add_row(self._edits(key, item))
 
     @property
     def problems(self) -> list[str]:

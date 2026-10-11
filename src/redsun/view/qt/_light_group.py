@@ -9,16 +9,13 @@ from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
 from ._icons import set_icon
-from ._positioner_group import LIMIT
+from ._positioner_group import DEFAULT_PRECISION, LIMIT
 
 if TYPE_CHECKING:
-    from redsun.utils.devices import LightInfo
+    from redsun.utils.devices import LightInfo, Readback
 
 THROTTLE_MS = 100
 """Least milliseconds between two writes while the slider is dragged."""
-
-DEFAULT_PRECISION = 2
-"""Decimals of an intensity whose descriptor gives none."""
 
 MAX_STEPS = 1_000_000
 """Most steps a slider spans from zero, well inside the integers Qt takes."""
@@ -67,54 +64,8 @@ class LightGroup(QtW.QGroupBox):
 
         self._slider: QtW.QSlider | None = None
         self._field: QtW.QDoubleSpinBox | None = None
-        intensity = info.intensity
-        if intensity is not None:
-            decimals = (
-                DEFAULT_PRECISION
-                if intensity.precision is None
-                else intensity.precision
-            )
-            row = QtW.QHBoxLayout()
-            low, high = intensity.limits
-            if low is not None and high is not None:
-                # the slider steps more coarsely than the field when the range
-                # in steps of the last decimal would not fit in Qt's integers
-                self._scale = float(10**decimals)
-                while max(abs(low), abs(high)) * self._scale > MAX_STEPS:
-                    self._scale /= 10
-                self._slider = QtW.QSlider(QtCore.Qt.Orientation.Horizontal, self)
-                self._slider.setObjectName("slider")
-                self._slider.setAccessibleName(f"{device} intensity")
-                self._slider.setRange(
-                    round(low * self._scale), round(high * self._scale)
-                )
-                self._slider.setValue(round(intensity.value * self._scale))
-                self._slider.valueChanged.connect(self._slider_moved)
-                self._slider.sliderReleased.connect(self._slider_released)
-                row.addWidget(self._slider, 1)
-                self._controls.append(self._slider)
-            self._field = QtW.QDoubleSpinBox(self)
-            self._field.setObjectName("intensity")
-            self._field.setAccessibleName(f"{device} intensity value")
-            self._field.setLocale(QtCore.QLocale.c())
-            self._field.setDecimals(decimals)
-            self._field.setRange(
-                -LIMIT if low is None else low, LIMIT if high is None else high
-            )
-            self._field.setKeyboardTracking(False)
-            self._field.setValue(intensity.value)
-            self._field.valueChanged.connect(self._field_changed)
-            self._field.editingFinished.connect(self._field_done)
-            if (edit := self._field.lineEdit()) is not None:
-                edit.textEdited.connect(self._start_editing)
-            row.addWidget(self._field)
-            row.addWidget(QtW.QLabel(intensity.units or "", self))
-            layout.addLayout(row)
-            self._controls.append(self._field)
-            self._timer = QtCore.QTimer(self)
-            self._timer.setSingleShot(True)
-            self._timer.setInterval(THROTTLE_MS)
-            self._timer.timeout.connect(self._write_pending)
+        if info.intensity is not None:
+            layout.addLayout(self._build_intensity(device, info.intensity))
 
         self._state = QtW.QLabel("", self)
         self._state.setObjectName("state")
@@ -124,6 +75,51 @@ class LightGroup(QtW.QGroupBox):
         # a failure stays shown until the user acts on the light again
         self.sig_enabled.connect(self._clear_failure)
         self.sig_intensity.connect(self._clear_failure)
+
+    def _build_intensity(self, device: str, intensity: Readback) -> QtW.QHBoxLayout:
+        """Return the row of *intensity*: a slider where it has both limits, its field and its units."""
+        decimals = (
+            DEFAULT_PRECISION if intensity.precision is None else intensity.precision
+        )
+        row = QtW.QHBoxLayout()
+        low, high = intensity.limits
+        if low is not None and high is not None:
+            # the slider steps more coarsely than the field when the range
+            # in steps of the last decimal would not fit in Qt's integers
+            self._scale = float(10**decimals)
+            while max(abs(low), abs(high)) * self._scale > MAX_STEPS:
+                self._scale /= 10
+            self._slider = QtW.QSlider(QtCore.Qt.Orientation.Horizontal, self)
+            self._slider.setObjectName("slider")
+            self._slider.setAccessibleName(f"{device} intensity")
+            self._slider.setRange(round(low * self._scale), round(high * self._scale))
+            self._slider.setValue(round(intensity.value * self._scale))
+            self._slider.valueChanged.connect(self._slider_moved)
+            self._slider.sliderReleased.connect(self._slider_released)
+            row.addWidget(self._slider, 1)
+            self._controls.append(self._slider)
+        self._field = QtW.QDoubleSpinBox(self)
+        self._field.setObjectName("intensity")
+        self._field.setAccessibleName(f"{device} intensity value")
+        self._field.setLocale(QtCore.QLocale.c())
+        self._field.setDecimals(decimals)
+        self._field.setRange(
+            -LIMIT if low is None else low, LIMIT if high is None else high
+        )
+        self._field.setKeyboardTracking(False)
+        self._field.setValue(intensity.value)
+        self._field.valueChanged.connect(self._field_changed)
+        self._field.editingFinished.connect(self._field_done)
+        if (edit := self._field.lineEdit()) is not None:
+            edit.textEdited.connect(self._start_editing)
+        row.addWidget(self._field)
+        row.addWidget(QtW.QLabel(intensity.units or "", self))
+        self._controls.append(self._field)
+        self._timer = QtCore.QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.setInterval(THROTTLE_MS)
+        self._timer.timeout.connect(self._write_pending)
+        return row
 
     def set_enabled(self, on: bool) -> None:
         """Show whether the light is on, as read back, in the button's icon and tooltip as well."""
