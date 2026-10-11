@@ -177,6 +177,12 @@ class LogView(QtW.QWidget):
         self._batch_timer = QtCore.QTimer(self)
         self._batch_timer.setInterval(BATCH_INTERVAL_MS)
         self._batch_timer.timeout.connect(self._draw_batch)
+        # a child of the view, so a redraw still pending when the view is
+        # deleted goes with it; pyside6 would run a bare single shot anyway
+        self._redraw_timer = QtCore.QTimer(self)
+        self._redraw_timer.setSingleShot(True)
+        self._redraw_timer.setInterval(0)
+        self._redraw_timer.timeout.connect(self._render)
 
         self._render()
         # psygnal holds the bound method weakly, so a destroyed view drops out
@@ -198,7 +204,7 @@ class LogView(QtW.QWidget):
             super().changeEvent(event)
             if event.type() == QtCore.QEvent.Type.PaletteChange:
                 # the consoles receive the new palette only after the view
-                QtCore.QTimer.singleShot(0, self._render)
+                self._redraw_timer.start()
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""

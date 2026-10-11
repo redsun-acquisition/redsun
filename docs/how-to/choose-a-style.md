@@ -12,6 +12,12 @@ with one line.
 
 ![The positioner view in napari's dark theme](images/napari-style.png)
 
+To see the style before you write a session, run the example with it:
+
+```bash
+redsun --example napari
+```
+
 ## Prerequisites
 
 You need a [`QtSession`][redsun.qt.QtSession]. The style is a

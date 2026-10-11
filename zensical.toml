@@ -145,6 +145,7 @@ nav = [
             "reference/plugin-manifest.md",
         ]},
         "reference/hook-points.md",
+        "reference/command-line.md",
         "reference/environment.md",
         "reference/log-files.md",
         { "API" = [
