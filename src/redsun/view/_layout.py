@@ -28,6 +28,19 @@ def split_problems(count: int, sizes: Sequence[float] | None) -> list[str]:
     return problems
 
 
+def refuse_problems(problems: Sequence[str], subject: str = "") -> None:
+    """Refuse what has *problems*, naming *subject* before them.
+
+    Raises
+    ------
+    ValueError
+        Listing every problem, if there is one.
+    """
+    if problems:
+        prefix = f"{subject} " if subject else ""
+        raise ValueError(prefix + "; ".join(problems))
+
+
 def tabs_problems(names: Sequence[str], current: str | None) -> list[str]:
     """Return what is wrong with tabs of *names* showing *current* on top."""
     problems = []
@@ -49,9 +62,9 @@ class Split:
     """One positive weight per child, or `None` for equal shares."""
 
     def __post_init__(self) -> None:
-        problems = split_problems(len(self.children), self.sizes)
-        if problems:
-            raise ValueError(f"{type(self).__name__} {'; '.join(problems)}")
+        refuse_problems(
+            split_problems(len(self.children), self.sizes), type(self).__name__
+        )
 
 
 class Row(Split):
@@ -101,9 +114,7 @@ class TabGroup:
     """The view shown on top, or `None` for the first."""
 
     def __post_init__(self) -> None:
-        problems = tabs_problems(self.names, self.current)
-        if problems:
-            raise ValueError(f"Tabs {'; '.join(problems)}")
+        refuse_problems(tabs_problems(self.names, self.current), "Tabs")
 
 
 class Tabs(TabGroup):
@@ -202,9 +213,7 @@ class WindowLayout:
     """The views that start hidden."""
 
     def __post_init__(self) -> None:
-        problems = layout_problems(self.regions, self.sizes)
-        if problems:
-            raise ValueError(f"WindowLayout {'; '.join(problems)}")
+        refuse_problems(layout_problems(self.regions, self.sizes), "WindowLayout")
 
     @property
     def names(self) -> list[str]:
