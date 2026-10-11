@@ -62,16 +62,6 @@ class HookFailure:
     """What it raised."""
 
 
-def point_protocol(point: type | Many) -> type:
-    """Return the protocol a provider at *point* satisfies."""
-    return point.protocol if isinstance(point, Many) else point
-
-
-def takes_many(point: type | Many) -> bool:
-    """Return whether *point* takes any number of providers."""
-    return isinstance(point, Many)
-
-
 def known_points(moments: Iterable[str]) -> str:
     """Name the hook points a container calls, to end an error message.
 
@@ -189,9 +179,7 @@ def refuse_unknown_points(
                 )
 
 
-def refuse_ambiguous(
-    specs: Iterable[HookGroup], same: Callable[[str], str] = str
-) -> None:
+def refuse_ambiguous(specs: Iterable[HookGroup], same: Callable[[str], str]) -> None:
     """Refuse two separate entries naming one provider with the same keys.
 
     *same* turns a provider's name into what it stands for, so a short name
@@ -255,7 +243,7 @@ def refuse_crowded(
         If *owner* and its configuration name several between them.
     """
     for moment, named in sources.items():
-        if len(named) > 1 and not takes_many(points[moment]):
+        if len(named) > 1 and not isinstance(points[moment], Many):
             raise HookError(
                 f"hook point {moment!r} takes one provider, and {owner} and "
                 f"its configuration name {len(named)} between them; drop all "
@@ -274,7 +262,8 @@ def refuse_misfits(
         If a provider does not implement its point's protocol.
     """
     for moment, providers in resolved.items():
-        protocol = point_protocol(points[moment])
+        point = points[moment]
+        protocol = point.protocol if isinstance(point, Many) else point
         for provider in providers:
             if not isinstance(provider, protocol):
                 raise HookError(
