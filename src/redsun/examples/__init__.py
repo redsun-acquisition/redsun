@@ -19,7 +19,7 @@ from redsun.view.qt.builtins import (  # noqa: TC001
     PositionerView,
 )
 
-from ._devices import Laser, Led, Plans, Stage  # noqa: TC001
+from ._devices import Axis, Laser, Led, Plans, Stage  # noqa: TC001
 
 __all__ = ["ExampleApp", "example_config"]
 
@@ -38,13 +38,15 @@ def example_config(style: str | None) -> dict[str, Any]:
 class ExampleApp(QtSession):
     """Every built-in component in one window, over simulated devices.
 
-    A stage with two axes, a laser and an LED stand in for hardware, and one
-    plan walks an axis. Nothing is written or moved outside the process.
+    A stage with two axes, a focus axis, a laser and an LED stand in for
+    hardware, and one plan walks the focus. Nothing is written or moved
+    outside the process.
     """
 
     config: ClassVar[dict[str, Any]] = {"session": "redsun-example", "strict": True}
 
     stage: AsDevice[Stage]
+    focus: AsDevice[Axis]
     laser: AsDevice[Laser]
     led: AsDevice[Led]
 

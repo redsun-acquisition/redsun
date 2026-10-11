@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 class Axis(StandardReadable, StandardMovable[float]):
-    """One axis of the stage, moving at once to where it is sent."""
+    """An axis moving at once to where it is sent, by itself or as part of a stage."""
 
     def __init__(self, name: str = "") -> None:
         with self.add_children_as_readables(StandardReadableFormat.HINTED_SIGNAL):
