@@ -45,11 +45,6 @@ class ColorSchemeMode(StrEnum):
         """
         return cls(declared) if declared is not None else cls(cls.SYSTEM)
 
-    @property
-    def glyph(self) -> str:
-        """A character standing for this mode in plain text; the control shows an icon."""
-        return GLYPHS[self]
-
     def apply(self) -> None:
         """Ask the platform for this scheme, or stop asking under `SYSTEM`.
 
@@ -85,12 +80,6 @@ ICONS: dict[ColorSchemeMode, str] = {
     ColorSchemeMode.DARK: "weather-night",
 }
 """The icon the control shows while each mode is asked for."""
-
-GLYPHS: dict[ColorSchemeMode, str] = {
-    ColorSchemeMode.SYSTEM: "\u25d0",
-    ColorSchemeMode.LIGHT: "\u2600",
-    ColorSchemeMode.DARK: "\u263e",
-}
 
 
 class ColorSchemeButton(QToolButton):
