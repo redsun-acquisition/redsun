@@ -30,6 +30,11 @@ needs_qlementine = pytest.mark.skipif(
     reason=f"needs the {qlementine.EXTRAS[API]} dependency group",
 )
 
+STYLES = [
+    pytest.param(name, marks=needs_qlementine) if name == "qlementine" else name
+    for name in styles()
+]
+
 WITHOUT_QT = """
 import sys
 
@@ -41,14 +46,7 @@ sys.exit(main([]))
 
 
 @pytest.mark.qt
-@pytest.mark.parametrize(
-    "style",
-    [
-        None,
-        "napari",
-        pytest.param("qlementine", marks=needs_qlementine),
-    ],
-)
+@pytest.mark.parametrize("style", [None, *STYLES])
 def test_the_example_builds_every_component_under_each_style(
     style: str | None,
     qapp: QApplication,
@@ -65,11 +63,6 @@ def test_the_example_builds_every_component_under_each_style(
     assert len(installed) == (0 if style is None else 1)
     assert not session.unconnected
     assert list(session.acquisition.plans) == ["walk"]
-
-
-def test_every_style_of_the_manifest_is_built_above() -> None:
-    """List in the test above exactly the styles the command offers."""
-    assert styles() == ["napari", "qlementine"]
 
 
 @pytest.mark.qt

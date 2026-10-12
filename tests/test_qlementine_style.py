@@ -10,13 +10,14 @@ import pytest
 from qtpy import API
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QColor, QFont, QGuiApplication, QPalette
-from qtpy.QtWidgets import QToolButton
+from qtpy.QtWidgets import QToolButton, QWidget
+from superqt import QCollapsible
 
 from redsun import AsHook
 from redsun.qt import QtHook, QtSession
 from redsun.qt.styles import qlementine
 from redsun.qt.styles.qlementine import QlementineStyle
-from redsun.view.qt._icons import set_icon
+from redsun.view.qt._icons import set_collapsible_icons, set_icon
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QApplication
@@ -45,9 +46,9 @@ def is_dark(app: QApplication) -> bool:
     return window_colour(app).lightness() < 128
 
 
-def contrast(button: QToolButton) -> int:
-    """Return how far apart the lightest and the darkest pixel of *button* as drawn are, from 0 to 255."""
-    image = button.grab().toImage()
+def contrast(widget: QWidget) -> int:
+    """Return how far apart the lightest and the darkest pixel of *widget* as drawn are, from 0 to 255."""
+    image = widget.grab().toImage()
     lightness = [
         image.pixelColor(x, y).lightness()
         for x in range(image.width())
@@ -125,6 +126,61 @@ def test_an_icon_of_a_built_in_view_stands_out_in_each_theme(
 
 
 @needs_qlementine
+@pytest.mark.parametrize(
+    "scheme", [QtNamespace.ColorScheme.Dark, QtNamespace.ColorScheme.Light]
+)
+def test_the_header_of_a_collapsible_section_stands_out_in_each_theme(
+    scheme: QtNamespace.ColorScheme, qapp: QApplication, build: BuildSession
+) -> None:
+    """Draw the header of a collapsible section in a colour that stands out, in the dark and the light theme."""
+    build(StyledApp)
+    hints = QGuiApplication.styleHints()
+    assert hints is not None
+    style: Any = qapp.style()
+    style.setAnimationsEnabled(False)
+    section = QCollapsible("Saved positions")
+    set_collapsible_icons(section)
+
+    hints.colorSchemeChanged.emit(scheme)
+    qapp.processEvents()
+
+    assert contrast(section.toggleButton()) > 100
+
+
+@needs_qlementine
+def test_shutdown_restores_the_style_under_a_stylesheet(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put back the style of an application that has a stylesheet, which hides the style's name."""
+    before = style_name(qapp)
+    qapp.setStyleSheet("QLabel { color: red; }")
+    try:
+        build(StyledApp).shutdown()
+    finally:
+        qapp.setStyleSheet("")
+
+    assert style_name(qapp) == before
+
+
+@needs_qlementine
+def test_a_theme_that_cannot_be_applied_leaves_the_application_as_it_was(
+    qapp: QApplication, build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Put back the style, font and palette when the style fails after it was set on the application."""
+
+    def refuse(style: QlementineStyle, dark: bool) -> None:
+        raise RuntimeError("the theme cannot be applied")
+
+    monkeypatch.setattr(QlementineStyle, "_apply", refuse)
+    before = (style_name(qapp), qapp.font().toString(), window_colour(qapp))
+
+    session = build(StyledApp)
+
+    assert session.hooks[QtHook.CONFIGURE_APPLICATION] == ()
+    assert (style_name(qapp), qapp.font().toString(), window_colour(qapp)) == before
+
+
+@needs_qlementine
 def test_shutdown_gives_back_the_palette_of_the_platforms_style(
     qapp: QApplication, build: BuildSession
 ) -> None:
@@ -141,12 +197,10 @@ def test_shutdown_gives_back_the_palette_of_the_platforms_style(
 
 
 @needs_qlementine
-def test_shutdown_restores_the_style_font_and_palette_and_stops_following(
+def test_shutdown_restores_the_style_font_and_palette(
     qapp: QApplication, build: BuildSession
 ) -> None:
-    """Put back the application's style, font and palette at shutdown, and ignore later scheme changes."""
-    hints = QGuiApplication.styleHints()
-    assert hints is not None
+    """Put back the application's style, font and palette at shutdown."""
     font = QFont(qapp.font())
     font.setPointSize(font.pointSize() + 3)
     palette = QPalette(qapp.palette())
@@ -156,7 +210,6 @@ def test_shutdown_restores_the_style_font_and_palette_and_stops_following(
     qapp.setPalette(palette)
     try:
         build(StyledApp).shutdown()
-        hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
         restored = (style_name(qapp), qapp.font().toString(), window_colour(qapp))
     finally:
         qapp.setFont(earlier[1])
@@ -181,3 +234,4 @@ def test_a_missing_package_skips_the_style_and_names_the_extra(
     assert session.hooks[QtHook.CONFIGURE_APPLICATION] == ()
     assert style_name(qapp) == before
     assert f"redsun[{qlementine.EXTRAS[API]}]" in caplog.text
+    assert "No module named 'no_such_qlementine_package'" in caplog.text

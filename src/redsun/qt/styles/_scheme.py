@@ -14,22 +14,24 @@ if TYPE_CHECKING:
 class SchemeFollower:
     """Tells a style whether the colour scheme is dark, at once and at every change.
 
-    An unknown scheme counts as light.
+    An unknown scheme counts as light. If the style raises when told the
+    first time, nothing is left connected.
     """
 
     def __init__(self, apply: Callable[[bool], None]) -> None:
-        self._apply = apply
+        self.apply = apply
         hints = QGuiApplication.styleHints()
-        if hints is not None:
-            hints.colorSchemeChanged.connect(self._tell)
         unknown = QtNamespace.ColorScheme.Unknown
-        self._tell(hints.colorScheme() if hints is not None else unknown)
+        self.tell(hints.colorScheme() if hints is not None else unknown)
+        if hints is not None:
+            hints.colorSchemeChanged.connect(self.tell)
 
     def stop(self) -> None:
         """Stop telling the style about changes."""
         hints = QGuiApplication.styleHints()
         if hints is not None:
-            hints.colorSchemeChanged.disconnect(self._tell)
+            hints.colorSchemeChanged.disconnect(self.tell)
 
-    def _tell(self, scheme: QtNamespace.ColorScheme) -> None:
-        self._apply(scheme == QtNamespace.ColorScheme.Dark)
+    def tell(self, scheme: QtNamespace.ColorScheme) -> None:
+        """Tell the style whether *scheme* is the dark one."""
+        self.apply(scheme == QtNamespace.ColorScheme.Dark)

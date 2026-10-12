@@ -40,6 +40,9 @@ those packages shaped how a session gets the style:
   palette's colour, as the `napari` style has it, vanishes on every other
   button. The style turns on `qlementine`'s own icon colouring, which draws
   each icon in the colour of the control it is on.
+  [ADR 30](0030-napari-styling-is-copied-until-napari-publishes-it.md)
+  expected every style to set the window's text colour for the icons to
+  take; this style is the exception.
 - **`shutdown` puts back the style, the font and the palette.** A style the
   application held without a name cannot be put back.
 
@@ -78,6 +81,15 @@ Other options were rejected:
   GPL software, so `qlementine-pyqt` adds no new condition.
 - The packages exist for Windows on x64, macOS on Apple silicon and Linux
   on x64. On another platform the extra does not install.
-- qlementine animates a change of colour, so a control shows its old colour
-  for a moment after the theme changes. A test reads the application's
-  palette, which changes at once.
+- `qlementine` animates a change of colour, so a control shows its old
+  colour for a moment after the theme changes. A test reads the
+  application's palette, which changes at once.
+- Every icon in the window is drawn in one colour under this style, an icon
+  of a plugin's view included. A widget keeps its icon's own colours by
+  asking the style for that widget alone.
+- An application with a stylesheet hides its style behind a wrapper with no
+  name. The style reads the name of the wrapped one, so it can put it back.
+- In `redsun`'s own repository, `uv` refuses to install the `pyside` extra
+  and the `pyside` group together, and so `--all-extras` and
+  `--all-groups`: one `conflicts` entry holds the four names. No workflow
+  uses them.
