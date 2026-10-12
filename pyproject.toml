@@ -133,6 +133,9 @@ qlementine-pyqt = [
 qlementine-pyside = [
     # not the pyside group: the package brings the one pyside6 it accepts
     {include-group = "qt-common"},
+    # the same constraints as the pyside extra, which says why; the package
+    # holds pyside6 at 6.10.2 today, and these hold once it no longer does
+    "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "pyside6-qlementine>=1.5.1",
 ]
 
@@ -187,6 +190,9 @@ qlementine-pyside = [
     # not redsun[pyside]: the package brings the whole pyside6, at the one
     # version it accepts
     "redsun[qt-common]",
+    # the same constraints as the pyside extra, which says why; the package
+    # holds pyside6 at 6.10.2 today, and these hold once it no longer does
+    "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "pyside6-qlementine>=1.5.1",
 ]
 
