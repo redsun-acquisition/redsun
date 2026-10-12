@@ -1,4 +1,4 @@
-"""napari's look for a Qt session, following its colour scheme."""
+"""`napari`'s look for a Qt session, following its colour scheme."""
 
 from __future__ import annotations
 
@@ -19,12 +19,12 @@ __all__ = ["NapariStyle"]
 
 
 class NapariStyle:
-    """Gives the window napari's look, dark or light as the colour scheme reads.
+    """Gives the window `napari`'s look, dark or light as the colour scheme reads.
 
-    A `configure_application` hook provider. It applies napari's stylesheet
+    A `configure_application` hook provider. It applies `napari`'s stylesheet
     and icons for the current colour scheme, then again at every change of
     the scheme, so the session's colour scheme control switches between
-    napari's dark and light themes. An unknown scheme gets the light theme.
+    `napari`'s dark and light themes. An unknown scheme gets the light theme.
     Both themes' icons are written to the user's cache folder when the
     session builds. At shutdown the application gets back the stylesheet it
     had before.
@@ -32,7 +32,7 @@ class NapariStyle:
     Parameters
     ----------
     font_size
-        The stylesheet's base font size in points; `None` keeps napari's own
+        The stylesheet's base font size in points; `None` keeps `napari`'s own
         size for the platform.
 
     Raises
@@ -58,7 +58,7 @@ class NapariStyle:
         self._follower: SchemeFollower | None = None
 
     def configure_application(self, app: QApplication) -> None:
-        """Apply napari's theme for the current colour scheme, and again on each change."""
+        """Apply `napari`'s theme for the current colour scheme, and again on each change."""
         self._app = app
         self._previous = app.styleSheet()
         # files are written here, where a failure is caught and the style
