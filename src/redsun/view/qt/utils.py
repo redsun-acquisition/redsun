@@ -22,8 +22,8 @@ from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
+from redsun.view.qt.icons import set_icon
 
-from ._icons import set_icon
 from ._value_widgets import located, problems_of
 from ._widget_factory import create_param_widget
 

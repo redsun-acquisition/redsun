@@ -9,7 +9,7 @@ from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QGuiApplication
 from qtpy.QtWidgets import QSizePolicy, QToolButton, QWidget
 
-from ..view.qt._icons import set_icon
+from redsun.view.qt.icons import set_icon
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QMainWindow

@@ -16,7 +16,7 @@ from qtpy.QtWidgets import (
 )
 from superqt import QCollapsible
 
-from redsun.view.qt._icons import set_collapsible_icons, set_icon, set_item_icon
+from redsun.view.qt.icons import set_collapsible_icons, set_icon, set_item_icon
 from tests.sdk.helpers import automatic_collection
 
 pytestmark = pytest.mark.qt

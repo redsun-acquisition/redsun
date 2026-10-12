@@ -50,7 +50,9 @@ Install `NapariStyle` at the `configure_application` hook point:
 The window then takes napari's colours and font sizes, and napari's own
 pictures for check boxes, arrows and other small controls. The buttons of the
 built-in views keep `redsun`'s own icons, which take the theme's text colour,
-so they are light in the dark theme and dark in the light one.
+so they are light in the dark theme and dark in the light one. A view of
+your own gets the same icons from
+[`redsun.view.qt.icons`](../reference/api/view.md#redsun.view.qt.icons).
 
 ## Set the font size
 

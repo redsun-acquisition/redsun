@@ -8,7 +8,8 @@ from psygnal import Signal
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from ._icons import set_icon
+from redsun.view.qt.icons import set_icon
+
 from ._positioner_group import DEFAULT_PRECISION, LIMIT
 
 if TYPE_CHECKING:

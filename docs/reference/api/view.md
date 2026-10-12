@@ -59,6 +59,14 @@ icon: lucide/code
         - DescriptorTreeView
         - ConfigurationTab
 
+::: redsun.view.qt.icons
+    options:
+      members:
+        - set_icon
+        - set_item_icon
+        - collapsible_section
+        - set_collapsible_icons
+
 ## Built-ins
 
 ::: redsun.view.qt.builtins.LogView
