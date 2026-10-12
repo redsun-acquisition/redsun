@@ -134,10 +134,44 @@ jobs:
           "
           uv run --locked --no-default-groups --group dev --group ${{ env.GROUP }} $with pytest -q --color=yes -n auto --dist loadfile
 
+  # the style's package is an extra, and the pyside6 one holds pyside6 at one
+  # version, so its tests run in an environment of their own
+  qlementine:
+    name: qlementine style
+    needs: [binding]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Set up Qt's system libraries
+        uses: pyvista/setup-headless-display-action@v5
+        with:
+          qt: true
+
+      - name: Run the style's tests with coverage
+        env:
+          QT_API: ${{ inputs.binding }}
+        run: uv run --locked --no-default-groups --group dev --group qlementine-${{ env.GROUP }} coverage run -p -m pytest --color=yes tests/test_qlementine_style.py tests/test_cli.py
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: covreport-${{ inputs.binding }}-qlementine
+          path: ./.coverage*
+          include-hidden-files: true
+
   upload_coverage:
     name: Upload coverage
     if: ${{ !cancelled() }}
-    needs: [test]
+    needs: [test, qlementine]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -173,7 +207,7 @@ jobs:
   passed:
     name: ${{ inputs.binding }} passed
     if: ${{ !cancelled() }}
-    needs: [binding, mypy, test, floor]
+    needs: [binding, mypy, test, floor, qlementine]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any check did not succeed
