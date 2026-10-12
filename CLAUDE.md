@@ -284,7 +284,11 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   `docs/how-to/contribute.md`). A release collects the files into
   `docs/reference/changelog.md`; edit that file by hand only to fix an entry
   while releasing. A change that breaks existing code also gets a `breaking`
-  entry and a line on the current `docs/how-to/migrate-from-*.md` page.
+  entry and a section or a line on the migration page of the release being
+  made. Each release has its own page, named after the release a user
+  leaves: `docs/how-to/migrate-from-0.14.md` while 0.15 is made. A
+  deprecation gets a `deprecated` entry and a place in that page's
+  "Deprecated" section, which names the release that removes it.
 
 ### Docstrings and comments
 
