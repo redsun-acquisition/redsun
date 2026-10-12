@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 from qtpy.QtCore import QEvent, QObject, QSize, Qt
-from qtpy.QtGui import QIcon, QPalette
+from qtpy.QtGui import QColor, QGuiApplication, QIcon, QPalette
 from qtpy.QtWidgets import QAbstractButton, QComboBox, QWidget
 from superqt import QCollapsible, fonticon
 
@@ -65,6 +65,7 @@ class Repaint(QObject):
         self.button: str | None = None
         self.items: dict[int, str] = {}
         self.arrows: tuple[str, str] | None = None
+        self.header: QColor | None = None
         widget.installEventFilter(self)
 
     def eventFilter(self, watched: QObject | None, event: QEvent | None) -> bool:
@@ -85,9 +86,28 @@ class Repaint(QObject):
             for index, name in self.items.items():
                 widget.setItemIcon(index, icon(name, widget))
         if self.arrows is not None and isinstance(widget, QCollapsible):
+            toggle = widget.toggleButton()
+            self.match_header(widget, toggle)
             collapsed, expanded = self.arrows
-            widget.setCollapsedIcon(icon(collapsed, widget.toggleButton()))
-            widget.setExpandedIcon(icon(expanded, widget.toggleButton()))
+            widget.setCollapsedIcon(icon(collapsed, toggle))
+            widget.setExpandedIcon(icon(expanded, toggle))
+
+    def match_header(self, collapsible: QCollapsible, toggle: QAbstractButton) -> None:
+        """Give the header button the text colour around it, unless a style sheet gave it one.
+
+        The button has a style sheet of its own, so Qt draws its text and
+        arrow in the palette's `ButtonText` and passes it no change of the
+        application's palette. A style may keep that role for the text of
+        its own buttons, which leaves a header nobody can read.
+        """
+        role = QPalette.ColorRole.ButtonText
+        current = toggle.palette().color(role)
+        inherited = current == QGuiApplication.palette().color(role)
+        if inherited or current == self.header:
+            self.header = collapsible.palette().color(QPalette.ColorRole.WindowText)
+            palette = toggle.palette()
+            palette.setColor(role, self.header)
+            toggle.setPalette(palette)
 
 
 def repaint_for(widget: QWidget) -> Repaint:

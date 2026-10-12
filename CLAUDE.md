@@ -75,7 +75,7 @@ a second `uv.exe` in the project `.venv` and shadows the installed one:
 
 ```bash
 uv run prek install              # once: run the prek.toml hooks on every commit
-uv run tox                       # lint, both mypy legs, both test legs, docs
+uv run tox                       # lint, both mypy legs, the test legs, docs
 uv run tox -e tests-pyqt         # one environment
 uv run tox -e tests-pyqt -- tests/sdk -x         # posargs reach pytest
 uv run tox -e mypy-pyqt,mypy-pyside
@@ -86,6 +86,7 @@ uv run tox -e mypy-pyqt,mypy-pyside
 | `lint` | `prek run --all-files`: the commit hooks, ruff included |
 | `mypy-pyqt` / `mypy-pyside` | mypy against that binding |
 | `tests-pyqt` / `tests-pyside` | `pytest -q -n auto --dist loadfile` under that binding |
+| `tests-qlementine-pyqt` / `tests-qlementine-pyside` | `pytest -q tests/test_qlementine_style.py tests/test_cli.py`, with the style's package for that binding |
 | `docs` | `zensical build`, `scripts/check_xrefs.py`, then a `towncrier` draft |
 
 tox and CI run the tests with `pytest-xdist`, every test of a file on the
@@ -133,6 +134,12 @@ whole length (`redsun.testing.no_automatic_collection`) and collects after
 each test module on the main thread (`collect_after_module`), so no widget a
 test leaves in a cycle is freed on the loop thread;
 `keep_automatic_collection_off` fails a test that leaves it on.
+
+The qlementine style's package is an extra, one per binding
+(`qlementine-pyqt`, `qlementine-pyside`), and the pyside6 one accepts
+pyside6 6.10.2 only. A `[tool.uv] conflicts` entry keeps that version out of
+every other environment, so the tests needing the package run in the two
+`tests-qlementine-*` environments and are skipped elsewhere.
 
 `scripts/mypy_qt.py` is what the two `mypy-*` environments call. `qtpy mypy-args` prints
 the `--always-true` / `--always-false` flags for the selected binding, and

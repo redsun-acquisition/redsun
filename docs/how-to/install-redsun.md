@@ -91,6 +91,14 @@ checks that the two agree -->
 <button type="button" data-value="">none<small>no window: a headless session</small></button>
 </div>
 </div>
+<div class="install-row" data-role="extra" role="group" aria-label="Style">
+<span class="install-label">Style</span>
+<div class="install-choices">
+<button type="button" data-value="">none<small>the platform's look, or the <code>napari</code> style, which needs no extra</small></button>
+<button type="button" data-value="qlementine-pyqt">qlementine, PyQt6<small><code>qlementine-pyqt</code>: the <code>qlementine</code> style, with the PyQt6 window</small></button>
+<button type="button" data-value="qlementine-pyside">qlementine, PySide6<small><code>qlementine-pyside</code>: the <code>qlementine</code> style, with the PySide6 window, held at 6.10.2</small></button>
+</div>
+</div>
 <div class="install-row" data-role="extra" data-multiple role="group" aria-label="Data">
 <span class="install-label">Data</span>
 <div class="install-choices">

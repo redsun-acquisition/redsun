@@ -5,10 +5,10 @@ icon: lucide/palette
 # How to choose a style
 
 A Qt session looks like the other programs on your computer, because it uses
-the style your platform gives every window. You can give it the look of
-`napari` instead, an image viewer many labs already use, so the two programs
-look alike side by side. The style comes with `redsun`, and you turn it on
-with one line.
+the style your platform gives every window. You can give it another look:
+`napari`'s, an image viewer many labs already use, or `qlementine`'s. The
+`napari` style comes with `redsun`, and you turn it on with one line; the
+`qlementine` style needs an extra, and has a section of its own below.
 
 ![The positioner view in napari's dark theme](images/napari-style.png)
 
@@ -25,7 +25,7 @@ You need a [`QtSession`][redsun.qt.QtSession]. The style is a
 [How to install hooks](install-hooks.md) explains the two ways of installing
 it shown below.
 
-## Turn on the style
+## Turn on the napari style
 
 Install `NapariStyle` at the `configure_application` hook point:
 
@@ -103,10 +103,11 @@ platform doesn't say which it prefers, the style uses the light theme.
 
 ## Undo the style
 
-The style keeps the stylesheet the application had before. When the session
-shuts down, the style puts it back and stops following the colour scheme.
+The `napari` style keeps the stylesheet the application had before. When the
+session shuts down, the style puts it back and stops following the colour
+scheme.
 
-## Where the files come from
+## Where napari's files come from
 
 The stylesheets and icons are napari 0.9.2's, copied unchanged into
 `redsun.qt.styles`, so napari doesn't need to be installed. They stay under
@@ -114,12 +115,77 @@ napari's BSD 3-Clause licence, which is beside them. When the session
 builds, the style writes the icons of both themes, in their colours, to your
 user cache folder, and a file that hasn't changed isn't written again.
 
+## Use the qlementine style
+
+`qlementine` is a style that draws every control itself, where the `napari`
+style is a stylesheet over your platform's. `redsun` doesn't ship it, so
+install the extra for your Qt binding first:
+
+```bash
+pip install "redsun[qlementine-pyqt]"     # with PyQt6
+pip install "redsun[qlementine-pyside]"   # with PySide6
+```
+
+Then install `QlementineStyle` at the same hook point:
+
+=== "Session class"
+
+    ```python
+    from redsun import AsHook
+    from redsun.qt import QtSession
+    from redsun.qt.styles.qlementine import QlementineStyle
+
+
+    class MyApp(QtSession):
+        configure_application: AsHook[QlementineStyle]
+    ```
+
+=== "Session file"
+
+    ```yaml
+    hooks:
+      configure_application: qlementine
+    ```
+
+To see it first, run `redsun --example qlementine`.
+
+The style follows the colour scheme as the `napari` style does, and takes no
+setting. It changes the application's font as well as its colours. When the
+session shuts down it puts back the style, the font and the palette the
+application had.
+
+`qlementine` draws every icon in the window in one colour, the colour of the
+control the icon is on. That keeps the icons of the built-in views readable
+in both themes, and it takes the colours away from an icon of your own that
+has several. To keep them on one widget, tell `qlementine` so for that
+widget:
+
+```python
+import PyQt6Qlementine as qlementine  # or PySide6Qlementine
+
+qlementine.QlementineStyle.setAutoIconColor(my_widget, qlementine.AutoIconColor.None_)
+```
+
+Before you choose it:
+
+- Its packages exist for Windows on x64, macOS on Apple silicon and Linux on
+  x64 only.
+- `qlementine-pyside` installs the whole `pyside6` at version 6.10.2, the
+  one version its package accepts.
+- `PyQt6-Qlementine` is under the GPL-3.0 licence, as `pyqt6` is.
+  `PySide6-Qlementine` is under the MIT licence.
+- If the package is missing, the session logs the extra to install and
+  starts with your platform's look. A session that sets `strict` stops
+  instead.
+
 ## See also
 
 - [How to install hooks](install-hooks.md) shows how to write a style of
   your own, as a `configure_application` provider.
 - [ADR 30](../explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it.md)
   records why the files are copied.
+- [ADR 32](../explanation/decisions/0032-the-qlementine-style-comes-behind-one-extra-per-binding.md)
+  records why `qlementine` has one extra per Qt binding.
 
 ## The example in full
 

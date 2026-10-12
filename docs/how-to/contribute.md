@@ -145,6 +145,7 @@ uv run tox -e mypy-pyqt
 | `lint` | `prek run --all-files`: the [commit checks](#checks-before-each-commit) |
 | `mypy-pyqt` / `mypy-pyside` | `mypy` against that Qt binding |
 | `tests-pyqt` / `tests-pyside` | `pytest -q -n auto --dist loadfile` under that Qt binding |
+| `tests-qlementine-pyqt` / `tests-qlementine-pyside` | the tests of the `qlementine` style and of the example, with the style's package for that Qt binding |
 | `docs` | `zensical build` then the cross-reference check |
 
 ### Only some tests

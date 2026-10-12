@@ -126,6 +126,18 @@ profile = [
     "py-spy>=0.4.2",
     "pyinstrument>=5.1.3",
 ]
+qlementine-pyqt = [
+    {include-group = "pyqt"},
+    "pyqt6-qlementine>=1.5.1",
+]
+qlementine-pyside = [
+    # not the pyside group: the package brings the one pyside6 it accepts
+    {include-group = "qt-common"},
+    # the same constraints as the pyside extra, which says why; the package
+    # holds pyside6 at 6.10.2 today, and these hold once it no longer does
+    "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
+    "pyside6-qlementine>=1.5.1",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -168,6 +180,20 @@ testing = [
 profile = [
     "py-spy>=0.4.2",
     "pyinstrument>=5.1.3",
+]
+qlementine-pyqt = [
+    "redsun[pyqt]",
+    # GPL-3.0-only, as pyqt6 is
+    "pyqt6-qlementine>=1.5.1",
+]
+qlementine-pyside = [
+    # not redsun[pyside]: the package brings the whole pyside6, at the one
+    # version it accepts
+    "redsun[qt-common]",
+    # the same constraints as the pyside extra, which says why; the package
+    # holds pyside6 at 6.10.2 today, and these hold once it no longer does
+    "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
+    "pyside6-qlementine>=1.5.1",
 ]
 
 [project.scripts]
@@ -289,10 +315,21 @@ convention = "numpy"
 # a plain `uv sync` or `uv run` gets one Qt binding; the pyside legs ask for
 # their own with --no-default-groups, so they never see PyQt6
 default-groups = ["dev", "pyqt"]
+# PySide6-Qlementine accepts one version of pyside6 (PyQlementine#18). Without
+# this, the lock would hold that version for every environment; with it, only
+# the qlementine one is held back.
+conflicts = [
+    [
+        { extra = "pyside" },
+        { group = "pyside" },
+        { extra = "qlementine-pyside" },
+        { group = "qlementine-pyside" },
+    ],
+]
 
 [tool.tox]
 requires = ["tox>=4.28", "tox-uv-bare>=1.36"]
-env_list = ["lint", "mypy-pyqt", "mypy-pyside", "tests-pyqt", "tests-pyside", "docs"]
+env_list = ["lint", "mypy-pyqt", "mypy-pyside", "tests-pyqt", "tests-pyside", "tests-qlementine-pyqt", "tests-qlementine-pyside", "docs"]
 
 [tool.tox.env_run_base]
 runner = "uv-venv-lock-runner"
@@ -321,6 +358,16 @@ commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "po
 dependency_groups = ["dev", "pyside"]
 set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
+
+[tool.tox.env.tests-qlementine-pyqt]
+dependency_groups = ["dev", "qlementine-pyqt"]
+set_env = { QT_API = "pyqt6" }
+commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
+
+[tool.tox.env.tests-qlementine-pyside]
+dependency_groups = ["dev", "qlementine-pyside"]
+set_env = { QT_API = "pyside6" }
+commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]
 dependency_groups = ["dev", "docs", "pyqt"]

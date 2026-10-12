@@ -1,4 +1,4 @@
-"""napari's look for a Qt session, following its colour scheme."""
+"""`napari`'s look for a Qt session, following its colour scheme."""
 
 from __future__ import annotations
 
@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from platformdirs import user_cache_dir
-from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtGui import QGuiApplication
 
+from ._scheme import SchemeFollower
 from ._vendor._napari.icons import write_icons
 from ._vendor._napari.theme import DARK, LIGHT, stylesheet
 
@@ -20,12 +19,12 @@ __all__ = ["NapariStyle"]
 
 
 class NapariStyle:
-    """Gives the window napari's look, dark or light as the colour scheme reads.
+    """Gives the window `napari`'s look, dark or light as the colour scheme reads.
 
-    A `configure_application` hook provider. It applies napari's stylesheet
+    A `configure_application` hook provider. It applies `napari`'s stylesheet
     and icons for the current colour scheme, then again at every change of
     the scheme, so the session's colour scheme control switches between
-    napari's dark and light themes. An unknown scheme gets the light theme.
+    `napari`'s dark and light themes. An unknown scheme gets the light theme.
     Both themes' icons are written to the user's cache folder when the
     session builds. At shutdown the application gets back the stylesheet it
     had before.
@@ -33,7 +32,7 @@ class NapariStyle:
     Parameters
     ----------
     font_size
-        The stylesheet's base font size in points; `None` keeps napari's own
+        The stylesheet's base font size in points; `None` keeps `napari`'s own
         size for the platform.
 
     Raises
@@ -56,9 +55,10 @@ class NapariStyle:
         self._app: QApplication | None = None
         self._previous = ""
         self._sheets: dict[str, str] = {}
+        self._follower: SchemeFollower | None = None
 
     def configure_application(self, app: QApplication) -> None:
-        """Apply napari's theme for the current colour scheme, and again on each change."""
+        """Apply `napari`'s theme for the current colour scheme, and again on each change."""
         self._app = app
         self._previous = app.styleSheet()
         # files are written here, where a failure is caught and the style
@@ -71,23 +71,17 @@ class NapariStyle:
             )
             for theme in (DARK, LIGHT)
         }
-        hints = QGuiApplication.styleHints()
-        if hints is not None:
-            hints.colorSchemeChanged.connect(self._apply)
-        unknown = QtNamespace.ColorScheme.Unknown
-        self._apply(hints.colorScheme() if hints is not None else unknown)
+        self._follower = SchemeFollower(self._apply)
 
     def shutdown(self) -> None:
         """Stop following the colour scheme, and restore the previous stylesheet."""
-        if self._app is None:
+        if self._app is None or self._follower is None:
             return
-        hints = QGuiApplication.styleHints()
-        if hints is not None:
-            hints.colorSchemeChanged.disconnect(self._apply)
+        self._follower.stop()
         self._app.setStyleSheet(self._previous)
         self._app = None
 
-    def _apply(self, scheme: QtNamespace.ColorScheme) -> None:
-        theme = DARK if scheme == QtNamespace.ColorScheme.Dark else LIGHT
+    def _apply(self, dark: bool) -> None:
+        theme = DARK if dark else LIGHT
         if self._app is not None:
             self._app.setStyleSheet(self._sheets[theme.name])

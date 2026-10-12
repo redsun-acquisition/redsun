@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import pytest
+from qtpy import API
 from qtpy.QtWidgets import QTabWidget
 
 from redsun._cli import main, styles
@@ -14,6 +16,7 @@ from redsun.errors import BuildError, HookError
 from redsun.examples import ExampleApp, example_config
 from redsun.examples._devices import Axis, Plans
 from redsun.qt import QtHook
+from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,6 +24,16 @@ if TYPE_CHECKING:
     from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
+
+needs_qlementine = pytest.mark.skipif(
+    find_spec(qlementine.MODULES[API]) is None,
+    reason=f"needs the {qlementine.EXTRAS[API]} dependency group",
+)
+
+STYLES = [
+    pytest.param(name, marks=needs_qlementine) if name == "qlementine" else name
+    for name in styles()
+]
 
 WITHOUT_QT = """
 import sys
@@ -33,7 +46,7 @@ sys.exit(main([]))
 
 
 @pytest.mark.qt
-@pytest.mark.parametrize("style", [None, *styles()])
+@pytest.mark.parametrize("style", [None, *STYLES])
 def test_the_example_builds_every_component_under_each_style(
     style: str | None,
     qapp: QApplication,
@@ -110,7 +123,7 @@ def test_an_unknown_style_is_refused(capsys: pytest.CaptureFixture[str]) -> None
         main(["--example", "no-such-style"])
 
     assert stopped.value.code == 2
-    assert "no style named 'no-such-style'; choose from napari" in (
+    assert "no style named 'no-such-style'; choose from napari, qlementine" in (
         capsys.readouterr().err
     )
 

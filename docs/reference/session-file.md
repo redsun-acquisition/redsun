@@ -236,6 +236,7 @@ The providers `redsun` ships, by short name:
 | Name | Hook point | Provider |
 | --- | --- | --- |
 | `napari` | `configure_application` | [`NapariStyle`][redsun.qt.styles.napari.NapariStyle], `napari`'s look, dark or light as the colour scheme reads |
+| `qlementine` | `configure_application` | [`QlementineStyle`][redsun.qt.styles.qlementine.QlementineStyle], `qlementine`'s look, dark or light as the colour scheme reads; needs the `qlementine-pyqt` or `qlementine-pyside` extra |
 
 ```yaml
 hooks:
