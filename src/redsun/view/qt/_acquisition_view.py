@@ -15,10 +15,10 @@ from redsun.ports import slot
 from redsun.presenter import DescribesPlans  # noqa: TC001
 from redsun.qt import Dock
 from redsun.view import shortcut
+from redsun.view.qt.icons import set_icon
 from redsun.view.qt.utils import PlanInfoDialog, PlanWidget, create_plan_widget
 
 from ..._settings import Settings  # noqa: TC001
-from ._icons import set_icon
 
 if TYPE_CHECKING:
     from redsun.engine import ProgressState

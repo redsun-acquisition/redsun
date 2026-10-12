@@ -18,7 +18,7 @@ from redsun import AsHook
 from redsun.qt import QtHook, QtSession
 from redsun.qt.styles import qlementine
 from redsun.qt.styles.qlementine import QlementineStyle
-from redsun.view.qt._icons import set_collapsible_icons, set_icon
+from redsun.view.qt.icons import set_collapsible_icons, set_icon
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QApplication

@@ -12,8 +12,7 @@ from qtpy import QtWidgets as QtW
 
 from redsun.log import GlobalFormatter, log_buffer, service_of, session_log
 from redsun.qt import Dock
-
-from ._icons import set_item_icon
+from redsun.view.qt.icons import set_item_icon
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

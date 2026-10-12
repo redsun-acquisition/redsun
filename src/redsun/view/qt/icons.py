@@ -1,4 +1,10 @@
-"""Icons the built-in views draw from the Material Design icon font."""
+"""Icons from the Material Design icon font, as the built-in views draw them.
+
+An icon is named as Material Design Icons 7 names it, without a prefix:
+`play`, `content-save`, `crosshairs-gps`. It takes its colours from the
+palette of the widget it is on, and is drawn again when that palette changes,
+so it stays readable through a switch between light and dark.
+"""
 
 from __future__ import annotations
 
@@ -9,13 +15,16 @@ from qtpy.QtGui import QColor, QGuiApplication, QIcon, QPalette
 from qtpy.QtWidgets import QAbstractButton, QComboBox, QWidget
 from superqt import QCollapsible, fonticon
 
-__all__ = ["set_collapsible_icons", "set_icon", "set_item_icon"]
+__all__ = ["collapsible_section", "set_collapsible_icons", "set_icon", "set_item_icon"]
 
 PREFIX: Final = "mdi7"
 """The icon font's prefix in `superqt.fonticon` keys."""
 
 SCALE: Final = 1.4
 """An icon's size as a multiple of its widget's line height."""
+
+ARROWS: Final = ("menu-right", "menu-down")
+"""The icons of a collapsible section's arrow, collapsed and expanded."""
 
 
 def icon(name: str, widget: QWidget) -> QIcon:
@@ -119,7 +128,17 @@ def repaint_for(widget: QWidget) -> Repaint:
 def set_icon(button: QAbstractButton, name: str, words: str) -> None:
     """Show the icon *name* on *button* in place of text, with *words* as tooltip and accessible name.
 
-    The icon follows the button's palette from then on.
+    The icon follows the button's palette from then on. Calling this again
+    on the same button changes its icon.
+
+    Parameters
+    ----------
+    name
+        The icon's name in Material Design Icons 7, without a prefix, such
+        as `play`.
+    words
+        What the button does, in a few words: a screen reader reads them,
+        and they are the tooltip.
     """
     button.setText("")
     button.setToolTip(words)
@@ -133,10 +152,29 @@ def set_icon(button: QAbstractButton, name: str, words: str) -> None:
 
 
 def set_item_icon(combo: QComboBox, index: int, name: str) -> None:
-    """Show the icon *name* beside item *index* of *combo*, following its palette."""
+    """Show the icon *name* beside item *index* of *combo*, following its palette.
+
+    *name* is the icon's name in Material Design Icons 7, without a prefix.
+    """
     repaint = repaint_for(combo)
     repaint.items[index] = name
     repaint.draw()
+
+
+def collapsible_section(title: str, parent: QWidget) -> QCollapsible:
+    """Return a collapsible section of *parent* titled *title*, its arrows icons following its palette.
+
+    The arrows are given when the section is made. Left to itself, `superqt`
+    draws its default arrows on a picture sized by the font's point size,
+    which a font sized in pixels does not have, and Qt's painter complains
+    about the empty picture.
+    """
+    collapsed, expanded = (icon(name, parent) for name in ARROWS)
+    section = QCollapsible(
+        title, parent, expandedIcon=expanded, collapsedIcon=collapsed
+    )
+    set_collapsible_icons(section)
+    return section
 
 
 def set_collapsible_icons(collapsible: QCollapsible) -> None:
@@ -146,7 +184,7 @@ def set_collapsible_icons(collapsible: QCollapsible) -> None:
     moment, so a light/dark switch would leave them in the old colour.
     """
     repaint = repaint_for(collapsible)
-    repaint.arrows = ("menu-right", "menu-down")
+    repaint.arrows = ARROWS
     # the button has a style sheet of its own, so its palette changes apart
     # from the collapsible's and only the button's own events report it
     collapsible.toggleButton().installEventFilter(repaint)

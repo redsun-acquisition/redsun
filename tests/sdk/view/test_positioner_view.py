@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 from superqt import QCollapsible, QLabeledSlider
 
 from redsun import Settings
@@ -625,3 +625,25 @@ def test_the_view_passes_its_step_box_to_every_group(
     ]
 
     assert boxes == [QtWidgets.QDoubleSpinBox] * 3
+
+
+def test_the_view_is_built_without_a_warning_under_a_font_sized_in_pixels(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Build the view under a font sized in pixels, as a style may set, with no complaint from Qt's painter."""
+    messages: list[str] = []
+    font = qapp.font()
+    in_pixels = QtGui.QFont(font)
+    in_pixels.setPixelSize(12)
+    parent = QtWidgets.QWidget()
+    previous = QtCore.qInstallMessageHandler(
+        lambda kind, context, message: messages.append(message or "")
+    )
+    qapp.setFont(in_pixels)
+    try:
+        PositionerView("positioner", parent)
+    finally:
+        qapp.setFont(font)
+        QtCore.qInstallMessageHandler(previous)
+
+    assert [message for message in messages if "QPainter" in message] == []
