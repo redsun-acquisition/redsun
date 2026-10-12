@@ -135,6 +135,7 @@ nav = [
                 "explanation/decisions/0029-keyboard-shortcuts-are-declared-by-components.md",
                 "explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it.md",
                 "explanation/decisions/0031-hook-points-take-several-providers.md",
+                "explanation/decisions/0032-the-qlementine-style-comes-behind-one-extra-per-binding.md",
         ]},
     ]},
     { "Reference" = [

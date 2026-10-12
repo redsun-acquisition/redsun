@@ -40,3 +40,4 @@ never edited; a later one replaces it.
 - [29. Keyboard shortcuts are declared by components](0029-keyboard-shortcuts-are-declared-by-components.md)
 - [30. napari's styling is copied until napari publishes it](0030-napari-styling-is-copied-until-napari-publishes-it.md)
 - [31. Hook points take several providers and tolerate one that fails](0031-hook-points-take-several-providers.md)
+- [32. The qlementine style comes behind one extra per Qt binding](0032-the-qlementine-style-comes-behind-one-extra-per-binding.md)

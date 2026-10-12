@@ -15,7 +15,7 @@ redsun [--version] [--example [STYLE]]
 | --- | --- |
 | `--version` | prints the installed version |
 | `--example` | opens the example session in your platform's look |
-| `--example STYLE` | opens the example session in the style named: `napari` |
+| `--example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
 | none | prints the help |
 
 ## The example session

@@ -60,6 +60,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.qt.styles.qlementine.QlementineStyle
+    options:
+      show_root_heading: true
+
 ## Actions
 
 ::: redsun.qt.ActionError
