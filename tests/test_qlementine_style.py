@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from qtpy import API
+from qtpy.QtCore import QPoint, QRect
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QColor, QFont, QGuiApplication, QPalette
 from qtpy.QtWidgets import QToolButton, QWidget
@@ -46,15 +47,22 @@ def is_dark(app: QApplication) -> bool:
     return window_colour(app).lightness() < 128
 
 
-def contrast(widget: QWidget) -> int:
-    """Return how far apart the lightest and the darkest pixel of *widget* as drawn are, from 0 to 255."""
-    image = widget.grab().toImage()
+def contrast(widget: QWidget, region: QRect | None = None) -> int:
+    """Return how far apart the lightest and the darkest pixel of *widget* as drawn are, from 0 to 255, in *region* when given."""
+    image = (widget.grab() if region is None else widget.grab(region)).toImage()
     lightness = [
         image.pixelColor(x, y).lightness()
         for x in range(image.width())
         for y in range(image.height())
     ]
     return max(lightness) - min(lightness)
+
+
+def icon_region(button: QToolButton) -> QRect:
+    """Return the square in the middle of *button* that its icon is drawn in, leaving the frame out."""
+    region = QRect(QPoint(0, 0), button.iconSize())
+    region.moveCenter(button.rect().center())
+    return region
 
 
 def style_name(app: QApplication) -> str:
@@ -122,7 +130,7 @@ def test_an_icon_of_a_built_in_view_stands_out_in_each_theme(
     hints.colorSchemeChanged.emit(scheme)
     qapp.processEvents()
 
-    assert contrast(button) > 100
+    assert contrast(button, icon_region(button)) > 100
 
 
 @needs_qlementine
