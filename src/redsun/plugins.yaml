@@ -9,3 +9,4 @@ views:
   positioner: "redsun.view.qt.builtins:PositionerView"
 hooks:
   napari: "redsun.qt.styles.napari:NapariStyle"
+  qlementine: "redsun.qt.styles.qlementine:QlementineStyle"
