@@ -11,8 +11,9 @@ import pytest
 from app_model.backends.qt import QModelMainWindow, QModelMenu
 from app_model.types import Action, MenuRule
 from mock_bundle.panels import Panel
+from qtpy.QtCore import QEvent, QSize
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtGui import QAction
+from qtpy.QtGui import QAction, QShowEvent
 from qtpy.QtWidgets import (
     QApplication,
     QDockWidget,
@@ -45,6 +46,7 @@ LEFT = QtNamespace.DockWidgetArea.LeftDockWidgetArea
 RIGHT = QtNamespace.DockWidgetArea.RightDockWidgetArea
 TOP = QtNamespace.DockWidgetArea.TopDockWidgetArea
 BOTTOM = QtNamespace.DockWidgetArea.BottomDockWidgetArea
+WIDE = 500
 
 
 class Charts(Panel):  # type: ignore[misc]
@@ -207,6 +209,33 @@ class LaidOutApp(QtSession):
             },
             hidden=["e"],
         )
+
+
+class Widening(Panel):  # type: ignore[misc]
+    """A view asking for `WIDE` pixels once an event it posts while shown arrives."""
+
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        self.width_wanted = 50
+
+    def showEvent(self, event: QShowEvent | None) -> None:
+        super().showEvent(event)
+        QApplication.postEvent(self, QEvent(QEvent.Type.User))
+
+    def customEvent(self, event: QEvent | None) -> None:
+        self.width_wanted = WIDE
+        self.updateGeometry()
+
+    def sizeHint(self) -> QSize:
+        return QSize(self.width_wanted, 100)
+
+
+class WideningApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "widening-session"}
+
+    wide: AsView[Widening]
 
 
 class PropertyApp(QtSession):
@@ -658,6 +687,17 @@ def test_a_declared_layout_arranges_the_docks(
     assert d.geometry().y() > a.geometry().y()
     assert window.tabifiedDockWidgets(c) == [d]
     assert not d.visibleRegion().isEmpty()
+
+
+def test_a_dock_opens_as_wide_as_a_view_that_widens_while_shown(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Grow the window on the first show to a size hint that changed while it was shown."""
+    app = build(WideningApp)
+    app.show()
+    qapp.processEvents()
+
+    assert _dock(app, "wide").width() >= WIDE
 
 
 def test_the_centre_is_arranged_like_the_docks(

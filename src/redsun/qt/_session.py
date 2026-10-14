@@ -1338,12 +1338,22 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def show(self) -> None:
         """Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.
 
-        The sizes are given once, so showing the window again keeps what the
-        user changed. `run` calls it; a script that runs the event loop itself
+        The first show also grows the window, within the screen, to the size
+        its views ask for. The sizes are given once, so showing the window
+        again keeps what the user changed. `run` calls it; a script that runs the event loop itself
         calls it in place of showing `main_window`.
         """
         self.main_window.show()
         if not self._sized:
+            # the views' size hints grow with the style's font and metric
+            # changes, which arrive as posted events after the window took its
+            # size; without this the docks open narrower than their content
+            QApplication.sendPostedEvents()
+            hint = self.main_window.sizeHint()
+            screen = self.main_window.screen()
+            if screen is not None:
+                hint = hint.boundedTo(screen.availableGeometry().size())
+            self.main_window.resize(self.main_window.size().expandedTo(hint))
             fit_layout(self.main_window, self._shown_layout)
             self._sized = True
 
