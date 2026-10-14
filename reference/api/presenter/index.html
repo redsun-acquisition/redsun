@@ -11285,6 +11285,8 @@ breaks its own limits.</p>
     <div class="doc doc-contents ">
 
         <p>Build the <code>(args, kwargs)</code> calling a plan, from its <code>PlanSpec</code>.</p>
+<p>A positional parameter with no value takes its default when a later
+positional argument is given, so every argument keeps its place.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -11312,6 +11314,30 @@ breaks its own limits.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a positional parameter with no value and no default comes before
+a positional argument that is given.</p>
+              </div>
             </td>
           </tr>
       </tbody>
