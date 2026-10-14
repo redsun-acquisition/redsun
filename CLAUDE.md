@@ -108,8 +108,10 @@ and missed the one CI failed on. Trust tox.
 
 ### The Qt binding matrix
 
-CI type-checks and tests against pyqt6 **and** pyside6, one workflow per
-binding (`pyqt6.yaml`, `pyside6.yaml`, both calling `test-binding.yaml`). The
+CI type-checks and tests against pyqt6 **and** pyside6, all in `ci.yaml`:
+one job runs both `mypy-*` environments, and the test matrix takes the
+binding as one of its axes, every Python on Ubuntu and the oldest and newest
+on macOS and Windows. The
 `mypy-*` and `tests-*` environments each sync only their own binding's group
 and set `QT_API`, which is what decides the branches qtpy exposes. The `dev`
 group holds no binding: `[tool.uv] default-groups` adds `pyqt` to a plain
@@ -117,10 +119,10 @@ group holds no binding: `[tool.uv] default-groups` adds `pyqt` to a plain
 PyQt6 installed, as a `redsun[pyside]` user does.
 
 The pyside6 side depends on `pyside6-essentials`, not the whole `pyside6`
-(`pyproject.toml` says why). The pyside6 workflow also runs the suite once on
-the oldest version `redsun` accepts, layered over the lock with
-`uv run --with`; that floor, in `pyside6.yaml`, moves with the lower bound in
-`pyproject.toml`. Removing `pyside6` from an existing environment deletes files
+(`pyproject.toml` says why). The `extras` job of `ci.yaml` also runs the
+suite once on the oldest pyside6 `redsun` accepts, layered over the lock with
+`uv run --with`; that floor, its `FLOOR` variable, moves with the lower bound
+in `pyproject.toml`. Removing `pyside6` from an existing environment deletes files
 `pyside6-essentials` ships too, so after that change an environment updated in
 place reports no Qt binding: rebuild it (`uv run tox -r -e tests-pyside`, or
 `uv sync --reinstall-package pyside6-essentials`).
