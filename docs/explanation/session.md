@@ -329,10 +329,11 @@ shows how to read the summary and make a session strict.
 [ADR 11](decisions/0011-tolerating-a-component-that-fails-to-build.md) records
 why the session carries on.
 
-Two cases only log a warning: a component that shares nothing, asks for nothing
-and isn't wired to anything, and a shared value no component asks for. Neither
-is a mistake while you're still putting a session together, or when a
-[plugin](glossary.md#plugin) ships more than your session uses.
+A component that shares nothing, asks for nothing and isn't wired to anything
+logs a warning. A shared value no component asks for is logged at debug level
+only, because a built-in or [plugin](glossary.md#plugin) component often shares
+more than your session uses. Neither is a mistake while you're still putting a
+session together.
 
 ## Shutting down
 
