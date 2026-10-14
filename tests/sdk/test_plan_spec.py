@@ -603,6 +603,27 @@ class TestCollectArguments:
         args, _kwargs = collect_arguments(spec, {"x": 1})
         assert args == (1,)
 
+    def test_a_missing_positional_with_a_default_keeps_the_next_in_place(
+        self,
+    ) -> None:
+        """Pass the default of a missing positional parameter a later argument follows."""
+        spec = _make_spec(
+            param("a", kind=ParamKind.POSITIONAL_ONLY),
+            param("b", kind=ParamKind.POSITIONAL_ONLY, default=2),
+            param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD, default=3),
+        )
+        args, _kwargs = collect_arguments(spec, {"a": 1, "c": 30})
+        assert args == (1, 2, 30)
+
+    def test_a_missing_positional_without_a_default_is_refused(self) -> None:
+        """Refuse a missing positional parameter with no default a later argument follows."""
+        spec = _make_spec(
+            param("a", kind=ParamKind.POSITIONAL_ONLY),
+            param("b", kind=ParamKind.POSITIONAL_ONLY),
+        )
+        with pytest.raises(ValueError, match="'a' has no value"):
+            collect_arguments(spec, {"b": 2})
+
     def test_ordering_preserved(self) -> None:
         """Keep positional arguments in the order the plan declares them."""
         spec = _make_spec(

@@ -645,10 +645,19 @@ def collect_arguments(
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
     """Build the `(args, kwargs)` calling a plan, from its `PlanSpec`.
 
+    A positional parameter with no value takes its default when a later
+    positional argument is given, so every argument keeps its place.
+
     Parameters
     ----------
     values
         Resolved values by parameter name.
+
+    Raises
+    ------
+    ValueError
+        If a positional parameter with no value and no default comes before
+        a positional argument that is given.
 
     Notes
     -----
@@ -660,9 +669,25 @@ def collect_arguments(
     """
     args: list[Any] = []
     kwargs: dict[str, Any] = {}
+    positional = (ParamKind.POSITIONAL_ONLY, ParamKind.POSITIONAL_OR_KEYWORD)
+    last_given = max(
+        (
+            index
+            for index, p in enumerate(spec.parameters)
+            if p.name in values and p.kind in (*positional, ParamKind.VAR_POSITIONAL)
+        ),
+        default=-1,
+    )
 
-    for p in spec.parameters:
+    for index, p in enumerate(spec.parameters):
         if p.name not in values:
+            if index < last_given and p.kind in positional:
+                if p.default is Parameter.empty:
+                    raise ValueError(
+                        f"{p.name!r} has no value, and a later positional "
+                        "argument needs its place"
+                    )
+                args.append(p.default)
             continue
         value = values[p.name]
 
