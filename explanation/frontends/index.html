@@ -2428,6 +2428,8 @@
       
         
       
+        
+      
     
     
     
@@ -2471,6 +2473,35 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/migrate-from-0.15/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right-left" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to migrate from 0.15
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
               
                 
                   
@@ -6691,11 +6722,10 @@ naming what the frontend shows instead:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 </span></code></pre></div>
-<p>A <code>placement</code> set from a property can only be checked after the view is
-built; that form is deprecated and goes in 0.16, so set it as a class
-attribute or in the declaration. A session file's placement words, such as
-<code>left</code> or <code>central</code>, are read by the frontend's <code>read_placement</code>; the core
-knows none of them.</p>
+<p>The session reads the placement from the class attribute or the declaration,
+never from a property, since the view does not exist yet. A session file's
+placement words, such as <code>left</code> or <code>central</code>, are read by the frontend's
+<code>read_placement</code>; the core knows none of them.</p>
 <h2 id="the-qt-frontend">The Qt frontend<a class="headerlink" href="#the-qt-frontend" title="Permanent link">&para;</a></h2>
 <p>A Qt view's constructor starts with exactly <code>(name: str, parent: QWidget)</code>,
 and <code>QtSession</code> passes its main window as the parent
