@@ -2148,7 +2148,7 @@ class Session(BuildableSession):
             provided = shared_keys(declaration.cls)
             for method, key in provided.items():
                 if key not in wanted:
-                    logger.warning(
+                    logger.debug(
                         "%s.%s shares %r, which no component asks for",
                         declaration.name,
                         method,

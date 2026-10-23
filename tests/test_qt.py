@@ -175,7 +175,7 @@ class BrokenApp(QtSession):
     broken_ctrl: AsPresenter[BrokenPresenter]
 
 
-class GroupedPanel(Panel):  # type: ignore[misc]
+class GroupedPanel(Panel):
     placement: Placement = Dock("left", group="tools")
 
 

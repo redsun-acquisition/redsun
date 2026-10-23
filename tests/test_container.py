@@ -70,7 +70,7 @@ class FailsOnce:
             raise ValueError("not yet")
 
 
-class WorksOnce(MockStage):  # type: ignore[misc]
+class WorksOnce(MockStage):
     """Device that can be made the first time, and not afterwards."""
 
     def __init__(self, name: str, attempts: list[str]) -> None:
@@ -181,7 +181,7 @@ class Widget:
         self.seen = where
 
 
-class Registrar(MockRegistrar):  # type: ignore[misc]
+class Registrar(MockRegistrar):
     """Document router presenter that records being shut down."""
 
     def __init__(self, name: str) -> None:
@@ -1409,7 +1409,8 @@ def test_a_component_another_is_built_from_is_not_reported(
 def test_a_shared_value_nothing_asks_for_is_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """Log a shared value that no component asks for."""
+    """Log a shared value that no component asks for, at debug level."""
+    caplog.set_level(logging.DEBUG, logger="redsun")
     build(App)
     assert (
         "ctrl.descriptions shares 'Descriptions', which no component asks for"

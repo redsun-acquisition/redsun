@@ -226,7 +226,7 @@ class Answers:
         return self.answer
 
 
-class ClosingPair(MockBoth):  # type: ignore[misc]
+class ClosingPair(MockBoth):
     """Serves two points, and records its shutdown."""
 
     def __init__(self, closed: list[str]) -> None:
