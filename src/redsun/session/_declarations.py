@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 import logging
-import warnings
 from collections.abc import Mapping
 from dataclasses import KW_ONLY, dataclass, field
 from enum import StrEnum
@@ -220,8 +219,8 @@ class Declaration:
     class stay separable in a type-keyed graph. A device's `service` and
     `autoconnect` keywords are kept here, not passed to its constructor.
     A view's `placement` keyword is kept here too, read and checked against
-    the frontend: `placement` is where the view attaches, or `None` when its
-    class answers from a property and only the built instance can say.
+    the frontend: `placement` is where the view attaches, or `None` when the
+    declaration is refused or not a view.
     `refusal` is why the class cannot be built in its layer, or `None`; a
     refused declaration is never built. `attribute` is the annotation the
     session class declares it under and `source` the configuration entry its
@@ -335,17 +334,17 @@ def take_view_placement(
 ) -> dict[str, Any]:
     """Move a view's `placement` from *kwargs* onto *declaration*, read and checked.
 
-    A declared placement wins over the class's; *frontend* reads a word or
-    mapping. Without one the class attribute is kept, or nothing when the
-    class answers from a property, which is deprecated.
+    A declared placement wins over the class attribute; *frontend* reads a
+    word or mapping.
 
     Returns the keywords left for the view's constructor.
 
     Raises
     ------
     TypeError
-        If the view's class takes `placement` itself, the value is not a
-        placement, or *frontend* does not attach it.
+        If the view's class takes `placement` itself, neither the declaration
+        nor a class attribute gives a placement, the value is not a placement,
+        or *frontend* does not attach it.
     ValueError
         If *frontend* cannot read the value.
     """
@@ -359,15 +358,12 @@ def take_view_placement(
     declared = rest.pop("placement", None)
     if declared is None:
         default = inspect.getattr_static(declaration.cls, "placement", None)
-        if isinstance(default, Placement):
-            declaration.placement = default
-        else:
-            warnings.warn(
-                f"{where}: answering 'placement' from a property is deprecated "
-                "and is removed in 0.16; declare 'placement' instead",
-                DeprecationWarning,
-                stacklevel=2,
+        if not isinstance(default, Placement):
+            raise TypeError(
+                f"{where} has no placement: set 'placement' as a class attribute "
+                "or give it in the declaration"
             )
+        declaration.placement = default
         return rest
     if isinstance(declared, (str, Mapping)):
         declared = frontend.read_placement(declared)

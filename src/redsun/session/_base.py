@@ -915,9 +915,8 @@ class Session(BuildableSession):
     def resolve_layout(self) -> WindowLayout:
         """Return the layout the window starts with: what the session declares, completed by its views' placements.
 
-        A view whose class answers `placement` from a property takes what its
-        built instance answers. A name the declared layout gives that no view
-        placed in a region of the window answers to is left out, and logged.
+        A name the declared layout gives that no view placed in a region of
+        the window answers to is left out, and logged.
 
         Raises
         ------
@@ -926,7 +925,6 @@ class Session(BuildableSession):
         """
         placements: dict[str, Placement | None] = {
             declaration.name: declaration.placement
-            or getattr(declaration.instance, "placement", None)
             for declaration in self._view_declarations()
         }
         layout, dropped = resolved_layout(
@@ -1871,28 +1869,19 @@ class Session(BuildableSession):
     def _verify(self, declaration: Declaration, instance: object) -> None:
         """Check a component just built against the protocol of its layer.
 
-        A view whose class answers `placement` from a property, deprecated,
-        is only checkable now; any other view's placement was checked when it
-        was declared.
-
         Raises
         ------
         TypeError
-            If the instance does not satisfy its layer's protocol, or asks for
-            a placement the frontend cannot attach it to.
+            If the instance does not satisfy its layer's protocol.
         """
-        view = declaration.kind is Layer.VIEW
-        protocol: type = AttachableComponent if view else NamedComponent
+        protocol: type = (
+            AttachableComponent if declaration.kind is Layer.VIEW else NamedComponent
+        )
         reasons = _structural.problems(instance, protocol)
         if reasons:
             raise TypeError(
                 f"{declaration.name!r} is declared as a {declaration.kind}, but "
                 f"does not satisfy {protocol.__name__!r}: " + "; ".join(reasons)
-            )
-        attachable = as_protocol(instance, AttachableComponent) if view else None
-        if attachable is not None and declaration.placement is None:
-            self.frontend.check_placement(
-                attachable, attachable.placement, f"view {declaration.name!r}"
             )
 
     def start_services(self) -> None:
