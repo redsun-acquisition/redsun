@@ -51,7 +51,7 @@ class MyPlans:
     def walk(
         self, motor: Movable[float], steps: int = 3, size: float = 1.0
     ) -> MsgGenerator[None]:
-        """Move *motor* by *size* *steps* times."""
+        """Move *motor* to *size*, then twice *size*, and so on for *steps* moves."""
         for step in range(1, steps + 1):
             yield from bps.mv(motor, step * size)
 

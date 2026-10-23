@@ -7903,8 +7903,9 @@ hook is handed exists.</p>
     <div class="doc doc-contents ">
 
         <p>Show the window, giving its regions the sizes the layout declares unless a saved layout was restored.</p>
-<p>The sizes are given once, so showing the window again keeps what the
-user changed. <code>run</code> calls it; a script that runs the event loop itself
+<p>The first show also grows the window, within the screen, to the size
+its views ask for. The sizes are given once, so showing the window
+again keeps what the user changed. <code>run</code> calls it; a script that runs the event loop itself
 calls it in place of showing <code>main_window</code>.</p>
 
 

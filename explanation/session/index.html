@@ -8206,10 +8206,11 @@ whenever something is missing.
 shows how to read the summary and make a session strict.
 <a href="../decisions/0011-tolerating-a-component-that-fails-to-build/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 11</a> records
 why the session carries on.</p>
-<p>Two cases only log a warning: a component that shares nothing, asks for nothing
-and isn't wired to anything, and a shared value no component asks for. Neither
-is a mistake while you're still putting a session together, or when a
-<a href="../glossary/#plugin">plugin</a> ships more than your session uses.</p>
+<p>A component that shares nothing, asks for nothing and isn't wired to anything
+logs a warning. A shared value no component asks for is logged at debug level
+only, because a built-in or <a href="../glossary/#plugin">plugin</a> component often shares
+more than your session uses. Neither is a mistake while you're still putting a
+session together.</p>
 <h2 id="shutting-down">Shutting down<a class="headerlink" href="#shutting-down" title="Permanent link">&para;</a></h2>
 <p>Each build step registers how to undo what it did, at the moment it does it.
 These <a href="../glossary/#release">releases</a> run in reverse order when you call
