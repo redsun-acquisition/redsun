@@ -123,11 +123,10 @@ Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
 Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 ```
 
-A `placement` set from a property can only be checked after the view is
-built; that form is deprecated and goes in 0.16, so set it as a class
-attribute or in the declaration. A session file's placement words, such as
-`left` or `central`, are read by the frontend's `read_placement`; the core
-knows none of them.
+The session reads the placement from the class attribute or the declaration,
+never from a property, since the view does not exist yet. A session file's
+placement words, such as `left` or `central`, are read by the frontend's
+`read_placement`; the core knows none of them.
 
 ## The Qt frontend
 

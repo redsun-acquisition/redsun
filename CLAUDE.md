@@ -289,7 +289,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   while releasing. A change that breaks existing code also gets a `breaking`
   entry and a section or a line on the migration page of the release being
   made. Each release has its own page, named after the release a user
-  leaves: `docs/how-to/migrate-from-0.14.md` while 0.15 is made. A
+  leaves: `docs/how-to/migrate-from-0.15.md` while 0.16 is made. A
   deprecation gets a `deprecated` entry and a place in that page's
   "Deprecated" section, which names the release that removes it.
 
