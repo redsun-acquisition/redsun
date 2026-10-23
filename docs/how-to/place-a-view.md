@@ -173,18 +173,9 @@ above the entries that show and hide the docks.
 The session checks the placement before it builds anything, so if a view fails
 to build, its error message appears where you placed it. The session refuses a
 view whose constructor has its own `placement` parameter, because it keeps
-that name for itself.
-
-!!! warning "Deprecated: a `placement` property"
-
-    Some views return `placement` from a property, to choose it per
-    declaration. This still works, but it is deprecated and will be removed
-    in 0.16. The session can read such a placement only after it builds the
-    view, so it checks it late, and if the view fails to build, no error
-    message appears in the window. A saved window layout also ignores such a
-    placement, so changing what the property returns does not move the dock
-    until you choose **Reset layout**. Give `placement` in the declaration
-    instead.
+that name for itself. It also refuses a view whose class attribute and
+declaration give no placement. A `placement` property does not count, because
+the session needs the placement before the view exists.
 
 ## Tab docks together
 

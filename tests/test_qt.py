@@ -6,7 +6,6 @@ import re
 import subprocess
 import sys
 import threading
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
@@ -414,25 +413,17 @@ class GivenParentApp(QtSession):
     panel: AsView[Receiving]
 
 
-@dataclass(frozen=True)
-class Nowhere(Placement):
-    """A placement Qt does not attach."""
+class Unnamed(QWidget):
+    """A view whose built instance lacks the name its layer asks for."""
 
-
-class Misplaced(QWidget):
-    """A view whose placement only the built instance answers, wrongly."""
+    placement: Placement = Dock("left")
 
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
-        self.name = name
-
-    @property
-    def placement(self) -> Placement:
-        return Nowhere()
 
 
-class MisplacedApp(QtSession):
-    panel: AsView[Misplaced]
+class UnnamedApp(QtSession):
+    panel: AsView[Unnamed]
 
 
 class BreakingApp(QtSession):
@@ -808,13 +799,13 @@ def test_a_view_given_a_parent_by_its_configuration_is_skipped(
 def test_a_view_refused_once_built_is_removed_from_the_window(
     qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Remove a view from the window when its built instance has a bad placement."""
-    app = build(MisplacedApp)
+    """Remove a view from the window when its built instance fails its layer's protocol."""
+    app = build(UnnamedApp)
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     assert "panel" not in app.views
-    assert app.main_window.findChildren(Misplaced) == []
-    assert "asks to be attached as 'Nowhere'" in caplog.text
+    assert app.main_window.findChildren(Unnamed) == []
+    assert "does not satisfy 'AttachableComponent'" in caplog.text
 
 
 def test_a_view_failing_after_joining_the_window_leaves_nothing_in_it(

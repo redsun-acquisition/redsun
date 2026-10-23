@@ -19,7 +19,6 @@ from ophyd_async.core import (
 )
 from psygnal import Signal
 
-import redsun.session
 from redsun import (
     Alias,
     AsDevice,
@@ -1323,32 +1322,21 @@ def test_a_component_that_drops_its_name_is_skipped(
     assert "Traceback" not in capsys.readouterr().err
 
 
-def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
+def test_a_view_with_no_placement_is_skipped(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Skip a view whose placement, read from the built instance, is not attachable."""
+    """Skip a view whose placement neither its class attribute nor its declaration gives, saying how to give one."""
     app = build(DeferredApp)
 
     assert "stray" not in app.views
-    assert "view 'stray' asks to be attached" in caplog.text
+    assert "view 'stray' has no placement" in caplog.text
 
 
-def test_a_placement_answered_from_a_property_is_deprecated(
-    build: BuildSession,
-) -> None:
-    """Warn that answering placement from a property is deprecated, naming what replaces it."""
-    with pytest.warns(DeprecationWarning, match="declare 'placement'"):
-        build(DeferredApp)
-
-
-def test_a_declared_placement_replaces_a_property_without_a_warning(
-    build: BuildSession, recwarn: pytest.WarningsRecorder
-) -> None:
-    """Use the declared placement over a property, with no deprecation warning."""
+def test_a_declared_placement_replaces_a_property(build: BuildSession) -> None:
+    """Build a view whose class answers placement from a property when its declaration gives one."""
     app = build(TurningApp)
 
     assert "turning" in app.views
-    assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
 
 
 def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
@@ -2080,11 +2068,3 @@ def test_a_build_reports_every_step_in_order(build: BuildSession) -> None:
     build(Watched)
 
     assert reported == list(BuildStep)
-
-
-def test_the_old_name_of_the_build_steps_warns_and_still_lists_them() -> None:
-    """Warn on reading `BUILD_STEPS`, which lists the same steps as `BuildStep`."""
-    with pytest.warns(DeprecationWarning, match="BuildStep"):
-        steps = redsun.session.BUILD_STEPS
-
-    assert steps == tuple(BuildStep)

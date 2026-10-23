@@ -112,25 +112,6 @@ class FragileApp(QtSession):
     fragile: AsView[Fragile]
 
 
-class FragileByProperty(QWidget):
-    def __init__(self, name: str, parent: QWidget, fail: bool = False) -> None:
-        if fail:
-            raise RuntimeError("no detector attached")
-        super().__init__(parent)
-        self.name = name
-
-    @property
-    def placement(self) -> Placement:
-        return Dock("right")
-
-
-class FragileByPropertyApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"session": "fragile-property-session"}
-
-    panel: AsView[Panel]
-    fragile: AsView[FragileByProperty]
-
-
 class AddsItsOwnDock(Panel):
     placement: Placement = Dock("right")
 
@@ -239,16 +220,6 @@ class WideningApp(QtSession):
     wide: AsView[Widening]
 
 
-class PropertyApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"session": "property-session"}
-
-    panel: AsView[Panel]
-    old: AsView[FragileByProperty]
-
-    def window_layout(self) -> WindowLayout | None:
-        return WindowLayout(regions={"left": "panel"})
-
-
 class FragileLaidOutApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "fragile-laid-out-session"}
 
@@ -306,16 +277,6 @@ class OwnPresentApp(QtSession):
 
     def present(self) -> None:
         attach(self.main_window, self.views)
-
-
-class PropertyLaidOutApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"session": "property-laid-out-session"}
-
-    panel: AsView[Panel]
-    old: AsView[FragileByProperty]
-
-    def window_layout(self) -> WindowLayout | None:
-        return WindowLayout(regions={"left": Column("panel", "old")})
 
 
 def builtin_session(
@@ -411,17 +372,16 @@ def test_a_layout_saved_before_placements_were_recorded_is_restored(
     assert second.main_window.dockWidgetArea(_dock(second, "charts")) is LEFT
 
 
-@pytest.mark.parametrize("session", [FragileApp, FragileByPropertyApp])
 def test_a_view_that_fails_to_build_keeps_the_saved_layout(
-    qapp: QApplication, build: BuildSession, session: type[QtSession]
+    qapp: QApplication, build: BuildSession
 ) -> None:
-    """Restore the saved layout when a view that built before fails, its placement declared or answered by a property."""
-    first = build(session)
+    """Restore the saved layout when a view that built before fails."""
+    first = build(FragileApp)
     first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
     first.save_layout()
     first.shutdown()
 
-    second = build(session, {"views": {"fragile": {"fail": True}}})
+    second = build(FragileApp, {"views": {"fragile": {"fail": True}}})
 
     assert "fragile" not in second.views
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT
@@ -764,15 +724,6 @@ def test_a_failed_view_keeps_its_slot_in_the_layout(
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is RIGHT
 
 
-def test_a_view_placed_by_a_property_is_still_attached(
-    qapp: QApplication, build: BuildSession
-) -> None:
-    """Attach a view placed by a deprecated property where it asks, beside a declared layout."""
-    app = build(PropertyApp)
-
-    assert app.main_window.dockWidgetArea(_dock(app, "old")) is RIGHT
-
-
 def test_a_changed_layout_skips_the_saved_one(
     qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -902,25 +853,6 @@ def test_a_damaged_settings_file_starts_from_the_placements(
 
     assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
     assert "could not be read" in caplog.text
-
-
-def test_moving_a_property_placed_view_in_the_layout_skips_the_saved_one(
-    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Start from a layout that moved a view placed by a property, rather than the saved arrangement."""
-    caplog.set_level(logging.INFO, logger="redsun")
-    first = build(PropertyLaidOutApp)
-    first.main_window.addDockWidget(RIGHT, _dock(first, "panel"))
-    first.save_layout()
-    first.shutdown()
-
-    second = build(
-        PropertyLaidOutApp,
-        {"layout": {"regions": {"left": {"column": ["old", "panel"]}}}},
-    )
-
-    assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
-    assert "placed differently" in caplog.text
 
 
 def test_attach_refuses_a_layout_naming_a_view_it_was_not_given(

@@ -760,10 +760,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         The digest covers the layout the session declares, the name of every
         view, and the layout those resolve to. Each view counts with the
         placement its declaration holds, so one that fails to build does not
-        discard the saved layout. A view whose class answers `placement` from a
-        property has none there, so changing what the property answers keeps
-        the saved layout, while moving the view in the declared layout does
-        not.
+        discard the saved layout.
         """
         placements: dict[str, Placement | None] = {
             declaration.name: declaration.placement
