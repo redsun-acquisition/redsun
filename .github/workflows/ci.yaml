@@ -336,7 +336,7 @@ jobs:
   # final tags only: a release candidate's entries stay in changelog.d for
   # the final release's section
   github-release:
-    name: Publish the GitHub release
+    name: Write the GitHub release notes
     needs: publish-to-pypi
     if: ${{ !contains(github.ref_name, 'rc') }}
     runs-on: ubuntu-latest
