@@ -70,7 +70,7 @@ class FailsOnce:
             raise ValueError("not yet")
 
 
-class WorksOnce(MockStage):  # type: ignore[misc]
+class WorksOnce(MockStage):
     """Device that can be made the first time, and not afterwards."""
 
     def __init__(self, name: str, attempts: list[str]) -> None:
@@ -181,7 +181,7 @@ class Widget:
         self.seen = where
 
 
-class Registrar(MockRegistrar):  # type: ignore[misc]
+class Registrar(MockRegistrar):
     """Document router presenter that records being shut down."""
 
     def __init__(self, name: str) -> None:

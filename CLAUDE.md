@@ -34,9 +34,10 @@ redsun/
 |-- tests/
 |   |-- conftest.py            qt marker, qapp, mock plugin (the rest: redsun.testing)
 |   |-- test_*.py              session tests, one module per subject
-|   |-- mock_bundle/           fake plugin package the session tests discover
 |   |-- configs/               session YAML files the tests load
-|   |-- launchable/mock_pkg/   service stand-ins a test launches as processes
+|   |-- launchable/            on pytest's and mypy's path:
+|   |   |-- mock_bundle/       fake plugin package the session tests discover
+|   |   `-- mock_pkg/          service stand-ins a test launches as processes
 |   |-- sdk/                   unit tests of the shared modules
 |   |-- compose/               an IOC in a container, for the tests marked compose
 |   `-- typing/                assert_type modules, checked by mypy, never run
@@ -155,10 +156,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 - mypy is `strict = true` with `warn_unreachable`; `files = "."` with only
   `docs/` excluded, so **tests are strictly type-checked too**. `mypy_path`
-  (`src`, `tests/launchable`) + `explicit_package_bases` make `mock_pkg`
-  resolve; don't pass mypy an explicit path or tests fall out of scope. Only
-  `import-untyped` and `no-untyped-call` are globally disabled; do not widen
-  that list to silence a real error.
+  (`src`, `tests/launchable`) + `explicit_package_bases` make `mock_bundle`
+  and `mock_pkg` resolve; don't pass mypy an explicit path or tests fall out
+  of scope. Only `import-untyped` and `no-untyped-call` are globally
+  disabled; do not widen that list to silence a real error.
 - pytest is `asyncio_mode = "auto"`, so **do not decorate async tests** with
   `@pytest.mark.asyncio`. `QT_QPA_PLATFORM=offscreen` comes from pytest-env.
 - Qt tests take `@pytest.mark.qt`; the root `conftest.py` auto-skips them
@@ -338,8 +339,9 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   No numpydoc sections in tests; a parametrised test gets one sentence
   covering all its cases.
 - Mirror the source layout under `tests/sdk/`. Session and plugin-discovery
-  tests live directly under `tests/` and use the `mock_bundle/` fixture
-  package; a service a test launches lives in `tests/launchable/mock_pkg/`.
+  tests live directly under `tests/` and use the fixture package
+  `tests/launchable/mock_bundle/`; a service a test launches lives in
+  `tests/launchable/mock_pkg/`.
   Extend those rather than inventing new mock plugins elsewhere.
 - **Test objects go at the top of the module, after the imports**: mock
   components, the container classes declaring them, fixtures, helpers, in that

@@ -49,7 +49,7 @@ BOTTOM = QtNamespace.DockWidgetArea.BottomDockWidgetArea
 WIDE = 500
 
 
-class Charts(Panel):  # type: ignore[misc]
+class Charts(Panel):
     placement: Placement = Dock("right")
 
 
@@ -60,11 +60,11 @@ class LayoutApp(QtSession):
     charts: AsView[Charts]
 
 
-class Grouped(Panel):  # type: ignore[misc]
+class Grouped(Panel):
     placement: Placement = Dock("left", group="tools")
 
 
-class GroupedRight(Panel):  # type: ignore[misc]
+class GroupedRight(Panel):
     placement: Placement = Dock("right", group="tools")
 
 
@@ -77,7 +77,7 @@ class GroupedApp(QtSession):
     other_edge: AsView[GroupedRight]
 
 
-class TakesPlacement(Panel):  # type: ignore[misc]
+class TakesPlacement(Panel):
     def __init__(self, name: str, parent: QWidget, placement: str = "") -> None:
         super().__init__(name, parent)
 
@@ -96,7 +96,7 @@ class TakesPlacementApp(QtSession):
     taking: AsView[TakesPlacement]
 
 
-class Fragile(Panel):  # type: ignore[misc]
+class Fragile(Panel):
     placement: Placement = Dock("right")
 
     def __init__(self, name: str, parent: QWidget, fail: bool = False) -> None:
@@ -131,7 +131,7 @@ class FragileByPropertyApp(QtSession):
     fragile: AsView[FragileByProperty]
 
 
-class AddsItsOwnDock(Panel):  # type: ignore[misc]
+class AddsItsOwnDock(Panel):
     placement: Placement = Dock("right")
 
     def __init__(self, name: str, parent: QWidget) -> None:
@@ -211,7 +211,7 @@ class LaidOutApp(QtSession):
         )
 
 
-class Widening(Panel):  # type: ignore[misc]
+class Widening(Panel):
     """A view asking for `WIDE` pixels once an event it posts while shown arrives."""
 
     placement: Placement = Dock("right")
@@ -221,7 +221,8 @@ class Widening(Panel):  # type: ignore[misc]
         self.width_wanted = 50
 
     def showEvent(self, event: QShowEvent | None) -> None:
-        super().showEvent(event)
+        if event is not None:
+            super().showEvent(event)
         QApplication.postEvent(self, QEvent(QEvent.Type.User))
 
     def customEvent(self, event: QEvent | None) -> None:

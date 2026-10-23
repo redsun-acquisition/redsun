@@ -242,11 +242,6 @@ strict = true
 warn_unreachable = true
 warn_no_return = true
 
-# mock_bundle is put on sys.path by tests/conftest.py, which mypy does not run
-[[tool.mypy.overrides]]
-module = ["mock_bundle.*"]
-ignore_missing_imports = true
-
 # caproto and fastcs ship no type information, so a class taken from either is
 # Any and subclassing one is an error a stub would fix
 [[tool.mypy.overrides]]
@@ -400,7 +395,7 @@ minversion = "6.0"
 testpaths = [
     "tests",
 ]
-pythonpath = ["."]
+pythonpath = [".", "tests/launchable"]
 addopts = "-p no:warnings -p redsun.testing"
 asyncio_mode = "auto"
 markers = [

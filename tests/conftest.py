@@ -27,11 +27,7 @@ if TYPE_CHECKING:
 # the module imports tiled, which the extra does not install on every Python
 collect_ignore = [] if find_spec("tiled") else ["test_catalog.py"]
 
-_TESTS_DIR = str(Path(__file__).parent)
-if _TESTS_DIR not in sys.path:
-    sys.path.insert(0, _TESTS_DIR)
-
-_MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
+_MOCK_PKG_DIR = Path(__file__).parent / "launchable" / "mock_bundle"
 
 
 @pytest.fixture

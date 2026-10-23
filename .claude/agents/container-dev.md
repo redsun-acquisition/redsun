@@ -13,7 +13,7 @@ directly under `tests/`.
 Architecture invariants live in CLAUDE.md (Architecture invariants section) -
 read them before editing; don't restate them here.
 
-Extend `tests/mock_bundle/` for new plugin fixtures, and
+Extend `tests/launchable/mock_bundle/` for new plugin fixtures, and
 `tests/launchable/mock_pkg/` for a service a test launches, rather than
 creating parallel mock packages.
 
