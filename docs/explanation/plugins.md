@@ -167,7 +167,7 @@ names its plugin with both `plugin_name` and `plugin_id`, or it is left out.
 
 `redsun` is a plugin of itself, named `redsun`. It offers three
 [stacks](glossary.md#stack), each a presenter and a view written to work
-together, and a log window:
+together, and two ways to show the log:
 
 | id | presenter | view | for |
 | --- | --- | --- | --- |
@@ -175,6 +175,7 @@ together, and a log window:
 | `lights` | `LightPresenter` | `LightView` | [switching and dimming lights](../how-to/switch-and-dim-lights.md) |
 | `acquisition` | `AcquisitionPresenter` | `AcquisitionView` | [running plans from the window](../how-to/run-plans-from-the-window.md) |
 | `logs` | none | `LogView` | [showing the log](../how-to/configure-logging.md#show-the-logs-in-the-application) |
+| `log-window` | none | `LogWindowAction` | [showing the log in a window of its own](../how-to/configure-logging.md#open-the-logs-in-a-window-of-their-own) |
 
 A session file names each one by `plugin_name: redsun` and its id, under
 `presenters` or `views`:

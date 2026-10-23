@@ -29,7 +29,7 @@ from redsun.log import (
 )
 from redsun.qt import QtSession
 from redsun.view.qt._log_view import BATCH_SIZE
-from redsun.view.qt.builtins import LogView
+from redsun.view.qt.builtins import LogView, LogWindowAction
 from tests.sdk.view.helpers import child
 
 if TYPE_CHECKING:
@@ -157,6 +157,15 @@ def rendered(view: LogView) -> str:
     document = console(view).document()
     assert document is not None
     return document.toHtml()
+
+
+def log_windows() -> list[LogView]:
+    """Return every log window on screen."""
+    return [
+        widget
+        for widget in QApplication.topLevelWidgets()
+        if isinstance(widget, LogView) and widget.isVisible()
+    ]
 
 
 def test_each_level_shows_an_icon_beside_its_name(
@@ -631,3 +640,24 @@ def test_a_qt_session_docks_the_built_in_view_at_the_bottom(
     assert isinstance(dock, QDockWidget)
     area = session.main_window.dockWidgetArea(dock)
     assert area == QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
+
+
+def test_the_menu_entry_opens_one_log_window_at_a_time(qapp: QApplication) -> None:
+    """Open one log window, bring it forward when chosen again, and a new one once closed."""
+    parent = QWidget()
+    action = LogWindowAction("log-window", parent)
+
+    action.trigger()
+    first = log_windows()
+    action.trigger()
+    assert log_windows() == first and len(first) == 1
+
+    first[0].close()
+    QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete.value)
+    assert log_windows() == []
+
+    action.trigger()
+    reopened = log_windows()
+    assert len(reopened) == 1
+    reopened[0].close()
+    parent.close()

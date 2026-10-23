@@ -5,6 +5,7 @@ presenters:
 views:
   acquisition: "redsun.view.qt.builtins:AcquisitionView"
   lights: "redsun.view.qt.builtins:LightView"
+  log-window: "redsun.view.qt.builtins:LogWindowAction"
   logs: "redsun.view.qt.builtins:LogView"
   positioner: "redsun.view.qt.builtins:PositionerView"
 hooks:

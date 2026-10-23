@@ -3,7 +3,7 @@
 from ._acquisition_view import AcquisitionView
 from ._light_group import LightGroup
 from ._light_view import LightView
-from ._log_view import LogView
+from ._log_view import LogView, LogWindowAction
 from ._positioner_group import PositionerGroup
 from ._positioner_view import PositionerView
 
@@ -12,6 +12,7 @@ __all__ = [
     "LightGroup",
     "LightView",
     "LogView",
+    "LogWindowAction",
     "PositionerGroup",
     "PositionerView",
 ]
