@@ -227,6 +227,23 @@ records held in memory and `Open log folder` is disabled.
     --8<-- "docs/examples/log_view.py:session"
     ```
 
+### Open the logs in a window of their own
+
+When the main window has no room for a dock at the bottom, name
+[`LogWindowAction`][redsun.view.qt.builtins.LogWindowAction] instead. It adds
+a **Logs** entry to the **View** menu, and choosing it opens the same log view
+in a separate window:
+
+```yaml
+views:
+  log-window:
+    plugin_name: redsun
+    plugin_id: log-window
+```
+
+The window closes like any other, and choosing **Logs** again while it is open
+brings it to the front rather than opening a second one.
+
 ## Send records somewhere else as well
 
 [`add_handler`][redsun.log.add_handler] adds a destination beside the existing
