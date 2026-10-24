@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
 )
-from bluesky.run_engine import RunEngineResult
+from bluesky.run_engine import RunEngineResult, default_scan_id_source
 from bluesky.utils import IllegalMessageSequence
 from psygnal import Signal
 
@@ -38,11 +38,6 @@ if TYPE_CHECKING:
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 R = TypeVar("R")
-
-
-def default_scan_id_source(md: dict[str, Any]) -> int:
-    scan_id: int = md.get("scan_id", 0)
-    return scan_id + 1
 
 
 class RunEngine(BlueskyRunEngine):
@@ -557,6 +552,4 @@ def register_bound_command(
     Unlike `RunEngine.register_command`, binds the command to *engine*: it is
     called with the engine first, then the `Msg`.
     """
-    bound_command = partial(command, engine)
-    command_name = command.__name__
-    engine.register_command(command_name, bound_command)
+    engine.register_command(command.__name__, partial(command, engine))
