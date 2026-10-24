@@ -139,6 +139,7 @@ nav = [
                 "explanation/decisions/0030-napari-styling-is-copied-until-napari-publishes-it.md",
                 "explanation/decisions/0031-hook-points-take-several-providers.md",
                 "explanation/decisions/0032-the-qlementine-style-comes-behind-one-extra-per-binding.md",
+                "explanation/decisions/0033-device-trees-one-index-of-every-device.md",
         ]},
     ]},
     { "Reference" = [

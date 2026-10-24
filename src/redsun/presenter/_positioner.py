@@ -114,9 +114,9 @@ class PositionerPresenter(Loggable):
 
     Axes are grouped by the device holding them: an axis is a row of the box
     of its parent, or a box of its own when it has none. Every box is kept, or
-    only those named in `include`. Each axis is described and followed from the start, and its
-    readbacks are relayed on `sig_readback`; an axis that cannot be, within
-    `timeout`, is left out with a warning.
+    only those named in `include`. Each axis is described and followed from
+    the start, and its readbacks are relayed on `sig_readback`; an axis that
+    cannot be, within `timeout`, is left out with a warning.
 
     A step starts from the setpoint, so steps add up exactly, and from the
     readback after a stop or a failure, when the setpoint no longer says

@@ -41,3 +41,4 @@ never edited; a later one replaces it.
 - [30. napari's styling is copied until napari publishes it](0030-napari-styling-is-copied-until-napari-publishes-it.md)
 - [31. Hook points take several providers and tolerate one that fails](0031-hook-points-take-several-providers.md)
 - [32. The qlementine style comes behind one extra per Qt binding](0032-the-qlementine-style-comes-behind-one-extra-per-binding.md)
+- [33. Device trees: one index of every device](0033-device-trees-one-index-of-every-device.md)

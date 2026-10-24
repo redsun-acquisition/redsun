@@ -135,9 +135,10 @@ and keeps next to the data it came from, such as a median over a scan. A
 
 A device describes one piece of your setup, such as a stage or a camera,
 through the values you can read and set. You write devices with [`ophyd-async`](#ophyd-async), and
-together they model the setup. For now, the preferred way to reach the
-hardware is a [service](#service); see [Services](services.md). Devices are
-the first [layer](#layer) to be built.
+together they model the setup. A device can hold other devices, so the setup
+forms a tree whose root, such as a microscope, holds the stage and the camera.
+For now, the preferred way to reach the hardware is a [service](#service); see
+[Services](services.md). Devices are the first [layer](#layer) to be built.
 
 ### Device signal
 

@@ -109,7 +109,8 @@ slider and intensity field, and an LED that is on](images/lights.png)
 ## Hold the lights during a plan
 
 A plan that locks a light disables its controls, and the presenter refuses
-writes to it. The engine isn't a session component, so you make these links in
+writes to it. Locking a device above the light, such as the microscope holding
+it, does the same. The engine isn't a session component, so you make these links in
 `wire()`, from the presenter that holds the engine:
 
 ```python

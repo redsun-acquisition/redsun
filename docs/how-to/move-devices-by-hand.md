@@ -19,16 +19,18 @@ script, and the whole script is at the end.
 
 ## How the positioner finds axes
 
-The positioner looks inside every device for its axes. An axis is a piece of a
-device that `set` moves, `locate` reports and `subscribe` follows, which means
-it satisfies `AsyncLocatable` from `ophyd-async` and `Subscribable` from
-`bluesky`, and it isn't a signal. The search stops at each axis it finds, so
-the signals of an axis never show up as axes. A device that is itself movable
-is its own single axis.
+The positioner looks for axes in every device of the session and in every
+device below it. An axis is a piece of a device that `set` moves, `locate`
+reports and `subscribe` follows, which means it satisfies `AsyncLocatable` from
+`ophyd-async` and `Subscribable` from `bluesky`, and it isn't a signal. The
+search stops at each axis it finds, so the signals of an axis never show up as
+axes.
 
-The view shows each axis under its attribute name, or under its dotted path,
-such as `left.x`, when two axes of one device share a name. This stage has two
-axes, `x` and `y`:
+The view groups the axes by the device that holds them. That device gets a
+box, titled with its place in its tree, such as `microscope / stage`, and each
+of its axes gets a row under the name the device gives it. An axis that no
+device holds, such as a motor declared on its own, is a box of its own. This
+stage holds two axes, `x` and `y`, so the view shows one box with two rows:
 
 ```{.python}
 --8<-- "docs/examples/positioner.py:device"
@@ -36,8 +38,6 @@ axes, `x` and `y`:
 
 The positioner finds axes by what they can do, never by their names, so the
 view makes no assumption about which axis is which.
-[`find_axes`][redsun.utils.devices.find_axes] returns what the positioner finds
-for a device.
 
 When the positioner is built, it describes and follows every axis. It leaves
 out, with a warning, an axis whose position is not a number, whose
@@ -80,9 +80,9 @@ The pairing makes the nine links between the two. Written out, they are:
       positioner.sig_configuration: positioner_view.update_configuration
     ```
 
-The presenter takes every device with at least one axis. To show only some of
-them, list them under `include`. A name that isn't a device of the session
-gets a warning:
+The presenter keeps every box. To show only some of them, list the names of
+the devices holding them under `include`. A name that holds no axis gets a
+warning:
 
 ```yaml
 presenters:
@@ -119,10 +119,13 @@ The same pairing, from `wire()`:
 --8<-- "docs/examples/positioner.py:wire"
 ```
 
-A plan that locks a device disables that device's controls while it runs,
-`Stop` and its configuration included. The presenter also refuses moves and
-configuration writes for it, a go-to already waiting included. To stop the
-device, stop the plan, because the engine stops every device the plan moved.
+A plan that locks a device disables the controls of that device and of every
+device below it while it runs, their configuration included. Locking the whole
+stage disables both of its rows, while locking only its `x` axis leaves the `y`
+row free but disables Stop and Save on the box until the plan ends. The
+presenter also refuses moves and configuration writes for a locked axis, a
+go-to already waiting included. To stop the device, stop the plan, because the
+engine stops every device the plan moved.
 The engine isn't a session component, so you make these links in `wire()`, from
 the presenter that holds the engine:
 
@@ -141,7 +144,8 @@ shows how.
 ![The positioner view of the example session: a group for the stage, with a
 row for each of its axes x and y](images/positioner.png)
 
-- The Motors tab has a group per device and a row per axis. The minus and
+- The Motors tab has a box per device holding axes and a row per axis.
+  Pointing at a box's title shows the device's name. The minus and
   plus buttons step the axis by the size chosen beside them, and repeat while
   you hold them. The view's buttons show icons, and pointing at one says what
   it does. With the row or a step button focused, Left and Right do the same;

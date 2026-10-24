@@ -8,7 +8,6 @@ from functools import cached_property
 from typing import Annotated, Any, ClassVar
 
 from ophyd_async.core import (
-    DeviceMap,
     MovableLogic,
     StandardMovable,
     StandardReadable,
@@ -49,8 +48,9 @@ class MyAxis(StandardReadable, StandardMovable[float]):
 
 class MyStage(StandardReadable):
     def __init__(self, name: str = "") -> None:
-        self.axis = DeviceMap({"x": MyAxis(), "y": MyAxis()})
-        self.add_readables(list(self.axis.values()))
+        self.x = MyAxis()
+        self.y = MyAxis()
+        self.add_readables([self.x, self.y])
         super().__init__(name=name)
 
 

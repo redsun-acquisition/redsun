@@ -226,6 +226,12 @@ Making a device as `cls(name=<name>, **kwargs)` works for every `ophyd-async`
 device, including one whose first parameter is `prefix`, except one that takes
 `name` only by position (after a `/`), which is left out.
 
+You can declare the whole setup as one root device, each piece as a device of
+its own, or a mix of both. Either way, the session also holds every device
+below each declared one, so a stage inside a microscope reaches the
+positioner and the plans. [Devices and services](services.md#devices-and-services)
+shows a root device.
+
 ### Connecting
 
 A device declared with [`autoconnect=False`](glossary.md#autoconnect) stays

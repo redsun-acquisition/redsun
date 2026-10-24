@@ -16,6 +16,9 @@ icon: lucide/code
         - Axis
         - AxisInfo
         - Configuration
+        - DevicePath
+        - device_path
+        - held_by
         - describe_axis
         - find_axes
         - limits

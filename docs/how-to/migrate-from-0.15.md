@@ -4,8 +4,8 @@ icon: lucide/arrow-right-left
 
 # How to migrate from 0.15
 
-Release 0.16 removes the two things 0.15 deprecated, and changes what a view
-of plan progress receives. This page gives each change with what to write
+Release 0.16 removes the two things 0.15 deprecated, changes what a view of
+plan progress receives, and moves some axes to another box of the positioner. This page gives each change with what to write
 instead. The [changelog](../reference/changelog.md) lists everything else the
 release changed.
 
@@ -48,6 +48,28 @@ from redsun.session import BUILD_STEPS
 # now
 from redsun.session import BuildStep
 ```
+
+## Positioner boxes follow the device holding the axes
+
+The positioner groups axes by the device that holds them directly. A device
+whose axes are its own children, such as a stage with the attributes `x` and
+`y`, keeps its box and its saved positions. A device whose axes sit one level
+deeper sees them move. This stage holds its axes in `motors`:
+
+```python
+class MyStage(StandardReadable):
+    def __init__(self, name: str = "") -> None:
+        self.motors = DeviceMap({"x": MyAxis(), "y": MyAxis()})
+        super().__init__(name=name)
+```
+
+In 0.15 its axes were rows of the box `stage`. Now they are rows of the box
+`stage-motors`, titled `stage / motors`, so positions saved under `stage` no
+longer match a box: the view leaves them out and logs a warning naming
+`stage`. Move the stage to each position again and save it. To keep the box
+`stage` instead, hold the axes as attributes of the stage, as in
+`self.x = MyAxis()`. An `include` list naming `stage` changes the same way, to
+`stage-motors`.
 
 ## Progress views receive the scopes
 
