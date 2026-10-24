@@ -20,15 +20,14 @@ the other components read it as it changes.
 
 ## Can a shared value be optional?
 
-No. The session decides what exists by reading types before it builds, and
-`Roi | None` is a type of its own: the session reports it as a value no
-component asks for, even when one asks for `Roi | None`. The value still
-arrives while it is a `Roi`, but when the method returns `None`, a component
-asking for `Roi` fails its `setup`:
+No. The session decides what exists by reading types before it builds, so it
+reads `Roi | None` as `Roi`. A component asking for `Roi` gets the value while
+it is one, but when the method returns `None`, that component fails its
+`setup`:
 
 ```python
 @provides
-def roi(self) -> Roi | None:  # does not do what it looks like
+def roi(self) -> Roi | None:  # shared as Roi, even when it returns None
     return self._roi if self.camera.has_roi else None
 ```
 
