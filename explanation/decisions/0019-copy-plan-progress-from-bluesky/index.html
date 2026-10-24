@@ -5936,7 +5936,9 @@
 <h1 id="19-copy-plan-progress-from-bluesky">19. Copy plan progress from bluesky<a class="headerlink" href="#19-copy-plan-progress-from-bluesky" title="Permanent link">&para;</a></h1>
 <p>Date: 2026-10-01</p>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted. Temporary: superseded once <code>bluesky</code> releases plan progress.</p>
+<p>Accepted. Temporary: superseded once <code>bluesky</code> releases plan progress.
+Amended on 24 October 2026: <code>PlanProgress</code> keeps its updates as <code>ophyd-async</code>
+does, and <code>ProgressState</code> is gone.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>A plan widget should show how far a running plan has got. <code>bluesky</code> has no
 released way for a plan to say so. Pull request
@@ -5952,19 +5954,44 @@ with the same names, signatures and messages, so that a plan written against
 resumes, which the pull request does. A replayed <code>declare_progress</code> would
 find its scope still open and be refused. This follows a review comment on
 the pull request.</p>
-<p>On top of the copy, <code>redsun</code> adds <code>ProgressState</code>, a snapshot of one scope,
-and <code>RunEngine.sig_progress</code>, which carries the open scopes to views, a
-"Progress" group on each plan page, and <code>monitor_progress</code>, which follows a
-device status with a scope. The engine finishes every scope a plan
+<p><code>PlanProgress</code> also differs from the copy in how it holds an update. It is
+generic over the type of the values it reports, keeps its last update as the
+<code>WatcherUpdate</code> of <code>ophyd-async</code>, and passes it to watchers typed as the
+<code>Watcher</code> of <code>ophyd-async</code>, so a scope and a device's status report in the
+same shape. A fraction reported alone reaches the watchers alone, where the
+pull request fills <code>current</code>, <code>initial</code> and <code>target</code> from it for the progress
+bar of the terminal. A view reads the scope's update where it read a snapshot
+the engine built before:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># before</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scopes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ProgressState</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">for</span> <span class="n">scope</span> <span class="ow">in</span> <span class="n">scopes</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">fraction</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># after</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scopes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PlanProgress</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="k">for</span> <span class="n">scope</span> <span class="ow">in</span> <span class="n">scopes</span><span class="p">:</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="k">if</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="nb">print</span><span class="p">(</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="n">fraction</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The snapshot computed the fraction and dropped values that were not finite
+numbers. Only the plan widget needs either, so the widget does both now, and
+the engine passes on what the plan or the device reported.</p>
+<p>On top of the copy, <code>redsun</code> adds <code>RunEngine.sig_progress</code>, which carries the
+open scopes to views, a "Progress" group on each plan page, which computes
+the fraction of its bar from a scope's update, and <code>monitor_progress</code>, which
+follows a device status with a scope. The engine finishes every scope a plan
 left open when it goes back to idle, which the pull request does in parts of
 the <code>RunEngine</code> a subclass cannot reach.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <p>When <code>bluesky</code> releases plan progress:</p>
 <ul>
 <li>delete <code>redsun</code>'s <code>PlanProgress</code>, the two commands and the two stubs, and
-  re-export <code>bluesky</code>'s stubs and <code>PlanProgress</code> under the same names;</li>
-<li>keep <code>ProgressState</code>, <code>sig_progress</code>, the engine's own <code>progress_hook</code> and
-  the widget, which then follow <code>bluesky</code>'s objects;</li>
+  re-export <code>bluesky</code>'s stubs and <code>PlanProgress</code> under the same names, unless
+  <code>bluesky</code>'s scope does not hold its update as a <code>WatcherUpdate</code>, which code
+  annotated with <code>PlanProgress[T]</code> or reading <code>update</code> relies on;</li>
+<li>keep <code>sig_progress</code>, the engine's own <code>progress_hook</code> and the widget, which
+  then follow <code>bluesky</code>'s objects;</li>
 <li>keep the two messages out of the replay if <code>bluesky</code> has not done so;</li>
 <li>rebuild <code>monitor_progress</code>, which is <code>redsun</code>'s own, on <code>bluesky</code>'s scopes.</li>
 </ul>
