@@ -188,8 +188,8 @@ works only as `Mapping[str, P]` in a constructor; for every device, ask for
 Both questions reach every device in the session, not only the declared ones.
 The session keeps each declared device and every device below it, signals left
 out, under the names `ophyd-async` gives them: a declared `microscope` holding
-a `stage` with an axis `x` gives `microscope`, `microscope-stage` and
-`microscope-stage-x`. Each device is checked against `P` on its own, so a root
+a stage `xy` with an axis `x` gives `microscope`, `microscope-xy` and
+`microscope-xy-x`. Each device is checked against `P` on its own, so a root
 and its children can all answer. A `DeviceMap`, the `ophyd-async` container
 holding devices by key, answers only if it satisfies `P` itself, so a map of
 lights gives its lights to `DevicesOf[Light]` but not itself. A name may hold

@@ -69,7 +69,7 @@ only the microscope:
 ```python
 class MyMicroscope(StandardReadable):
     def __init__(self, prefix: str, name: str = "") -> None:
-        self.stage = MyStage(f"{prefix}ST:")
+        self.xy = MyStage(f"{prefix}ST:")
         self.camera = MyCamera(f"{prefix}CAM:")
         super().__init__(name=name)
 
@@ -78,8 +78,14 @@ class MyApp(QtSession):
     microscope: Annotated[AsDevice[MyMicroscope], Declare(service="scope_ioc")]
 ```
 
+!!! warning "A child named `stage` stops the device"
+
+    `ophyd-async` keeps the names of the `bluesky` methods, such as `stage`,
+    `read` and `set`, so a child given one of them raises a `NameError` when
+    the device is made. Name the stage after what it moves, as `xy` here.
+
 The session then holds every device of the tree, under the name `ophyd-async`
-gives it, such as `microscope-stage`, so the positioner finds the stage's axes
+gives it, such as `microscope-xy`, so the positioner finds the stage's axes
 and a plan can be offered the camera.
 [Asking about devices](questions.md#asking-about-devices) says how components
 see them. A device can also declare its children with annotations, in the

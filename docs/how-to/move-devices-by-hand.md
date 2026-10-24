@@ -27,7 +27,7 @@ search stops at each axis it finds, so the signals of an axis never show up as
 axes.
 
 The view groups the axes by the device that holds them. That device gets a
-box, titled with its place in its tree, such as `microscope / stage`, and each
+box, titled with its place in its tree, such as `microscope / xy`, and each
 of its axes gets a row under the name the device gives it. An axis that no
 device holds, such as a motor declared on its own, is a box of its own. This
 stage holds two axes, `x` and `y`, so the view shows one box with two rows:

@@ -35,8 +35,8 @@ tree, and what a plan holds when it locks a device.
   motor's velocity would answer a question about axes. Commands stay out for
   the same reason. The index is built after connecting, because some
   transports create children only while they connect.
-- **Devices keep the names `ophyd-async` gives them.** The `stage` of
-  `microscope` is `microscope-stage`, the name the run's documents also use.
+- **Devices keep the names `ophyd-async` gives them.** The stage `xy` of
+  `microscope` is `microscope-xy`, the name the run's documents also use.
   No code finds a device or its owner by splitting a name at `-`, since a name
   may hold a dash of its own and the separator can be changed. Two devices
   with one name, or a device with no name, stop the build with a
@@ -59,7 +59,7 @@ tree, and what a plan holds when it locks a device.
 - **A view shows a device by its root and path.**
   [`device_path`][redsun.utils.devices.device_path] returns a
   [`DevicePath`][redsun.utils.devices.DevicePath], which reads as
-  `microscope / stage.x`. The descriptions
+  `microscope / xy.x`. The descriptions
   presenters send carry it in new fields that have defaults: `AxisInfo.path`,
   `LightInfo.path`, `Configuration.paths` and `ParamDescription.labels`. A view
   titles a box with the path and gives it the device's name as its tooltip.
@@ -73,7 +73,7 @@ The same setup, declared as one root device:
 ```python
 class MyMicroscope(StandardReadable):
     def __init__(self, name: str = "") -> None:
-        self.stage = MyStage()
+        self.xy = MyStage()
         self.camera = MyCamera()
         super().__init__(name=name)
 
@@ -98,11 +98,11 @@ The session declaring `microscope` holds every device of the tree:
 
 ```python
 set(devices)
-# {"microscope", "microscope-stage", "microscope-stage-x",
-#  "microscope-stage-y", "microscope-camera"}, and the camera's own devices
+# {"microscope", "microscope-xy", "microscope-xy-x", "microscope-xy-y",
+#  "microscope-camera"}, and the camera's own devices
 ```
 
-The positioner shows the box `microscope / stage` with the rows `x` and `y`,
+The positioner shows the box `microscope / xy` with the rows `x` and `y`,
 and a plan whose parameter takes a camera is offered `microscope / camera`.
 The session that declares `stage` and `camera` one by one keeps working, and
 now also holds `stage-x` and `stage-y`.
@@ -131,7 +131,8 @@ Other options were rejected:
   `stage / motors`, so positions saved under `stage` no longer match. The
   [migration page](../../how-to/migrate-from-0.15.md) says to save them again;
   no converter is written.
-- `find_axes` stays public, though the positioner no longer uses it.
+- `find_axes` and `walk_axes` are removed. They gathered every axis below one
+  device for one box, which the positioner no longer does.
 - Children declared with annotations, in the `ophyd-async` style, are created
   by the device's connector, the `ophyd-async` object that connects it over
   its transport, such as EPICS. `redsun` reads the tree once it is built.
