@@ -321,7 +321,7 @@ def test_an_unknown_mimetype_is_logged_and_the_product_skipped(
 
 
 def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
-    plain_store: Path,
+    plain_store: Path, closed: list[Path]
 ) -> None:
     """Write a nested run's product into the outer run's store at the outer stop."""
     writer = Writer()
@@ -335,12 +335,14 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
         "stop",
         {"uid": "stop-2", "run_start": "run-2", "time": 2.0, "exit_status": "success"},
     )
-    assert not (plain_store / "det_median" / "zarr.json").exists()
+    after_the_inner_stop = list(closed)
     writer(
         "stop",
         {"uid": "stop-1", "run_start": "run-1", "time": 3.0, "exit_status": "success"},
     )
 
+    assert after_the_inner_stop == []
+    assert closed == [plain_store]
     assert product == plain_store.as_uri()
     assert attributes(plain_store / "det_median")["redsun"]["run_start"] == "run-1"
 
