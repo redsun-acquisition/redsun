@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -61,8 +60,8 @@ class DeviceConfiguration(Loggable):
         """Read *device*'s configuration, follow its signals, and file it under *owner*.
 
         Returns the configuration of *device* alone. Nothing is kept when
-        reading fails or the call is cancelled. A key, or the owner, whose
-        device is not among its parent's children gets no path.
+        reading fails or the call is cancelled. A key already added is
+        followed once, and stays with its first owner.
 
         Parameters
         ----------
@@ -72,20 +71,23 @@ class DeviceConfiguration(Loggable):
         configuration = await read_configuration(device)
         signals = walk_devices(device).values() if isinstance(device, Device) else ()
         for signal in signals:
-            if isinstance(signal, SignalR) and signal.name in configuration.readings:
+            if (
+                isinstance(signal, SignalR)
+                and signal.name in configuration.readings
+                and signal.name not in self._configuration.readings
+            ):
                 self._unsubscribers.append(partial(signal.clear_sub, self._relay))
                 signal.subscribe_reading(self._relay)
-                with suppress(LookupError):
-                    configuration.paths[signal.name] = device_path(signal)
+                configuration.paths[signal.name] = device_path(signal)
         named = device if owner_device is None else owner_device
         if isinstance(named, Device):
-            with suppress(LookupError):
-                configuration.paths[owner] = device_path(named)
+            configuration.paths[owner] = device_path(named)
+        known = self._configuration.owners
         self._configuration.descriptors.update(configuration.descriptors)
         self._configuration.readings.update(configuration.readings)
         self._configuration.writable.update(configuration.writable)
         self._configuration.owners.update(
-            dict.fromkeys(configuration.descriptors, owner)
+            dict.fromkeys(configuration.descriptors.keys() - known, owner)
         )
         self._configuration.paths.update(configuration.paths)
         return configuration

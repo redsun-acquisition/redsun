@@ -99,7 +99,7 @@ class DescribesAxes(Protocol):
 
     @property
     def axes(self) -> Mapping[str, Mapping[str, AxisInfo]]:
-        """The axes of each device, by axis name, by device name."""
+        """The axes of each box, by row, by the name of the device holding them."""
         ...
 
     @property
@@ -184,7 +184,7 @@ class PositionerPresenter(Loggable):
 
     @property
     def axes(self) -> dict[str, dict[str, AxisInfo]]:
-        """The axes of each device, by axis name, by device name."""
+        """The axes of each box, by row, by the name of the device holding them."""
         return self._info
 
     @property
@@ -276,8 +276,12 @@ class PositionerPresenter(Loggable):
         targets: list[Stoppable] = [
             axis for axis in self._axes[device].values() if isinstance(axis, Stoppable)
         ]
-        whole: object = self._holders[device]
-        if isinstance(whole, Stoppable) and whole not in targets:
+        whole = self._holders[device]
+        if (
+            isinstance(whole, Stoppable)
+            and whole not in targets
+            and not self._holds_below(whole)
+        ):
             targets.append(whole)
         if not targets:
             self.logger.warning(f"{device} has nothing that can be stopped")
@@ -458,13 +462,12 @@ class PositionerPresenter(Loggable):
         self._axes = {device: axes for device, axes in self._axes.items() if axes}
         return info
 
+    def _holds_below(self, device: Device) -> bool:
+        """Tell whether a plan holds a device below *device*."""
+        return any(below.name in self._held for below in walk_devices(device).values())
+
     def _path(self, axis: Axis) -> DevicePath | None:
-        if not isinstance(axis, Device):
-            return None
-        try:
-            return device_path(axis)
-        except LookupError:
-            return None
+        return device_path(axis) if isinstance(axis, Device) else None
 
     async def _follow_axis(
         self, device: str, name: str, axis: Axis

@@ -65,6 +65,18 @@ class Scope(Device):
         super().__init__(name=name)
 
 
+class StoppingScope(Scope):
+    """A scope whose own `stop` is recorded in `stopped`."""
+
+    def __init__(self, name: str = "") -> None:
+        super().__init__(name=name)
+        self.stopped = False
+
+    async def stop(self, success: bool = True) -> None:
+        """Record that the whole scope was asked to stop."""
+        self.stopped = True
+
+
 class Coarse(SoftAxis):
     """A soft axis holding a finer axis of its own."""
 
@@ -712,9 +724,11 @@ async def test_axes_are_grouped_by_the_device_holding_them(scope: Scope) -> None
         "scope-xy": {"x", "y"},
         "scope-stages": {"1", "2"},
     }
-    path = positioner.axes["scope-xy"]["x"].path
-    assert path is not None
-    assert str(path.parent) == "scope / xy"
+    xy = positioner.axes["scope-xy"]["x"].path
+    stages = positioner.axes["scope-stages"]["1"].path
+    assert xy is not None
+    assert stages is not None
+    assert (str(xy.parent), str(stages.parent)) == ("scope / xy", "scope / stages")
     positioner.shutdown()
 
 
@@ -766,4 +780,17 @@ async def test_holding_one_axis_leaves_its_neighbour_free(scope: Scope) -> None:
 
     assert await position(scope.xy.x) == pytest.approx(0.0)
     assert await position(scope.xy.y) == pytest.approx(1.0)
+    positioner.shutdown()
+
+
+async def test_stopping_a_box_spares_a_held_device_holding_it() -> None:
+    """Stop the rows of a root's box, not the root, while a plan holds a device below it."""
+    scope = StoppingScope("scope")
+    await scope.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"scope": scope})
+    positioner.set_locked(frozenset({"scope-xy-x"}))
+
+    await positioner.stop("scope")
+
+    assert scope.stopped is False
     positioner.shutdown()

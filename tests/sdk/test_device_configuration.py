@@ -146,3 +146,17 @@ async def test_holding_an_unknown_name_holds_nothing(rig: Rig) -> None:
     await configuration.configure("scope-xy-x-velocity", 3.0)
 
     assert await rig.xy.x.velocity.get_value() == pytest.approx(3.0)
+
+
+async def test_a_key_added_twice_is_followed_once(rig: Rig) -> None:
+    """Relay each change of a signal once and keep its first owner when added again."""
+    configuration = DeviceConfiguration("lights")
+    await configuration.add("scope-xy", rig.xy.x, owner_device=rig.xy)
+    await configuration.add("scope-xy-x", rig.xy.x)
+    seen: list[tuple[str, object]] = []
+    configuration.sig_changed.connect(lambda *args: seen.append(args))
+
+    await rig.xy.x.velocity.set(3.0)
+
+    assert seen == [("scope-xy-x-velocity", 3.0)]
+    assert configuration.configuration.owners["scope-xy-x-velocity"] == "scope-xy"
