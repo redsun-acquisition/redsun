@@ -12,7 +12,6 @@ icon: lucide/code
         - RunEngine
         - Deferrals
         - PlanProgress
-        - ProgressState
         - register_bound_command
 
 `RunEngineResult` is the class of `bluesky`,

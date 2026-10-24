@@ -7,7 +7,7 @@ objects, used inside larger plans with `yield from`.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 from uuid import uuid4
 
 import bluesky.plan_stubs as bps
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         Status,
     )
     from bluesky.utils import MsgGenerator
+    from ophyd_async.core import WatchableAsyncStatus
 
     from redsun.engine.actions import SRLatch
 
@@ -195,6 +196,18 @@ def update_progress(
     )
 
 
+@overload
+def monitor_progress(
+    name: str, status: WatchableAsyncStatus[T], *, parent: str | None = None
+) -> MsgGenerator[PlanProgress[T]]: ...
+
+
+@overload
+def monitor_progress(
+    name: str, status: Status, *, parent: str | None = None
+) -> MsgGenerator[PlanProgress]: ...
+
+
 def monitor_progress(
     name: str, status: Status, *, parent: str | None = None
 ) -> MsgGenerator[PlanProgress]:
@@ -205,7 +218,7 @@ def monitor_progress(
     end. The scope finishes when the status is done, whether it succeeds or
     not; the plan still waits on the status itself, and does not update or
     finish the scope with [`update_progress`][redsun.engine.plan_stubs.update_progress].
-    Returns the scope.
+    Returns the scope, which reports values of the type the status reports.
     """
     scope: PlanProgress = yield Msg(
         "monitor_progress", status, name=name, parent=parent

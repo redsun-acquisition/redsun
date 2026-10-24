@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import gc
-import math
 import threading
 import weakref
-from typing import TYPE_CHECKING, Any
+from functools import partial
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import bluesky.plan_stubs as bps
 import pytest
@@ -23,14 +23,45 @@ if TYPE_CHECKING:
 
     from bluesky.utils import MsgGenerator
 
-    from redsun.engine import ProgressState, RunEngine
+    from redsun.engine import PlanProgress, RunEngine
 
 
-def record(RE: RunEngine) -> list[tuple[ProgressState, ...]]:
-    """Collect every tuple the engine announces on `sig_progress`."""
-    seen: list[tuple[ProgressState, ...]] = []
-    RE.sig_progress.connect(seen.append)
+class Shown(NamedTuple):
+    """A scope as the engine announced it."""
+
+    name: str
+    parent: str | None
+    update: WatcherUpdate[Any] | None
+
+
+def record(RE: RunEngine) -> list[tuple[Shown, ...]]:
+    """Collect the scopes of every tuple the engine announces on `sig_progress`."""
+    seen: list[tuple[Shown, ...]] = []
+
+    def announced(scopes: tuple[PlanProgress, ...]) -> None:
+        seen.append(
+            tuple(
+                Shown(
+                    scope.name,
+                    scope.parent.name if scope.parent is not None else None,
+                    scope.update,
+                )
+                for scope in scopes
+            )
+        )
+
+    RE.sig_progress.connect(announced)
     return seen
+
+
+def current(shown: Shown) -> Any:
+    """Return the `current` of *shown*, or `None` before its first update."""
+    return shown.update.current if shown.update is not None else None
+
+
+def record_update(updates: list[dict[str, Any]], **update: Any) -> None:
+    """Keep *update*, the keywords a scope passes its watchers."""
+    updates.append(update)
 
 
 class WatchedMover(Device):
@@ -111,11 +142,11 @@ def test_a_scope_is_reported_as_it_is_declared_updated_and_finished(
 
     RE(plan()).result(timeout=10)
 
-    assert [[(s.name, s.current, s.fraction) for s in scopes] for scopes in seen] == [
-        [("series", None, None)],
-        [("series", 1.0, 0.25)],
-        [("series", 2.0, 0.5)],
-        [("series", 4.0, 1.0)],
+    assert [[(s.name, current(s)) for s in scopes] for scopes in seen] == [
+        [("series", None)],
+        [("series", 1)],
+        [("series", 2)],
+        [("series", 4)],
         [],
     ]
 
@@ -188,70 +219,28 @@ def test_a_paused_plan_keeps_its_scope_and_resumes(RE: RunEngine) -> None:
 
     with pytest.raises(RunEngineInterrupted):
         RE(plan()).result(timeout=10)
-    assert [s.current for s in seen[-1]] == [1.0]
+    assert [current(s) for s in seen[-1]] == [1]
 
     RE.resume().result(timeout=10)
 
-    assert [[s.current for s in scopes] for scopes in seen[-3:]] == [[2.0], [2.0], []]
+    assert [[current(s) for s in scopes] for scopes in seen[-3:]] == [[2], [2], []]
 
 
-@pytest.mark.parametrize(
-    ("update", "expected"),
-    [
-        ({"fraction": 0.4}, (None, None, None, 0.4)),
-        ({"current": 3, "initial": 1, "target": 5}, (3.0, 1.0, 5.0, 0.5)),
-        ({"current": 9, "initial": 0, "target": 5}, (9.0, 0.0, 5.0, 1.0)),
-        ({"current": 2, "initial": 2, "target": 2}, (2.0, 2.0, 2.0, None)),
-        ({"current": 7}, (7.0, None, None, None)),
-        ({"current": "seven", "initial": 0, "target": 5}, (None, 0.0, 5.0, None)),
-        ({"current": math.nan, "initial": 0, "target": 5}, (None, 0.0, 5.0, None)),
-        ({"current": 1, "initial": 0, "target": math.inf}, (1.0, 0.0, None, None)),
-        ({"fraction": math.nan}, (None, 0.0, 1.0, None)),
-    ],
-    ids=[
-        "reported",
-        "computed",
-        "clamped",
-        "no span",
-        "no end",
-        "not a number",
-        "nan",
-        "infinite",
-        "nan fraction",
-    ],
-)
-def test_a_scope_reports_how_far_it_has_got(
-    RE: RunEngine,
-    update: dict[str, Any],
-    expected: tuple[float | None, float | None, float | None, float | None],
-) -> None:
-    """Report the current, initial, target and fraction an update gives, dropping what is not a finite number."""
-    seen = record(RE)
+def test_a_fraction_reported_alone_reaches_watchers_alone(RE: RunEngine) -> None:
+    """Pass a fraction reported alone to watchers, with no current, initial or target."""
+    updates: list[dict[str, Any]] = []
 
     def plan() -> MsgGenerator[None]:
-        yield from rps.declare_progress("series")
-        yield from rps.update_progress("series", **update)
+        scope = yield from rps.declare_progress("series")
+        scope.watch(partial(record_update, updates))
+        yield from rps.update_progress("series", fraction=0.4)
 
     RE(plan()).result(timeout=10)
 
-    state = next(scopes[0] for scopes in reversed(seen) if scopes)
-    assert (state.current, state.initial, state.target, state.fraction) == expected
-
-
-def test_a_negative_precision_is_dropped(RE: RunEngine) -> None:
-    """Report no precision when the plan passes a negative one."""
-    seen = record(RE)
-
-    def plan() -> MsgGenerator[None]:
-        yield from rps.declare_progress("series")
-        yield from rps.update_progress(
-            "series", current=1, initial=0, target=2, precision=-1
-        )
-
-    RE(plan()).result(timeout=10)
-
-    state = next(scopes[0] for scopes in reversed(seen) if scopes)
-    assert state.precision is None
+    assert [
+        (update["current"], update["initial"], update["target"], update["fraction"])
+        for update in updates
+    ] == [(None, None, None, 0.4), (None, None, None, 1.0)]
 
 
 def test_opening_and_closing_a_nested_scope_never_reports_nothing(
@@ -308,18 +297,18 @@ def test_a_watchable_status_fills_its_scope(RE: RunEngine) -> None:
     RE(plan()).result(timeout=10)
 
     reported = [
-        scopes[0] for scopes in seen if scopes and scopes[0].current is not None
+        scopes[0].update for scopes in seen if scopes and current(scopes[0]) is not None
     ]
-    assert [state.current for state in reported] == [1.0, 2.0, 3.0, 3.0]
-    assert {state.name for state in reported} == {"move"}
-    assert {state.unit for state in reported} == {"mm"}
+    assert [update.current for update in reported if update] == [1.0, 2.0, 3.0, 3.0]
+    assert {update.name for update in reported if update} == {"move"}
+    assert {update.unit for update in reported if update} == {"mm"}
     assert seen[-1] == ()
 
 
 def test_a_plain_status_keeps_a_busy_scope_until_done(RE: RunEngine) -> None:
     """Keep a scope with no end while a silent move runs, and drop it after."""
     seen = record(RE)
-    shown: list[tuple[ProgressState, ...]] = []
+    shown: list[tuple[Shown, ...]] = []
 
     def plan() -> MsgGenerator[None]:
         status = yield from bps.abs_set(
@@ -333,8 +322,7 @@ def test_a_plain_status_keeps_a_busy_scope_until_done(RE: RunEngine) -> None:
     RE(plan()).result(timeout=10)
 
     moving, moved = shown
-    assert [state.name for state in moving] == ["move"]
-    assert moving[0].fraction is None
+    assert moving == (Shown("move", None, None),)
     assert moved == ()
 
 
@@ -342,7 +330,7 @@ def test_a_failed_status_closes_its_scope(RE: RunEngine) -> None:
     """Drop the scope of a move that fails, and let the plan's wait raise."""
     seen = record(RE)
 
-    shown: list[tuple[ProgressState, ...]] = []
+    shown: list[tuple[Shown, ...]] = []
 
     def plan() -> MsgGenerator[None]:
         status = yield from bps.abs_set(
@@ -440,8 +428,8 @@ def test_a_paused_monitored_plan_resumes(RE: RunEngine) -> None:
 def test_a_failing_progress_display_leaves_the_move_alone(RE: RunEngine) -> None:
     """Complete a followed move, and free its scope, when a progress display raises."""
 
-    def display(scopes: tuple[ProgressState, ...]) -> None:
-        if scopes and scopes[0].current is not None:
+    def display(scopes: tuple[PlanProgress, ...]) -> None:
+        if scopes and scopes[0].update is not None:
             raise RuntimeError("the display failed")
 
     RE.sig_progress.connect(display)

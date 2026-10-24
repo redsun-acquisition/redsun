@@ -11,12 +11,13 @@ from bluesky.run_engine import (
 )
 from bluesky.run_engine import RunEngineResult, default_scan_id_source
 from bluesky.utils import IllegalMessageSequence
+from ophyd_async.core import WatcherUpdate
 from psygnal import Signal
 
 from redsun.aio import get_shared_loop
 from redsun.log import logger
 
-from ._progress import PlanProgress, ProgressState, depth, empty_state, snapshot
+from ._progress import PlanProgress, depth
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
@@ -123,7 +124,7 @@ class RunEngine(BlueskyRunEngine):
     """The engine's new and old state on every change, named as `state` names them."""
 
     sig_progress = Signal(tuple)
-    """Every progress scope of the running plan, as a tuple of `ProgressState`,
+    """Every progress scope of the running plan, as a tuple of `PlanProgress`,
     parents before children, whenever one is declared, updated or finished;
     an empty tuple when none is left."""
 
@@ -155,7 +156,6 @@ class RunEngine(BlueskyRunEngine):
         self._held_guard = Lock()
         self._progress_scopes: dict[str, PlanProgress] = {}
         self._progress_listed: tuple[PlanProgress, ...] = ()
-        self._progress_states: dict[PlanProgress, ProgressState] = {}
         self._progress_hook_active = False
         self._progress_shown = False
         self._progress_closing = False
@@ -318,6 +318,7 @@ class RunEngine(BlueskyRunEngine):
                     "It must be declared before its children."
                 )
         scope = PlanProgress(name, parent=parent)
+        scope.watch(partial(self._on_progress_update, scope))
         self._progress_scopes[name] = scope
         self._rebuild_progress_hook()
         return scope
@@ -372,7 +373,14 @@ class RunEngine(BlueskyRunEngine):
         # the device's own name; the scope keeps the one the plan gave
         update.pop("name", None)
         try:
-            scope._notify(**update)
+            scope._notify(
+                WatcherUpdate(
+                    current=update.pop("current", None),
+                    initial=update.pop("initial", None),
+                    target=update.pop("target", None),
+                    **update,
+                )
+            )
         except Exception:  # noqa: BLE001 - a failing view must not fail the device
             logger.exception("Progress of %r not shown", scope.name)
 
@@ -401,14 +409,16 @@ class RunEngine(BlueskyRunEngine):
             self._finish_scope(scope)
             return
         scope._notify(
-            current=msg.kwargs.get("current"),
-            initial=msg.kwargs.get("initial"),
-            target=msg.kwargs.get("target"),
-            unit=msg.kwargs.get("unit", "unit"),
-            precision=msg.kwargs.get("precision"),
-            fraction=msg.kwargs.get("fraction"),
-            time_elapsed=msg.kwargs.get("time_elapsed"),
-            time_remaining=msg.kwargs.get("time_remaining"),
+            WatcherUpdate(
+                current=msg.kwargs.get("current"),
+                initial=msg.kwargs.get("initial"),
+                target=msg.kwargs.get("target"),
+                unit=msg.kwargs.get("unit", "unit"),
+                precision=msg.kwargs.get("precision"),
+                fraction=msg.kwargs.get("fraction"),
+                time_elapsed=msg.kwargs.get("time_elapsed"),
+                time_remaining=msg.kwargs.get("time_remaining"),
+            )
         )
 
     def _rebuild_progress_hook(self) -> None:
@@ -426,37 +436,27 @@ class RunEngine(BlueskyRunEngine):
             self.progress_hook(active)
 
     def _report_scopes(self, scopes: list[PlanProgress] | None) -> None:
-        """Follow the scopes the engine lists, and announce them.
+        """Announce the scopes the engine lists.
 
         The engine clears the list before handing a new one; that clearing is
         announced only when no scope is left open to follow it.
         """
         self._progress_listed = tuple(scopes or ())
-        self._progress_states = {
-            scope: state
-            for scope, state in self._progress_states.items()
-            if not scope.done
-        }
         if scopes is None and any(
             not scope.done for scope in self._progress_scopes.values()
         ):
             return
-        for scope in self._progress_listed:
-            if scope not in self._progress_states:
-                self._progress_states[scope] = empty_state(scope)
-                scope.watch(partial(self._on_progress_update, scope))
         self._announce_progress()
 
     def _on_progress_update(self, scope: PlanProgress, **update: Any) -> None:
-        self._progress_states[scope] = snapshot(scope, update)
-        self._announce_progress()
+        if scope in self._progress_listed:
+            self._announce_progress()
 
     def _announce_progress(self) -> None:
         if self._progress_closing:
             return
-        states = tuple(self._progress_states[scope] for scope in self._progress_listed)
-        self._progress_shown = bool(states)
-        self.sig_progress.emit(states)
+        self._progress_shown = bool(self._progress_listed)
+        self.sig_progress.emit(self._progress_listed)
 
     def _close_progress(self) -> None:
         """Finish every scope a plan left open, and announce that none is left."""
@@ -468,7 +468,6 @@ class RunEngine(BlueskyRunEngine):
         finally:
             self._progress_closing = False
         self._progress_scopes.clear()
-        self._progress_states.clear()
         self._progress_listed = ()
         self._progress_hook_active = False
         if self._progress_shown:

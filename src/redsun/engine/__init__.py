@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ._deferrals import Deferrals
-from ._progress import PlanProgress, ProgressState
+from ._progress import PlanProgress
 from ._wrapper import (
     RunEngine,
     RunEngineResult,
@@ -11,7 +11,6 @@ from ._wrapper import (
 __all__ = [
     "Deferrals",
     "PlanProgress",
-    "ProgressState",
     "RunEngine",
     "RunEngineResult",
     "register_bound_command",

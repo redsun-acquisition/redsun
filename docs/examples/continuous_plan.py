@@ -25,7 +25,7 @@ from redsun import (
     PlanEntry,
     slot,
 )
-from redsun.engine import ProgressState, RunEngine
+from redsun.engine import PlanProgress, RunEngine
 from redsun.engine.actions import ActionManager, ActionState, PlanAction, continuous
 from redsun.log import Loggable
 from redsun.presenter.plan_spec import (
@@ -294,7 +294,7 @@ class PlanView(QWidget):
     # --8<-- [end:view-actions]
     # --8<-- [start:progress-view]
     @slot
-    def on_progress(self, scopes: tuple[ProgressState, ...]) -> None:
+    def on_progress(self, scopes: tuple[PlanProgress, ...]) -> None:
         self.widgets[self.chooser.currentText()].show_progress(scopes)
 
     # --8<-- [end:progress-view]
