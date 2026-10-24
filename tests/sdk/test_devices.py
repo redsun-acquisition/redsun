@@ -8,6 +8,9 @@ import numpy as np
 import pytest
 from ophyd_async.core import (
     AsyncStatus,
+    Device,
+    DeviceMap,
+    DeviceVector,
     MovableLogic,
     StandardMovable,
     StandardReadable,
@@ -16,11 +19,14 @@ from ophyd_async.core import (
 )
 
 from redsun.utils.devices import (
+    DevicePath,
     LightInfo,
     Readback,
     describe_axis,
     describe_light,
+    device_path,
     find_axes,
+    held_by,
     is_light,
     limits,
     readback,
@@ -108,6 +114,39 @@ class Carrier(StandardReadable):
     def __init__(self, name: str) -> None:
         self.coarse = OuterAxis()
         super().__init__(name=name)
+
+
+class Leaf(Device):
+    """A device holding one signal."""
+
+    def __init__(self, name: str = "") -> None:
+        self.power = soft_signal_rw(float)
+        super().__init__(name=name)
+
+
+class Pair(Device):
+    """A device holding two leaves."""
+
+    def __init__(self, name: str = "") -> None:
+        self.x = Leaf()
+        self.y = Leaf()
+        super().__init__(name=name)
+
+
+class Tree(Device):
+    """A root holding a device, a `DeviceVector` and a `DeviceMap`."""
+
+    def __init__(self, name: str = "") -> None:
+        self.xy = Pair()
+        self.channel = DeviceVector({1: Leaf()})
+        self.lights = DeviceMap({"laser": Leaf(), "led-blue": Leaf()})
+        super().__init__(name=name)
+
+
+@pytest.fixture
+def scope() -> Tree:
+    """Return a tree named `scope`."""
+    return Tree("scope")
 
 
 async def test_the_axes_of_a_device_are_its_movable_descendants() -> None:
@@ -279,3 +318,48 @@ def test_a_readback_keeps_what_its_descriptor_states_well(
 ) -> None:
     """Keep text units, a whole precision of at least 0, and limits, from a descriptor."""
     assert readback(1.5, descriptor) == expected
+
+
+def test_a_device_path_names_its_root_and_the_way_down(scope: Tree) -> None:
+    """Give attributes, container keys and signals their dotted path below the root."""
+    assert device_path(scope.xy.x) == DevicePath(
+        "scope", "xy.x", ("scope", "scope-xy", "scope-xy-x")
+    )
+    assert device_path(scope.channel[1]).path == "channel.1"
+    assert device_path(scope.lights["led-blue"].power).path == "lights.led-blue.power"
+    assert device_path(scope) == DevicePath("scope", "", ("scope",))
+
+
+def test_a_device_path_reads_as_a_label(scope: Tree) -> None:
+    """Render a path as the root, then the path when there is one."""
+    assert str(device_path(scope.xy)) == "scope / xy"
+    assert str(device_path(scope)) == "scope"
+    assert device_path(scope.xy.x).parent == device_path(scope.xy)
+    assert device_path(scope).parent is None
+
+
+def test_a_device_outside_its_parents_children_has_no_path(scope: Tree) -> None:
+    """Raise `LookupError` for a device whose parent does not list it."""
+    stray = soft_signal_rw(int)
+    stray.parent = scope.xy
+
+    with pytest.raises(LookupError):
+        device_path(stray)
+
+
+@pytest.mark.parametrize(
+    ("held", "expected"),
+    [
+        ({"scope"}, True),
+        ({"scope-xy"}, True),
+        ({"scope-xy-x"}, True),
+        ({"scope-xy-y"}, False),
+        ({"scope-xy-x-power"}, False),
+        (set(), False),
+    ],
+)
+def test_holding_a_device_holds_what_is_below_it(
+    scope: Tree, held: set[str], expected: bool
+) -> None:
+    """Hold a device when it or a device above it is named, never when only one below it is."""
+    assert held_by(scope.xy.x, held) is expected

@@ -11,7 +11,14 @@ import dataclasses
 from collections import Counter
 from dataclasses import dataclass, field
 from numbers import Real
-from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    NamedTuple,
+    Protocol,
+    TypeGuard,
+    runtime_checkable,
+)
 
 from bluesky.protocols import HasHints, Stoppable, Subscribable
 from ophyd_async.core import (
@@ -21,11 +28,13 @@ from ophyd_async.core import (
     Signal,
     SignalRW,
     StandardMovable,
+    walk_devices,
     walk_rw_signals,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from collections.abc import Set as AbstractSet
 
     from bluesky.protocols import Reading
     from event_model import DataKey
@@ -35,14 +44,17 @@ __all__ = [
     "Axis",
     "AxisInfo",
     "Configuration",
+    "DevicePath",
     "DimmableLight",
     "Light",
     "LightInfo",
     "Readback",
     "describe_axis",
     "describe_light",
+    "device_path",
     "dimmable",
     "find_axes",
+    "held_by",
     "is_light",
     "limits",
     "read_configuration",
@@ -110,6 +122,60 @@ class Configuration:
 
     owners: dict[str, str] = field(default_factory=dict)
     """Name of the device each key belongs to; empty when not known."""
+
+
+class DevicePath(NamedTuple):
+    """Where a device sits in its tree."""
+
+    root: str
+    """Name of the device at the top of the tree."""
+
+    path: str
+    """Attribute path from the root, dotted; empty for the root itself."""
+
+    names: tuple[str, ...]
+    """Names of the root and of every device down to this one, in order."""
+
+    @property
+    def parent(self) -> DevicePath | None:
+        """Where the device's parent sits; `None` for a root."""
+        if not self.path:
+            return None
+        return DevicePath(self.root, self.path.rpartition(".")[0], self.names[:-1])
+
+    def __str__(self) -> str:
+        """Return the label a view shows: `scope / xy.x`, or `scope` for a root."""
+        return f"{self.root} / {self.path}" if self.path else self.root
+
+
+def device_path(device: Device) -> DevicePath:
+    """Return where *device* sits in its tree.
+
+    Raises
+    ------
+    LookupError
+        If a device on the way up is not among its parent's children.
+    """
+    chain = [device]
+    while (parent := chain[-1].parent) is not None:
+        chain.append(parent)
+    names = tuple(each.name for each in reversed(chain))
+    if len(chain) == 1:
+        return DevicePath(device.name, "", names)
+    for path, found in walk_devices(chain[-1]).items():
+        if found is device:
+            return DevicePath(chain[-1].name, path, names)
+    raise LookupError(f"{device.name!r} is not reachable from {chain[-1].name!r}")
+
+
+def held_by(device: Device, names: AbstractSet[str]) -> bool:
+    """Tell whether *device* or a device above it is in *names*."""
+    current: Device | None = device
+    while current is not None:
+        if current.name in names:
+            return True
+        current = current.parent
+    return False
 
 
 def is_axis(item: object) -> TypeGuard[Axis]:
