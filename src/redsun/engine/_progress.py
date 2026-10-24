@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import asdict, replace
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Generic
 
 from ophyd_async.core import WatcherUpdate
@@ -16,9 +16,9 @@ T = TypeVar("T", default=Any)
 class PlanProgress(Generic[T]):
     """A progress scope a plan declared, passing each update to its watchers.
 
-    Watchers receive the fields of a `WatcherUpdate` as keywords, as the
-    watchers of an `ophyd-async` `WatchableAsyncStatus` do. `name` is always
-    the name of the scope.
+    Watchers receive every field of a `WatcherUpdate` as keywords, those that
+    are `None` included, and the values themselves, not copies. `name` is
+    always the name of the scope.
     """
 
     def __init__(self, name: str, *, parent: PlanProgress[Any] | None = None) -> None:
@@ -45,14 +45,17 @@ class PlanProgress(Generic[T]):
         """Pass every update to *watcher*, starting with the last one, if any."""
         self._watchers.append(watcher)
         if self._update is not None:
-            watcher(**asdict(self._update))
+            watcher(**vars(self._update))
 
     def _notify(self, update: WatcherUpdate[T | None]) -> None:
         if update.time_elapsed is None:
             update = replace(update, time_elapsed=time.monotonic() - self._start)
         self._update = replace(update, name=self.name)
+        # vars, not asdict: asdict deep-copies the values, which fails on one
+        # that cannot be copied
+        values = vars(self._update)
         for watcher in self._watchers:
-            watcher(**asdict(self._update))
+            watcher(**values)
 
     def finish(self) -> None:
         """Mark the scope done, reporting it complete to the watchers once more."""

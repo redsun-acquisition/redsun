@@ -30,8 +30,13 @@ class Shown(NamedTuple):
     """A scope as the engine announced it."""
 
     name: str
+    """Name of the scope."""
+
     parent: str | None
+    """Name of the scope it is nested under, or `None`."""
+
     update: WatcherUpdate[Any] | None
+    """Its last update when announced, or `None` before the first."""
 
 
 def record(RE: RunEngine) -> list[tuple[Shown, ...]]:
@@ -241,6 +246,37 @@ def test_a_fraction_reported_alone_reaches_watchers_alone(RE: RunEngine) -> None
         (update["current"], update["initial"], update["target"], update["fraction"])
         for update in updates
     ] == [(None, None, None, 0.4), (None, None, None, 1.0)]
+
+
+def test_a_watcher_added_late_gets_the_last_update_at_once(RE: RunEngine) -> None:
+    """Pass a watcher added after an update that update, under the scope's name and timed."""
+    updates: list[dict[str, Any]] = []
+
+    def plan() -> MsgGenerator[None]:
+        scope = yield from rps.declare_progress("series")
+        yield from rps.update_progress("series", current=1, initial=0, target=2)
+        scope.watch(partial(record_update, updates))
+
+    RE(plan()).result(timeout=10)
+
+    first = updates[0]
+    assert (first["name"], first["current"], first["target"]) == ("series", 1, 2)
+    assert first["time_elapsed"] >= 0
+
+
+def test_a_value_reaches_watchers_as_reported(RE: RunEngine) -> None:
+    """Pass watchers the value the plan reported itself, one that cannot be copied included."""
+    lock = threading.Lock()
+    updates: list[dict[str, Any]] = []
+
+    def plan() -> MsgGenerator[None]:
+        scope = yield from rps.declare_progress("series")
+        scope.watch(partial(record_update, updates))
+        yield from rps.update_progress("series", current=lock)
+
+    RE(plan()).result(timeout=10)
+
+    assert updates[0]["current"] is lock
 
 
 def test_opening_and_closing_a_nested_scope_never_reports_nothing(

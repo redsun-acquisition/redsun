@@ -826,6 +826,8 @@ def test_bluesky_count_gets_its_widgets() -> None:
         (_scope("s", current=1, target=math.inf), None, "1 frames"),
         (_scope("s", fraction=math.nan), None, "frames"),
         (_scope("s", current=1, target=2, precision=-1), 0.5, "1 / 2 frames"),
+        (_scope("s", current=1, target=2, precision=True), 0.5, "1 / 2 frames"),
+        (_scope("s", current=37, initial=None, target=100), None, "37 frames"),
     ],
     ids=[
         "counted",
@@ -841,6 +843,8 @@ def test_bluesky_count_gets_its_widgets() -> None:
         "infinite",
         "nan fraction",
         "negative precision",
+        "boolean precision",
+        "no initial",
     ],
 )
 def test_a_scope_shows_a_bar_and_what_it_counts(
