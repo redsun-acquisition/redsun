@@ -1047,6 +1047,8 @@
       
         
       
+        
+      
     
     
     
@@ -1137,6 +1139,35 @@
     
   
   How to write a service
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/write-a-camera-for-continuous-acquisition/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to write a camera for continuous acquisition
 
     
   </span>
@@ -4523,6 +4554,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#areadetector" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        areaDetector
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#attached-service" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -4644,6 +4686,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#continuous-acquisition" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Continuous acquisition
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#data-key" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -4736,6 +4789,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Frontend
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hint" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hint
       </span>
     </span>
   </a>
@@ -5143,6 +5207,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Stack
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Stage
       </span>
     </span>
   </a>
@@ -6382,6 +6457,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#areadetector" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        areaDetector
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#attached-service" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6503,6 +6589,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#continuous-acquisition" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Continuous acquisition
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#data-key" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6595,6 +6692,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Frontend
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hint" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hint
       </span>
     </span>
   </a>
@@ -7009,6 +7117,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#stage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Stage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#streamdatum" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7225,6 +7344,11 @@ dotted underline to read what it stands for.</p>
 <a href="../decisions/">Decisions</a> that records one
 decision and the reasons for it. Once accepted, it's never edited; a later <abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr>
 replaces it instead.</p>
+<h3 id="areadetector">areaDetector<a class="headerlink" href="#areadetector" title="Permanent link">&para;</a></h3>
+<p>areaDetector is the <a href="#epics"><abbr title="A set of tools for controlling instruments over a network.">EPICS</abbr></a> framework most camera <a href="#ioc">IOCs</a> are
+built on. A driver takes the frames, and plugins chained after it pass them
+on: one serves the latest frame over <a href="#pvaccess">PVAccess</a>, one holds frames
+back until a trigger, one writes them to an <abbr title="Hierarchical Data Format 5. A file format that stores arrays, such as camera frames, in named datasets.">HDF5</abbr> file.</p>
 <h3 id="attached-service">Attached service<a class="headerlink" href="#attached-service" title="Permanent link">&para;</a></h3>
 <p>An attached service is a <a href="#service">service</a> that already runs, in a
 container or on another host, and that you declare with <code>Attach</code>. The session
@@ -7278,6 +7402,11 @@ that a later one overrides an earlier one. Three keys say what kind of
 session it is, <code>schema_version</code>, <code>frontend</code> and <code>services.transport</code>, so every
 source that gives one of them must give the same value, or the session stops
 with an error.</p>
+<h3 id="continuous-acquisition">Continuous acquisition<a class="headerlink" href="#continuous-acquisition" title="Permanent link">&para;</a></h3>
+<p>In continuous acquisition, a camera takes frames one after another until
+something stops it, rather than one frame each time a <a href="#plan">plan</a> asks.
+A plan then reads the latest frame, or writes frames to a file, while the
+camera goes on.</p>
 <h3 id="data-key">Data key<a class="headerlink" href="#data-key" title="Permanent link">&para;</a></h3>
 <p>A data key is the name under which one measured value is recorded in a
 <a href="#run">run</a>, such as <code>camera-sum</code>. A device chooses the data keys of what it
@@ -7329,6 +7458,12 @@ the server allows, sets them. See
 <p>A frontend is what shows a session on screen, such as the Qt one that
 <code>redsun</code> ships. A session file names it by its registered name (<code>frontend: qt</code>), and a
 package can register its own.</p>
+<h3 id="hint">Hint<a class="headerlink" href="#hint" title="Permanent link">&para;</a></h3>
+<p>A hint is a <a href="#data-key">data key</a> a device marks as the one worth showing,
+such as the image of a camera rather than its exposure time. The device lists
+them under <code>fields</code> in its <code>hints</code>, and plans and views read them there
+instead of knowing the device's attribute names. The term comes from
+<a href="#bluesky"><code>bluesky</code></a>.</p>
 <h3 id="hook">Hook<a class="headerlink" href="#hook" title="Permanent link">&para;</a></h3>
 <p>A hook is an object you give a session so you can act at a given point of its
 life, for example to style the application before any window exists, or to
@@ -7515,6 +7650,12 @@ other that reaches it. The session still builds them as two components, and a
 ports. <code>redsun</code> ships three: the positioner (<code>PositionerPresenter</code>,
 <code>PositionerView</code>), the light stack (<code>LightPresenter</code>, <code>LightView</code>) and the
 acquisition stack (<code>AcquisitionPresenter</code>, <code>AcquisitionView</code>).</p>
+<h3 id="stage">Stage<a class="headerlink" href="#stage" title="Permanent link">&para;</a></h3>
+<p>To stage a device is to get it ready for a <a href="#plan">plan</a>, and to unstage it is
+to undo that once the plan ends. A plan stages each device it uses before the
+first reading and unstages it after the last. The plans of <code>bluesky</code> stage
+the device at the top of the tree each device belongs to, not the device
+itself. The term comes from <a href="#bluesky"><code>bluesky</code></a>.</p>
 <h3 id="streamdatum">StreamDatum<a class="headerlink" href="#streamdatum" title="Permanent link">&para;</a></h3>
 <p>A <code>StreamDatum</code> is a <a href="#document">document</a> that follows a
 <a href="#streamresource"><code>StreamResource</code></a> and says which part of the data it names
