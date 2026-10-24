@@ -9,9 +9,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pytest
-from ophyd_async.core import SignalRW, set_mock_attr
+from ophyd_async.core import Device, DeviceMap, SignalRW, set_mock_attr
 
 from redsun.presenter import DescribesLights, LightPresenter
+from redsun.utils.devices import device_path
 from tests.sdk.mocks import (
     BoundedBackend,
     DimmerLight,
@@ -48,6 +49,14 @@ class SlowIntensity(SoftLight):
         with self.add_children_as_readables():
             self.intensity = SignalRW(self.backend)
         super().__init__(name)
+
+
+class Bench(Device):
+    """A root holding its lights in a `DeviceMap`."""
+
+    def __init__(self, name: str = "") -> None:
+        self.lights = DeviceMap({"laser": DimmerLight()})
+        super().__init__(name=name)
 
 
 @pytest.fixture
@@ -297,4 +306,37 @@ async def test_a_whole_number_intensity_is_written_whole_and_without_limits() ->
     lamp_intensity = presenter.lights["lamp"].intensity
     assert lamp_intensity is not None
     assert lamp_intensity.precision == 0
+    presenter.shutdown()
+
+
+async def test_a_light_in_a_tree_carries_its_path_and_follows_locks() -> None:
+    """Send a tree light's path and refuse it while a device above it is held."""
+    bench = Bench("bench")
+    await bench.connect(mock=False)
+    light = bench.lights["laser"]
+    presenter = LightPresenter("lights", devices={light.name: light})
+
+    presenter.set_locked(frozenset({"bench"}))
+    await presenter.set_enabled(light.name, True)
+
+    path = presenter.lights[light.name].path
+    assert path == device_path(light)
+    assert str(path) == "bench / lights.laser"
+    assert await light.enabled.get_value() is False
+    presenter.shutdown()
+
+
+async def test_a_light_with_no_path_is_sent_without_one() -> None:
+    """Send path `None` for a light its parent does not list as a child."""
+    bench = Bench("bench")
+    stray = SoftLight("stray")
+    stray.parent = bench
+    await stray.connect(mock=False)
+    presenter = LightPresenter("lights", devices={"stray": stray})
+
+    presenter.set_locked(frozenset({"stray"}))
+    await presenter.set_enabled("stray", True)
+
+    assert presenter.lights["stray"].path is None
+    assert await stray.enabled.get_value() is False
     presenter.shutdown()

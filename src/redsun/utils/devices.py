@@ -106,6 +106,9 @@ class AxisInfo:
     configuration: tuple[str, ...] = ()
     """Keys of the axis' configuration entries."""
 
+    path: DevicePath | None = None
+    """Where the axis sits in its tree; `None` when not known."""
+
 
 @dataclass(slots=True)
 class Configuration:
@@ -122,6 +125,12 @@ class Configuration:
 
     owners: dict[str, str] = field(default_factory=dict)
     """Name of the device each key belongs to; empty when not known."""
+
+    paths: dict[str, DevicePath] = field(default_factory=dict)
+    """Where the signal behind each key, and each owner, sit in their tree, by name.
+
+    Empty when not known.
+    """
 
 
 class DevicePath(NamedTuple):
@@ -342,6 +351,9 @@ class LightInfo:
     intensity: Readback | None = None
     """Intensity when described, with its units, precision and limits; `None` for a
     light that has none."""
+
+    path: DevicePath | None = None
+    """Where the light sits in its tree; `None` when not known."""
 
 
 def is_light(item: object) -> TypeGuard[Light]:

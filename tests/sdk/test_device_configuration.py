@@ -3,15 +3,33 @@
 from __future__ import annotations
 
 import pytest
+from ophyd_async.core import Device
 
 from redsun.presenter import DeviceConfiguration
-from tests.sdk.mocks import SoftAxis
+from redsun.utils.devices import device_path
+from tests.sdk.mocks import SoftAxis, XYStage
+
+
+class Rig(Device):
+    """A root holding a stage with the axes `x` and `y`."""
+
+    def __init__(self, name: str = "") -> None:
+        self.xy = XYStage("")
+        super().__init__(name=name)
 
 
 @pytest.fixture
 async def axis() -> SoftAxis:
     """Return a connected soft axis named `focus`."""
     device = SoftAxis("focus")
+    await device.connect(mock=False)
+    return device
+
+
+@pytest.fixture
+async def rig() -> Rig:
+    """Return a connected rig named `scope`."""
+    device = Rig("scope")
     await device.connect(mock=False)
     return device
 
@@ -96,3 +114,35 @@ async def test_each_key_is_filed_under_its_owner(axis: SoftAxis) -> None:
     await configuration.add("focus-488", axis)
 
     assert set(configuration.configuration.owners.values()) == {"focus-488"}
+
+
+async def test_configuration_paths_name_each_key_and_its_owner(rig: Rig) -> None:
+    """Give each configuration key and its owner their place in the tree."""
+    configuration = DeviceConfiguration("positioner")
+
+    added = await configuration.add("scope-xy", rig.xy.x, owner_device=rig.xy)
+
+    assert added.paths["scope-xy-x-velocity"].path == "xy.x.velocity"
+    assert configuration.configuration.paths["scope-xy"] == device_path(rig.xy)
+
+
+async def test_a_write_below_a_held_device_is_refused(rig: Rig) -> None:
+    """Refuse a configuration write when a device above the signal is held."""
+    configuration = DeviceConfiguration("positioner")
+    await configuration.add("scope-xy", rig.xy.x, owner_device=rig.xy)
+
+    configuration.set_locked(frozenset({"scope-xy-x"}))
+    await configuration.configure("scope-xy-x-velocity", 3.0)
+
+    assert await rig.xy.x.velocity.get_value() == pytest.approx(1.0)
+
+
+async def test_holding_an_unknown_name_holds_nothing(rig: Rig) -> None:
+    """Write as usual when the held names match no device of the configuration."""
+    configuration = DeviceConfiguration("positioner")
+    await configuration.add("scope-xy", rig.xy.x, owner_device=rig.xy)
+
+    configuration.set_locked(frozenset({"elsewhere"}))
+    await configuration.configure("scope-xy-x-velocity", 3.0)
+
+    assert await rig.xy.x.velocity.get_value() == pytest.approx(3.0)
