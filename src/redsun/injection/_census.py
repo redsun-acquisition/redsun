@@ -40,7 +40,9 @@ class MotorPresenter:
         self._motors = motors
 ```
 
-Devices are built before any presenter or view, so the mapping arrives
+Each device of the session, and each device below it, is checked on its
+own, so a root device and the devices it holds can all match. Devices are
+built before any presenter or view, so the mapping arrives
 complete and may be read while the component is built. Ask for
 `redsun.DeviceMapping` instead to receive every device,
 unfiltered.

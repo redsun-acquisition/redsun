@@ -36,9 +36,11 @@ CallbackType: TypeAlias = Callable[[str, Document], None] | DocumentRouter
 """A document callback: a `DocumentRouter`, or anything callable as `(name, doc)`."""
 
 DeviceMapping: TypeAlias = Mapping[str, Device]
-"""Every device an application built, by name.
+"""Every device an application built, and every device below each, by name.
 
-Not ophyd-async's `DeviceMap`, which is a device holding string-keyed
+Signals and commands are left out. Each device is keyed by the name
+`ophyd-async` gives it, such as `scope-xy-x` for the child `x` of the child
+`xy` of `scope`. Not ophyd-async's `DeviceMap`, which is a device holding string-keyed
 children; this is the application's own set.
 """
 

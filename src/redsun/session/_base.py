@@ -107,6 +107,7 @@ from ._protocols import (
 )
 from ._questions import NoAnswer, answer, shape_of
 from ._shortcuts import Binding, candidates, resolved_shortcuts
+from ._tree import index_devices
 from ._wiring import NotBuilt, Wiring
 
 if TYPE_CHECKING:
@@ -255,6 +256,7 @@ class Session(BuildableSession):
         "_class_counts",
         "_config",
         "_declarations",
+        "_device_index",
         "_devices",
         "_failed",
         "_failed_hooks",
@@ -371,6 +373,7 @@ class Session(BuildableSession):
         self._failed_services: dict[str, BaseException] = {}
         self._transport = CHANNEL_ACCESS
         self._devices: dict[str, Device] = {}
+        self._device_index: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
@@ -465,7 +468,11 @@ class Session(BuildableSession):
 
     @property
     def devices(self) -> Mapping[str, Device]:
-        """The devices that built successfully."""
+        """The declared devices that built successfully.
+
+        Ask for [`DeviceMapping`][redsun.DeviceMapping] to reach the devices
+        below them too.
+        """
         return dict(self._devices)
 
     @property
@@ -1165,7 +1172,8 @@ class Session(BuildableSession):
         self._store = store
         self._settings = Settings.for_session(self.name)
         store.register_provider(constant(self._settings), type_hint=Settings)
-        self._register_framework_values(store, lambda: dict(self._devices))
+        self._device_index = index_devices(self._devices.values())
+        self._register_framework_values(store, lambda: dict(self._device_index))
         self._share(store, self._configuration().providers)
 
     def seal(self) -> None:
@@ -1339,6 +1347,7 @@ class Session(BuildableSession):
         self._releases.close()
         self._hooks = None
         self._devices.clear()
+        self._device_index.clear()
         self._failed.clear()
         self._failed_hooks.clear()
         self._skipped_hooks.clear()
@@ -1719,7 +1728,7 @@ class Session(BuildableSession):
             passed = {
                 **view_arguments,
                 **{
-                    pname: satisfying(self._devices, protocol)
+                    pname: satisfying(self._device_index, protocol)
                     for pname, protocol in device_questions(
                         declaration.cls, declaration.cfg_kwargs
                     ).items()
