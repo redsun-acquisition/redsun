@@ -5,7 +5,18 @@ from __future__ import annotations
 import inspect
 from functools import cache
 from itertools import product
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, get_origin, overload
+from types import UnionType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    TypeVar,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+    overload,
+)
 
 from typing_extensions import get_protocol_members, is_protocol
 
@@ -16,11 +27,14 @@ if TYPE_CHECKING:
 
 __all__ = [
     "is_protocol_class",
+    "is_union",
     "members",
     "methods",
+    "optional_arg",
     "problems",
     "protocol_of",
     "satisfies",
+    "without_none",
 ]
 
 P = TypeVar("P")
@@ -43,6 +57,24 @@ def protocol_of(hint: object) -> type | None:
         return hint
     origin = get_origin(hint)
     return origin if is_protocol_class(origin) else None
+
+
+def is_union(hint: TypeForm[Any]) -> bool:
+    """Return whether *hint* is a union, written as `X | Y` or `Union[X, Y]`."""
+    return get_origin(hint) in (Union, UnionType)
+
+
+def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
+    """Return `X` for `X | None`, or `None` for anything else."""
+    if not is_union(hint):
+        return None
+    args = [arg for arg in get_args(hint) if arg is not type(None)]
+    return args[0] if len(args) == 1 else None
+
+
+def without_none(hint: TypeForm[Any]) -> TypeForm[Any]:
+    """Return `X` for `X | None`, and *hint* itself for anything else."""
+    return optional_arg(hint) or hint
 
 
 @cache

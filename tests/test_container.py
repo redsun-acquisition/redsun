@@ -363,6 +363,38 @@ class TwoOwners(Session):
     second: Annotated[AsPresenter[Duplicated], Alias("second")]
 
 
+class MaybeReadings:
+    """Presenter sharing readings it may not have."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def value(self) -> Readings | None:
+        return Readings({"x": 1.0})
+
+
+class MaybeReader:
+    """Presenter taking readings that may be missing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.readings: Readings | None = None
+
+    def setup(self, readings: Readings | None) -> None:
+        self.readings = readings
+
+
+class OptionalShared(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[MaybeReader]
+
+
+class OptionalAndPlainOwners(Session):
+    plain: AsPresenter[Duplicated]
+    maybe: AsPresenter[MaybeReadings]
+
+
 ViewerModel = NewType("ViewerModel", "dict[str, str]")
 
 
@@ -1142,6 +1174,12 @@ def test_two_components_sharing_one_type_is_refused() -> None:
         TwoOwners().build()
 
 
+def test_sharing_a_type_and_the_same_type_or_none_is_refused() -> None:
+    """Refuse two components sharing `X` and `X | None`, which name one value."""
+    with pytest.raises(TypeError, match="'maybe' and 'plain' both share"):
+        OptionalAndPlainOwners().build()
+
+
 def test_two_views_of_one_layer_may_share(build: BuildSession) -> None:
     """Give one view a value another view of the same layer shares."""
     app = build(SameLayerApp)
@@ -1404,6 +1442,16 @@ def test_a_shared_value_nothing_asks_for_is_reported(
         "ctrl.descriptions shares 'Descriptions', which no component asks for"
         in caplog.text
     )
+
+
+def test_a_value_shared_as_optional_is_not_reported_when_asked_for(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """Give a value shared as `X | None` to its asker without logging it as unused."""
+    caplog.set_level(logging.DEBUG, logger="redsun")
+    app = build(OptionalShared)
+    assert app.reader.readings == {"x": 1.0}
+    assert "which no component asks for" not in caplog.text
 
 
 def test_a_session_is_named_after_its_class_when_it_says_nothing(
