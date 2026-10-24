@@ -53,6 +53,29 @@ A shared type identifies one value; give them distinct types.
 
 Give each value its own type.
 
+## Can two protocols with the same members be told apart?
+
+No. A component [matches](questions.md#how-a-component-matches) a protocol by
+its members, and the protocol's name plays no part, so two protocols listing
+the same methods with the same parameters match the same components. A
+component asking for `Mapping[str, Steerable]` then gets every `HasStage` as
+well. Types aren't compared either, so `read() -> float` and `read() -> str`
+count as the same member. The session warns when components ask for two such
+protocols:
+
+```text
+'HasStage' and 'Steerable' have the same members, so every component
+satisfying one satisfies the other; give each a member of its own
+```
+
+Give each protocol a member that only its own components have:
+
+```python
+class Steerable(Protocol):
+    def move(self, to: float) -> None: ...
+    def steer(self, angle: float) -> None: ...
+```
+
 ## Can I import parameter types under `if TYPE_CHECKING:`?
 
 Not the types the session reads to decide what to pass: it reads them while
