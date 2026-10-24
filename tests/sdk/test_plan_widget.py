@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import math
 from collections import OrderedDict, deque
 from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal
@@ -14,10 +15,11 @@ from annotated_types import Gt
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
+from ophyd_async.core import WatcherUpdate
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from redsun.engine import ProgressState
+from redsun.engine import PlanProgress
 from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
@@ -198,27 +200,27 @@ def _exposure_plan(exposure: Annotated[float, Gt(0)] = 1.0) -> MsgGenerator[None
 def _scope(
     name: str,
     *,
-    parent: str | None = None,
-    current: float | None = None,
-    target: float | None = None,
-    fraction: float | None = None,
+    parent: PlanProgress | None = None,
     unit: str = "frames",
-    precision: int | None = None,
-    time_remaining: float | None = None,
-) -> ProgressState:
-    """Build the state of one progress scope."""
-    return ProgressState(
-        name=name,
-        parent=parent,
-        current=current,
-        initial=0.0 if target is not None else None,
-        target=target,
-        unit=unit,
-        precision=precision,
-        fraction=fraction,
-        time_elapsed=None,
-        time_remaining=time_remaining,
-    )
+    **update: Any,
+) -> PlanProgress:
+    """Build a progress scope whose last update is *update*, or that has none yet.
+
+    `initial` is 0 when the update gives a `target` and no `initial`.
+    """
+    scope = PlanProgress(name, parent=parent)
+    if update:
+        target = update.pop("target", None)
+        scope._notify(
+            WatcherUpdate(
+                current=update.pop("current", None),
+                initial=update.pop("initial", 0.0 if target is not None else None),
+                target=target,
+                unit=unit,
+                **update,
+            )
+        )
+    return scope
 
 
 def _texts(widget: PlanWidget) -> list[str]:
@@ -805,39 +807,56 @@ def test_bluesky_count_gets_its_widgets() -> None:
 
 
 @pytest.mark.parametrize(
-    ("scope", "busy", "text"),
+    ("scope", "fraction", "text"),
     [
-        (_scope("s", current=37, target=100, fraction=0.37), False, "37 / 100 frames"),
-        (_scope("s", fraction=0.42), False, "42 %"),
-        (_scope("s", current=412), True, "412 frames"),
-        (_scope("s", unit=""), True, ""),
+        (_scope("s", current=37, target=100), 0.37, "37 / 100 frames"),
+        (_scope("s", fraction=0.42), 0.42, "42 %"),
+        (_scope("s", current=412), None, "412 frames"),
+        (_scope("s"), None, ""),
+        (_scope("s", current=3.5, target=10, precision=1), 0.35, "3.5 / 10.0 frames"),
         (
-            _scope("s", current=3.5, target=10, fraction=0.35, precision=1),
-            False,
-            "3.5 / 10.0 frames",
-        ),
-        (
-            _scope("s", current=1, target=4, fraction=0.25, time_remaining=12.4),
-            False,
+            _scope("s", current=1, target=4, time_remaining=12.4),
+            0.25,
             "1 / 4 frames, 12 s left",
         ),
+        (_scope("s", current=9, target=5), 1.0, "9 / 5 frames"),
+        (_scope("s", current=2, initial=2, target=2), None, "2 frames"),
+        (_scope("s", current="seven", target=5), None, "frames"),
+        (_scope("s", current=math.nan, target=5), None, "frames"),
+        (_scope("s", current=1, target=math.inf), None, "1 frames"),
+        (_scope("s", fraction=math.nan), None, "frames"),
+        (_scope("s", current=1, target=2, precision=-1), 0.5, "1 / 2 frames"),
     ],
-    ids=["counted", "fraction", "no end", "nothing yet", "precision", "time left"],
+    ids=[
+        "counted",
+        "fraction",
+        "no end",
+        "nothing yet",
+        "precision",
+        "time left",
+        "clamped",
+        "no span",
+        "not a number",
+        "nan",
+        "infinite",
+        "nan fraction",
+        "negative precision",
+    ],
 )
 def test_a_scope_shows_a_bar_and_what_it_counts(
-    scope: ProgressState, busy: bool, text: str
+    scope: PlanProgress, fraction: float | None, text: str
 ) -> None:
-    """Fill a bar from a known fraction, or keep it busy, and say what is counted."""
+    """Fill a bar from the fraction reported or spanned, or keep it busy, and say what is counted."""
     widget = create_plan_widget(_simple_spec())
     assert widget.progress_group is not None
 
     widget.show_progress((scope,))
 
     bar = widget.progress_group.findChildren(QtW.QProgressBar)[0]
-    assert (bar.maximum() == 0) is busy
-    if not busy:
-        assert scope.fraction is not None
-        assert bar.value() == round(scope.fraction * bar.maximum())
+    if fraction is None:
+        assert bar.maximum() == 0
+    else:
+        assert bar.value() == round(fraction * bar.maximum())
     assert _texts(widget) == [text]
     assert not widget.progress_group.isHidden()
 
@@ -846,8 +865,8 @@ def test_a_nested_scope_is_indented_and_a_finished_one_removed() -> None:
     """Indent a child under its parent, drop a finished row, and hide on nothing."""
     widget = create_plan_widget(_simple_spec())
     assert widget.progress_group is not None
-    outer = _scope("repeats", current=1, target=3, fraction=1 / 3, unit="repeats")
-    inner = _scope("series", parent="repeats", current=4, target=10, fraction=0.4)
+    outer = _scope("repeats", current=1, target=3, unit="repeats")
+    inner = _scope("series", parent=outer, current=4, target=10)
 
     widget.show_progress((outer, inner))
     names = widget.progress_group.findChildren(QtW.QLabel, "progress-name")
@@ -881,13 +900,13 @@ def test_progress_rows_follow_the_order_of_the_scopes() -> None:
             found.append((name_label.text(), text_label.text()))
         return found
 
-    first = _scope("first", current=1, target=4, fraction=0.25)
-    second = _scope("second", current=2, target=4, fraction=0.5)
+    first = _scope("first", current=1, target=4)
+    second = _scope("second", current=2, target=4)
     widget.show_progress((first, second))
     widget.show_progress((second, first))
     assert rows() == [("second", "2 / 4 frames"), ("first", "1 / 4 frames")]
 
-    widget.show_progress((second, _scope("first", current=3, target=4, fraction=0.75)))
+    widget.show_progress((second, _scope("first", current=3, target=4)))
     assert rows() == [("second", "2 / 4 frames"), ("first", "3 / 4 frames")]
 
 

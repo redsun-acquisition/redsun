@@ -12,7 +12,9 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
+from numbers import Real
 from typing import TYPE_CHECKING, Any, cast
 
 import magicgui.widgets as mgw
@@ -30,7 +32,9 @@ from ._widget_factory import create_param_widget
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
-    from redsun.engine import ProgressState
+    from ophyd_async.core import WatcherUpdate
+
+    from redsun.engine import PlanProgress
     from redsun.presenter.plan_spec import PlanSpec
     from redsun.registry import CallbackType
 
@@ -284,7 +288,7 @@ class PlanWidget:
         """Names of the checked callbacks the user attached, in order."""
         return _attached(self.callbacks_list)
 
-    def show_progress(self, scopes: Sequence[ProgressState]) -> None:
+    def show_progress(self, scopes: Sequence[PlanProgress]) -> None:
         """Show a row for each progress scope of the running plan, in the order given.
 
         A scope is indented under its parent, and a bar is busy while its
@@ -310,7 +314,7 @@ class PlanWidget:
         depths: dict[str, int] = {}
         for row, scope in enumerate(scopes):
             depths[scope.name] = (
-                depths.get(scope.parent, -1) + 1 if scope.parent is not None else 0
+                depths.get(scope.parent.name, -1) + 1 if scope.parent is not None else 0
             )
             if scope.name not in self._progress_rows:
                 name_label = QtW.QLabel(scope.name)
@@ -326,12 +330,13 @@ class PlanWidget:
                     layout.removeWidget(cell)
                     layout.addWidget(cell, row, column)
             name_label.setIndent(depths[scope.name] * _PROGRESS_INDENT)
-            if scope.fraction is None:
+            fraction = _fraction(scope.update)
+            if fraction is None:
                 bar.setRange(0, 0)
             else:
                 bar.setRange(0, _PROGRESS_STEPS)
-                bar.setValue(round(scope.fraction * _PROGRESS_STEPS))
-            text_label.setText(_progress_text(scope))
+                bar.setValue(round(fraction * _PROGRESS_STEPS))
+            text_label.setText(_progress_text(scope.update))
         group.setHidden(not scopes)
 
 
@@ -445,25 +450,65 @@ def _format_number(value: float, precision: int | None) -> str:
     return f"{value:.{precision}f}" if precision is not None else f"{value:g}"
 
 
-def _progress_text(scope: ProgressState) -> str:
+def _number(value: object) -> float | None:
+    """Return *value* as a float, or `None` when it is not a finite real number."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return None
+    result = float(value)
+    return result if math.isfinite(result) else None
+
+
+def _fraction(update: WatcherUpdate[Any] | None) -> float | None:
+    """Return how far *update* says its scope has got, from 0 to 1.
+
+    The fraction reported, or else the one `current`, `initial` and `target`
+    span when all three are numbers; `None` when the end is not known.
+    """
+    if update is None:
+        return None
+    fraction = _number(update.fraction)
+    if fraction is None:
+        current = _number(update.current)
+        initial = _number(update.initial)
+        target = _number(update.target)
+        if current is None or initial is None or target is None or target == initial:
+            return None
+        fraction = (current - initial) / (target - initial)
+    return min(max(fraction, 0.0), 1.0)
+
+
+def _progress_text(update: WatcherUpdate[Any] | None) -> str:
     """Return what a progress row says: a count against its end, a percentage, or a count."""
+    if update is None:
+        return ""
+    current = _number(update.current)
+    target = _number(update.target)
+    # typed float by ophyd-async, but only a whole number of decimals can be shown
+    reported: object = update.precision
+    precision = reported if isinstance(reported, int) and reported >= 0 else None
+    unit = update.unit or ""
+    fraction = _fraction(update)
+    # a fraction reported alone is shown as a percentage, one spanned as a count
     if (
-        scope.fraction is not None
-        and scope.current is not None
-        and scope.target is not None
+        fraction is not None
+        and _number(update.fraction) is None
+        and current is not None
+        and target is not None
     ):
         text = (
-            f"{_format_number(scope.current, scope.precision)} / "
-            f"{_format_number(scope.target, scope.precision)} {scope.unit}"
+            f"{_format_number(current, precision)} / "
+            f"{_format_number(target, precision)} {unit}"
         )
-    elif scope.fraction is not None:
-        text = f"{round(scope.fraction * 100)} %"
-    elif scope.current is not None:
-        text = f"{_format_number(scope.current, scope.precision)} {scope.unit}"
+    elif fraction is not None:
+        text = f"{round(fraction * 100)} %"
+    elif current is not None:
+        text = f"{_format_number(current, precision)} {unit}"
     else:
-        text = scope.unit
-    if scope.time_remaining is not None:
-        left = f"{scope.time_remaining:.0f} s left"
+        text = unit
+    text = text.rstrip()
+    time_remaining = _number(update.time_remaining)
+    if time_remaining is not None:
+        left = f"{time_remaining:.0f} s left"
         text = f"{text}, {left}" if text else left
     return text
 

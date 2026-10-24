@@ -59,6 +59,13 @@ running:
 and the session links the two, with
 `yield self.plan_ctrl.sig_progress, self.plan_view.on_progress` in `wire`.
 
+Each scope the view receives is a
+[`PlanProgress`][redsun.engine.PlanProgress], which gives its `name`, its
+`parent` scope and, in `update`, the last `WatcherUpdate` of `ophyd-async` it
+reported, or `None` before the first. A view of your own reads those three to
+draw a scope, and the plan widget computes how far its bar is filled from the
+update, as the table below shows.
+
 ## Follow a device's progress
 
 A step the plan starts without waiting, such as a move or a detector

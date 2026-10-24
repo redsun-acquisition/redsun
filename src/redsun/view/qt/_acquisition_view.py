@@ -21,7 +21,7 @@ from redsun.view.qt.utils import PlanInfoDialog, PlanWidget, create_plan_widget
 from ..._settings import Settings  # noqa: TC001
 
 if TYPE_CHECKING:
-    from redsun.engine import ProgressState
+    from redsun.engine import PlanProgress
     from redsun.view import Placement
     from redsun.view.qt.utils import ActionButton
 
@@ -167,7 +167,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
             self._failures[plan].show()
 
     @slot(signal="sig_progress")
-    def update_progress(self, scopes: tuple[ProgressState, ...]) -> None:
+    def update_progress(self, scopes: tuple[PlanProgress, ...]) -> None:
         """Show the progress of the running plan."""
         if self._running is None:
             self.logger.debug("Ignoring progress with no plan running")
