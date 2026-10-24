@@ -7834,6 +7834,9 @@ changing the RunEngine's state. Empty here; <code>bluesky</code> defaults to
         <p>Every progress scope of the running plan, as a tuple of <code>PlanProgress</code>,
 parents before children, whenever one is declared, updated or finished;
 an empty tuple when none is left.</p>
+<p>The scopes are the engine's own: the engine's thread replaces their
+<code>update</code> after the emission, so a slot reads it once for each emission and
+keeps a copy of what it needs later.</p>
 
     </div>
 
@@ -8177,9 +8180,9 @@ ones after it still run.</p>
 
 
         <p>A progress scope a plan declared, passing each update to its watchers.</p>
-<p>Watchers receive the fields of a <code>WatcherUpdate</code> as keywords, as the
-watchers of an <code>ophyd-async</code> <code>WatchableAsyncStatus</code> do. <code>name</code> is always
-the name of the scope.</p>
+<p>Watchers receive every field of a <code>WatcherUpdate</code> as keywords, those that
+are <code>None</code> included, and the values themselves, not copies. <code>name</code> is
+always the name of the scope.</p>
 
 
 

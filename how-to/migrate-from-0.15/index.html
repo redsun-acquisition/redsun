@@ -5904,8 +5904,11 @@ gone. A scope gives its <code>name</code>, its <code>parent</code> scope, and in
 <code>WatcherUpdate</code> of <code>ophyd-async</code> it reported, or <code>None</code> before the first. The
 update holds what the plan or the device reported and nothing more, so a view
 that showed <code>fraction</code> computes it from <code>current</code>, <code>initial</code> and <code>target</code> when
-the update has none. A view that passes the scopes on to the plan widget only
-changes its annotation:</p>
+the update has none. The scopes are the engine's own, and the engine replaces
+their <code>update</code> after the emission, so a view reads it once for each emission.</p>
+<p>A view that passes the scopes on to the plan widget only changes its
+annotation to <code>tuple[PlanProgress, ...]</code>. A view that reads the values reads
+them from the scope's update:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># 0.15</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nd">@slot</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scopes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ProgressState</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -5922,9 +5925,12 @@ changes its annotation:</p>
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
 </span></code></pre></div>
 <p>A watcher passed to <code>PlanProgress.watch</code> is now typed as the <code>Watcher</code> of
-<code>ophyd-async</code>, whose parameters have names, so a type checker refuses a
-function that takes only <code>**kwargs</code>. A fraction reported alone reaches the
-watcher alone, with <code>current</code>, <code>initial</code> and <code>target</code> left <code>None</code>.</p>
+<code>ophyd-async</code>, whose parameters can be passed by position or by name. A type
+checker therefore refuses a function that takes only <code>**kwargs</code>, or whose
+parameters are keyword-only; declare the parameters as plain named ones. A
+fraction reported alone reaches the watcher alone, with <code>current</code>, <code>initial</code>
+and <code>target</code> left <code>None</code>, and a device's status that reports no unit gives
+<code>unit</code> as <code>None</code> instead of <code>"unit"</code>.</p>
 
 
 

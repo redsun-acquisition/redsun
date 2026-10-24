@@ -5972,11 +5972,13 @@ the engine built before:</p>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scopes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PlanProgress</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="k">for</span> <span class="n">scope</span> <span class="ow">in</span> <span class="n">scopes</span><span class="p">:</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="k">if</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="nb">print</span><span class="p">(</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="n">fraction</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="nb">print</span><span class="p">(</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="n">scope</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="n">target</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The snapshot computed the fraction and dropped values that were not finite
 numbers. Only the plan widget needs either, so the widget does both now, and
-the engine passes on what the plan or the device reported.</p>
+the engine passes on what the plan or the device reported: <code>update.fraction</code>
+is a fraction the plan or device reported, never one computed from <code>current</code>,
+<code>initial</code> and <code>target</code>.</p>
 <p>On top of the copy, <code>redsun</code> adds <code>RunEngine.sig_progress</code>, which carries the
 open scopes to views, a "Progress" group on each plan page, which computes
 the fraction of its bar from a scope's update, and <code>monitor_progress</code>, which
