@@ -48,6 +48,18 @@ class Resettable(Protocol):
     def reset(self) -> None: ...
 
 
+class Steerable(Protocol):
+    """The members of `HasStage` under another name."""
+
+    def move(self, to: float) -> None: ...
+
+
+class Sliding(Protocol):
+    """The member of `HasStage` with a keyword `HasStage` cannot take."""
+
+    def move(self, to: float, *, speed: float = 1.0) -> None: ...
+
+
 class ViewerModel:
     """A concrete object one component makes and shares."""
 
@@ -161,6 +173,28 @@ class CameraView:
         return b""
 
 
+class AsksTwoNames:
+    """Asks for two protocols no component can tell apart."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(
+        self, stages: Mapping[str, HasStage], steerable: Mapping[str, Steerable]
+    ) -> None: ...
+
+
+class AsksTwoShapes:
+    """Asks for two protocols with one member called differently."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(
+        self, stages: Mapping[str, HasStage], sliding: Mapping[str, Sliding]
+    ) -> None: ...
+
+
 class AnswersApp(Session):
     imager: AsPresenter[Imager]
     camera: AsPresenter[Camera]
@@ -257,6 +291,14 @@ class AsksForUnionApp(Session):
 
 class SharesProtocolApp(Session):
     ctrl: AsPresenter[SharesProtocol]
+
+
+class TwoNamesApp(Session):
+    ctrl: AsPresenter[AsksTwoNames]
+
+
+class TwoShapesApp(Session):
+    ctrl: AsPresenter[AsksTwoShapes]
 
 
 class TakesAnother:
@@ -375,3 +417,17 @@ def test_a_constructor_taking_another_component_stops_the_session_before_it_star
         watched.build()
 
     assert not watched.started
+
+
+@pytest.mark.parametrize(
+    ("app", "warned"), [(TwoNamesApp, True), (TwoShapesApp, False)]
+)
+def test_two_protocols_the_same_components_satisfy_are_reported(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    app: type[Session],
+    warned: bool,
+) -> None:
+    """Warn about two protocols asked for that no component can tell apart, and only those."""
+    build(app)
+    assert ("have the same members" in caplog.text) is warned
