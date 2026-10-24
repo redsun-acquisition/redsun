@@ -5933,13 +5933,12 @@ can't hand the session a new value later.</p>
 <p>If something fills up over time, share a single object that changes, and let
 the other components read it as it changes.</p>
 <h2 id="can-a-shared-value-be-optional">Can a shared value be optional?<a class="headerlink" href="#can-a-shared-value-be-optional" title="Permanent link">&para;</a></h2>
-<p>No. The session decides what exists by reading types before it builds, and
-<code>Roi | None</code> is a type of its own: the session reports it as a value no
-component asks for, even when one asks for <code>Roi | None</code>. The value still
-arrives while it is a <code>Roi</code>, but when the method returns <code>None</code>, a component
-asking for <code>Roi</code> fails its <code>setup</code>:</p>
+<p>No. The session decides what exists by reading types before it builds, so it
+reads <code>Roi | None</code> as <code>Roi</code>. A component asking for <code>Roi</code> gets the value while
+it is one, but when the method returns <code>None</code>, that component fails its
+<code>setup</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@provides</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">roi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Roi</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># does not do what it looks like</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">roi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Roi</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># shared as Roi, even when it returns None</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">has_roi</span> <span class="k">else</span> <span class="kc">None</span>
 </span></code></pre></div>
 <p>Always share a value, and let the value say it's empty:</p>
