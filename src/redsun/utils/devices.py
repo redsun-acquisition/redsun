@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from collections import Counter
 from dataclasses import dataclass, field
 from numbers import Real
 from typing import (
@@ -33,7 +32,7 @@ from ophyd_async.core import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Mapping
     from collections.abc import Set as AbstractSet
 
     from bluesky.protocols import Reading
@@ -53,13 +52,11 @@ __all__ = [
     "describe_light",
     "device_path",
     "dimmable",
-    "find_axes",
     "held_by",
     "is_light",
     "limits",
     "read_configuration",
     "readback",
-    "walk_axes",
 ]
 
 
@@ -190,42 +187,6 @@ def held_by(device: Device, names: AbstractSet[str]) -> bool:
 def is_axis(item: object) -> TypeGuard[Axis]:
     """Tell whether *item* is an axis: one that is not a signal."""
     return isinstance(item, Axis) and not isinstance(item, Signal)
-
-
-def walk_axes(device: Device, path_prefix: str = "") -> Iterator[tuple[str, Axis]]:
-    """Yield the axes under *device* with their dotted attribute paths.
-
-    The walk stops at each axis it finds, so the signals of an axis are never
-    yielded, and it does not enter signals.
-
-    Parameters
-    ----------
-    path_prefix
-        Prefix of the yielded paths; left blank by a caller.
-    """
-    for name, child in device.children():
-        path = f"{path_prefix}{name}"
-        if is_axis(child):
-            yield path, child
-        elif not isinstance(child, Signal):
-            yield from walk_axes(child, f"{path}.")
-
-
-def find_axes(device: Device) -> dict[str, Axis]:
-    """Return the axes of *device*, by name.
-
-    A device that is itself an axis is its only axis, under its own name.
-    Otherwise each axis under it is keyed by its attribute name, or by its
-    dotted path when another axis of the device shares that name. A signal
-    is never an axis, though a writable one can be set and located.
-    """
-    if is_axis(device):
-        return {device.name: device}
-    found = {path: (path.rpartition(".")[2], axis) for path, axis in walk_axes(device)}
-    shared = Counter(name for name, _ in found.values())
-    return {
-        path if shared[name] > 1 else name: axis for path, (name, axis) in found.items()
-    }
 
 
 def readback(value: float, descriptor: Mapping[str, Any]) -> Readback:

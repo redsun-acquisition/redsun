@@ -25,7 +25,6 @@ from redsun.utils.devices import (
     describe_axis,
     describe_light,
     device_path,
-    find_axes,
     held_by,
     is_light,
     limits,
@@ -36,8 +35,6 @@ from tests.sdk.mocks import (
     NumberSwitchDevice,
     SoftAxis,
     SoftLight,
-    Stage,
-    TwinStage,
 )
 
 if TYPE_CHECKING:
@@ -100,22 +97,6 @@ class Float32Axis(SoftAxis):
         }
 
 
-class OuterAxis(SoftAxis):
-    """A soft axis holding a finer axis of its own."""
-
-    def __init__(self, name: str = "") -> None:
-        self.fine = SoftAxis()
-        super().__init__(name=name)
-
-
-class Carrier(StandardReadable):
-    """A device holding one axis that holds another."""
-
-    def __init__(self, name: str) -> None:
-        self.coarse = OuterAxis()
-        super().__init__(name=name)
-
-
 class Leaf(Device):
     """A device holding one signal."""
 
@@ -147,42 +128,6 @@ class Tree(Device):
 def scope() -> Tree:
     """Return a tree named `scope`."""
     return Tree("scope")
-
-
-async def test_the_axes_of_a_device_are_its_movable_descendants() -> None:
-    """Find the axes inside a `DeviceMap`, keyed by name, and skip plain signals."""
-    stage = Stage("stage")
-    await stage.connect(mock=False)
-
-    axes = find_axes(stage)
-
-    assert set(axes) == {"x", "theta"}
-    assert axes["x"] is stage.axis["x"]
-    assert axes["theta"] is stage.axis["theta"]
-
-
-async def test_a_device_that_moves_itself_is_its_one_axis() -> None:
-    """Return a movable device as its own axis, under its name."""
-    axis = SoftAxis("focus")
-    await axis.connect(mock=False)
-
-    axes = find_axes(axis)
-
-    assert list(axes) == ["focus"]
-    assert axes["focus"] is axis
-
-
-async def test_axes_sharing_a_name_are_keyed_by_their_path() -> None:
-    """Key two axes named `x` by their dotted paths."""
-    twin = TwinStage("twin")
-    await twin.connect(mock=False)
-
-    assert set(find_axes(twin)) == {"left.x", "right.x"}
-
-
-def test_a_signal_is_never_an_axis() -> None:
-    """Find no axis in a signal, though a writable signal can be moved."""
-    assert find_axes(soft_signal_rw(float, 0.0, name="exposure")) == {}
 
 
 @pytest.mark.parametrize(
@@ -227,14 +172,6 @@ def test_limits_are_read_from_a_descriptor(
 ) -> None:
     """Read control limits, else display ones, and count a 0-0 pair as none."""
     assert limits(descriptor) == expected
-
-
-async def test_the_walk_stops_at_an_axis() -> None:
-    """Find an axis holding a finer axis, and not the finer axis inside it."""
-    carrier = Carrier("carrier")
-    await carrier.connect(mock=False)
-
-    assert list(find_axes(carrier)) == ["coarse"]
 
 
 async def test_an_axis_is_described_by_its_hinted_entry() -> None:

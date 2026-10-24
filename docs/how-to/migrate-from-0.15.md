@@ -5,7 +5,8 @@ icon: lucide/arrow-right-left
 # How to migrate from 0.15
 
 Release 0.16 removes the two things 0.15 deprecated, changes what a view of
-plan progress receives, and moves some axes to another box of the positioner. This page gives each change with what to write
+plan progress receives, moves some axes to another box of the positioner, and
+removes two helpers the positioner no longer uses. This page gives each change with what to write
 instead. The [changelog](../reference/changelog.md) lists everything else the
 release changed.
 
@@ -70,6 +71,25 @@ longer match a box: the view leaves them out and logs a warning naming
 `stage` instead, hold the axes as attributes of the stage, as in
 `self.x = MyAxis()`. An `include` list naming `stage` changes the same way, to
 `stage-motors`.
+
+## `find_axes` and `walk_axes` are gone
+
+`redsun.utils.devices.find_axes` and `walk_axes` gathered every axis below one
+device. To find the axes below a device, walk it with `walk_devices` from
+`ophyd-async` and keep what is an [`Axis`][redsun.utils.devices.Axis] and not a
+signal:
+
+```python
+# 0.15
+axes = find_axes(stage)
+
+# now
+axes = {
+    path: device
+    for path, device in walk_devices(stage).items()
+    if isinstance(device, Axis) and not isinstance(device, Signal)
+}
+```
 
 ## Progress views receive the scopes
 
