@@ -5,8 +5,8 @@ import inspect
 import sys
 from typing import TYPE_CHECKING, Any
 
+from .._structural import is_union
 from ..injection._census import devices_protocol
-from ._questions import is_union
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping

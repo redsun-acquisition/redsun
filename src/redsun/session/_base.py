@@ -71,6 +71,7 @@ from .._hooks import (
     refuse_unknown_points,
 )
 from .._settings import Settings
+from .._structural import optional_arg, without_none
 from ..injection._provides import constant, register_shared, shared_keys
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._declarations import (
@@ -104,7 +105,7 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
-from ._questions import NoAnswer, answer, optional_arg, shape_of, without_none
+from ._questions import NoAnswer, answer, shape_of
 from ._shortcuts import Binding, candidates, resolved_shortcuts
 from ._wiring import NotBuilt, Wiring
 
