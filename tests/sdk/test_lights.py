@@ -326,17 +326,20 @@ async def test_a_light_in_a_tree_carries_its_path_and_follows_locks() -> None:
     presenter.shutdown()
 
 
-async def test_a_light_with_no_path_is_sent_without_one() -> None:
-    """Send path `None` for a light its parent does not list as a child."""
+async def test_a_light_its_parent_does_not_list_is_held_from_above() -> None:
+    """Label a light its parent does not list by its name, and hold it with that parent."""
     bench = Bench("bench")
     stray = SoftLight("stray")
     stray.parent = bench
     await stray.connect(mock=False)
     presenter = LightPresenter("lights", devices={"stray": stray})
 
-    presenter.set_locked(frozenset({"stray"}))
+    presenter.set_locked(frozenset({"bench"}))
     await presenter.set_enabled("stray", True)
 
-    assert presenter.lights["stray"].path is None
+    path = presenter.lights["stray"].path
+    assert path is not None
+    assert str(path) == "stray"
+    assert path.names == ("bench", "stray")
     assert await stray.enabled.get_value() is False
     presenter.shutdown()

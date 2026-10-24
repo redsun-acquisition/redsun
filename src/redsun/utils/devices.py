@@ -27,7 +27,6 @@ from ophyd_async.core import (
     Signal,
     SignalRW,
     StandardMovable,
-    walk_devices,
     walk_rw_signals,
 )
 
@@ -134,44 +133,53 @@ class DevicePath(NamedTuple):
     """Where a device sits in its tree."""
 
     root: str
-    """Name of the device at the top of the tree."""
+    """Name of the device the keys start from: the top of the tree, or the
+    highest device below a parent that does not list it among its children."""
 
-    path: str
-    """Attribute path from the root, dotted; empty for the root itself."""
+    keys: tuple[str, ...]
+    """Key of each device below the root, down to this one; empty for the root."""
 
     names: tuple[str, ...]
-    """Names of the root and of every device down to this one, in order."""
+    """Names of the device at the top of the tree and of every device down to
+    this one, in order."""
+
+    @property
+    def path(self) -> str:
+        """The keys joined by dots, such as `xy.x`; empty for the root."""
+        return ".".join(self.keys)
 
     @property
     def parent(self) -> DevicePath | None:
         """Where the device's parent sits; `None` for a root."""
-        if not self.path:
+        if not self.keys:
             return None
-        return DevicePath(self.root, self.path.rpartition(".")[0], self.names[:-1])
+        return DevicePath(self.root, self.keys[:-1], self.names[:-1])
 
     def __str__(self) -> str:
         """Return the label a view shows: `scope / xy.x`, or `scope` for a root."""
-        return f"{self.root} / {self.path}" if self.path else self.root
+        return f"{self.root} / {self.path}" if self.keys else self.root
 
 
 def device_path(device: Device) -> DevicePath:
     """Return where *device* sits in its tree.
 
-    Raises
-    ------
-    LookupError
-        If a device on the way up is not among its parent's children.
+    A device whose parent does not list it among its children starts the
+    keys, as a root does, and the names still reach the top of the tree.
     """
-    chain = [device]
-    while (parent := chain[-1].parent) is not None:
-        chain.append(parent)
-    names = tuple(each.name for each in reversed(chain))
-    if len(chain) == 1:
-        return DevicePath(device.name, "", names)
-    for path, found in walk_devices(chain[-1]).items():
-        if found is device:
-            return DevicePath(chain[-1].name, path, names)
-    raise LookupError(f"{device.name!r} is not reachable from {chain[-1].name!r}")
+    keys: list[str] = []
+    names = [device.name]
+    root = device.name
+    listed = True
+    child = device
+    while (parent := child.parent) is not None:
+        names.append(parent.name)
+        key = next((str(k) for k, each in parent.children() if each is child), None)
+        listed = listed and key is not None
+        if listed:
+            keys.append(str(key))
+            root = parent.name
+        child = parent
+    return DevicePath(root, tuple(reversed(keys)), tuple(reversed(names)))
 
 
 def held_by(device: Device, names: AbstractSet[str]) -> bool:

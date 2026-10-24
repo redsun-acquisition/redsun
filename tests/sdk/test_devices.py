@@ -260,11 +260,11 @@ def test_a_readback_keeps_what_its_descriptor_states_well(
 def test_a_device_path_names_its_root_and_the_way_down(scope: Tree) -> None:
     """Give attributes, container keys and signals their dotted path below the root."""
     assert device_path(scope.xy.x) == DevicePath(
-        "scope", "xy.x", ("scope", "scope-xy", "scope-xy-x")
+        "scope", ("xy", "x"), ("scope", "scope-xy", "scope-xy-x")
     )
     assert device_path(scope.channel[1]).path == "channel.1"
     assert device_path(scope.lights["led-blue"].power).path == "lights.led-blue.power"
-    assert device_path(scope) == DevicePath("scope", "", ("scope",))
+    assert device_path(scope) == DevicePath("scope", (), ("scope",))
 
 
 def test_a_device_path_reads_as_a_label(scope: Tree) -> None:
@@ -275,13 +275,27 @@ def test_a_device_path_reads_as_a_label(scope: Tree) -> None:
     assert device_path(scope).parent is None
 
 
-def test_a_device_outside_its_parents_children_has_no_path(scope: Tree) -> None:
-    """Raise `LookupError` for a device whose parent does not list it."""
-    stray = soft_signal_rw(int)
+def test_a_dotted_key_keeps_its_parent(scope: Tree) -> None:
+    """Find the parent of a device whose container key holds a dot."""
+    scope.lights["led.1"] = Leaf()
+    scope.set_name("scope")
+
+    path = device_path(scope.lights["led.1"])
+
+    assert path.keys == ("lights", "led.1")
+    assert path.parent == device_path(scope.lights)
+
+
+def test_a_device_outside_its_parents_children_starts_its_path(scope: Tree) -> None:
+    """Label a device its parent does not list by its own name, keeping the names above."""
+    stray = soft_signal_rw(int, name="stray")
     stray.parent = scope.xy
 
-    with pytest.raises(LookupError):
-        device_path(stray)
+    path = device_path(stray)
+
+    assert str(path) == "stray"
+    assert path.names == ("scope", "scope-xy", "stray")
+    assert held_by(stray, {"scope"})
 
 
 @pytest.mark.parametrize(

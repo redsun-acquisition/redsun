@@ -14,7 +14,6 @@ import collections.abc as cabc
 import datetime
 import enum
 import inspect
-from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import IntEnum
 from inspect import Parameter, _empty, signature
@@ -319,11 +318,8 @@ def _fields_from_annotation(
 
 
 def _device_label(key: str, device: object) -> str:
-    """Return the root and path of *device*, or *key* when it has none."""
-    if isinstance(device, Device):
-        with suppress(LookupError):
-            return str(device_path(device))
-    return key
+    """Return the root and path of *device*, or *key* when it is not a device."""
+    return str(device_path(device)) if isinstance(device, Device) else key
 
 
 def _extract_action_meta(

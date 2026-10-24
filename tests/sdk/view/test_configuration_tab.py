@@ -37,10 +37,10 @@ UNDERSCORED = Configuration(
     paths={
         "scope_xy_x_velocity": DevicePath(
             "scope",
-            "xy.x.velocity",
+            ("xy", "x", "velocity"),
             ("scope", "scope_xy", "scope_xy_x", "scope_xy_x_velocity"),
         ),
-        "scope_xy": DevicePath("scope", "xy", ("scope", "scope_xy")),
+        "scope_xy": DevicePath("scope", ("xy",), ("scope", "scope_xy")),
     },
 )
 

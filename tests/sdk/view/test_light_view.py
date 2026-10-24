@@ -31,7 +31,7 @@ TREE_LIGHTS = {
         False,
         path=DevicePath(
             "bench",
-            "lights.laser",
+            ("lights", "laser"),
             ("bench", "bench-lights", "bench-lights-laser"),
         ),
     ),

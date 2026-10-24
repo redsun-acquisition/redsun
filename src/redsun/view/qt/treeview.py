@@ -304,10 +304,10 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         signal, device = self._paths.get(key), self._paths.get(owner)
         if signal is None or device is None or signal.root != device.root:
             return None
-        if not device.path:
-            return signal.path
-        prefix = f"{device.path}."
-        return signal.path[len(prefix) :] if signal.path.startswith(prefix) else None
+        depth = len(device.keys)
+        if signal.keys[:depth] != device.keys:
+            return None
+        return ".".join(signal.keys[depth:])
 
     def set_value(self, key: str, value: Any) -> None:
         """Show *value* for *key*, the value the device holds.

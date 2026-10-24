@@ -70,7 +70,7 @@ TREE_AXES = {
         axis: AxisInfo(
             Readback(0.0, "um", 3),
             path=DevicePath(
-                "scope", f"xy.{axis}", ("scope", "scope-xy", f"scope-xy-{axis}")
+                "scope", ("xy", axis), ("scope", "scope-xy", f"scope-xy-{axis}")
             ),
         )
         for axis in ("x", "y")
@@ -78,7 +78,7 @@ TREE_AXES = {
     "scope": {
         "focus": AxisInfo(
             Readback(0.0, "um", 3),
-            path=DevicePath("scope", "focus", ("scope", "scope-focus")),
+            path=DevicePath("scope", ("focus",), ("scope", "scope-focus")),
         )
     },
 }

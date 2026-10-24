@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import math
-from contextlib import suppress
 from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
@@ -237,8 +236,7 @@ class LightPresenter(Loggable):
             async with asyncio.timeout(self.timeout):
                 info = await describe_light(light)
                 if isinstance(light, Device):
-                    with suppress(LookupError):
-                        info = dataclasses.replace(info, path=device_path(light))
+                    info = dataclasses.replace(info, path=device_path(light))
                 relay = partial(self._relay, name, self.sig_enabled.emit, bool)
                 unsubscribers.append(partial(light.enabled.clear_sub, relay))
                 light.enabled.subscribe_reading(relay)
