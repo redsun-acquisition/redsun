@@ -149,7 +149,7 @@ def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
     session = build(TaggedLab)
 
     assert session.positioner.tag == "left"
-    assert set(session.positioner.axes) == {"stage"}
+    assert set(session.positioner.axes) == {"stage-axis"}
 
 
 def test_the_built_ins_are_declared_from_a_session_file(
@@ -199,5 +199,5 @@ def test_arrow_keys_step_the_focused_axis_and_leave_the_tab_bar_its_own(
     key_click(row, QtCore.Qt.Key.Key_Left)
     key_click(bar, QtCore.Qt.Key.Key_Right)
 
-    assert steps == [("stage", "x", 1.0), ("stage", "x", -1.0)]
+    assert steps == [("stage-axis", "x", 1.0), ("stage-axis", "x", -1.0)]
     assert view.tabs.currentIndex() == 1

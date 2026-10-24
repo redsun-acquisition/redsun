@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 from ophyd_async.core import (
+    Device,
+    DeviceVector,
     MovableLogic,
     StandardMovable,
     StandardReadable,
@@ -30,6 +32,7 @@ from tests.sdk.mocks import (
     SoftAxis,
     Stage,
     StuckStage,
+    XYStage,
 )
 
 if TYPE_CHECKING:
@@ -52,6 +55,24 @@ class FilterWheel(StandardReadable, StandardMovable[str]):
         return MovableLogic(setpoint=self.position, readback=self.position)
 
 
+class Scope(Device):
+    """A root holding a stage, an axis and a `DeviceVector` of axes."""
+
+    def __init__(self, name: str = "") -> None:
+        self.xy = XYStage("")
+        self.focus = SoftAxis()
+        self.stages = DeviceVector({1: SoftAxis(), 2: SoftAxis()})
+        super().__init__(name=name)
+
+
+class Coarse(SoftAxis):
+    """A soft axis holding a finer axis of its own."""
+
+    def __init__(self, name: str = "") -> None:
+        self.fine = SoftAxis()
+        super().__init__(name=name)
+
+
 @dataclass(eq=False, kw_only=True)
 class KeepOut(PositionerPresenter):
     """A positioner refusing x targets from 4 to 6."""
@@ -67,6 +88,14 @@ class KeepOut(PositionerPresenter):
 async def stage() -> Stage:
     """Return a connected stage."""
     device = Stage("stage")
+    await device.connect(mock=False)
+    return device
+
+
+@pytest.fixture
+async def scope() -> Scope:
+    """Return a connected scope."""
+    device = Scope("scope")
     await device.connect(mock=False)
     return device
 
@@ -105,16 +134,16 @@ async def test_the_axes_are_described_and_followed(
 
     await stage.axis["x"].set(2.5)
 
-    x = presenter.axes["stage"]["x"]
+    x = presenter.axes["stage-axis"]["x"]
 
     assert isinstance(presenter, DescribesAxes)
-    assert set(presenter.axes["stage"]) == {"x", "theta"}
+    assert set(presenter.axes["stage-axis"]) == {"x", "theta"}
     assert (x.readback, x.stoppable) == (Readback(0.0, "um", 3), True)
     assert set(x.configuration) == {
         stage.axis["x"].velocity.name,
         stage.axis["x"].resolution.name,
     }
-    assert ("stage", "x", 2.5) in seen
+    assert ("stage-axis", "x", 2.5) in seen
 
 
 async def test_a_step_moves_from_the_readback(
@@ -124,11 +153,11 @@ async def test_a_step_moves_from_the_readback(
     states: list[tuple[str, bool]] = []
     presenter.sig_moving.connect(lambda *args: states.append(args))
 
-    await presenter.move("stage", "x", 1.5)
-    await presenter.move("stage", "x", 1.5)
+    await presenter.move("stage-axis", "x", 1.5)
+    await presenter.move("stage-axis", "x", 1.5)
 
     assert await position(stage.axis["x"]) == pytest.approx(3.0)
-    assert states == [("stage", True), ("stage", False)] * 2
+    assert states == [("stage-axis", True), ("stage-axis", False)] * 2
 
 
 async def test_a_step_asked_while_the_device_moves_is_skipped(
@@ -137,11 +166,11 @@ async def test_a_step_asked_while_the_device_moves_is_skipped(
     """Skip a step for a busy device, and wait for it with a go-to."""
     gate = asyncio.Event()
     stage.axis["x"].logic.gate = gate
-    first = asyncio.create_task(presenter.move("stage", "x", 1.0))
-    await started(presenter, "stage")
+    first = asyncio.create_task(presenter.move("stage-axis", "x", 1.0))
+    await started(presenter, "stage-axis")
 
-    await presenter.move("stage", "x", 1.0)
-    going = asyncio.create_task(presenter.move_to("stage", {"theta": 4.0}))
+    await presenter.move("stage-axis", "x", 1.0)
+    going = asyncio.create_task(presenter.move_to("stage-axis", {"theta": 4.0}))
     await asyncio.sleep(0)
     assert not going.done()
     gate.set()
@@ -155,7 +184,7 @@ async def test_a_go_to_moves_every_axis_it_names(
     presenter: PositionerPresenter, stage: Stage
 ) -> None:
     """Move the named axes of a device to the given positions."""
-    await presenter.move_to("stage", {"x": 7.0, "theta": -1.0})
+    await presenter.move_to("stage-axis", {"x": 7.0, "theta": -1.0})
 
     assert await position(stage.axis["x"]) == pytest.approx(7.0)
     assert await position(stage.axis["theta"]) == pytest.approx(-1.0)
@@ -171,10 +200,10 @@ async def test_a_failed_move_is_reported_and_ends_the_moving_state(
     presenter.sig_failed.connect(lambda *args: failures.append(args))
     presenter.sig_moving.connect(lambda *args: states.append(args))
 
-    await presenter.move("stage", "x", 1.0)
+    await presenter.move("stage-axis", "x", 1.0)
 
-    assert failures == [("stage", "out of range")]
-    assert states[-1] == ("stage", False)
+    assert failures == [("stage-axis", "out of range")]
+    assert states[-1] == ("stage-axis", False)
 
 
 async def test_only_devices_with_axes_and_included_are_kept(stage: Stage) -> None:
@@ -186,10 +215,10 @@ async def test_only_devices_with_axes_and_included_are_kept(stage: Stage) -> Non
     positioner = PositionerPresenter(
         "positioner",
         devices={"stage": stage, "other": other, "camera": detector},
-        include=["stage", "camera"],
+        include=["stage-axis", "camera"],
     )
 
-    assert set(positioner.axes) == {"stage"}
+    assert set(positioner.axes) == {"stage-axis"}
     positioner.shutdown()
 
 
@@ -202,14 +231,14 @@ async def test_stop_ends_a_move_without_a_failure(
     states: list[tuple[str, bool]] = []
     presenter.sig_failed.connect(lambda *args: failures.append(args))
     presenter.sig_moving.connect(lambda *args: states.append(args))
-    moving = asyncio.create_task(presenter.move("stage", "x", 1.0))
-    await started(presenter, "stage")
+    moving = asyncio.create_task(presenter.move("stage-axis", "x", 1.0))
+    await started(presenter, "stage-axis")
 
-    await presenter.stop("stage")
+    await presenter.stop("stage-axis")
     await asyncio.wait_for(moving, 2.0)
 
     assert failures == []
-    assert states[-1] == ("stage", False)
+    assert states[-1] == ("stage-axis", False)
     assert await position(stage.axis["x"]) == pytest.approx(0.0)
 
 
@@ -218,12 +247,12 @@ async def test_stop_also_ends_a_go_to_waiting_for_the_device(
 ) -> None:
     """Drop a go-to queued behind the move a stop ends."""
     stage.axis["x"].logic.gate = asyncio.Event()
-    moving = asyncio.create_task(presenter.move_to("stage", {"x": 5.0}))
-    await started(presenter, "stage")
-    waiting = asyncio.create_task(presenter.move_to("stage", {"theta": 9.0}))
+    moving = asyncio.create_task(presenter.move_to("stage-axis", {"x": 5.0}))
+    await started(presenter, "stage-axis")
+    waiting = asyncio.create_task(presenter.move_to("stage-axis", {"theta": 9.0}))
     await asyncio.sleep(0)
 
-    await presenter.stop("stage")
+    await presenter.stop("stage-axis")
     await asyncio.wait_for(asyncio.gather(moving, waiting), 2.0)
 
     assert await position(stage.axis["theta"]) == pytest.approx(0.0)
@@ -240,7 +269,7 @@ async def test_an_axis_without_a_numeric_position_is_left_out(
         "positioner", devices={"stage": stage, "wheel": wheel}
     )
 
-    assert set(positioner.axes) == {"stage"}
+    assert set(positioner.axes) == {"stage-axis"}
     assert "wheel" in caplog.text
     positioner.shutdown()
 
@@ -362,9 +391,9 @@ async def test_a_device_moves_again_after_a_stop(
     presenter: PositionerPresenter, stage: Stage
 ) -> None:
     """Move a device that was stopped while idle."""
-    await presenter.stop("stage")
+    await presenter.stop("stage-axis")
 
-    await presenter.move("stage", "x", 2.0)
+    await presenter.move("stage-axis", "x", 2.0)
 
     assert await position(stage.axis["x"]) == pytest.approx(2.0)
 
@@ -377,14 +406,14 @@ async def test_stop_reaches_every_axis_when_one_fails() -> None:
     failures: list[tuple[str, str]] = []
     positioner.sig_failed.connect(lambda *args: failures.append(args))
     stage.axis["x"].logic.gate = asyncio.Event()
-    moving = asyncio.create_task(positioner.move("stage", "x", 1.0))
-    await started(positioner, "stage")
+    moving = asyncio.create_task(positioner.move("stage-axis", "x", 1.0))
+    await started(positioner, "stage-axis")
 
-    await positioner.stop("stage")
+    await positioner.stop("stage-axis")
     await asyncio.wait_for(moving, 2.0)
 
     assert await position(stage.axis["x"]) == pytest.approx(0.0)
-    assert [device for device, _ in failures] == ["stage"]
+    assert [device for device, _ in failures] == ["stage-axis"]
     assert "stop write timed out" in failures[0][1]
     positioner.shutdown()
 
@@ -427,9 +456,9 @@ async def test_a_subclass_check_guards_steps_as_well_as_go_tos(stage: Stage) -> 
     """Refuse a step into a zone a subclass forbids, as a go-to is refused."""
     positioner = KeepOut("positioner", devices={"stage": stage})
 
-    await positioner.move_to("stage", {"x": 3.0})
-    await positioner.move("stage", "x", 2.0)
-    await positioner.move_to("stage", {"x": 5.0})
+    await positioner.move_to("stage-axis", {"x": 3.0})
+    await positioner.move("stage-axis", "x", 2.0)
+    await positioner.move_to("stage-axis", {"x": 5.0})
 
     assert await position(stage.axis["x"]) == pytest.approx(3.0)
     positioner.shutdown()
@@ -449,7 +478,7 @@ async def test_an_axis_whose_configuration_cannot_be_read_is_left_out(
 
     await broken.set(1.0)
 
-    assert set(positioner.axes) == {"stage"}
+    assert set(positioner.axes) == {"stage-axis"}
     assert "broken" in caplog.text
     assert seen == []
     positioner.shutdown()
@@ -466,7 +495,7 @@ async def test_an_axis_that_never_answers_is_left_out_after_the_timeout(
         "positioner", devices={"stage": stage, "hanging": hanging}, timeout=0.2
     )
 
-    assert set(positioner.axes) == {"stage"}
+    assert set(positioner.axes) == {"stage-axis"}
     positioner.shutdown()
 
 
@@ -475,7 +504,7 @@ async def test_an_unknown_name_in_include_is_reported(
 ) -> None:
     """Warn about a name in `include` that names no device of the session."""
     positioner = PositionerPresenter(
-        "positioner", devices={"stage": stage}, include=["stage", "stgae"]
+        "positioner", devices={"stage": stage}, include=["stage-axis", "stgae"]
     )
 
     assert "stgae" in caplog.text
@@ -490,8 +519,8 @@ async def test_a_held_device_takes_no_hand_move_or_configuration(
     presenter.sig_configuration.connect(lambda *args: seen.append(args))
     key = stage.axis["x"].velocity.name
 
-    presenter.set_locked(frozenset({"stage"}))
-    await presenter.move_to("stage", {"x": 3.0})
+    presenter.set_locked(frozenset({"stage-axis"}))
+    await presenter.move_to("stage-axis", {"x": 3.0})
     await presenter.configure(key, 9.0)
 
     assert await position(stage.axis["x"]) == pytest.approx(0.0)
@@ -505,12 +534,12 @@ async def test_a_go_to_waiting_when_a_plan_takes_the_device_is_dropped(
     """Drop a go-to queued behind a move once a plan holds the device."""
     gate = asyncio.Event()
     stage.axis["x"].logic.gate = gate
-    moving = asyncio.create_task(presenter.move_to("stage", {"x": 1.0}))
-    await started(presenter, "stage")
-    waiting = asyncio.create_task(presenter.move_to("stage", {"theta": 9.0}))
+    moving = asyncio.create_task(presenter.move_to("stage-axis", {"x": 1.0}))
+    await started(presenter, "stage-axis")
+    waiting = asyncio.create_task(presenter.move_to("stage-axis", {"theta": 9.0}))
     await asyncio.sleep(0)
 
-    presenter.set_locked(frozenset({"stage"}))
+    presenter.set_locked(frozenset({"stage-axis"}))
     gate.set()
     await asyncio.wait_for(asyncio.gather(moving, waiting), 2.0)
 
@@ -523,8 +552,8 @@ async def test_shutdown_stops_a_running_move_and_the_readbacks(stage: Stage) -> 
     seen: list[float] = []
     positioner.sig_readback.connect(lambda device, axis, value: seen.append(value))
     stage.axis["x"].logic.gate = asyncio.Event()
-    moving = asyncio.create_task(positioner.move("stage", "x", 1.0))
-    await started(positioner, "stage")
+    moving = asyncio.create_task(positioner.move("stage-axis", "x", 1.0))
+    await started(positioner, "stage-axis")
 
     await asyncio.to_thread(positioner.shutdown)
     await asyncio.wait_for(moving, 2.0)
@@ -632,8 +661,8 @@ async def test_cancelling_the_slot_cancels_the_move(
     """Pass a cancellation of the slot on, leaving the axis where it was."""
     gate = asyncio.Event()
     stage.axis["x"].logic.gate = gate
-    moving = asyncio.create_task(presenter.move("stage", "x", 1.0))
-    await started(presenter, "stage")
+    moving = asyncio.create_task(presenter.move("stage-axis", "x", 1.0))
+    await started(presenter, "stage-axis")
 
     moving.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -670,5 +699,71 @@ async def test_an_included_device_without_an_axis_is_reported(
         "positioner", devices={"stage": stage, "camera": camera}, include=["camera"]
     )
 
-    assert "camera has no axis" in caplog.text
+    assert "No device named camera holds an axis" in caplog.text
+    positioner.shutdown()
+
+
+async def test_axes_are_grouped_by_the_device_holding_them(scope: Scope) -> None:
+    """Make one box per device holding axes, its rows named as under that device."""
+    positioner = PositionerPresenter("positioner", devices={"scope": scope})
+
+    assert {box: set(rows) for box, rows in positioner.axes.items()} == {
+        "scope": {"focus"},
+        "scope-xy": {"x", "y"},
+        "scope-stages": {"1", "2"},
+    }
+    path = positioner.axes["scope-xy"]["x"].path
+    assert path is not None
+    assert str(path.parent) == "scope / xy"
+    positioner.shutdown()
+
+
+async def test_a_flat_device_keeps_its_box() -> None:
+    """Keep the box and row names of a declared stage whose axes are its children."""
+    stage = XYStage("stage")
+    await stage.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"stage": stage})
+
+    assert {box: set(rows) for box, rows in positioner.axes.items()} == {
+        "stage": {"x", "y"}
+    }
+    positioner.shutdown()
+
+
+async def test_an_axis_inside_an_axis_is_not_a_row() -> None:
+    """Leave out an axis that sits below another axis."""
+    coarse = Coarse("coarse")
+    await coarse.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"coarse": coarse})
+
+    assert {box: set(rows) for box, rows in positioner.axes.items()} == {
+        "coarse": {"coarse"}
+    }
+    positioner.shutdown()
+
+
+async def test_stopping_a_box_without_stop_stops_each_axis(scope: Scope) -> None:
+    """Stop every axis of a box whose device has no stop of its own."""
+    positioner = PositionerPresenter("positioner", devices={"scope": scope})
+    scope.xy.x.logic.gate = asyncio.Event()
+    moving = asyncio.create_task(positioner.move("scope-xy", "x", 1.0))
+    await started(positioner, "scope-xy")
+
+    await positioner.stop("scope-xy")
+    await asyncio.wait_for(moving, 2.0)
+
+    assert await position(scope.xy.x) == pytest.approx(0.0)
+    positioner.shutdown()
+
+
+async def test_holding_one_axis_leaves_its_neighbour_free(scope: Scope) -> None:
+    """Refuse a move of the held axis and make one of the other axis of the box."""
+    positioner = PositionerPresenter("positioner", devices={"scope": scope})
+
+    positioner.set_locked(frozenset({"scope-xy-x"}))
+    await positioner.move("scope-xy", "x", 1.0)
+    await positioner.move("scope-xy", "y", 1.0)
+
+    assert await position(scope.xy.x) == pytest.approx(0.0)
+    assert await position(scope.xy.y) == pytest.approx(1.0)
     positioner.shutdown()

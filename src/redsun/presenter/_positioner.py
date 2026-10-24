@@ -16,7 +16,9 @@ from ophyd_async.core import (
     AsyncConfigurable,
     AsyncReadable,
     AsyncStatus,
+    Device,
     WatchableAsyncStatus,
+    walk_devices,
 )
 from psygnal import Signal
 
@@ -27,23 +29,68 @@ from redsun.registry import DeviceMapping  # noqa: TC001
 from redsun.utils.devices import (
     AxisInfo,
     describe_axis,
-    find_axes,
+    device_path,
+    held_by,
+    is_axis,
     limits,
 )
 
 from ._device_configuration import DeviceConfiguration
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Mapping
+    from collections.abc import Awaitable, Callable, Iterable, Mapping
 
     from bluesky.protocols import Reading
 
-    from redsun.utils.devices import Axis, Configuration
+    from redsun.utils.devices import Axis, Configuration, DevicePath
 
 
 def label(device: str, axis: str) -> str:
     """Return how messages name *axis* of *device*: once when they are one."""
     return device if axis == device else f"{device} {axis}"
+
+
+def boxes(devices: Mapping[str, Device]) -> dict[str, tuple[Device, dict[str, Axis]]]:
+    """Return the axes in or below *devices*, grouped by the device holding them.
+
+    Each box is keyed by the name of that device and holds it with its axes,
+    by the name each has under it. An axis below another axis is left out.
+    """
+    found: dict[str, tuple[Device, dict[str, Axis]]] = {}
+    seen: set[int] = set()
+    for root in devices.values():
+        for device in (root, *walk_devices(root).values()):
+            axis = device
+            if id(device) in seen or not is_axis(axis) or below_an_axis(device):
+                continue
+            seen.add(id(device))
+            box, row = holder(device)
+            found.setdefault(box.name, (box, {}))[1][row] = axis
+    return found
+
+
+def holder(device: Device) -> tuple[Device, str]:
+    """Return the device whose box shows *device*, and the name of its row there.
+
+    That is the parent, under the name it gives *device*. A device with no
+    parent, or one its parent does not list, is its own box, under its own
+    name.
+    """
+    if device.parent is not None:
+        for key, child in device.parent.children():
+            if child is device:
+                return device.parent, str(key)
+    return device, device.name
+
+
+def below_an_axis(device: Device) -> bool:
+    """Tell whether a device above *device* is an axis."""
+    above = device.parent
+    while above is not None:
+        if is_axis(above):
+            return True
+        above = above.parent
+    return False
 
 
 @runtime_checkable
@@ -65,8 +112,9 @@ class DescribesAxes(Protocol):
 class PositionerPresenter(Loggable):
     """Move the axes of devices by hand, one move at a time per device.
 
-    Every device with at least one axis is kept, or only those named in
-    `include`. Each axis is described and followed from the start, and its
+    Axes are grouped by the device holding them: an axis is a row of the box
+    of its parent, or a box of its own when it has none. Every box is kept, or
+    only those named in `include`. Each axis is described and followed from the start, and its
     readbacks are relayed on `sig_readback`; an axis that cannot be, within
     `timeout`, is left out with a warning.
 
@@ -100,26 +148,26 @@ class PositionerPresenter(Loggable):
     _: KW_ONLY
 
     devices: DeviceMapping = field(repr=False)
-    """Devices of the session, searched for axes."""
+    """Devices of the session, searched for axes, with the devices below them."""
 
     include: list[str] | None = None
-    """Names of the devices to keep; `None` keeps every device with an axis."""
+    """Names of the boxes to keep; `None` keeps every box."""
 
     timeout: float = 10.0
     """Seconds an axis may take to be described and followed at the start."""
 
     def __post_init__(self) -> None:
+        found = boxes(self.devices)
         for name in self.include or ():
-            if name not in self.devices:
-                self.logger.warning(f"No device named {name} to include")
-            elif not find_axes(self.devices[name]):
-                self.logger.warning(f"{name} has no axis to include")
-        self._axes = {
-            device: axes
-            for device, item in self.devices.items()
-            if (self.include is None or device in self.include)
-            and (axes := find_axes(item))
+            if name not in found:
+                self.logger.warning(f"No device named {name} holds an axis to include")
+        kept = {
+            name: box
+            for name, box in found.items()
+            if self.include is None or name in self.include
         }
+        self._holders = {name: holder for name, (holder, _) in kept.items()}
+        self._axes = {name: axes for name, (_, axes) in kept.items()}
         self._configuration = DeviceConfiguration(self.name)
         self._configuration.sig_changed.connect(self.sig_configuration.emit)
         self._unsubscribers: list[Callable[[], None]] = []
@@ -191,7 +239,7 @@ class PositionerPresenter(Loggable):
             )
             return {axis: start + delta}
 
-        await self._run(device, targets)
+        await self._run(device, (axis,), targets)
 
     @slot(signal="sig_move_to")
     async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
@@ -209,7 +257,7 @@ class PositionerPresenter(Loggable):
         async def targets() -> Mapping[str, float]:
             return positions
 
-        await self._run(device, targets)
+        await self._run(device, positions, targets)
 
     @slot(signal="sig_stop_device")
     async def stop(self, device: str) -> None:
@@ -228,7 +276,7 @@ class PositionerPresenter(Loggable):
         targets: list[Stoppable] = [
             axis for axis in self._axes[device].values() if isinstance(axis, Stoppable)
         ]
-        whole: object = self.devices.get(device)
+        whole: object = self._holders[device]
         if isinstance(whole, Stoppable) and whole not in targets:
             targets.append(whole)
         if not targets:
@@ -254,10 +302,10 @@ class PositionerPresenter(Loggable):
 
     @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
-        """Hold the devices in *names* for a plan.
+        """Hold the devices in *names*, and every device below them, for a plan.
 
         No hand move, waiting go-to or configuration write reaches a held
-        device.
+        axis.
         """
         self._held = names
         self._configuration.set_locked(names)
@@ -295,15 +343,25 @@ class PositionerPresenter(Loggable):
         await self._unfollow()
 
     async def _run(
-        self, device: str, targets: Callable[[], Awaitable[Mapping[str, float]]]
+        self,
+        device: str,
+        axes: Iterable[str],
+        targets: Callable[[], Awaitable[Mapping[str, float]]],
     ) -> None:
         stops = self._stops[device]
         async with self._locks[device]:
             if self._stops[device] != stops:
                 self.logger.info(f"Not moving {device}: stopped while waiting")
                 return
-            if device in self._held:
-                self.logger.info(f"Not moving {device}: a plan holds it")
+            held = [
+                axis
+                for axis in axes
+                if axis in self._axes[device]
+                and isinstance(item := self._axes[device][axis], Device)
+                and held_by(item, self._held)
+            ]
+            if held:
+                self.logger.info(f"Not moving {device}: a plan holds {', '.join(held)}")
                 return
             self.sig_moving.emit(device, True)
             failed = False
@@ -391,13 +449,22 @@ class PositionerPresenter(Loggable):
             info.setdefault(device, {})[name] = dataclasses.replace(
                 axis_info,
                 stoppable=axis_info.stoppable
-                or isinstance(self.devices.get(device), Stoppable),
+                or isinstance(self._holders[device], Stoppable),
                 configuration=axis_info.configuration
                 if configuration is None
                 else tuple(configuration.descriptors),
+                path=self._path(self._axes[device][name]),
             )
         self._axes = {device: axes for device, axes in self._axes.items() if axes}
         return info
+
+    def _path(self, axis: Axis) -> DevicePath | None:
+        if not isinstance(axis, Device):
+            return None
+        try:
+            return device_path(axis)
+        except LookupError:
+            return None
 
     async def _follow_axis(
         self, device: str, name: str, axis: Axis
@@ -411,7 +478,9 @@ class PositionerPresenter(Loggable):
                 axis.subscribe(relay)
                 # last in the block, so a timeout during it leaves nothing behind
                 configuration = (
-                    await self._configuration.add(device, axis)
+                    await self._configuration.add(
+                        device, axis, owner_device=self._holders[device]
+                    )
                     if isinstance(axis, AsyncConfigurable)
                     else None
                 )
