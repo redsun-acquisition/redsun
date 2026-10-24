@@ -19,6 +19,13 @@ An ADR (Architecture Decision Record) is a numbered page under
 decision and the reasons for it. Once accepted, it's never edited; a later ADR
 replaces it instead.
 
+### areaDetector
+
+areaDetector is the [EPICS](#epics) framework most camera [IOCs](#ioc) are
+built on. A driver takes the frames, and plugins chained after it pass them
+on: one serves the latest frame over [PVAccess](#pvaccess), one holds frames
+back until a trigger, one writes them to an HDF5 file.
+
 ### Attached service
 
 An attached service is a [service](#service) that already runs, in a
@@ -94,6 +101,13 @@ session it is, `schema_version`, `frontend` and `services.transport`, so every
 source that gives one of them must give the same value, or the session stops
 with an error.
 
+### Continuous acquisition
+
+In continuous acquisition, a camera takes frames one after another until
+something stops it, rather than one frame each time a [plan](#plan) asks.
+A plan then reads the latest frame, or writes frames to a file, while the
+camera goes on.
+
 ### Data key
 
 A data key is the name under which one measured value is recorded in a
@@ -162,6 +176,14 @@ the server allows, sets them. See
 A frontend is what shows a session on screen, such as the Qt one that
 `redsun` ships. A session file names it by its registered name (`frontend: qt`), and a
 package can register its own.
+
+### Hint
+
+A hint is a [data key](#data-key) a device marks as the one worth showing,
+such as the image of a camera rather than its exposure time. The device lists
+them under `fields` in its `hints`, and plans and views read them there
+instead of knowing the device's attribute names. The term comes from
+[`bluesky`](#bluesky).
 
 ### Hook
 
@@ -417,6 +439,14 @@ other that reaches it. The session still builds them as two components, and a
 ports. `redsun` ships three: the positioner (`PositionerPresenter`,
 `PositionerView`), the light stack (`LightPresenter`, `LightView`) and the
 acquisition stack (`AcquisitionPresenter`, `AcquisitionView`).
+
+### Stage
+
+To stage a device is to get it ready for a [plan](#plan), and to unstage it is
+to undo that once the plan ends. A plan stages each device it uses before the
+first reading and unstages it after the last. The plans of `bluesky` stage
+the device at the top of the tree each device belongs to, not the device
+itself. The term comes from [`bluesky`](#bluesky).
 
 ### StreamDatum
 

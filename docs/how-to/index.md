@@ -18,6 +18,7 @@ them together.
 
 - [How to write a component](write-a-component.md)
 - [How to write a service](write-a-service.md)
+- [How to write a camera for continuous acquisition](write-a-camera-for-continuous-acquisition.md)
 - [How to write a session file](write-a-session-file.md)
 - [How to wire components together](wire-components.md)
 - [How to offer a pairing](offer-a-pairing.md)

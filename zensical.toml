@@ -32,6 +32,7 @@ nav = [
         { "Build a session" = [
             "how-to/write-a-component.md",
             "how-to/write-a-service.md",
+            "how-to/write-a-camera-for-continuous-acquisition.md",
             "how-to/write-a-session-file.md",
             "how-to/wire-components.md",
             "how-to/offer-a-pairing.md",

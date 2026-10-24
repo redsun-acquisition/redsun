@@ -7,3 +7,4 @@
 *[EPICS]: A set of tools for controlling instruments over a network.
 *[IOC]: Input/output controller. The EPICS server program that offers values, most often read from hardware it controls.
 *[PV]: Process variable. One named value an IOC offers.
+*[HDF5]: Hierarchical Data Format 5. A file format that stores arrays, such as camera frames, in named datasets.
