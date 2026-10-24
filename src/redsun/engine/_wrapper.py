@@ -144,7 +144,7 @@ class RunEngine(BlueskyRunEngine):
         preprocessors: list[Preprocessor] | None = None,
         md_validator: MDValidator | None = None,
         md_normalizer: MDNormalizer | None = None,
-        scan_id_source: MDScanIDSource | None = default_scan_id_source,
+        scan_id_source: MDScanIDSource = default_scan_id_source,
         call_returns_result: bool = True,
     ):
         # set before bluesky's constructor, which already moves the state to idle
@@ -165,7 +165,7 @@ class RunEngine(BlueskyRunEngine):
             preprocessors=preprocessors,
             md_validator=md_validator,
             md_normalizer=md_normalizer,
-            scan_id_source=scan_id_source,  # type: ignore[arg-type]
+            scan_id_source=scan_id_source,
             call_returns_result=call_returns_result,
             # bluesky's default installs a SIGINT handler, which only the main
             # thread may do, and plans run on a thread of their own
