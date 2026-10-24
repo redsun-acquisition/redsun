@@ -15,9 +15,10 @@ from redsun.view.qt.treeview import ConfigurationTab
 
 from ..._settings import Settings  # noqa: TC001
 from ._light_group import LightGroup
+from ._locks import held
 
 if TYPE_CHECKING:
-    from redsun.utils.devices import LightInfo
+    from redsun.utils.devices import DevicePath, LightInfo
     from redsun.view import Placement
 
 
@@ -71,6 +72,7 @@ class LightView(QtW.QWidget, Loggable):
         super().__init__(parent)
         self.name = name
         self._groups: dict[str, LightGroup] = {}
+        self._paths: dict[str, DevicePath | None] = {}
         self._configuration_tab: ConfigurationTab | None = None
         self._settings: Settings | None = None
         self._dragging = QtW.QCheckBox("Write while dragging", self)
@@ -119,7 +121,11 @@ class LightView(QtW.QWidget, Loggable):
             )
             group.sig_enabled.connect(self.sig_enabled.emit)
             group.sig_intensity.connect(self.sig_intensity.emit)
+            if info.path is not None:
+                group.setTitle(str(info.path))
+            group.setToolTip(device)
             self._groups[device] = group
+            self._paths[device] = info.path
             self._lights.addWidget(group)
         self._configuration_tab = ConfigurationTab(lights.configuration, self)
         self._configuration_tab.sig_configure.connect(self.sig_configure.emit)
@@ -149,9 +155,9 @@ class LightView(QtW.QWidget, Loggable):
 
     @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
-        """Disable the controls of the lights in *names*, and enable the rest."""
+        """Disable the lights in *names*, and below the devices in it, and enable the rest."""
         for device, group in self._groups.items():
-            group.set_locked(device in names)
+            group.set_locked(held(self._paths[device], device, names))
         if self._configuration_tab is not None:
             self._configuration_tab.set_locked(names)
 

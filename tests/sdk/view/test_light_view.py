@@ -6,7 +6,7 @@ import pytest
 from qtpy import QtCore, QtWidgets
 
 from redsun import Settings
-from redsun.utils.devices import Configuration, LightInfo, Readback
+from redsun.utils.devices import Configuration, DevicePath, LightInfo, Readback
 from redsun.view.qt.builtins import LightGroup, LightView
 from tests.sdk.view.helpers import child, press
 
@@ -23,6 +23,26 @@ class Lights:
     """Describes three lights, as a light presenter would."""
 
     lights = LIGHTS
+    configuration = Configuration(descriptors={}, readings={}, writable={})
+
+
+TREE_LIGHTS = {
+    "bench-lights-laser": LightInfo(
+        False,
+        path=DevicePath(
+            "bench",
+            "lights.laser",
+            ("bench", "bench-lights", "bench-lights-laser"),
+        ),
+    ),
+    "stray": LightInfo(False),
+}
+
+
+class TreeLights:
+    """Describes a light in a tree and one with no path."""
+
+    lights = TREE_LIGHTS
     configuration = Configuration(descriptors={}, readings={}, writable={})
 
 
@@ -250,3 +270,33 @@ def test_the_state_line_shows_only_while_a_failure_stands(
     child(laser, QtWidgets.QAbstractButton, "toggle").click()
 
     assert (hidden_at_first, shown, state.isHidden()) == (True, True, True)
+
+
+def test_a_light_is_titled_by_its_path_or_its_key(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Title a light with its path, or with its key when it has none."""
+    view = LightView("lights_view", parent)
+    view.setup(TreeLights(), settings)
+
+    laser = group(view, "bench / lights.laser")
+
+    assert laser.toolTip() == "bench-lights-laser"
+    assert group(view, "stray").toolTip() == "stray"
+
+
+def test_a_light_below_a_held_device_cannot_be_switched(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Disable a light when a device above it is held, and leave the others."""
+    view = LightView("lights_view", parent)
+    view.setup(TreeLights(), settings)
+
+    view.set_locked(frozenset({"bench"}))
+
+    laser = child(
+        group(view, "bench / lights.laser"), QtWidgets.QAbstractButton, "toggle"
+    )
+    stray = child(group(view, "stray"), QtWidgets.QAbstractButton, "toggle")
+    assert not laser.isEnabled()
+    assert stray.isEnabled()

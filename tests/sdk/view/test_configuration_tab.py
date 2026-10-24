@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from qtpy import QtCore, QtWidgets
 
-from redsun.utils.devices import Configuration
+from redsun.utils.devices import Configuration, DevicePath
 from redsun.view.qt.treeview import ConfigurationTab
 
 pytestmark = pytest.mark.qt
@@ -24,6 +24,24 @@ CONFIGURATION = Configuration(
         "led-power": {"value": 1.0, "timestamp": 0.0},
     },
     writable={},
+)
+
+
+UNDERSCORED = Configuration(
+    descriptors={
+        "scope_xy_x_velocity": {"source": "soft://v", "dtype": "number", "shape": []}
+    },
+    readings={"scope_xy_x_velocity": {"value": 1.0, "timestamp": 0.0}},
+    writable={},
+    owners={"scope_xy_x_velocity": "scope_xy"},
+    paths={
+        "scope_xy_x_velocity": DevicePath(
+            "scope",
+            "xy.x.velocity",
+            ("scope", "scope_xy", "scope_xy_x", "scope_xy_x_velocity"),
+        ),
+        "scope_xy": DevicePath("scope", "xy", ("scope", "scope_xy")),
+    },
 )
 
 
@@ -97,3 +115,42 @@ def test_an_owner_named_with_a_dash_is_kept_whole(
     assert row is not None
     assert row.text(0) == "laser-488"
     assert locked
+
+
+def test_a_row_is_named_by_its_path_and_edits_its_own_key(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Show a row's path below its owner's, and send an edit under the row's key."""
+    tab = ConfigurationTab(UNDERSCORED)
+    sent: list[tuple[str, object]] = []
+    tab.sig_configure.connect(lambda *args: sent.append(args))
+
+    [owner] = tab.findItems("scope / xy", QtCore.Qt.MatchFlag.MatchExactly)
+    row = owner.child(0)
+    assert row is not None
+    velocity = tab.itemWidget(row, 1)
+    assert isinstance(velocity, QtWidgets.QDoubleSpinBox)
+    velocity.setValue(2.0)
+
+    assert row.text(0) == "x.velocity"
+    assert sent == [("scope_xy_x_velocity", 2.0)]
+
+
+@pytest.mark.parametrize(
+    ("held", "enabled"),
+    [({"scope_xy_x"}, False), ({"scope"}, False), ({"scope_xy_y"}, True)],
+)
+def test_a_row_below_a_held_device_cannot_be_edited(
+    qapp: QtWidgets.QApplication, held: set[str], enabled: bool
+) -> None:
+    """Disable a row when a device above its signal is held, and only then."""
+    tab = ConfigurationTab(UNDERSCORED)
+
+    tab.set_locked(frozenset(held))
+
+    [owner] = tab.findItems("scope / xy", QtCore.Qt.MatchFlag.MatchExactly)
+    row = owner.child(0)
+    assert row is not None
+    velocity = tab.itemWidget(row, 1)
+    assert velocity is not None
+    assert velocity.isEnabled() is enabled

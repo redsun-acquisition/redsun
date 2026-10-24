@@ -27,12 +27,13 @@ from redsun.view.qt.icons import collapsible_section
 from redsun.view.qt.treeview import ConfigurationTab
 
 from ..._settings import Settings  # noqa: TC001
+from ._locks import held
 from ._positioner_group import PositionerGroup, StepBox, tool_button
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from redsun.utils.devices import AxisInfo
+    from redsun.utils.devices import AxisInfo, DevicePath
     from redsun.view import Placement
 
 DEFAULT_STEPS = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0)
@@ -229,7 +230,8 @@ class PositionerView(QtW.QWidget, Loggable):
         self._step_box: StepBox = step_box
         self._steps = tuple(steps)
         self._groups: dict[str, PositionerGroup] = {}
-        self._locked: frozenset[str] = frozenset()
+        self._paths: dict[str, dict[str, DevicePath | None]] = {}
+        self._held_boxes: set[str] = set()
         self._settings: Settings | None = None
         self._configuration_tab: ConfigurationTab | None = None
         self._configuration = QtW.QVBoxLayout()
@@ -319,6 +321,12 @@ class PositionerView(QtW.QWidget, Loggable):
         self._configuration_tab.sig_configure.connect(self.sig_configure.emit)
         self._configuration.addWidget(self._configuration_tab)
         self._entries = self._read_saved(settings)
+        missing = sorted({e["device"] for e in self._entries} - set(self._groups))
+        if missing:
+            self.logger.warning(
+                f"Not showing the positions saved for {', '.join(missing)}: "
+                "the positioner has no such device"
+            )
         self._show_entries()
         # the window sizes the view from hints it kept from before the groups
         self._scroll.updateGeometry()
@@ -339,7 +347,13 @@ class PositionerView(QtW.QWidget, Loggable):
             group.sig_move_to.connect(self.sig_move_to.emit)
             group.sig_stop.connect(self.sig_stop_device.emit)
             group.sig_save.connect(self._save)
+            paths = {axis: info.path for axis, info in axes.items()}
+            path = next((p for p in paths.values() if p is not None), None)
+            if path is not None and path.parent is not None:
+                group.setTitle(str(path.parent))
+            group.setToolTip(device)
             self._groups[device] = group
+            self._paths[device] = paths
             self._devices.addWidget(group)
 
     def _read_saved(self, settings: Settings) -> list[SavedPosition]:
@@ -387,10 +401,17 @@ class PositionerView(QtW.QWidget, Loggable):
 
     @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
-        """Disable the controls of the devices in *names*, and enable the rest."""
-        self._locked = names
+        """Disable the axes in *names*, and below the devices in it, and enable the rest."""
+        self._held_boxes.clear()
         for device, group in self._groups.items():
-            group.set_locked(device in names)
+            axes = {
+                axis
+                for axis, path in self._paths[device].items()
+                if held(path, device, names)
+            }
+            group.set_axes_locked(axes)
+            if axes:
+                self._held_boxes.add(device)
         if self._configuration_tab is not None:
             self._configuration_tab.set_locked(names)
         self._lock_entries()
@@ -551,7 +572,7 @@ class PositionerView(QtW.QWidget, Loggable):
 
     def _lock_entries(self) -> None:
         for device, button in self._entry_buttons:
-            button.setEnabled(device not in self._locked)
+            button.setEnabled(device not in self._held_boxes)
 
     def _set_repeat_interval(self, milliseconds: int) -> None:
         for group in self._groups.values():
