@@ -4,8 +4,8 @@ import asyncio
 from collections import deque
 from typing import TYPE_CHECKING, Any
 
-import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
+from bluesky.utils import Msg
 
 from redsun.log import logger
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from concurrent.futures import Future
 
-    from bluesky.utils import Msg, MsgGenerator
+    from bluesky.utils import MsgGenerator
 
     from ._wrapper import RunEngine
 
@@ -36,9 +36,9 @@ class Deferrals:
         self._queue: deque[
             tuple[Callable[[], Awaitable[None]], asyncio.Future[None]]
         ] = deque()
-        # the mutator sees the messages it inserts too, so the drain it
-        # inserts must not be wrapped in another drain
-        self._draining = False
+        # one instance, so the mutator recognises the drain it inserted and
+        # does not wrap it in another drain
+        self._drain = Msg("wait_for", None, [self._apply_queued])
         self._engine.preprocessors.append(self.wrap)
         # a halted plan skips its cleanup, so the changes it leaves wait for idle
         self._engine.sig_state_changed.connect(self._on_state)
@@ -56,15 +56,11 @@ class Deferrals:
         """Run the changes queued so far before each message of *plan* and before it returns."""
 
         def before(msg: Msg) -> tuple[MsgGenerator[Any] | None, None]:
-            if self._draining or not self._queue:
+            if msg is self._drain or not self._queue:
                 return None, None
 
             def head() -> MsgGenerator[Any]:
-                self._draining = True
-                try:
-                    yield from bps.wait_for([self._apply_queued])
-                finally:
-                    self._draining = False
+                yield self._drain
                 return (yield msg)
 
             return head(), None
@@ -72,7 +68,7 @@ class Deferrals:
         def leftovers() -> MsgGenerator[None]:
             # asked for during the last message, which no message follows
             if self._queue:
-                yield from bps.wait_for([self._apply_queued])
+                yield self._drain
 
         wrapped: MsgGenerator[Any] = bpp.finalize_wrapper(
             bpp.plan_mutator(plan, before), leftovers()
