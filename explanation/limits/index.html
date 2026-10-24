@@ -3077,6 +3077,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#can-two-protocols-with-the-same-members-be-told-apart" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Can two protocols with the same members be told apart?
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#can-i-import-parameter-types-under-if-type_checking" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5764,6 +5775,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#can-two-protocols-with-the-same-members-be-told-apart" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Can two protocols with the same members be told apart?
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#can-i-import-parameter-types-under-if-type_checking" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5954,6 +5976,22 @@ that shares it is in the session.</p>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>A shared type identifies one value; give them distinct types.
 </span></code></pre></div>
 <p>Give each value its own type.</p>
+<h2 id="can-two-protocols-with-the-same-members-be-told-apart">Can two protocols with the same members be told apart?<a class="headerlink" href="#can-two-protocols-with-the-same-members-be-told-apart" title="Permanent link">&para;</a></h2>
+<p>No. A component <a href="../questions/#how-a-component-matches">matches</a> a protocol by
+its members, and the protocol's name plays no part, so two protocols listing
+the same methods with the same parameters match the same components. A
+component asking for <code>Mapping[str, Steerable]</code> then gets every <code>HasStage</code> as
+well. Types aren't compared either, so <code>read() -&gt; float</code> and <code>read() -&gt; str</code>
+count as the same member. The session warns when components ask for two such
+protocols:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>'HasStage' and 'Steerable' have the same members, so every component
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>satisfying one satisfies the other; give each a member of its own
+</span></code></pre></div>
+<p>Give each protocol a member that only its own components have:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Steerable</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">steer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angle</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
 <h2 id="can-i-import-parameter-types-under-if-type_checking">Can I import parameter types under <code>if TYPE_CHECKING:</code>?<a class="headerlink" href="#can-i-import-parameter-types-under-if-type_checking" title="Permanent link">&para;</a></h2>
 <p>Not the types the session reads to decide what to pass: it reads them while
 the program runs, when a type imported only under <code>if TYPE_CHECKING:</code>, a
@@ -6369,10 +6407,10 @@ function setUpFigures() {
 <rect x="76" y="312" width="99" height="21" fill="black"></rect>
 </mask></svg></svg></div></div></figure>
 <p>A component left out shows in the log like this:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Failed to build presenter 'motor_ctrl': cannot read the constructor of
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>MotorPresenter: 'Calibration' is not available at runtime. A type a component
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>is injected by must be imported outside 'if TYPE_CHECKING', because the graph
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>evaluates the annotation.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Failed to build presenter 'motor_ctrl': cannot read the constructor of
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>MotorPresenter: 'Calibration' is not available at runtime. A type a component
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>is injected by must be imported outside 'if TYPE_CHECKING', because the graph
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>evaluates the annotation.
 </span></code></pre></div>
 <p>Either way, import those types with a normal import.</p>
 <h2 id="can-i-run-two-frontends">Can I run two frontends?<a class="headerlink" href="#can-i-run-two-frontends" title="Permanent link">&para;</a></h2>
