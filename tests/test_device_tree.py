@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+import threading
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Annotated, Protocol
 
+import bluesky.plan_stubs as bps
 import pytest
+from bluesky.utils import MsgGenerator
 from ophyd_async.core import (
     Device,
     DeviceConnector,
@@ -14,23 +19,47 @@ from ophyd_async.core import (
     soft_command,
     soft_signal_rw,
 )
+from qtpy import QtWidgets
 
 from redsun import (
     Alias,
     AsDevice,
     AsPresenter,
+    AsView,
     Declare,
     DeviceMapping,
     DevicesOf,
+    Link,
     Session,
+    links_between,
 )
+from redsun.aio import run_coro
+from redsun.engine.plan_stubs import lock_wrapper
 from redsun.errors import BuildError
+from redsun.presenter import (
+    AcquisitionPresenter,
+    LightPresenter,
+    PositionerPresenter,
+)
+from redsun.qt import QtSession
 from redsun.utils.devices import Light
+from redsun.view.qt.builtins import (
+    AcquisitionView,
+    LightGroup,
+    LightView,
+    PositionerGroup,
+    PositionerView,
+)
 from tests.sdk.mocks import SoftAxis, SoftLight, XYStage
+from tests.sdk.view.helpers import child
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+    from pathlib import Path
+
     from bluesky.protocols import Location
 
+    from redsun import PlanEntry
     from redsun.testing import BuildSession
 
 
@@ -139,9 +168,51 @@ class Recorder:
         self.lights = lights
 
 
+class HoldingPlans:
+    """Offers one plan, which holds its motor until `gate` is set."""
+
+    def __init__(self, name: str, gate: threading.Event) -> None:
+        self.name = name
+        self.gate = gate
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        """Return the plans by name."""
+        return {"hold": {"plan": self.hold}}
+
+    def hold(self, motor: SoftAxis) -> MsgGenerator[None]:
+        """Move *motor* to 1, then wait for the gate, holding *motor* all along."""
+        yield from lock_wrapper(self.move_and_wait(motor), motor)
+
+    def move_and_wait(self, motor: SoftAxis) -> MsgGenerator[None]:
+        """Move *motor* to 1, then wait for the gate."""
+        yield from bps.mv(motor, 1.0)
+        yield from bps.wait_for([lambda: asyncio.to_thread(self.gate.wait)])
+
+
 class ScopeApp(Session):
     scope: AsDevice[Scope]
     recorder: AsPresenter[Recorder]
+
+
+class StackedApp(QtSession):
+    scope: AsDevice[Scope]
+    plans: AsPresenter[HoldingPlans]
+    acquisition: AsPresenter[AcquisitionPresenter]
+    positioner: AsPresenter[PositionerPresenter]
+    lights: AsPresenter[LightPresenter]
+    acquisition_view: AsView[AcquisitionView]
+    positioner_view: AsView[PositionerView]
+    lights_view: AsView[LightView]
+
+    def wire(self) -> Iterator[Link]:
+        """Link each view to its presenter, and the plan locks to all of them."""
+        yield from links_between(self.acquisition_view, self.acquisition)
+        yield from links_between(self.positioner_view, self.positioner)
+        yield from links_between(self.lights_view, self.lights)
+        yield from links_between(self.acquisition, self.positioner)
+        yield from links_between(self.acquisition, self.positioner_view)
+        yield from links_between(self.acquisition, self.lights)
+        yield from links_between(self.acquisition, self.lights_view)
 
 
 class AcrossTrees(Session):
@@ -230,3 +301,41 @@ def test_session_devices_still_lists_the_declared_devices(build: BuildSession) -
     app = build(ScopeApp)
 
     assert set(app.devices) == {"scope"}
+
+
+@pytest.mark.qt
+def test_a_session_runs_on_one_root_device(
+    qapp: QtWidgets.QApplication,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
+    tmp_path: Path,
+) -> None:
+    """Run the built-in stacks on one root: lights, boxes, plan arguments and locks."""
+    gate = threading.Event()
+    app = build(
+        StackedApp,
+        {
+            "storage": {"base_dir": str(tmp_path)},
+            "presenters": {"plans": {"gate": gate}},
+        },
+    )
+    lights = [g.title() for g in app.lights_view.findChildren(LightGroup)]
+    boxes = {g.title(): g for g in app.positioner_view.findChildren(PositionerGroup)}
+    xy = child(boxes["scope / xy"], QtWidgets.QAbstractButton, "save")
+    focus = child(boxes["scope"], QtWidgets.QAbstractButton, "save")
+    motor = app.acquisition.plans["hold"].parameters[0]
+
+    app.acquisition_view.sig_launch.emit("hold", {"motor": "scope-xy-x"}, ())
+    assert wait_until(lambda: not xy.isEnabled())
+    held = focus.isEnabled()
+    run_coro(app.positioner.move("scope-xy", "x", 5.0))
+    run_coro(app.positioner.move("scope-xy", "y", 1.0))
+    gate.set()
+    assert wait_until(xy.isEnabled)
+
+    assert lights == ["scope / lights.laser"]
+    assert set(boxes) == {"scope / xy", "scope"}
+    assert motor.labels["scope-xy-x"] == "scope / xy.x"
+    assert held
+    assert run_coro(app.scope.xy.x.locate())["readback"] == 1.0
+    assert run_coro(app.scope.xy.y.locate())["readback"] == 1.0
