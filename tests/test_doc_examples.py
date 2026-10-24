@@ -15,6 +15,8 @@ EXAMPLES = [
     "acquisition_files",
     "connect_on_demand",
     "console_frontend",
+    "continuous_areadetector",
+    "continuous_camera",
     "continuous_plan",
     "lights",
     "log_view",
