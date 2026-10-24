@@ -18,7 +18,12 @@ __all__ = [
 
 
 class BuildError(RuntimeError):
-    """Raised when a strict session could not build or set up a component."""
+    """Raised when a session cannot finish its build.
+
+    A strict session raises it for a component it could not build or set up.
+    Every session raises it for two devices sharing a name, or for a device
+    with none.
+    """
 
 
 class ConfigurationError(ValueError):

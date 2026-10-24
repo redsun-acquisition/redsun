@@ -8,6 +8,9 @@ import numpy as np
 import pytest
 from ophyd_async.core import (
     AsyncStatus,
+    Device,
+    DeviceMap,
+    DeviceVector,
     MovableLogic,
     StandardMovable,
     StandardReadable,
@@ -16,11 +19,13 @@ from ophyd_async.core import (
 )
 
 from redsun.utils.devices import (
+    DevicePath,
     LightInfo,
     Readback,
     describe_axis,
     describe_light,
-    find_axes,
+    device_path,
+    held_by,
     is_light,
     limits,
     readback,
@@ -30,8 +35,6 @@ from tests.sdk.mocks import (
     NumberSwitchDevice,
     SoftAxis,
     SoftLight,
-    Stage,
-    TwinStage,
 )
 
 if TYPE_CHECKING:
@@ -94,56 +97,37 @@ class Float32Axis(SoftAxis):
         }
 
 
-class OuterAxis(SoftAxis):
-    """A soft axis holding a finer axis of its own."""
+class Leaf(Device):
+    """A device holding one signal."""
 
     def __init__(self, name: str = "") -> None:
-        self.fine = SoftAxis()
+        self.power = soft_signal_rw(float)
         super().__init__(name=name)
 
 
-class Carrier(StandardReadable):
-    """A device holding one axis that holds another."""
+class Pair(Device):
+    """A device holding two leaves."""
 
-    def __init__(self, name: str) -> None:
-        self.coarse = OuterAxis()
+    def __init__(self, name: str = "") -> None:
+        self.x = Leaf()
+        self.y = Leaf()
         super().__init__(name=name)
 
 
-async def test_the_axes_of_a_device_are_its_movable_descendants() -> None:
-    """Find the axes inside a `DeviceMap`, keyed by name, and skip plain signals."""
-    stage = Stage("stage")
-    await stage.connect(mock=False)
+class Tree(Device):
+    """A root holding a device, a `DeviceVector` and a `DeviceMap`."""
 
-    axes = find_axes(stage)
-
-    assert set(axes) == {"x", "theta"}
-    assert axes["x"] is stage.axis["x"]
-    assert axes["theta"] is stage.axis["theta"]
+    def __init__(self, name: str = "") -> None:
+        self.xy = Pair()
+        self.channel = DeviceVector({1: Leaf()})
+        self.lights = DeviceMap({"laser": Leaf(), "led-blue": Leaf()})
+        super().__init__(name=name)
 
 
-async def test_a_device_that_moves_itself_is_its_one_axis() -> None:
-    """Return a movable device as its own axis, under its name."""
-    axis = SoftAxis("focus")
-    await axis.connect(mock=False)
-
-    axes = find_axes(axis)
-
-    assert list(axes) == ["focus"]
-    assert axes["focus"] is axis
-
-
-async def test_axes_sharing_a_name_are_keyed_by_their_path() -> None:
-    """Key two axes named `x` by their dotted paths."""
-    twin = TwinStage("twin")
-    await twin.connect(mock=False)
-
-    assert set(find_axes(twin)) == {"left.x", "right.x"}
-
-
-def test_a_signal_is_never_an_axis() -> None:
-    """Find no axis in a signal, though a writable signal can be moved."""
-    assert find_axes(soft_signal_rw(float, 0.0, name="exposure")) == {}
+@pytest.fixture
+def scope() -> Tree:
+    """Return a tree named `scope`."""
+    return Tree("scope")
 
 
 @pytest.mark.parametrize(
@@ -188,14 +172,6 @@ def test_limits_are_read_from_a_descriptor(
 ) -> None:
     """Read control limits, else display ones, and count a 0-0 pair as none."""
     assert limits(descriptor) == expected
-
-
-async def test_the_walk_stops_at_an_axis() -> None:
-    """Find an axis holding a finer axis, and not the finer axis inside it."""
-    carrier = Carrier("carrier")
-    await carrier.connect(mock=False)
-
-    assert list(find_axes(carrier)) == ["coarse"]
 
 
 async def test_an_axis_is_described_by_its_hinted_entry() -> None:
@@ -279,3 +255,62 @@ def test_a_readback_keeps_what_its_descriptor_states_well(
 ) -> None:
     """Keep text units, a whole precision of at least 0, and limits, from a descriptor."""
     assert readback(1.5, descriptor) == expected
+
+
+def test_a_device_path_names_its_root_and_the_way_down(scope: Tree) -> None:
+    """Give attributes, container keys and signals their dotted path below the root."""
+    assert device_path(scope.xy.x) == DevicePath(
+        "scope", ("xy", "x"), ("scope", "scope-xy", "scope-xy-x")
+    )
+    assert device_path(scope.channel[1]).path == "channel.1"
+    assert device_path(scope.lights["led-blue"].power).path == "lights.led-blue.power"
+    assert device_path(scope) == DevicePath("scope", (), ("scope",))
+
+
+def test_a_device_path_reads_as_a_label(scope: Tree) -> None:
+    """Render a path as the root, then the path when there is one."""
+    assert str(device_path(scope.xy)) == "scope / xy"
+    assert str(device_path(scope)) == "scope"
+    assert device_path(scope.xy.x).parent == device_path(scope.xy)
+    assert device_path(scope).parent is None
+
+
+def test_a_dotted_key_keeps_its_parent(scope: Tree) -> None:
+    """Find the parent of a device whose container key holds a dot."""
+    scope.lights["led.1"] = Leaf()
+    scope.set_name("scope")
+
+    path = device_path(scope.lights["led.1"])
+
+    assert path.keys == ("lights", "led.1")
+    assert path.parent == device_path(scope.lights)
+
+
+def test_a_device_outside_its_parents_children_starts_its_path(scope: Tree) -> None:
+    """Label a device its parent does not list by its own name, keeping the names above."""
+    stray = soft_signal_rw(int, name="stray")
+    stray.parent = scope.xy
+
+    path = device_path(stray)
+
+    assert str(path) == "stray"
+    assert path.names == ("scope", "scope-xy", "stray")
+    assert held_by(stray, {"scope"})
+
+
+@pytest.mark.parametrize(
+    ("held", "expected"),
+    [
+        ({"scope"}, True),
+        ({"scope-xy"}, True),
+        ({"scope-xy-x"}, True),
+        ({"scope-xy-y"}, False),
+        ({"scope-xy-x-power"}, False),
+        (set(), False),
+    ],
+)
+def test_holding_a_device_holds_what_is_below_it(
+    scope: Tree, held: set[str], expected: bool
+) -> None:
+    """Hold a device when it or a device above it is named, never when only one below it is."""
+    assert held_by(scope.xy.x, held) is expected

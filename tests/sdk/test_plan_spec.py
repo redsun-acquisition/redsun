@@ -11,6 +11,7 @@ import pytest
 from annotated_types import Ge, Gt, Interval, Le, Len, MaxLen, MinLen, MultipleOf
 from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
+from ophyd_async.core import Device
 
 from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
@@ -39,6 +40,14 @@ def _option_dict(
     frames: Annotated[int, Ge(1), {"widget_type": "Slider"}] = 1,
 ) -> MsgGenerator[None]:
     yield from ()
+
+
+class Rig(Device):
+    """A root holding a stage."""
+
+    def __init__(self, name: str = "") -> None:
+        self.xy = XYStage("")
+        super().__init__(name=name)
 
 
 @pytest.fixture
@@ -266,6 +275,19 @@ class TestCreatePlanSpec:
         assert p.choices == ["stage"]
         assert not p.multiselect
         assert p.device_proto is MotorProtocol
+
+    def test_device_choices_carry_labels(self) -> None:
+        """Label each device choice with its root and path, keeping the key as the choice."""
+
+        def plan(motor: MotorProtocol) -> MsgGenerator[None]:
+            yield from ()
+
+        rig = Rig("scope")
+        spec = create_plan_spec(plan, {"scope-xy": rig.xy, "stage": XYStage("stage")})
+
+        p = spec.parameters[0]
+        assert p.choices == ["scope-xy", "stage"]
+        assert p.labels == {"scope-xy": "scope / xy", "stage": "stage"}
 
     def test_single_device_no_registry_match_raises(self) -> None:
         """Refuse a required device parameter that no registered device matches."""

@@ -240,8 +240,10 @@ tree.sig_property_changed.connect(on_property_changed)
 Rows are grouped by their `name-property` key, with one header per device
 name. A property whose name holds a dash of its own gets a second header under
 that one, so `cam-properties-Binning` shows as `Binning` under `properties`
-under `cam`. A property whose source ends in `:readonly` shows as a greyed
-label.
+under `cam`. Given `owners` and `paths`, as the built-in Configuration tabs
+give it, the tree instead titles each header with the device's place in its
+tree, such as `microscope / xy`, and names each row by its path below that
+device. A property whose source ends in `:readonly` shows as a greyed label.
 
 An edit is only a request. The tree emits `sig_property_changed` and keeps the
 edit pending, showing what was typed, until it's told how the request ended:

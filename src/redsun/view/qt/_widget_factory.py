@@ -73,7 +73,9 @@ def make_device_sequence_edit(p: ParamDescription) -> mgw.Widget:
             initial = [d]
         elif isinstance(d, (list, tuple, set, frozenset)):
             initial = list(d)
-    return DeviceSequenceEdit(name=p.name, choices=choices, value=initial)
+    return DeviceSequenceEdit(
+        name=p.name, choices=choices, value=initial, labels=p.labels
+    )
 
 
 def make_singleselect_device(p: ParamDescription) -> mgw.Widget:
@@ -81,7 +83,7 @@ def make_singleselect_device(p: ParamDescription) -> mgw.Widget:
     choices = p.choices or []
     return mgw.ComboBox(
         name=p.name,
-        choices=choices,
+        choices=[(p.labels.get(key, key), key) for key in choices],
         value=p.default
         if p.has_default and p.default in choices
         else (choices[0] if choices else None),

@@ -13,6 +13,7 @@ from redsun.view.qt.icons import set_icon
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from collections.abc import Set as AbstractSet
 
     from redsun.utils.devices import AxisInfo
 
@@ -426,8 +427,29 @@ class PositionerGroup(QtW.QGroupBox):
         A control holding the focus gives it to its row, or to the first row
         for a button above the rows, so the focus stays with the locked device.
         """
+        self._lock(self._controls if locked else [])
+
+    def set_axes_locked(self, axes: AbstractSet[str]) -> None:
+        """Disable the rows of *axes*, and the stop and save buttons while any is held.
+
+        Readbacks keep updating, and the focus moves as in
+        [`set_locked`][redsun.view.qt.builtins.PositionerGroup.set_locked].
+        """
+        disabled = [
+            widget
+            for axis, row in self._rows.items()
+            if axis in axes
+            for widget in row.controls
+        ]
+        if disabled:
+            disabled += [
+                widget for widget in (self._stop, self._save) if widget is not None
+            ]
+        self._lock(disabled)
+
+    def _lock(self, disabled: list[QtW.QWidget]) -> None:
         focus = QtW.QApplication.focusWidget()
-        if locked and focus in self._controls:
+        if focus in disabled:
             # Qt moves the focus off a disabled control to the next one, which
             # can be another device's row, where a held arrow key steps it
             rows = list(self._rows.values())
@@ -436,7 +458,7 @@ class PositionerGroup(QtW.QGroupBox):
             )
             row.setFocus()
         for widget in self._controls:
-            widget.setEnabled(not locked)
+            widget.setEnabled(widget not in disabled)
 
     def set_repeat_interval(self, milliseconds: int) -> None:
         """Repeat every step button at *milliseconds* while held."""

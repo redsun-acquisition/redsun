@@ -41,7 +41,7 @@ def test_an_inherited_field_resolves_in_the_module_declaring_it(
     """Inject an inherited field by its type, not by a same-named one of the subclass."""
     session = build(ShadowedLab)
 
-    assert set(session.positioner.axes) == {"stage"}
+    assert set(session.positioner.axes) == {"stage-axis"}
 
 
 def test_a_type_imported_only_for_type_checking_is_reported(

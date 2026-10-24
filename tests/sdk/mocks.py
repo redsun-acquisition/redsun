@@ -179,15 +179,6 @@ class XYStage(StandardReadable):
         super().__init__(name=name)
 
 
-class TwinStage(StandardReadable):
-    """A device with two groups whose axes share the name `x`."""
-
-    def __init__(self, name: str) -> None:
-        self.left = DeviceMap({"x": SoftAxis()})
-        self.right = DeviceMap({"x": SoftAxis()})
-        super().__init__(name=name)
-
-
 @dataclass
 class LaggingLogic(MovableLogic[float]):
     """Move logic whose readback lands `lag` short of the setpoint."""

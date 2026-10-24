@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import math
 from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from ophyd_async.core import AsyncConfigurable
+from ophyd_async.core import AsyncConfigurable, Device
 from psygnal import Signal
 
 from redsun.aio import run_coro
@@ -19,7 +20,9 @@ from redsun.utils.devices import (
     Light,
     LightInfo,
     describe_light,
+    device_path,
     dimmable,
+    held_by,
     is_light,
 )
 
@@ -136,7 +139,7 @@ class LightPresenter(Loggable):
             If the presenter does not hold *device*.
         """
         light = self._lights[device]
-        if device in self._held:
+        if self._is_held(device):
             self._refuse(device, "a plan holds it")
             return
         try:
@@ -155,7 +158,7 @@ class LightPresenter(Loggable):
             If the presenter does not hold *device*.
         """
         light = self._lights[device]
-        if device in self._held:
+        if self._is_held(device):
             self._refuse(device, "a plan holds it")
             return
         if not dimmable(light):
@@ -180,7 +183,7 @@ class LightPresenter(Loggable):
         try:
             while (wanted := self._wanted.pop(device, None)) is not None:
                 # a plan may have taken the light while this value waited
-                if device in self._held:
+                if self._is_held(device):
                     self._refuse(device, "a plan holds it")
                     break
                 try:
@@ -204,7 +207,10 @@ class LightPresenter(Loggable):
 
     @slot(signal="sig_locks_changed")
     def set_locked(self, names: frozenset[str]) -> None:
-        """Hold the lights in *names* for a plan: no write reaches them."""
+        """Hold the lights in *names*, or below a device in it, for a plan.
+
+        No write reaches a held light.
+        """
         self._held = names
         self._configuration.set_locked(names)
 
@@ -229,6 +235,8 @@ class LightPresenter(Loggable):
         try:
             async with asyncio.timeout(self.timeout):
                 info = await describe_light(light)
+                if isinstance(light, Device):
+                    info = dataclasses.replace(info, path=device_path(light))
                 relay = partial(self._relay, name, self.sig_enabled.emit, bool)
                 unsubscribers.append(partial(light.enabled.clear_sub, relay))
                 light.enabled.subscribe_reading(relay)
@@ -266,6 +274,12 @@ class LightPresenter(Loggable):
             emit(device, kind(next(iter(reading.values()))["value"]))
         except Exception:
             self.logger.exception(f"Relaying a readback of {device} failed")
+
+    def _is_held(self, device: str) -> bool:
+        light = self._lights[device]
+        if isinstance(light, Device):
+            return held_by(light, self._held)
+        return device in self._held
 
     def _refuse(self, device: str, reason: str) -> None:
         self.logger.warning(f"Not writing {device}: {reason}")

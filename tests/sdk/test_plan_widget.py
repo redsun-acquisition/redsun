@@ -442,6 +442,42 @@ class TestCreateParamWidget:
         w = create_param_widget(p)
         assert isinstance(w, DeviceSequenceEdit)
 
+    def test_a_device_chooser_shows_labels_and_returns_keys(self) -> None:
+        """Show labels in the chooser and hand the plan the chosen key."""
+        p = param(
+            "motor",
+            MotorProtocol,
+            choices=["scope-xy"],
+            labels={"scope-xy": "scope / xy"},
+            device_proto=MotorProtocol,
+        )
+
+        w = create_param_widget(p)
+
+        assert isinstance(w, mgw.ComboBox)
+        assert w.native.itemText(0) == "scope / xy"
+        assert w.value == "scope-xy"
+
+    def test_a_device_list_shows_labels_and_returns_keys(self) -> None:
+        """Show labels beside the checkboxes and hand the plan the checked keys."""
+        p = param(
+            "dets",
+            Sequence[DetectorProtocol],
+            choices=["scope-cam"],
+            labels={"scope-cam": "scope / cam"},
+            multiselect=True,
+            device_proto=DetectorProtocol,
+        )
+
+        w = create_param_widget(p)
+        assert isinstance(w, DeviceSequenceEdit)
+        box = w.native.findChildren(QtW.QCheckBox)[0]
+        box.setChecked(True)
+
+        assert box.text() == "scope / cam"
+        assert box.toolTip() == "scope-cam"
+        assert w.value == ["scope-cam"]
+
     def test_path_creates_file_edit(self) -> None:
         """Build a FileEdit for a Path parameter."""
         w = create_param_widget(param("output", Path))

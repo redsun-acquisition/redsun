@@ -185,6 +185,23 @@ Devices exist before any presenter, so the constructor can ask. `DevicesOf`
 works only as `Mapping[str, P]` in a constructor; for every device, ask for
 [`DeviceMapping`][redsun.DeviceMapping].
 
+Both questions reach every device in the session, not only the declared ones.
+The session keeps each declared device and every device below it, signals left
+out, under the names `ophyd-async` gives them: a declared `microscope` holding
+a stage `xy` with an axis `x` gives `microscope`, `microscope-xy` and
+`microscope-xy-x`. Each device is checked against `P` on its own, so a root
+and its children can all answer. A `DeviceMap`, the `ophyd-async` container
+holding devices by key, answers only if it satisfies `P` itself, so a map of
+lights gives its lights to `DevicesOf[Light]` but not itself. A name may hold
+a dash of its own, so find where a device sits with
+[`device_path`][redsun.utils.devices.device_path] rather than by splitting its
+name.
+
+A plan that locks a device holds that device and every device below it, never
+the devices above, so a plan moving `x` leaves the rest of the microscope
+free. [`held_by`][redsun.utils.devices.held_by] tells whether a device is held,
+given the names the engine reports.
+
 ## When not to ask
 
 - To get one specific value, ask for it by its class instead.

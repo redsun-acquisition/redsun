@@ -62,13 +62,41 @@ The devices model your setup the way its users think of it, as an
 axis a position. A service describes no setup; it only makes hardware
 reachable, so the same model can sit on real hardware or on a simulation.
 
-!!! note "One device for the whole setup"
+A session can declare the whole setup as one device at the root of such a
+tree. `MyMicroscope` holds its stage and its camera, so the session declares
+only the microscope:
 
-    We intend each setup to be described by a single device at the root of
-    such a tree, such as a `MyMicroscope` that holds its stage and its camera.
-    For now, some features of `redsun` look only at the devices a session
-    declares and not at their children, so declare each piece a plan or a
-    view needs, such as the stage and the camera, as a device of its own.
+```python
+class MyMicroscope(StandardReadable):
+    def __init__(self, prefix: str, name: str = "") -> None:
+        self.xy = MyStage(f"{prefix}ST:")
+        self.camera = MyCamera(f"{prefix}CAM:")
+        super().__init__(name=name)
+
+
+class MyApp(QtSession):
+    microscope: Annotated[AsDevice[MyMicroscope], Declare(service="scope_ioc")]
+```
+
+!!! warning "A child named `stage` stops the device"
+
+    `ophyd-async` keeps the names of the `bluesky` methods, such as `stage`,
+    `read` and `set`, so a child given one of them raises a `NameError` when
+    the device is made. Name the stage after what it moves, as `xy` here.
+
+The session then holds every device of the tree, under the name `ophyd-async`
+gives it, such as `microscope-xy`, so the positioner finds the stage's axes
+and a plan can be offered the camera.
+[Asking about devices](questions.md#asking-about-devices) says how components
+see them. A device can also declare its children with annotations, in the
+`ophyd-async` style. An `EpicsDevice` creates them when it is made, or while it
+connects when it asks the IOC for its structure (`with_pvi=True`). The session
+reads the tree after connecting, so it finds them either way.
+
+A root device takes the prefix of one service. When the pieces of a setup sit
+behind different services, as the stage and the camera do in the picture
+above, declare each piece as a device of its own. One session can mix both
+styles.
 
 A device declared with `service="stage_ioc"` gets that service's prefix as
 its `prefix` argument, and the prefix is all it knows of the service. So you

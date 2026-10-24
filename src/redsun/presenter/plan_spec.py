@@ -29,6 +29,7 @@ from typing import (
     get_origin,
 )
 
+from ophyd_async.core import Device
 from pydantic import ConfigDict, PydanticUserError, TypeAdapter, ValidationError
 from pydantic_core import SchemaError
 from typing_extensions import Format, evaluate_forward_ref, get_annotations
@@ -41,6 +42,7 @@ from redsun.presenter.utils import (
     isdevicesequence,
     isdeviceset,
 )
+from redsun.utils.devices import device_path
 
 from ._shapes import (
     container_type,
@@ -149,6 +151,9 @@ class ParamDescription:
 
     choices: list[Any] | None = None
     """Selectable values: a `Literal`'s own values, or device names."""
+
+    labels: dict[str, str] = field(default_factory=dict)
+    """What a view shows for each device name in `choices`, such as `scope / xy`."""
 
     multiselect: bool = False
     """Whether several values can be selected, as for `Sequence[OADevice]`."""
@@ -274,6 +279,7 @@ class _FieldsFromAnnotation(NamedTuple):
     """
 
     choices: list[Any] | None = None
+    labels: dict[str, str] | None = None
     multiselect: bool = False
     device_proto: type[Any] | None = None
 
@@ -304,8 +310,16 @@ def _fields_from_annotation(
     if not matching:
         return _FieldsFromAnnotation()
     return _FieldsFromAnnotation(
-        choices=matching, multiselect=multiselect, device_proto=proto
+        choices=matching,
+        labels={key: _device_label(key, devices[key]) for key in matching},
+        multiselect=multiselect,
+        device_proto=proto,
     )
+
+
+def _device_label(key: str, device: object) -> str:
+    """Return the root and path of *device*, or *key* when it is not a device."""
+    return str(device_path(device)) if isinstance(device, Device) else key
 
 
 def _extract_action_meta(
@@ -591,6 +605,7 @@ def _describe(
         annotation=ann,
         default=param.default,
         choices=fields.choices,
+        labels=fields.labels or {},
         multiselect=fields.multiselect,
         hidden=not shown,
         actions=actions_meta,

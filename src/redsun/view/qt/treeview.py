@@ -16,12 +16,14 @@ import numpy as np
 from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
 
+from ._locks import held
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from bluesky.protocols import Descriptor, Reading
 
-    from redsun.utils.devices import Configuration
+    from redsun.utils.devices import Configuration, DevicePath
 
 __all__ = ["ConfigurationTab", "DescriptorTreeView"]
 
@@ -241,6 +243,10 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
     owners
         Device of each key, for names that hold a dash themselves; a key not
         listed belongs to what comes before its first dash.
+    paths
+        Where the signal behind each key, and each device in *owners*, sit in
+        their tree. A device is then titled by its root and path, and a row by
+        its signal's path below the device's.
     """
 
     sig_property_changed = Signal(str, str, object)
@@ -256,10 +262,12 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         parent: QtWidgets.QWidget | None = None,
         *,
         owners: Mapping[str, str] | None = None,
+        paths: Mapping[str, DevicePath] | None = None,
     ) -> None:
         super().__init__(parent)
 
         self._owners_of = dict(owners or {})
+        self._paths = dict(paths or {})
         self._descriptors = descriptors
         self._readings = {k: v["value"] for k, v in readings.items()}
         self._pending: dict[str, Any] = {}
@@ -287,9 +295,19 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
     def _split(self, key: str) -> tuple[str, str]:
         owner = self._owners_of.get(key)
-        if owner is not None and key.startswith(f"{owner}-"):
-            return owner, key[len(owner) + 1 :]
-        return _split_key(key)
+        if owner is None:
+            return _split_key(key)
+        return owner, key[len(owner) + 1 :] if key.startswith(f"{owner}-") else key
+
+    def _below(self, owner: str, key: str) -> str | None:
+        """Return the path of *key*'s signal below *owner*, or `None` when unknown."""
+        signal, device = self._paths.get(key), self._paths.get(owner)
+        if signal is None or device is None or signal.root != device.root:
+            return None
+        depth = len(device.keys)
+        if signal.keys[:depth] != device.keys:
+            return None
+        return ".".join(signal.keys[depth:])
 
     def set_value(self, key: str, value: Any) -> None:
         """Show *value* for *key*, the value the device holds.
@@ -401,9 +419,16 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
                 ":readonly"
             )
             if owner not in owners:
-                owners[owner] = self._make_group_item(owner or "settings")
+                path = self._paths.get(owner)
+                owners[owner] = self._make_group_item(
+                    str(path) if path is not None else owner or "settings"
+                )
+                owners[owner].setToolTip(0, owner)
             parent = owners[owner]
-            if "-" in prop:
+            below = self._below(owner, full_key)
+            if below is not None:
+                prop = below
+            elif "-" in prop:
                 group, prop = prop.split("-", 1)
                 if (owner, group) not in groups:
                     groups[(owner, group)] = self._make_group_item(group, parent)
@@ -430,9 +455,8 @@ class ConfigurationTab(DescriptorTreeView):
             configuration.readings,
             parent,
             owners=configuration.owners,
+            paths=configuration.paths,
         )
-        self._owners = {self._split(key)[0] for key in configuration.descriptors}
-        self.sig_property_changed.connect(self._configure)
         if not configuration.descriptors:
             row = QtWidgets.QTreeWidgetItem(["No device has a configuration."])
             row.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
@@ -444,9 +468,15 @@ class ConfigurationTab(DescriptorTreeView):
         self.set_value(key, value)
 
     def set_locked(self, names: frozenset[str]) -> None:
-        """Disable the rows of the owners in *names*, and enable the rest."""
-        for owner in self._owners:
-            self.set_enabled(owner, owner not in names)
+        """Disable the rows in *names*, and below the devices in it, and enable the rest.
 
-    def _configure(self, owner: str, prop: str, value: object) -> None:
-        self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
+        A row with no path is disabled when its owner is in *names*.
+        """
+        for key, widget in self._widgets.items():
+            widget.setEnabled(
+                not held(self._paths.get(key), self._split(key)[0], names)
+            )
+
+    def _on_changed(self, key: str, value: Any) -> None:
+        super()._on_changed(key, value)
+        self.sig_configure.emit(key, value)

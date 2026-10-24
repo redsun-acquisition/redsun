@@ -10,7 +10,7 @@ from superqt import QCollapsible, QLabeledSlider
 
 from redsun import Settings
 from redsun.presenter import DescribesAxes
-from redsun.utils.devices import AxisInfo, Configuration, Readback
+from redsun.utils.devices import AxisInfo, Configuration, DevicePath, Readback
 from redsun.view.qt.builtins import PositionerGroup, PositionerView
 from redsun.view.qt.treeview import DescriptorTreeView
 from tests.sdk.view.helpers import child, type_into
@@ -63,6 +63,32 @@ class Positioner:
         },
         writable={},
     )
+
+
+TREE_AXES = {
+    "scope-xy": {
+        axis: AxisInfo(
+            Readback(0.0, "um", 3),
+            path=DevicePath(
+                "scope", ("xy", axis), ("scope", "scope-xy", f"scope-xy-{axis}")
+            ),
+        )
+        for axis in ("x", "y")
+    },
+    "scope": {
+        "focus": AxisInfo(
+            Readback(0.0, "um", 3),
+            path=DevicePath("scope", ("focus",), ("scope", "scope-focus")),
+        )
+    },
+}
+
+
+class TreePositioner:
+    """Describes the boxes of one root device, `scope`."""
+
+    axes = TREE_AXES
+    configuration = Configuration(descriptors={}, readings={}, writable={})
 
 
 class OffsetPositioner:
@@ -647,3 +673,59 @@ def test_the_view_is_built_without_a_warning_under_a_font_sized_in_pixels(
         QtCore.qInstallMessageHandler(previous)
 
     assert [message for message in messages if "QPainter" in message] == []
+
+
+def test_boxes_are_titled_with_their_place_in_the_tree(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Title each box with its root and path, its key as the tooltip."""
+    view = PositionerView("positioner", parent)
+    view.setup(TreePositioner(), settings)
+
+    xy = group(view, "scope / xy")
+
+    assert xy.toolTip() == "scope-xy"
+    assert group(view, "scope").toolTip() == "scope"
+
+
+@pytest.mark.parametrize(
+    ("held", "moved"),
+    [
+        ({"scope-xy-x"}, [("scope-xy", "y")]),
+        ({"scope-xy"}, []),
+        ({"elsewhere"}, [("scope-xy", "x"), ("scope-xy", "y")]),
+    ],
+)
+def test_a_held_device_disables_what_is_below_it(
+    parent: QtWidgets.QWidget,
+    settings: Settings,
+    held: set[str],
+    moved: list[tuple[str, str]],
+) -> None:
+    """Disable the rows below a held device, and only those."""
+    view = PositionerView("positioner", parent)
+    view.setup(TreePositioner(), settings)
+    steps: list[tuple[str, str]] = []
+    view.sig_move.connect(lambda device, axis, _: steps.append((device, axis)))
+
+    view.set_locked(frozenset(held))
+    xy = group(view, "scope / xy")
+    xy.step("x", 1.0)
+    xy.step("y", 1.0)
+
+    assert steps == moved
+    assert child(xy, QtWidgets.QAbstractButton, "save").isEnabled() is not bool(
+        set(held) & {"scope-xy-x", "scope-xy"}
+    )
+
+
+def test_a_saved_position_for_a_missing_box_is_reported(
+    parent: QtWidgets.QWidget, settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn about a stored position whose box the positioner no longer has."""
+    absent: dict[str, Any] = {"name": "old", "device": "gone", "positions": {"a": 1.0}}
+    settings.set("positioner.saved_positions", [absent])
+
+    make_view(settings, parent)
+
+    assert "gone" in caplog.text

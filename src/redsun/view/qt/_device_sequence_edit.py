@@ -24,7 +24,7 @@ from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
 
 class QCheckboxBackend(QBaseValueWidget):
@@ -38,6 +38,7 @@ class QCheckboxBackend(QBaseValueWidget):
 
     def __init__(self, parent: QtW.QWidget | None = None, **kwargs: Any) -> None:
         choices: list[str] = kwargs.pop("choices", [])
+        labels: Mapping[str, str] = kwargs.pop("labels", {})
         super().__init__(
             CheckboxListWidget,
             "get_value",
@@ -46,7 +47,7 @@ class QCheckboxBackend(QBaseValueWidget):
             parent=parent,
             **kwargs,
         )
-        self._qwidget.set_choices(choices)
+        self._qwidget.set_choices(choices, labels)
 
     def _mgui_bind_change_callback(self, callback: Callable[[Any], Any]) -> None:
         """Connect unconditionally.
@@ -89,6 +90,9 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
         Names checked initially. None by default.
     label
         Label shown in the parent container. Defaults to *name*.
+    labels
+        Text shown beside each device's checkbox, by name; the name itself
+        for a device it leaves out.
     """
 
     def __init__(
@@ -97,12 +101,13 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
         choices: list[str] | None = None,
         value: list[str] | None = None,
         label: str | None = None,
+        labels: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(
             widget_type=QCheckboxBackend,
             name=name,
             label=label,
-            backend_kwargs={"choices": choices or []},
+            backend_kwargs={"choices": choices or [], "labels": labels or {}},
         )
         if value:
             self.value = value
@@ -145,11 +150,15 @@ class CheckboxListWidget(QtW.QWidget):
 
         self._update_count_label()
 
-    def set_choices(self, choices: list[str]) -> None:
+    def set_choices(
+        self, choices: list[str], labels: Mapping[str, str] | None = None
+    ) -> None:
         """Replace the device pool, above the count label.
 
-        A removed checkbox is disconnected first; otherwise it would keep
-        emitting selections `get_value` no longer reports.
+        Each checkbox shows the device's label from *labels*, or its name,
+        with the name as its tooltip. A removed checkbox is disconnected
+        first; otherwise it would keep emitting selections `get_value` no
+        longer reports.
         """
         for stale in self._checkboxes.values():
             stale.toggled.disconnect(self._emit)
@@ -157,7 +166,8 @@ class CheckboxListWidget(QtW.QWidget):
             stale.deleteLater()
         self._checkboxes.clear()
         for name in choices:
-            cb = QtW.QCheckBox(name)
+            cb = QtW.QCheckBox((labels or {}).get(name, name))
+            cb.setToolTip(name)
             cb.toggled.connect(self._emit)
             self._layout.insertWidget(self._layout.count() - 1, cb)
             self._checkboxes[name] = cb
