@@ -134,10 +134,11 @@ Other options were rejected:
 - `find_axes` and `walk_axes` are removed. They gathered every axis below one
   device for one box, which the positioner no longer does.
 - Children declared with annotations, in the `ophyd-async` style, are created
-  by the device's connector, the `ophyd-async` object that connects it over
-  its transport, such as EPICS. `redsun` reads the tree once it is built.
-  A connector that adds children without naming them stops the build.
-- A root device takes the [prefix](../glossary.md#prefix) of one service. Pieces that sit behind
-  different services are still declared one by one.
+  when an `EpicsDevice` is made, or while it connects when it asks the IOC for
+  its structure (`with_pvi=True`). `redsun` reads the tree after connecting,
+  so it sees both. A device that adds children without naming them stops the
+  build.
+- A root device takes the [prefix](../glossary.md#prefix) of one service.
+  Pieces that sit behind different services are still declared one by one.
 - A custom view written for 0.15 keeps working, and shows names where the new
   fields would give paths.

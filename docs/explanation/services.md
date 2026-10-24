@@ -89,8 +89,9 @@ gives it, such as `microscope-xy`, so the positioner finds the stage's axes
 and a plan can be offered the camera.
 [Asking about devices](questions.md#asking-about-devices) says how components
 see them. A device can also declare its children with annotations, in the
-`ophyd-async` style. Then the device's connector, the `ophyd-async` object
-that connects it over its transport, creates them while it connects.
+`ophyd-async` style. An `EpicsDevice` creates them when it is made, or while it
+connects when it asks the IOC for its structure (`with_pvi=True`). The session
+reads the tree after connecting, so it finds them either way.
 
 A root device takes the prefix of one service. When the pieces of a setup sit
 behind different services, as the stage and the camera do in the picture
