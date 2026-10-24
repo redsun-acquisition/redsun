@@ -3448,6 +3448,8 @@
       
         
       
+        
+      
     
     
     
@@ -4355,6 +4357,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -6435,8 +6464,10 @@
 
     <div class="doc doc-contents first">
 
-        <p>Every device an application built, by name.</p>
-<p>Not ophyd-async's <code>DeviceMap</code>, which is a device holding string-keyed
+        <p>Every device an application built, and every device below each, by name.</p>
+<p>Signals and commands are left out. Each device is keyed by the name
+<code>ophyd-async</code> gives it, such as <code>scope-xy-x</code> for the child <code>x</code> of the child
+<code>xy</code> of <code>scope</code>. Not ophyd-async's <code>DeviceMap</code>, which is a device holding string-keyed
 children; this is the application's own set.</p>
 
     </div>

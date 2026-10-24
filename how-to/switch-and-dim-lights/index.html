@@ -3616,6 +3616,8 @@
       
         
       
+        
+      
     
     
     
@@ -4523,6 +4525,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -6093,7 +6122,8 @@ slider and intensity field, and an LED that is on" src="../images/lights.png" />
 </ul>
 <h2 id="hold-the-lights-during-a-plan">Hold the lights during a plan<a class="headerlink" href="#hold-the-lights-during-a-plan" title="Permanent link">&para;</a></h2>
 <p>A plan that locks a light disables its controls, and the presenter refuses
-writes to it. The engine isn't a session component, so you make these links in
+writes to it. Locking a device above the light, such as the microscope holding
+it, does the same. The engine isn't a session component, so you make these links in
 <code>wire()</code>, from the presenter that holds the engine:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">sig_locks_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">set_locked</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">sig_locks_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">set_locked</span>

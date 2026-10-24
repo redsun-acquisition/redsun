@@ -3448,6 +3448,8 @@
       
         
       
+        
+      
     
     
     
@@ -4355,6 +4357,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -6021,7 +6050,9 @@ the key, so it must be distinct across the application.</p>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">motors</span><span class="p">:</span> <span class="n">DevicesOf</span><span class="p">[</span><span class="n">MotorProtocol</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_motors</span> <span class="o">=</span> <span class="n">motors</span>
 </span></code></pre></div>
-<p>Devices are built before any presenter or view, so the mapping arrives
+<p>Each device of the session, and each device below it, is checked on its
+own, so a root device and the devices it holds can all match. Devices are
+built before any presenter or view, so the mapping arrives
 complete and may be read while the component is built. Ask for
 <code>redsun.DeviceMapping</code> instead to receive every device,
 unfiltered.</p>

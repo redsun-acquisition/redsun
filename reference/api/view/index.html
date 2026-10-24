@@ -3448,6 +3448,8 @@
       
         
       
+        
+      
     
     
     
@@ -4355,6 +4357,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -7104,6 +7133,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.view.qt.builtins.PositionerGroup.set_axes_locked" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_axes_locked
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.view.qt.builtins.PositionerGroup.set_repeat_interval" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -9189,6 +9229,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_locked
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.view.qt.builtins.PositionerGroup.set_axes_locked" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_axes_locked
       </span>
     </span>
   </a>
@@ -11504,7 +11555,8 @@ scope has no known end. An empty <em>scopes</em> hides the group.</p>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">parent</span><span class="p">:</span> <span class="n">QWidget</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">owners</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">paths</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">DevicePath</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11590,6 +11642,24 @@ under <code>cam</code>.</p>
               <div class="doc-md-description">
                 <p>Device of each key, for names that hold a dash themselves; a key not
 listed belongs to what comes before its first dash.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>paths</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="&lt;code&gt;collections.abc.Mapping&lt;/code&gt;" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping">Mapping</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;DevicePath&lt;/span&gt; (&lt;code&gt;redsun.utils.devices.DevicePath&lt;/code&gt;)" href="../utils/#redsun.utils.devices.DevicePath">DevicePath</a>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Where the signal behind each key, and each device in <em>owners</em>, sit in
+their tree. A device is then titled by its root and path, and a row by
+its signal's path below the device's.</p>
               </div>
             </td>
             <td>
@@ -11884,7 +11954,8 @@ no edit is pending on <em>key</em>.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Disable the rows of the owners in <em>names</em>, and enable the rest.</p>
+        <p>Disable the rows in <em>names</em>, and below the devices in it, and enable the rest.</p>
+<p>A row with no path is disabled when its owner is in <em>names</em>.</p>
 
 
     </div>
@@ -13213,7 +13284,7 @@ until the Advanced tab says otherwise.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Disable the controls of the lights in <em>names</em>, and enable the rest.</p>
+        <p>Disable the lights in <em>names</em>, and below the devices in it, and enable the rest.</p>
 
 
     </div>
@@ -13909,7 +13980,7 @@ one, and its arrows move it by decades.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Disable the controls of the devices in <em>names</em>, and enable the rest.</p>
+        <p>Disable the axes in <em>names</em>, and below the devices in it, and enable the rest.</p>
 
 
     </div>
@@ -14400,6 +14471,28 @@ one, and its arrows move it by decades.</p>
         <p>Disable the controls while <em>locked</em>; readbacks keep updating.</p>
 <p>A control holding the focus gives it to its row, or to the first row
 for a button above the rows, so the focus stays with the locked device.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.view.qt.builtins.PositionerGroup.set_axes_locked" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">set_axes_locked</span>
+
+
+<a href="#redsun.view.qt.builtins.PositionerGroup.set_axes_locked" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">set_axes_locked</span><span class="p">(</span><span class="n">axes</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Disable the rows of <em>axes</em>, and the stop and save buttons while any is held.</p>
+<p>Readbacks keep updating, and the focus moves as in
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;set_locked&lt;/span&gt;" href="./#redsun.view.qt.builtins.PositionerGroup.set_locked"><code>set_locked</code></a>.</p>
 
 
     </div>

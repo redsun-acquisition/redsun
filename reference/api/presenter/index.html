@@ -3448,6 +3448,8 @@
       
         
       
+        
+      
     
     
     
@@ -4355,6 +4357,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -6270,6 +6299,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;choices
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.presenter.plan_spec.ParamDescription.labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;labels
       </span>
     </span>
   </a>
@@ -8196,6 +8236,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.presenter.plan_spec.ParamDescription.labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;labels
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.presenter.plan_spec.ParamDescription.multiselect" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8645,10 +8696,11 @@
 
 
         <p>Move the axes of devices by hand, one move at a time per device.</p>
-<p>Every device with at least one axis is kept, or only those named in
-<code>include</code>. Each axis is described and followed from the start, and its
-readbacks are relayed on <code>sig_readback</code>; an axis that cannot be, within
-<code>timeout</code>, is left out with a warning.</p>
+<p>Axes are grouped by the device holding them: an axis is a row of the box
+of its parent, or a box of its own when it has none. Every box is kept, or
+only those named in <code>include</code>. Each axis is described and followed from
+the start, and its readbacks are relayed on <code>sig_readback</code>; an axis that
+cannot be, within <code>timeout</code>, is left out with a warning.</p>
 <p>A step starts from the setpoint, so steps add up exactly, and from the
 readback after a stop or a failure, when the setpoint no longer says
 where the axis is. Every target passes
@@ -8843,7 +8895,7 @@ of an axis that is not <code>Checkable</code>; a change is reported on <code>sig
 
     <div class="doc doc-contents ">
 
-        <p>Devices of the session, searched for axes.</p>
+        <p>Devices of the session, searched for axes, with the devices below them.</p>
 
     </div>
 
@@ -8868,7 +8920,7 @@ of an axis that is not <code>Checkable</code>; a change is reported on <code>sig
 
     <div class="doc doc-contents ">
 
-        <p>Names of the devices to keep; <code>None</code> keeps every device with an axis.</p>
+        <p>Names of the boxes to keep; <code>None</code> keeps every box.</p>
 
     </div>
 
@@ -8917,7 +8969,7 @@ of an axis that is not <code>Checkable</code>; a change is reported on <code>sig
 
     <div class="doc doc-contents ">
 
-        <p>The axes of each device, by axis name, by device name.</p>
+        <p>The axes of each box, by row, by the name of the device holding them.</p>
 
     </div>
 
@@ -9162,9 +9214,9 @@ ended this way is not reported as failed, and a go-to waiting for
 
     <div class="doc doc-contents ">
 
-        <p>Hold the devices in <em>names</em> for a plan.</p>
+        <p>Hold the devices in <em>names</em>, and every device below them, for a plan.</p>
 <p>No hand move, waiting go-to or configuration write reaches a held
-device.</p>
+axis.</p>
 
 
     </div>
@@ -9303,7 +9355,7 @@ write that was refused, or not made because a plan holds the device.</p>
 
     <div class="doc doc-contents ">
 
-        <p>The axes of each device, by axis name, by device name.</p>
+        <p>The axes of each box, by row, by the name of the device holding them.</p>
 
     </div>
 
@@ -10538,7 +10590,8 @@ its source.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Hold the lights in <em>names</em> for a plan: no write reaches them.</p>
+        <p>Hold the lights in <em>names</em>, or below a device in it, for a plan.</p>
+<p>No write reaches a held light.</p>
 
 
     </div>
@@ -10779,14 +10832,51 @@ its source.</p>
   </span>
 
 <a href="#redsun.presenter.DeviceConfiguration.add" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">add</span><span class="p">(</span><span class="n">owner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">AsyncConfigurable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Configuration</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">add</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">owner</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">AsyncConfigurable</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">owner_device</span><span class="p">:</span> <span class="n">Device</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Configuration</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Read <em>device</em>'s configuration, follow its signals, and file it under <em>owner</em>.</p>
 <p>Returns the configuration of <em>device</em> alone. Nothing is kept when
-reading fails or the call is cancelled.</p>
+reading fails or the call is cancelled. A key already added is
+followed once, and stays with its first owner.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>owner_device</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="&lt;code&gt;ophyd_async.core.Device&lt;/code&gt;" href="https://blueskyproject.io/ophyd-async/main/_api/ophyd_async/ophyd_async.core.html#ophyd_async.core.Device">Device</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The device <em>owner</em> names, when it is not <em>device</em>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -10811,8 +10901,8 @@ reading fails or the call is cancelled.</p>
     <div class="doc doc-contents ">
 
         <p>Write <em>value</em> to <em>key</em>, report what it reads back, and return its owner.</p>
-<p>A write to a held owner is not made, and the value is still read back
-and reported.</p>
+<p>A write to a signal that is held, or that sits below a held device, is
+not made, and the value is still read back and reported.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -10855,7 +10945,7 @@ and reported.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Refuse writes to the keys of the owners in <em>names</em>.</p>
+        <p>Refuse writes to the signals in <em>names</em> and below the devices in it.</p>
 
 
     </div>
@@ -11557,14 +11647,15 @@ a positional argument that is given.</p>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">annotation</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">default</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">choices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">multiselect</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">hidden</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">actions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">PlanAction</span><span class="p">]</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="o">|</span> <span class="n">PlanAction</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">device_proto</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">annotated</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_empty</span><span class="p">,</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">multiselect</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">hidden</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">actions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">PlanAction</span><span class="p">]</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="o">|</span> <span class="n">PlanAction</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">device_proto</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">annotated</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_empty</span><span class="p">,</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -11707,6 +11798,31 @@ a positional argument that is given.</p>
     <div class="doc doc-contents ">
 
         <p>Selectable values: a <code>Literal</code>'s own values, or device names.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.presenter.plan_spec.ParamDescription.labels" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">labels</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#redsun.presenter.plan_spec.ParamDescription.labels" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>What a view shows for each device name in <code>choices</code>, such as <code>scope / xy</code>.</p>
 
     </div>
 

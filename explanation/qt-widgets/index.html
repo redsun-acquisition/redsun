@@ -3591,6 +3591,8 @@
       
         
       
+        
+      
     
     
     
@@ -4501,6 +4503,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -7841,8 +7870,10 @@ writes nothing; a presenter does, through <code>Deferrals</code> while a plan ru
 <p>Rows are grouped by their <code>name-property</code> key, with one header per device
 name. A property whose name holds a dash of its own gets a second header under
 that one, so <code>cam-properties-Binning</code> shows as <code>Binning</code> under <code>properties</code>
-under <code>cam</code>. A property whose source ends in <code>:readonly</code> shows as a greyed
-label.</p>
+under <code>cam</code>. Given <code>owners</code> and <code>paths</code>, as the built-in Configuration tabs
+give it, the tree instead titles each header with the device's place in its
+tree, such as <code>microscope / xy</code>, and names each row by its path below that
+device. A property whose source ends in <code>:readonly</code> shows as a greyed label.</p>
 <p>An edit is only a request. The tree emits <code>sig_property_changed</code> and keeps the
 edit pending, showing what was typed, until it's told how the request ended:</p>
 <figure class="markdown-d2" data-transition="morph" aria-label="An edit in the tree"><figcaption>An edit in the tree</figcaption><div class="markdown-d2-board" data-step="1" data-name=""><div class="markdown-d2-light"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" width="903" height="1052" viewBox="0 0 903 1052"><svg class="d2-1245363647 d2-svg" width="903" height="1052" viewBox="-89 -49 903 1052"><rect x="-89" y="-49" width="903" height="1052" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[

@@ -3696,6 +3696,8 @@
       
         
       
+        
+      
     
     
     
@@ -4606,6 +4608,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -7490,6 +7519,11 @@ through the cases to see which devices end up in the session:</p>
 <p>Making a device as <code>cls(name=&lt;name&gt;, **kwargs)</code> works for every <code>ophyd-async</code>
 device, including one whose first parameter is <code>prefix</code>, except one that takes
 <code>name</code> only by position (after a <code>/</code>), which is left out.</p>
+<p>You can declare the whole setup as one root device, each piece as a device of
+its own, or a mix of both. Either way, the session also holds every device
+below each declared one, so a stage inside a microscope reaches the
+positioner and the plans. <a href="../services/#devices-and-services">Devices and services</a>
+shows a root device.</p>
 <h3 id="connecting">Connecting<a class="headerlink" href="#connecting" title="Permanent link">&para;</a></h3>
 <p>A device declared with <a href="../glossary/#autoconnect"><code>autoconnect=False</code></a> stays
 unconnected for your code to connect when it chooses, so the build can't leave

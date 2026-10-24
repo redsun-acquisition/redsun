@@ -3574,6 +3574,8 @@
       
         
       
+        
+      
     
     
     
@@ -4484,6 +4486,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -6718,6 +6747,21 @@ works only as <code>Mapping[str, P]</code> in a constructor; for every device, a
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-module-attribute&quot;&gt;&lt;code&gt;module-attribute&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt;" href="../../reference/api/registry/#redsun.DeviceMapping"><code>DeviceMapping</code></a>.</p>
+<p>Both questions reach every device in the session, not only the declared ones.
+The session keeps each declared device and every device below it, signals left
+out, under the names <code>ophyd-async</code> gives them: a declared <code>microscope</code> holding
+a stage <code>xy</code> with an axis <code>x</code> gives <code>microscope</code>, <code>microscope-xy</code> and
+<code>microscope-xy-x</code>. Each device is checked against <code>P</code> on its own, so a root
+and its children can all answer. A <code>DeviceMap</code>, the <code>ophyd-async</code> container
+holding devices by key, answers only if it satisfies <code>P</code> itself, so a map of
+lights gives its lights to <code>DevicesOf[Light]</code> but not itself. A name may hold
+a dash of its own, so find where a device sits with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;device_path&lt;/span&gt;" href="../../reference/api/utils/#redsun.utils.devices.device_path"><code>device_path</code></a> rather than by splitting its
+name.</p>
+<p>A plan that locks a device holds that device and every device below it, never
+the devices above, so a plan moving <code>x</code> leaves the rest of the microscope
+free. <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;held_by&lt;/span&gt;" href="../../reference/api/utils/#redsun.utils.devices.held_by"><code>held_by</code></a> tells whether a device is held,
+given the names the engine reports.</p>
 <h2 id="when-not-to-ask">When not to ask<a class="headerlink" href="#when-not-to-ask" title="Permanent link">&para;</a></h2>
 <ul>
 <li>To get one specific value, ask for it by its class instead.</li>

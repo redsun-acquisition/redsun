@@ -3448,6 +3448,8 @@
       
         
       
+        
+      
     
     
     
@@ -4355,6 +4357,33 @@
     
   
   32. The qlementine style comes behind one extra per Qt binding
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0033-device-trees-one-index-of-every-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  33. Device trees: one index of every device
 
     
   </span>
@@ -7427,9 +7456,10 @@ and keeps next to the data it came from, such as a median over a scan. A
 <h3 id="device">Device<a class="headerlink" href="#device" title="Permanent link">&para;</a></h3>
 <p>A device describes one piece of your setup, such as a stage or a camera,
 through the values you can read and set. You write devices with <a href="#ophyd-async"><code>ophyd-async</code></a>, and
-together they model the setup. For now, the preferred way to reach the
-hardware is a <a href="#service">service</a>; see <a href="../services/">Services</a>. Devices are
-the first <a href="#layer">layer</a> to be built.</p>
+together they model the setup. A device can hold other devices, so the setup
+forms a tree whose root, such as a microscope, holds the stage and the camera.
+For now, the preferred way to reach the hardware is a <a href="#service">service</a>; see
+<a href="../services/">Services</a>. Devices are the first <a href="#layer">layer</a> to be built.</p>
 <h3 id="device-signal">Device signal<a class="headerlink" href="#device-signal" title="Permanent link">&para;</a></h3>
 <p>A device signal is one value of a <a href="#device">device</a> that can be read, set or
 both, such as the position of a stage, or an action of the device that you
