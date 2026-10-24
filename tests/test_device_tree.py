@@ -6,7 +6,7 @@ import asyncio
 import threading
 from collections.abc import Iterator
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import bluesky.plan_stubs as bps
 import pytest
@@ -30,10 +30,12 @@ from redsun import (
     Alias,
     AsDevice,
     AsPresenter,
+    AsService,
     AsView,
     Declare,
     DeviceMapping,
     DevicesOf,
+    Launch,
     Link,
     Session,
     links_between,
@@ -47,6 +49,7 @@ from redsun.presenter import (
     PositionerPresenter,
 )
 from redsun.qt import QtSession
+from redsun.services._transports import PV_ACCESS, TRANSPORTS, PVAccess
 from redsun.utils.devices import Axis, Light
 from redsun.view.qt.builtins import (
     AcquisitionView,
@@ -64,6 +67,10 @@ if TYPE_CHECKING:
 
     from redsun import PlanEntry
     from redsun.testing import BuildSession
+
+
+PVI_STAND_IN = "mock_pkg.service.pvi_stand_in"
+PVI_READY = "pvi stand-in ready"
 
 
 def do_nothing() -> None:
@@ -173,6 +180,13 @@ class EpicsScope(EpicsDevice):
     focus: Annotated[EpicsAxis, PvSuffix("FOCUS:")]
 
 
+class PviScope(EpicsDevice):
+    """A root declaring no children: the IOC lists them over PVI."""
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(prefix=prefix, with_pvi=True, name=name)
+
+
 class Recorder:
     """Presenter keeping what the session answered about devices."""
 
@@ -243,6 +257,15 @@ class EpicsScopeApp(Session):
     positioner: AsPresenter[PositionerPresenter]
 
 
+class PviScopeApp(Session):
+    config: ClassVar[dict[str, Any]] = {"services": {"transport": "pv-access"}}
+    scope_ioc: Annotated[
+        AsService, Launch(PVI_STAND_IN, ready=PVI_READY, prefix="SCOPE:")
+    ]
+    scope: Annotated[AsDevice[PviScope], Declare(service="scope_ioc")]
+    recorder: AsPresenter[Recorder]
+
+
 class AcrossTrees(Session):
     stage: AsDevice[Holder]
     stage_x: Annotated[AsDevice[Leaf], Alias("stage-x")]
@@ -311,6 +334,18 @@ def test_children_declared_with_annotations_join_the_tree(build: BuildSession) -
     path = app.positioner.axes["scope-xy"]["x"].path
     assert path is not None
     assert str(path.parent) == "scope / xy"
+
+
+def test_children_a_device_finds_while_connecting_join_the_tree(
+    build: BuildSession, launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Index the devices a PVI device creates only once it connects."""
+    monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
+    monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
+
+    app = build(PviScopeApp)
+
+    assert set(app.recorder.devices) == {"scope", "scope-xy"}
 
 
 @pytest.mark.parametrize("app", [AcrossTrees, InsideOneTree])
