@@ -330,13 +330,16 @@ class PlanWidget:
                     layout.removeWidget(cell)
                     layout.addWidget(cell, row, column)
             name_label.setIndent(depths[scope.name] * _PROGRESS_INDENT)
-            fraction = _fraction(scope.update)
+            # the engine's thread replaces the update, so the bar and the text
+            # read the same one
+            update = scope.update
+            fraction = _fraction(update)
             if fraction is None:
                 bar.setRange(0, 0)
             else:
                 bar.setRange(0, _PROGRESS_STEPS)
                 bar.setValue(round(fraction * _PROGRESS_STEPS))
-            text_label.setText(_progress_text(scope.update))
+            text_label.setText(_progress_text(update, fraction))
         group.setHidden(not scopes)
 
 
@@ -477,17 +480,25 @@ def _fraction(update: WatcherUpdate[Any] | None) -> float | None:
     return min(max(fraction, 0.0), 1.0)
 
 
-def _progress_text(update: WatcherUpdate[Any] | None) -> str:
-    """Return what a progress row says: a count against its end, a percentage, or a count."""
+def _progress_text(update: WatcherUpdate[Any] | None, fraction: float | None) -> str:
+    """Return what a progress row says: a count against its end, a percentage, or a count.
+
+    *fraction* is what `_fraction` returns for *update*.
+    """
     if update is None:
         return ""
     current = _number(update.current)
     target = _number(update.target)
     # typed float by ophyd-async, but only a whole number of decimals can be shown
     reported: object = update.precision
-    precision = reported if isinstance(reported, int) and reported >= 0 else None
+    precision = (
+        reported
+        if isinstance(reported, int)
+        and not isinstance(reported, bool)
+        and reported >= 0
+        else None
+    )
     unit = update.unit or ""
-    fraction = _fraction(update)
     # a fraction reported alone is shown as a percentage, one spanned as a count
     if (
         fraction is not None
