@@ -126,7 +126,11 @@ class RunEngine(BlueskyRunEngine):
     sig_progress = Signal(tuple)
     """Every progress scope of the running plan, as a tuple of `PlanProgress`,
     parents before children, whenever one is declared, updated or finished;
-    an empty tuple when none is left."""
+    an empty tuple when none is left.
+
+    The scopes are the engine's own: the engine's thread replaces their
+    `update` after the emission, so a slot reads it once for each emission and
+    keeps a copy of what it needs later."""
 
     # a resumed plan replays its messages since the last checkpoint, and a
     # declaration replayed while its scope is still open would be refused

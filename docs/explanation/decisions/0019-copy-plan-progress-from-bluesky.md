@@ -48,12 +48,14 @@ def on_progress(self, scopes: tuple[ProgressState, ...]) -> None:
 def on_progress(self, scopes: tuple[PlanProgress, ...]) -> None:
     for scope in scopes:
         if scope.update is not None:
-            print(scope.name, scope.update.current, scope.update.fraction)
+            print(scope.name, scope.update.current, scope.update.target)
 ```
 
 The snapshot computed the fraction and dropped values that were not finite
 numbers. Only the plan widget needs either, so the widget does both now, and
-the engine passes on what the plan or the device reported.
+the engine passes on what the plan or the device reported: `update.fraction`
+is a fraction the plan or device reported, never one computed from `current`,
+`initial` and `target`.
 
 On top of the copy, `redsun` adds `RunEngine.sig_progress`, which carries the
 open scopes to views, a "Progress" group on each plan page, which computes

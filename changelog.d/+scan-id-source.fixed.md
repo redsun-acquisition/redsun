@@ -1,1 +1,1 @@
-`redsun.engine.RunEngine` no longer accepts `None` as `scan_id_source`, which failed at the first run.
+The `scan_id_source` parameter of `redsun.engine.RunEngine` is annotated without `None`, which failed at the first run.

@@ -94,7 +94,7 @@ parent. The plan widget hides the group while no scope is open.
 
 | the scope has | the bar | the text |
 | --- | --- | --- |
-| a `target`, or a `fraction` | fills up to the end | `37 / 100 frames`, or `42 %` for a fraction |
+| an `initial` and a `target`, or a `fraction` | fills up to the end | `37 / 100 frames`, or `42 %` for a fraction |
 | no end, but a `current` | moves back and forth | `412 frames` |
 | nothing reported yet | moves back and forth | no text |
 

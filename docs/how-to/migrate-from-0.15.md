@@ -57,8 +57,12 @@ gone. A scope gives its `name`, its `parent` scope, and in `update` the last
 `WatcherUpdate` of `ophyd-async` it reported, or `None` before the first. The
 update holds what the plan or the device reported and nothing more, so a view
 that showed `fraction` computes it from `current`, `initial` and `target` when
-the update has none. A view that passes the scopes on to the plan widget only
-changes its annotation:
+the update has none. The scopes are the engine's own, and the engine replaces
+their `update` after the emission, so a view reads it once for each emission.
+
+A view that passes the scopes on to the plan widget only changes its
+annotation to `tuple[PlanProgress, ...]`. A view that reads the values reads
+them from the scope's update:
 
 ```python
 # 0.15
@@ -78,6 +82,9 @@ def on_progress(self, scopes: tuple[PlanProgress, ...]) -> None:
 ```
 
 A watcher passed to `PlanProgress.watch` is now typed as the `Watcher` of
-`ophyd-async`, whose parameters have names, so a type checker refuses a
-function that takes only `**kwargs`. A fraction reported alone reaches the
-watcher alone, with `current`, `initial` and `target` left `None`.
+`ophyd-async`, whose parameters can be passed by position or by name. A type
+checker therefore refuses a function that takes only `**kwargs`, or whose
+parameters are keyword-only; declare the parameters as plain named ones. A
+fraction reported alone reaches the watcher alone, with `current`, `initial`
+and `target` left `None`, and a device's status that reports no unit gives
+`unit` as `None` instead of `"unit"`.
