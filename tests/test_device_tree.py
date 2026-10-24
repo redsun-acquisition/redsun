@@ -6,7 +6,7 @@ import asyncio
 import threading
 from collections.abc import Iterator
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, Protocol
+from typing import TYPE_CHECKING, Annotated
 
 import bluesky.plan_stubs as bps
 import pytest
@@ -47,7 +47,7 @@ from redsun.presenter import (
     PositionerPresenter,
 )
 from redsun.qt import QtSession
-from redsun.utils.devices import Light
+from redsun.utils.devices import Axis, Light
 from redsun.view.qt.builtins import (
     AcquisitionView,
     LightGroup,
@@ -62,20 +62,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from pathlib import Path
 
-    from bluesky.protocols import Location
-
     from redsun import PlanEntry
     from redsun.testing import BuildSession
 
 
 def do_nothing() -> None:
     """Stand in for the work a command does."""
-
-
-class Locating(Protocol):
-    """A device that reports where it is."""
-
-    async def locate(self) -> Location[float]: ...
 
 
 class Scope(Device):
@@ -189,7 +181,7 @@ class Recorder:
         name: str,
         *,
         devices: DeviceMapping,
-        axes: DevicesOf[Locating],
+        axes: DevicesOf[Axis],
         lights: DevicesOf[Light],
     ) -> None:
         self.name = name
