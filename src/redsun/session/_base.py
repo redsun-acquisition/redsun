@@ -12,7 +12,7 @@ from copy import deepcopy
 from dataclasses import replace
 from enum import StrEnum
 from functools import partial
-from itertools import chain
+from itertools import chain, combinations
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -1216,6 +1216,7 @@ class Session(BuildableSession):
         for first, second in self._configuration().pairs:
             self._wiring.link_pair(first, second)
         self._warn_unused()
+        self._warn_interchangeable()
 
     def present(self) -> None:
         """Assemble what was built into whatever shows it.
@@ -2154,6 +2155,26 @@ class Session(BuildableSession):
                     "%r shares nothing, asks for nothing and is wired to nothing; "
                     "it is built and reachable, and does nothing",
                     declaration.name,
+                )
+
+    def _warn_interchangeable(self) -> None:
+        """Report two protocols asked for that the same components satisfy."""
+        protocols = {
+            shape[1]
+            for declaration in self._components()
+            for hint in self._asked_for(declaration)
+            if (shape := shape_of(hint)) is not None
+        }
+        for first, second in combinations(
+            sorted(protocols, key=lambda p: p.__qualname__), 2
+        ):
+            if _structural.interchangeable(first, second):
+                logger.warning(
+                    "%r and %r have the same members, so every component "
+                    "satisfying one satisfies the other; give each a member of "
+                    "its own",
+                    first.__qualname__,
+                    second.__qualname__,
                 )
 
     def _asked_for(self, declaration: Declaration) -> list[Any]:

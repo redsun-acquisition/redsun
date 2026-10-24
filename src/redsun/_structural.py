@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeForm, TypeIs
 
 __all__ = [
+    "interchangeable",
     "is_protocol_class",
     "is_union",
     "members",
@@ -91,6 +92,15 @@ def methods(protocol: type) -> frozenset[str]:
     """
     return frozenset(
         name for name in members(protocol) if call_signature(protocol, name) is not None
+    )
+
+
+def interchangeable(first: type, second: type) -> bool:
+    """Whether every object satisfying one of two protocols satisfies the other."""
+    return (
+        members(first) == members(second)
+        and not signature_problems(first, second)
+        and not signature_problems(second, first)
     )
 
 
