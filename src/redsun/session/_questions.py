@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from types import UnionType
-from typing import TYPE_CHECKING, Any, Literal, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin
 
-from .._structural import problems, protocol_of
+from .._structural import is_union, optional_arg, problems, protocol_of
 from ..injection._census import satisfying
 
 if TYPE_CHECKING:
@@ -17,10 +16,7 @@ __all__ = [
     "Shape",
     "answer",
     "is_protocol_union",
-    "is_union",
-    "optional_arg",
     "shape_of",
-    "without_none",
 ]
 
 Shape = Literal["one", "maybe", "every"]
@@ -28,24 +24,6 @@ Shape = Literal["one", "maybe", "every"]
 
 class NoAnswer(LookupError):
     """Nothing in the session satisfies a protocol one answer was demanded for."""
-
-
-def is_union(hint: TypeForm[Any]) -> bool:
-    """Return whether *hint* is a union, written as `X | Y` or `Union[X, Y]`."""
-    return get_origin(hint) in (Union, UnionType)
-
-
-def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
-    """Return `X` for `X | None`, or `None` for anything else."""
-    if not is_union(hint):
-        return None
-    args = [arg for arg in get_args(hint) if arg is not type(None)]
-    return args[0] if len(args) == 1 else None
-
-
-def without_none(hint: TypeForm[Any]) -> TypeForm[Any]:
-    """Return `X` for `X | None`, and *hint* itself for anything else."""
-    return optional_arg(hint) or hint
 
 
 def is_protocol_union(hint: TypeForm[Any]) -> bool:

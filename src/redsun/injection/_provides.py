@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar, get_type_hints
 
+from .._structural import without_none
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -38,6 +40,8 @@ def provides(method: F) -> F:
 def shared_keys(cls: type) -> dict[str, Key]:
     """Return the `provides`-marked members of *cls*, as name to type.
 
+    A member annotated `X | None` is shared as `X`.
+
     Raises
     ------
     TypeError
@@ -55,7 +59,7 @@ def shared_keys(cls: type) -> dict[str, Key]:
                 f"{cls.__name__}.{name} is marked with 'provides' but has no "
                 "return annotation; the annotation is the key consumers use"
             )
-        found[name] = hints["return"]
+        found[name] = without_none(hints["return"])
     return found
 
 
