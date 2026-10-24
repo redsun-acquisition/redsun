@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections.abc import Iterator
+from functools import cached_property
 from typing import TYPE_CHECKING, Annotated, Protocol
 
 import bluesky.plan_stubs as bps
@@ -15,10 +16,14 @@ from ophyd_async.core import (
     DeviceConnector,
     DeviceMap,
     DeviceVector,
+    MovableLogic,
     NotConnectedError,
+    SignalRW,
+    StandardMovable,
     soft_command,
     soft_signal_rw,
 )
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
 from qtpy import QtWidgets
 
 from redsun import (
@@ -151,6 +156,31 @@ class Refusing(DeviceConnector):
         raise NotConnectedError("no answer")
 
 
+class EpicsAxis(EpicsDevice, StandardMovable[float]):
+    """An axis reached over EPICS, its position declared with an annotation."""
+
+    position: Annotated[SignalRW[float], PvSuffix("Position")]
+
+    @cached_property
+    def movable_logic(self) -> MovableLogic[float]:
+        """Setpoint and readback of the axis, which are one signal."""
+        return MovableLogic(setpoint=self.position, readback=self.position)
+
+
+class EpicsStage(EpicsDevice):
+    """A stage whose axes `x` and `y` are declared with annotations."""
+
+    x: Annotated[EpicsAxis, PvSuffix("X:")]
+    y: Annotated[EpicsAxis, PvSuffix("Y:")]
+
+
+class EpicsScope(EpicsDevice):
+    """A root whose stage and focus axis are declared with annotations."""
+
+    xy: Annotated[EpicsStage, PvSuffix("XY:")]
+    focus: Annotated[EpicsAxis, PvSuffix("FOCUS:")]
+
+
 class Recorder:
     """Presenter keeping what the session answered about devices."""
 
@@ -215,6 +245,12 @@ class StackedApp(QtSession):
         yield from links_between(self.acquisition, self.lights_view)
 
 
+class EpicsScopeApp(Session):
+    scope: Annotated[AsDevice[EpicsScope], Declare(prefix="SCOPE:")]
+    recorder: AsPresenter[Recorder]
+    positioner: AsPresenter[PositionerPresenter]
+
+
 class AcrossTrees(Session):
     stage: AsDevice[Holder]
     stage_x: Annotated[AsDevice[Leaf], Alias("stage-x")]
@@ -263,6 +299,26 @@ def test_devices_of_answers_with_every_matching_device_in_the_tree(
 
     assert set(app.recorder.axes) == {"scope-xy-x", "scope-xy-y", "scope-focus"}
     assert set(app.recorder.lights) == {"scope-lights-laser"}
+
+
+def test_children_declared_with_annotations_join_the_tree(build: BuildSession) -> None:
+    """Index and box the devices an `EpicsDevice` declares with annotations."""
+    app = build(EpicsScopeApp, {"mock": True})
+
+    assert set(app.recorder.devices) == {
+        "scope",
+        "scope-xy",
+        "scope-xy-x",
+        "scope-xy-y",
+        "scope-focus",
+    }
+    assert {box: set(rows) for box, rows in app.positioner.axes.items()} == {
+        "scope": {"focus"},
+        "scope-xy": {"x", "y"},
+    }
+    path = app.positioner.axes["scope-xy"]["x"].path
+    assert path is not None
+    assert str(path.parent) == "scope / xy"
 
 
 @pytest.mark.parametrize("app", [AcrossTrees, InsideOneTree])
