@@ -63,6 +63,10 @@ def test_the_example_builds_every_component_under_each_style(
     assert len(installed) == (0 if style is None else 1)
     assert not session.unconnected
     assert list(session.acquisition.plans) == ["walk"]
+    assert {box: set(rows) for box, rows in session.positioner.axes.items()} == {
+        "stage": {"x", "y"},
+        "focus": {"focus"},
+    }
 
 
 @pytest.mark.qt

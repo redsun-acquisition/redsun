@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import bluesky.plan_stubs as bps
 from bluesky.utils import MsgGenerator  # noqa: TC002
 from ophyd_async.core import (
-    DeviceMap,
     MovableLogic,
     SignalRW,
     SoftSignalBackend,
@@ -51,8 +50,9 @@ class Stage(StandardReadable):
     """A stage with an `x` and a `y` axis."""
 
     def __init__(self, name: str = "") -> None:
-        self.axis = DeviceMap({"x": Axis(), "y": Axis()})
-        self.add_readables(list(self.axis.values()))
+        self.x = Axis()
+        self.y = Axis()
+        self.add_readables([self.x, self.y])
         super().__init__(name=name)
 
 
