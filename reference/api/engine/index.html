@@ -7658,10 +7658,9 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">preprocessors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Preprocessor</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">md_validator</span><span class="p">:</span> <span class="n">MDValidator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">md_normalizer</span><span class="p">:</span> <span class="n">MDNormalizer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">scan_id_source</span><span class="p">:</span> <span class="n">MDScanIDSource</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">default_scan_id_source</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">call_returns_result</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">scan_id_source</span><span class="p">:</span> <span class="n">MDScanIDSource</span> <span class="o">=</span> <span class="n">default_scan_id_source</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">call_returns_result</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -7777,7 +7776,7 @@ normalized metadata.</p>
                 <code>scan_id_source</code>
             </td>
             <td>
-                  <code><span title="redsun.engine._wrapper.MDScanIDSource">MDScanIDSource</span> | None</code>
+                  <code><span title="redsun.engine._wrapper.MDScanIDSource">MDScanIDSource</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7786,7 +7785,7 @@ normalized metadata.</p>
               </div>
             </td>
             <td>
-                  <code><span title="redsun.engine._wrapper.default_scan_id_source">default_scan_id_source</span></code>
+                  <code><span title="bluesky.run_engine.default_scan_id_source">default_scan_id_source</span></code>
             </td>
           </tr>
           <tr class="doc-section-item">
