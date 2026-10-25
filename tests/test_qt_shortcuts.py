@@ -775,6 +775,57 @@ def test_a_key_qt_cannot_bind_is_refused_in_the_list(
     assert "shortcuts" not in app.settings
 
 
+def test_escape_in_a_key_cell_cancels_the_edit(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Leave the key as it was when Escape is pressed in a key cell."""
+    app = build(KeysApp)
+    dialog = opened(app)
+
+    edit_key(dialog, "Run", 1, QtNamespace.Key.Key_Escape)
+
+    assert rows(dialog, "Window")[0][1] == native("Ctrl+R")
+    assert "shortcuts" not in app.settings
+
+
+@pytest.mark.parametrize("then", ["same-key", "escape", "reset"])
+def test_a_refusal_in_the_list_is_cleared_by_the_next_edit(
+    qapp: QApplication, build: BuildSession, then: str
+) -> None:
+    """Clear the refusal once another key is captured, the edit cancelled or the keys reset."""
+    dialog = opened(build(KeysApp))
+    edit_key(dialog, "Run", 1, QtNamespace.Key.Key_PageUp)
+    problem = dialog.findChild(QLabel, "shortcut-problem")
+    reset = dialog.findChild(QPushButton, "reset-shortcuts")
+    assert problem is not None
+    assert reset is not None
+    assert problem.text()
+
+    match then:
+        case "same-key":
+            edit_key(dialog, "Run", 1, QtNamespace.Key.Key_R, CTRL)
+        case "escape":
+            edit_key(dialog, "Run", 1, QtNamespace.Key.Key_Escape)
+        case "reset":
+            reset.click()
+
+    assert problem.text() == ""
+
+
+def test_the_second_key_cell_of_an_unbound_command_opens_no_editor(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Open no editor in the second key cell of a command with no first key."""
+    dialog = opened(build(KeysApp, {"shortcuts": {"panel.refresh": None}}))
+    rows(dialog, "panel")
+    table = dialog.findChild(QTableWidget)
+    assert table is not None
+
+    table.cellDoubleClicked.emit(0, 2)
+
+    assert table.cellWidget(0, 2) is None
+
+
 def test_reset_in_the_list_puts_the_defaults_back(
     qapp: QApplication, build: BuildSession
 ) -> None:

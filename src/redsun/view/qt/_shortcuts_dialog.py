@@ -64,7 +64,7 @@ class ShortcutsDialog(QDialog):
     """Lists the keys a session binds, those of the whole window then each view's own, and edits them.
 
     Double-click a key cell and press the new key; Backspace or Delete clears
-    it. A key another command holds in the same place is moved after the user
+    it, and Escape leaves it as it was. A key another command holds in the same place is moved after the user
     agrees. *change* receives the new keys by command and raises `ValueError`
     for a key it refuses; *reset* forgets every change.
     """
@@ -81,6 +81,7 @@ class ShortcutsDialog(QDialog):
         self._bindings = list(bindings)
         self._notes = notes(self._bindings)
         self._change = change
+        self._reset = reset
         self._shown: list[Binding] = []
         self._groups = QComboBox()
         views = dict.fromkeys(b.view for b in self._bindings if b.view is not None)
@@ -98,7 +99,7 @@ class ShortcutsDialog(QDialog):
         self._problem.setWordWrap(True)
         reset_button = QPushButton("Reset to defaults")
         reset_button.setObjectName("reset-shortcuts")
-        reset_button.clicked.connect(reset)
+        reset_button.clicked.connect(self._reset_keys)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.close)
         bottom = QHBoxLayout()
@@ -149,6 +150,8 @@ class ShortcutsDialog(QDialog):
         """Open a key editor in a key cell of *row*."""
         if column not in (1, 2) or row >= len(self._shown):
             return
+        if column == 2 and not self._shown[row].keys:
+            return
         editor = QKeySequenceEdit(self._table)
         editor.setMaximumSequenceLength(1)
         editor.editingFinished.connect(partial(self._captured, row, column, editor))
@@ -159,12 +162,15 @@ class ShortcutsDialog(QDialog):
         """Turn the key pressed in *editor* into a change, asking first if it is taken."""
         # the editor finishes again when a prompt takes its focus
         editor.editingFinished.disconnect()
+        self._problem.clear()
         sequence = editor.keySequence()
         self._table.removeCellWidget(row, column)
         if sequence.isEmpty():
             return
         binding = self._shown[row]
         key = str(qkeysequence2modelkeybinding(sequence))
+        if key == "Escape":
+            return
         keys = list(binding.keys)
         index = column - 1
         if key in CLEARING:
@@ -187,8 +193,11 @@ class ShortcutsDialog(QDialog):
             self._change(changes)
         except ValueError as error:
             self._problem.setText(str(error))
-            return
+
+    def _reset_keys(self) -> None:
+        """Forget every change, and the refusal of the last one."""
         self._problem.clear()
+        self._reset()
 
     def _agree(self, question: str) -> bool:
         """Ask *question*, and return whether the user said yes."""
