@@ -52,7 +52,9 @@ so two spellings of one key are seen as the same. A binding that
 [`resolve_shortcuts`][redsun.Session.resolve_shortcuts] returns with a
 `when` function acts only while that function returns true, so ask it again
 each time the focus moves and leave the key press to the focused widget
-while it returns false. A frontend that lets the user change keys calls
+while it returns false. A binding whose `repeat` is false runs its command
+once per press, so let a held key repeat only the bindings that ask for it.
+A frontend that lets the user change keys calls
 [`set_shortcuts`][redsun.Session.set_shortcuts] or
 [`reset_shortcuts`][redsun.Session.reset_shortcuts], then binds what
 `resolve_shortcuts` returns again.

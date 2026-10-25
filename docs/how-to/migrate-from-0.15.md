@@ -6,8 +6,9 @@ icon: lucide/arrow-right-left
 
 Release 0.16 removes the two things 0.15 deprecated, changes what a view of
 plan progress receives, moves some axes to another box of the positioner,
-removes two helpers the positioner no longer uses, and changes what a session
-does when a service does not start. This page gives each change with what to
+removes two helpers the positioner no longer uses, changes what a session
+does when a service does not start, and stops a held key from running its
+command again and again. This page gives each change with what to
 write instead. The [changelog](../reference/changelog.md) lists everything
 else the release changed.
 
@@ -162,4 +163,24 @@ class MyCamera(StandardReadable):
 # now, to keep it skipped
 class MyCamera(StandardReadable):
     def __init__(self, prefix: str, name: str = "") -> None: ...
+```
+
+## A held key runs its command once
+
+A keyboard shortcut now runs its method once per press. In 0.15 a held key
+ran it again at the keyboard's repeat rate, so holding the key that starts a
+plan started it several times. To keep a key repeating, such as one that
+steps an axis, pass `repeat=True` to `@shortcut`:
+
+```python
+# 0.15: repeats while held
+class MyView(QWidget):
+    @shortcut("Right", title="Step forward", scope="view")
+    def step_forward(self) -> None: ...
+
+
+# now
+class MyView(QWidget):
+    @shortcut("Right", title="Step forward", scope="view", repeat=True)
+    def step_forward(self) -> None: ...
 ```
