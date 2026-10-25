@@ -398,6 +398,9 @@ class DeviceEntry(ComponentEntry):
     service: str | None = None
     """The service whose prefix the device gets."""
 
+    services: dict[str, str] | None = None
+    """The service whose prefix each constructor keyword gets, by keyword."""
+
     autoconnect: bool = Field(default=True, strict=True)
     """Whether the build connects the device."""
 

@@ -1287,9 +1287,14 @@ class Session(BuildableSession):
                 for failure in self._failed_hooks
             )
             summary += f"\nHooks skipped: {skipped}"
-        named_services = {d.service for d in self._declarations.values()}
+        named_services = {
+            s for d in self._declarations.values() for s in d.services.values()
+        }
         used = {
-            d.service for d in self._declarations.values() if d.instance is not None
+            s
+            for d in self._declarations.values()
+            if d.instance is not None
+            for s in d.services.values()
         }
         idle = named_services - used - self._failed_services.keys()
         unused = [name for name in self._services if name in idle]
@@ -1377,8 +1382,10 @@ class Session(BuildableSession):
         for declaration in self._declarations.values():
             entry = self._entry_for(declaration)
             if entry is not None:
-                if declaration.service is not None:
-                    entry["service"] = declaration.service
+                if declaration.services.keys() == {"prefix"}:
+                    entry["service"] = declaration.services["prefix"]
+                elif declaration.services:
+                    entry["services"] = dict(declaration.services)
                 if not declaration.autoconnect:
                     entry["autoconnect"] = False
                 section = config.setdefault(declaration.kind.section, {})
@@ -1977,7 +1984,7 @@ class Session(BuildableSession):
                 device = declaration.cls(
                     name=declaration.name,
                     **declaration.cfg_kwargs,
-                    **self._prefix_for(declaration),
+                    **self._prefixes_for(declaration),
                     **self._path_provider_for(declaration),
                 )
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
@@ -1991,8 +1998,8 @@ class Session(BuildableSession):
             if not declaration.autoconnect:
                 self._register_teardown(device)
 
-    def _prefix_for(self, declaration: Declaration) -> dict[str, str]:
-        """Return the `prefix` keyword from *declaration*'s service, if it names one.
+    def _prefixes_for(self, declaration: Declaration) -> dict[str, str]:
+        """Return the prefix each keyword of *declaration* gets from its service.
 
         Raises
         ------
@@ -2003,16 +2010,17 @@ class Session(BuildableSession):
         ValueError
             If the device names a service that gives no prefix.
         """
-        if declaration.service is None:
-            return {}
-        service = self._services.get(declaration.service)
-        if service is None:
-            raise LookupError(f"service {declaration.service!r} is not declared")
-        if declaration.service in self._failed_services:
-            raise RuntimeError(f"service {declaration.service!r} was not started")
-        if not service.prefix:
-            raise ValueError(f"service {declaration.service!r} gives no prefix")
-        return {"prefix": service.prefix}
+        prefixes = {}
+        for keyword, name in declaration.services.items():
+            service = self._services.get(name)
+            if service is None:
+                raise LookupError(f"service {name!r} is not declared")
+            if name in self._failed_services:
+                raise RuntimeError(f"service {name!r} was not started")
+            if not service.prefix:
+                raise ValueError(f"service {name!r} gives no prefix")
+            prefixes[keyword] = service.prefix
+        return prefixes
 
     def _path_provider_for(self, declaration: Declaration) -> dict[str, object]:
         """Return the `path_provider` keyword, for a device whose constructor takes it.
@@ -2079,14 +2087,19 @@ class Session(BuildableSession):
         """Return why *declaration*'s device did not connect, naming its service."""
         # ophyd-async pads the message of a NotConnectedError with whitespace
         detail = str(error).strip()
-        service = self._services.get(declaration.service or "")
-        if service is None:
-            return detail
-        how = "launched" if service.launched else "attached"
-        return (
-            f"service {service.name!r} ({how}) did not answer within "
-            f"{CONNECT_TIMEOUT:g} s: {detail}"
-        )
+        services = [
+            f"{s.name!r} ({'launched' if s.launched else 'attached'})"
+            for name in dict.fromkeys(declaration.services.values())
+            if (s := self._services.get(name)) is not None
+        ]
+        match services:
+            case []:
+                return detail
+            case [service]:
+                which = f"service {service}"
+            case _:
+                which = f"one of services {', '.join(services)}"
+        return f"{which} did not answer within {CONNECT_TIMEOUT:g} s: {detail}"
 
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         self._verify(declaration, instance)

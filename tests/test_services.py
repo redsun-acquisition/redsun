@@ -103,6 +103,31 @@ class DeviceWithServiceKeyword(Device):
         super().__init__(name=name)
 
 
+class DeviceWithServicesKeyword(Device):
+    def __init__(self, name: str = "", services: str = "") -> None:
+        super().__init__(name=name)
+
+
+class Piece(StandardReadable):
+    """Soft device standing for a stage or a camera behind a service."""
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        self.position = soft_signal_rw(float)
+        super().__init__(name=name)
+
+
+class Scope(StandardReadable):
+    """Root whose camera is optional."""
+
+    def __init__(
+        self, stage_prefix: str, camera_prefix: str | None = None, name: str = ""
+    ) -> None:
+        self.xy = Piece(stage_prefix)
+        if camera_prefix is not None:
+            self.camera = Piece(camera_prefix)
+        super().__init__(name=name)
+
+
 class ExitWatcher:
     """Presenter recording each service exit it hears, and the thread it ran on."""
 
@@ -134,6 +159,13 @@ class SavedStage(StandardReadable):
         return {"velocity": run_coro(self.velocity.get_value())}
 
 
+class SavedScope(Scope):
+    """Root asking to be saved, with nothing of its own to save."""
+
+    def serialize(self) -> dict[str, Any]:
+        return {}
+
+
 class ServiceAndPrefix(Session):
     beamline: Annotated[AsService, Attach("BL01:")]
     device: Annotated[AsDevice[Camera], Declare(service="beamline", prefix="X:")]
@@ -142,6 +174,33 @@ class ServiceAndPrefix(Session):
 class OwnServiceKeyword(Session):
     beamline: Annotated[AsService, Attach("BL01:")]
     device: Annotated[AsDevice[DeviceWithServiceKeyword], Declare(service="beamline")]
+
+
+class OwnServicesKeyword(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[
+        AsDevice[DeviceWithServicesKeyword], Declare(services={"name": "beamline"})
+    ]
+
+
+class ServiceAndServices(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[
+        AsDevice[Camera],
+        Declare(service="beamline", services={"prefix": "beamline"}),
+    ]
+
+
+class MappedKeywordGiven(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[
+        AsDevice[Camera], Declare(services={"prefix": "beamline"}, prefix="X:")
+    ]
+
+
+class UnknownKeywordMapped(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[AsDevice[Piece], Declare(services={"lens": "beamline"})]
 
 
 class AutoconnectNotBool(Session):
@@ -413,16 +472,28 @@ def test_a_device_whose_service_is_missing_is_skipped(
 @pytest.mark.parametrize(
     ("cls", "reason"),
     [
-        (ServiceAndPrefix, "and a prefix"),
+        (ServiceAndPrefix, "and a 'prefix'"),
         (OwnServiceKeyword, "'service' keyword"),
+        (OwnServicesKeyword, "'services' keyword"),
+        (ServiceAndServices, "both service and services"),
+        (MappedKeywordGiven, "and a 'prefix'"),
+        (UnknownKeywordMapped, "takes no 'lens'"),
         (AutoconnectNotBool, "takes true or false"),
     ],
-    ids=["service-and-prefix", "own-service-keyword", "autoconnect-not-bool"],
+    ids=[
+        "service-and-prefix",
+        "own-service-keyword",
+        "own-services-keyword",
+        "service-and-services",
+        "mapped-keyword-given",
+        "unknown-keyword-mapped",
+        "autoconnect-not-bool",
+    ],
 )
 def test_a_device_declared_with_keywords_the_session_cannot_read_is_refused(
     cls: type[Session], reason: str
 ) -> None:
-    """Refuse a device declared with both service and prefix, or with a bad keyword."""
+    """Refuse a device whose services, prefixes or reserved keywords conflict."""
     with pytest.raises(TypeError, match=reason):
         cls().read_configuration()
 
@@ -465,6 +536,40 @@ def test_a_saved_device_keeps_the_service_it_names(
     assert written["devices"]["stage"] == {
         "velocity": 1.5,
         "service": "beamline",
+        "autoconnect": False,
+    }
+
+
+def test_a_saved_device_keeps_the_services_it_maps(
+    build: BuildSession, tmp_path: Path
+) -> None:
+    """Save a device's services mapping as it was given."""
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "session": "saved",
+            "services": {
+                "beamline": {"prefix": "BL01:"},
+                "optics": {"prefix": "OP:"},
+            },
+            "devices": {
+                "scope": {
+                    "services": {
+                        "stage_prefix": "beamline",
+                        "camera_prefix": "optics",
+                    },
+                    "autoconnect": False,
+                }
+            },
+        }
+        scope: AsDevice[SavedScope]
+
+    app = build(App)
+    written = yaml.safe_load(app.write(tmp_path / "saved.yaml").read_text())
+
+    assert "scope" in app.devices
+    assert written["devices"]["scope"] == {
+        "services": {"stage_prefix": "beamline", "camera_prefix": "optics"},
         "autoconnect": False,
     }
 
