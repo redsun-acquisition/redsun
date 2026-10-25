@@ -55,7 +55,8 @@ window keeps answering while the device works. A press while the method still
 runs is ignored, so the command never runs twice at the same time. If the
 method raises, the session logs the exception with its traceback. A method
 still running when the session shuts down is cancelled before any component
-shuts down.
+shuts down. The session waits up to 5 seconds for it to stop, then logs a
+warning naming the command and shuts down without it.
 
 A view's coroutine method gets no key in a Qt session, because the method
 would run on the session's loop, and a widget touched from there can crash

@@ -200,6 +200,11 @@ class StagePresenter:
         self._task.cancel()
 ```
 
+The session waits up to 5 seconds for an `async` `shutdown`. If it hasn't
+returned by then, the session cancels it, logs a warning naming your
+component, and goes on to shut down the rest, so one device that stops
+answering can't keep the program from closing.
+
 ## Test it
 
 A component takes plain values, so a test can make it directly:

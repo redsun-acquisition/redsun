@@ -89,7 +89,7 @@ from .._hooks import (
     Many,
     WrapsBuild,
 )
-from ..session._base import Session
+from ..session._base import SHUTDOWN_TIMEOUT, Session
 from ..session._declarations import Layer
 from ..session._factories import resolved
 from ..session._frontend import Frontend
@@ -1026,11 +1026,24 @@ class QtSession(DesktopSession[QMainWindow], Session):
             del self._command_tasks[command]
 
     async def _cancel_coroutine_commands(self) -> None:
-        """Cancel the coroutine commands still running, and wait until they end."""
-        tasks = list(self._command_tasks.values())
-        for task in tasks:
+        """Cancel the coroutine commands still running, and wait until they end.
+
+        One still running after `SHUTDOWN_TIMEOUT` seconds is logged and left
+        running.
+        """
+        commands = {task: command for command, task in self._command_tasks.items()}
+        if not commands:
+            return
+        for task in commands:
             task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+        _, pending = await asyncio.wait(commands, timeout=SHUTDOWN_TIMEOUT)
+        for task in pending:
+            logger.warning(
+                "%s did not stop within %g s of being cancelled; shutting down "
+                "without it",
+                commands[task],
+                SHUTDOWN_TIMEOUT,
+            )
 
     def _register_window_actions(
         self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]

@@ -111,7 +111,7 @@ from ._tree import index_devices
 from ._wiring import NotBuilt, Wiring
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterable
+    from collections.abc import Awaitable, Callable, Collection, Iterable
     from contextlib import AbstractContextManager
 
     from ophyd_async.core import Device
@@ -195,6 +195,9 @@ class BuildStep(StrEnum):
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
+
+SHUTDOWN_TIMEOUT: Final = 5.0
+"""Seconds `shutdown` waits for each coroutine it ends, such as an async `shutdown` method."""
 
 
 def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
@@ -1371,7 +1374,8 @@ class Session(BuildableSession):
         Connections go first, so nothing is delivered to a component that is
         already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
-        Calling it a second time, or on a session that was never built, runs
+        An async `shutdown` still running after 5 seconds is cancelled and
+        logged, and the rest go on. Calling it a second time, or on a session that was never built, runs
         nothing: a release is dropped as it runs. What the build made is
         forgotten, so the session can be built again.
         """
@@ -2033,7 +2037,7 @@ class Session(BuildableSession):
             # a device the session connects is given back only once it has
             # connected: one that did not has nothing to give back
             if not declaration.autoconnect:
-                self._register_teardown(device)
+                self._register_teardown(device, declaration.name)
 
     def _prefixes_for(self, declaration: Declaration) -> dict[str, str]:
         """Return the prefix each keyword of *declaration* gets from its service.
@@ -2114,7 +2118,7 @@ class Session(BuildableSession):
 
         for name, result in zip(targets, run_coro(connect_all()), strict=True):
             if result is None:
-                self._register_teardown(targets[name])
+                self._register_teardown(targets[name], name)
                 continue
             declaration = self._declarations[name]
             reason = self._connection_failure(declaration, result)
@@ -2150,7 +2154,7 @@ class Session(BuildableSession):
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         self._verify(declaration, instance)
         self._keep(declaration, instance)
-        self._register_teardown(instance)
+        self._register_teardown(instance, declaration.name)
 
     def _keep(
         self, declaration: Declaration, instance: Device | NamedComponent
@@ -2172,19 +2176,19 @@ class Session(BuildableSession):
             return (declaration.name,)
         return (declaration.name, declaration.attribute)
 
-    def _register_teardown(self, component: object) -> None:
+    def _register_teardown(self, component: object, name: str) -> None:
         """Hand the session's own teardown to the one owner of it.
 
         A component that declares `shutdown` is finalized without having to
         ask for it; one that does not needs no teardown at all.
         """
         if isinstance(component, HasShutdown):
-            self.on_release(shutdown_call(component))
+            self.on_release(shutdown_call(component, name))
 
     def _shut_down_hook(self, hook: HasShutdown) -> None:
         """Shut *hook* down, unless it failed at a hook point and was skipped."""
         if not self._was_skipped(hook):
-            shutdown_call(hook)()
+            shutdown_call(hook, type(hook).__name__)()
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.
@@ -2476,14 +2480,27 @@ def as_keys(given: str | Sequence[str] | None) -> tuple[str, ...]:
     return (given,) if isinstance(given, str) else tuple(given)
 
 
-def shutdown_call(component: HasShutdown) -> Callable[[], None]:
-    """Return a plain call shutting *component* down, whether its `shutdown` is a coroutine or not."""
+def shutdown_call(component: HasShutdown, name: str) -> Callable[[], None]:
+    """Return a plain call shutting *component* down, whether its `shutdown` is a coroutine or not.
+
+    *name* is how a warning names *component*.
+    """
     shutdown = component.shutdown
     # both protocols name one method, so only the function says which it is
     if not inspect.iscoroutinefunction(shutdown):
         return shutdown
     async_shutdown = cast("HasAsyncShutdown", component).shutdown
-    return lambda: run_coro(async_shutdown())
+    return partial(await_shutdown, name, async_shutdown)
+
+
+def await_shutdown(name: str, shutdown: Callable[[], Awaitable[None]]) -> None:
+    """Run *shutdown* on the shared loop, cancelling and logging it after `SHUTDOWN_TIMEOUT` seconds."""
+    try:
+        run_coro(shutdown(), timeout=SHUTDOWN_TIMEOUT)
+    except TimeoutError:
+        logger.warning(
+            "%s did not shut down within %g s; cancelled it", name, SHUTDOWN_TIMEOUT
+        )
 
 
 def provider_from_class(declaration: HookDeclaration, owner: str) -> object:

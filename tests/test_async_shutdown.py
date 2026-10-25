@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import TYPE_CHECKING, Annotated
 
 import pytest
@@ -54,9 +56,29 @@ class Ctrl:
         self.shutdowns.append(self.name)
 
 
+class Stuck:
+    """Presenter whose teardown never ends unless cancelled."""
+
+    def __init__(self, name: str, shutdowns: list[str]) -> None:
+        self.name = name
+        self.shutdowns = shutdowns
+
+    async def shutdown(self) -> None:
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            self.shutdowns.append(f"{self.name} cancelled")
+            raise
+
+
 class App(Session):
     laser: AsDevice[Laser]
     ctrl: AsPresenter[Ctrl]
+
+
+class StuckApp(Session):
+    laser: AsDevice[Laser]
+    stuck: AsPresenter[Stuck]
 
 
 class Partial(Session):
@@ -106,3 +128,26 @@ def test_a_device_that_did_not_connect_is_not_shut_down(
     app.shutdown()
 
     assert sorted(shutdowns) == ["laser", "later"]
+
+
+def test_a_teardown_that_does_not_end_is_cancelled_and_logged(
+    build: BuildSession,
+    shutdowns: list[str],
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cancel an async `shutdown` still running after the wait, log it, and go on."""
+    monkeypatch.setattr("redsun.session._base.SHUTDOWN_TIMEOUT", 0.1)
+    app = build(
+        StuckApp,
+        {
+            "devices": {"laser": {"shutdowns": shutdowns}},
+            "presenters": {"stuck": {"shutdowns": shutdowns}},
+        },
+    )
+
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        app.shutdown()
+
+    assert shutdowns == ["stuck cancelled", "laser"]
+    assert "stuck did not shut down within 0.1 s; cancelled it" in caplog.messages
