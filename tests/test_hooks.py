@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
@@ -35,6 +36,9 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
+
+SHARED = {"provider": f"{__name__}:Signs", "kwargs": 3}
+"""A hook entry written once and named at two points, as a YAML alias would."""
 
 
 class Splash:
@@ -480,6 +484,33 @@ def test_a_point_taking_one_provider_refuses_a_second() -> None:
 
     with pytest.raises(HookError, match="takes one provider"):
         QtSession({"hooks": {"confirm_close": listed}}).build()
+
+
+@pytest.mark.parametrize(
+    ("hooks", "where"),
+    [
+        (
+            {
+                "configure_application": [
+                    {"provider": f"{__name__}:Heir"},
+                    {"provider": f"{__name__}:Notes", "kwargs": 3},
+                ]
+            },
+            "hooks.configure_application[1].kwargs",
+        ),
+        (
+            {"configure_application": [SHARED], "configure_main_view": SHARED},
+            "hooks.configure_application[0]+configure_main_view.kwargs",
+        ),
+    ],
+    ids=["listed", "shared"],
+)
+def test_a_problem_in_a_hook_entry_names_its_place_in_the_list(
+    hooks: dict[str, Any], where: str
+) -> None:
+    """Locate a problem in a listed hook entry by its index, and a shared entry by every place it is written."""
+    with pytest.raises(ConfigurationError, match=re.escape(where)):
+        QtSession({"hooks": hooks}).build()
 
 
 def test_a_provider_that_raises_is_skipped_and_the_rest_run(

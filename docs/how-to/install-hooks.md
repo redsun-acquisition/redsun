@@ -303,7 +303,8 @@ declared it does.
 When a provider can't be built, or its hook method raises, the session logs
 the error, skips the provider at every point it serves, and carries on. The
 build summary lists it as `Hooks skipped: DarkTheme (configure_application)`,
-and a skipped provider gets no `shutdown` call. A provider whose constructor
+and in a Qt session the failures button of the status bar lists it too. A
+skipped provider gets no `shutdown` call. A provider whose constructor
 raised is logged as `cannot construct hook provider 'X' ...`.
 
 Two cases stop the build instead. A `create_application` provider that
@@ -313,7 +314,8 @@ with `strict: true` in the session file, every skipped provider stops it.
 A wrong declaration raises [`HookError`][redsun.HookError] and names the
 point. In a session file, an entry of the wrong shape is found when the file
 is read and raised as [`ConfigurationError`][redsun.ConfigurationError],
-located as `hooks.<point>.<key>`.
+located as `hooks.<point>.<key>`. An entry in a list is located by its index,
+as `hooks.configure_application[1].kwargs`.
 
 | message | cause |
 | --- | --- |
