@@ -16,8 +16,7 @@ components, because `redsun` writes no acquisition data itself
 pip install "redsun[tiled]"
 ```
 
-It installs `tiled` and `ome-tiled`, but nothing on Python 3.14, which `tiled`
-doesn't support yet.
+It installs `tiled` and `ome-tiled`.
 
 ## Turn the catalog on
 

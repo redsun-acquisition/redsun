@@ -11,7 +11,6 @@ import os
 import sys
 import time
 from importlib.metadata import EntryPoint
-from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest import mock
@@ -23,9 +22,6 @@ from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
-
-# the module imports tiled, which the extra does not install on every Python
-collect_ignore = [] if find_spec("tiled") else ["test_catalog.py"]
 
 _MOCK_PKG_DIR = Path(__file__).parent / "launchable" / "mock_bundle"
 
