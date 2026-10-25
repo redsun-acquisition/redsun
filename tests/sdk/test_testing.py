@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from redsun import Session
+from redsun.testing import application_state
 from tests.sdk.helpers import automatic_collection
 
 if TYPE_CHECKING:
@@ -125,6 +126,21 @@ def test_after(qapp):
 """
 """Two tests, the first leaving a stylesheet on the application."""
 
+COLOURS_THE_APPLICATION = """
+from qtpy.QtGui import QColor, QPalette
+
+
+def test_colours_the_application(qapp):
+    palette = qapp.palette()
+    palette.setColor(QPalette.ColorRole.Window, QColor("red"))
+    qapp.setPalette(palette)
+
+
+def test_after(qapp):
+    assert qapp.palette().color(QPalette.ColorRole.Window) != QColor("red")
+"""
+"""Two tests, the first leaving a palette set by hand on the application."""
+
 
 def test_a_session_keeps_its_settings_under_tmp_path(
     tmp_path: Path, build: BuildSession
@@ -209,19 +225,24 @@ def test_a_test_leaving_collection_on_is_refused(pytester: pytest.Pytester) -> N
 
 
 @pytest.mark.qt
+@pytest.mark.parametrize(
+    ("source", "test"),
+    [
+        (STYLES_THE_APPLICATION, "test_styles_the_application"),
+        (COLOURS_THE_APPLICATION, "test_colours_the_application"),
+    ],
+    ids=["stylesheet", "palette"],
+)
 def test_a_test_leaving_the_application_changed_is_refused(
-    qapp: QApplication, pytester: pytest.Pytester
+    qapp: QApplication, pytester: pytest.Pytester, source: str, test: str
 ) -> None:
-    """Fail the test that left the application's stylesheet changed, and put it back."""
+    """Fail the test that left the application's stylesheet or palette changed, and put it back."""
+    before = application_state(qapp)
     pytester.makeconftest(THE_SUITES_QAPP)
-    pytester.makepyfile(STYLES_THE_APPLICATION)
+    pytester.makepyfile(source)
 
     result = pytester.runpytest("-p", "redsun.testing")
-    left = qapp.styleSheet()
-    qapp.setStyleSheet("")
 
     result.assert_outcomes(passed=2, errors=1)
-    result.stdout.fnmatch_lines(
-        ["*left the application changed*", "ERROR *::test_styles_the_application*"]
-    )
-    assert left == ""
+    result.stdout.fnmatch_lines(["*left the application changed*", f"ERROR *::{test}*"])
+    assert application_state(qapp) == before
