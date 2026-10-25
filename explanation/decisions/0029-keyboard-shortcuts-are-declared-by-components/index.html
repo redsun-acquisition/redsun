@@ -6054,7 +6054,9 @@
 <h1 id="29-keyboard-shortcuts-are-declared-by-components">29. Keyboard shortcuts are declared by components<a class="headerlink" href="#29-keyboard-shortcuts-are-declared-by-components" title="Permanent link">&para;</a></h1>
 <p>Date: 2026-10-09</p>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted</p>
+<p>Accepted. Amended on 25 October 2026: a presenter's coroutine method can be
+a shortcut, and runs on the session's loop. A view's can be one only on a
+frontend whose <code>view_coroutines</code> is true, which the Qt frontend's is not.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>No key was bound in a <code>redsun</code> window. The positioner stepped an axis on
 Left and Right by reading key presses inside its widget, which nothing else

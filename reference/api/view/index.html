@@ -9555,6 +9555,15 @@ nowhere and declares none.</p>
 <p>The method is returned unchanged, so it can be a slot too. A session
 binds the key once the component is built: anywhere in the window, or
 with <code>scope="view"</code> only while the component's own view has focus.</p>
+<p>A presenter's coroutine method runs on the session's loop, and a press
+while it still runs is ignored. A view's runs only on a frontend whose
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;view_coroutines&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-class-attribute&quot;&gt;&lt;code&gt;class-attribute&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../session/#redsun.Frontend.view_coroutines"><code>view_coroutines</code></a> is true; elsewhere
+its key is left out.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -9635,8 +9644,8 @@ not a function.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>When applied to a method that needs arguments besides itself, to a
-coroutine method, or to a method that already has a key.</p>
+                <p>When applied to a method that needs arguments besides itself, or to
+a method that already has a key.</p>
               </div>
             </td>
           </tr>

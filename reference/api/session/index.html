@@ -6555,6 +6555,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.Frontend.view_coroutines" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;view_coroutines
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.Frontend.check_view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8523,6 +8534,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.Frontend.view_coroutines" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;view_coroutines
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.Frontend.check_view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -10270,7 +10292,8 @@ warning. Yields nothing by default.</p>
 <p>Connections go first, so nothing is delivered to a component that is
 already finalizing. The releases follow: the <code>shutdown</code> method of
 every component that has one, then whatever a toolkit put in place.
-Calling it a second time, or on a session that was never built, runs
+An async <code>shutdown</code> still running after 5 seconds is cancelled and
+logged, and the rest go on. Calling it a second time, or on a session that was never built, runs
 nothing: a release is dropped as it runs. What the build made is
 forgotten, so the session can be built again.</p>
 
@@ -12895,6 +12918,32 @@ from the toolkit's event loop.</p>
     <div class="doc doc-contents ">
 
         <p>Whether a window layout may start a view hidden.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.Frontend.view_coroutines" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">view_coroutines</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+  </span>
+
+<a href="#redsun.Frontend.view_coroutines" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">view_coroutines</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether a key can run a view's coroutine method.</p>
+<p>False here: such a key is left out, since a coroutine runs on the
+session's loop, where most toolkits forbid touching a widget.</p>
 
     </div>
 

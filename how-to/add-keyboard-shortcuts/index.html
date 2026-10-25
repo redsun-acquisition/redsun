@@ -2077,6 +2077,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-a-coroutine-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Run a coroutine method
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#keep-a-key-to-one-view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5817,6 +5828,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-a-coroutine-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Run a coroutine method
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#keep-a-key-to-one-view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6040,15 +6062,33 @@ give <code>mac=</code>, <code>win=</code> or <code>linux=</code> only when a pla
 Don't write <code>Cmd</code> for Command: in <code>app-model</code>'s names, <code>Cmd</code> and <code>Meta</code> are
 the Control key on macOS.</p>
 <p>A method can be a <a href="../../explanation/glossary/#slot">slot</a> and a shortcut at
-once. A coroutine method can't be a shortcut yet, because a key fires on
-Qt's thread while coroutines run on the session's own loop: call it from a
-plain method instead.</p>
+once.</p>
+<h2 id="run-a-coroutine-method">Run a coroutine method<a class="headerlink" href="#run-a-coroutine-method" title="Permanent link">&para;</a></h2>
+<p>A presenter's key can run a coroutine method, such as one that waits for a
+device:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyController</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Ctrl+T"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Take a picture"</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">snap</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">trigger</span><span class="p">()</span>
+</span></code></pre></div>
+<p>The key starts the method on the session's loop and returns at once, so the
+window keeps answering while the device works. A press while the method still
+runs is ignored, so the command never runs twice at the same time. If the
+method raises, the session logs the exception with its traceback. A method
+still running when the session shuts down is cancelled before any component
+shuts down. The session waits up to 5 seconds for it to stop, then logs a
+warning naming the command and shuts down without it.</p>
+<p>A view's coroutine method gets no key in a Qt session, because the method
+would run on the session's loop, and a widget touched from there can crash
+the program. The session logs the key as left out. Do the waiting in a
+presenter instead, and let the view show the result when the presenter
+signals it.</p>
 <h2 id="keep-a-key-to-one-view">Keep a key to one view<a class="headerlink" href="#keep-a-key-to-one-view" title="Permanent link">&para;</a></h2>
 <p>A key marked <code>scope="view"</code> acts only while its view has focus, so it can
 reuse a combination that already acts in the whole window:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"F5"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Refresh"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"F5"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Refresh"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <p>While the view has focus, <code>F5</code> refreshes it; anywhere else it does what the
 window binds it to. A presenter has nothing to focus, so its keys always act
@@ -6065,11 +6105,11 @@ next section shows how to leave the key to them most of the time.</p>
 such as a method defined above the decorated one, and the key acts only
 while that function returns true. The rest of the time the key does nothing,
 so the key press goes to the widget that has focus:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_row_has_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Left"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step back"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="n">_row_has_focus</span><span class="p">)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_back</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_row_has_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Left"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step back"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="n">_row_has_focus</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_back</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <p>Here <code>Left</code> steps back while a row of the view has focus, and moves through
 a tree or a tab bar of the same view the rest of the time. The session asks
@@ -6082,17 +6122,17 @@ holding the key that starts a plan starts it once. A key that steps
 something is the opposite case, because the user holds it to keep stepping.
 Give it <code>repeat=True</code>, and the method runs again at the keyboard's repeat
 rate until the key is released:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <h2 id="change-a-key-in-the-session-file">Change a key in the session file<a class="headerlink" href="#change-a-key-in-the-session-file" title="Permanent link">&para;</a></h2>
 <p>The <code>shortcuts</code> section gives a command another key, two keys, or none. A
 command is named after the component and the method:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">my_view.run_selected</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">my_controller.stop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Escape</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Ctrl+.</span><span class="p p-Indicator">]</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">my_view.step_back</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">my_view.run_selected</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">my_controller.stop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Escape</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Ctrl+.</span><span class="p p-Indicator">]</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">my_view.step_back</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 </span></code></pre></div>
 <p>The <a href="../../reference/session-file/#shortcuts">session file reference</a> lists
 the rules.</p>
@@ -6111,8 +6151,8 @@ the session file gives come back.</p>
 <p>Two components conflict when they ask for one key that acts in the same
 place: both in the whole window, or both in one view. The first declared
 keeps the key, and the log names both:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Keyboard shortcuts:
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  Ctrl+R: kept on my_view.run_selected, taken from my_controller.restart
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Keyboard shortcuts:
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  Ctrl+R: kept on my_view.run_selected, taken from my_controller.restart
 </span></code></pre></div>
 <p>Give one of them another key in the <code>shortcuts</code> section. With <code>strict: true</code>
 in the session file, a conflict stops the build instead.</p>
