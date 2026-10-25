@@ -99,8 +99,8 @@ zarr = [
     "acquire-zarr>=0.10.0",
 ]
 tiled = [
-    "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
-    "tiled[client,server]>=0.2.20 ; python_full_version < '3.14'",
+    "ome-tiled[bluesky]>=0.2.1",
+    "tiled[client,server]>=0.2.20",
 ]
 pva = [
     "ophyd-async[pva]>=0.21.3",
@@ -168,8 +168,8 @@ zarr = [
     "acquire-zarr>=0.10.0",
 ]
 tiled = [
-    "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
-    "tiled[client,server]>=0.2.20 ; python_full_version < '3.14'",
+    "ome-tiled[bluesky]>=0.2.1",
+    "tiled[client,server]>=0.2.20",
 ]
 ome-zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",

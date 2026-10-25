@@ -695,9 +695,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "awkward-cpp" },
     { name = "fsspec" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "packaging" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1e/d7/ff39e4a334de35f46e3555b974e59834ed564ac987acfda0eb34c69a5746/awkward-2.14.0.tar.gz", hash = "sha256:f5bce2ddfd4b5ad5277462b01adf94fd6ca90c33a56949fb8c00490c30725737", size = 6508333, upload-time = "2026-09-17T20:00:34.352Z" }
@@ -710,8 +710,8 @@ name = "awkward-cpp"
 version = "57"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1a/20/be33e3d81b165a0c59e406423b12d2310fb25c8afac1255d98df45cf4a43/awkward_cpp-57.tar.gz", hash = "sha256:df2fff584d72b9942db6eb700fa24fe898bc65e369eecbcd35bcf81269aa41d2", size = 1502719, upload-time = "2026-09-17T19:56:47.318Z" }
 wheels = [
@@ -791,8 +791,8 @@ dependencies = [
     { name = "msgpack" },
     { name = "ndindex" },
     { name = "numexpr", marker = "platform_machine != 'wasm32'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pydantic" },
     { name = "rich" },
     { name = "threadpoolctl", marker = "platform_machine != 'wasm32'" },
@@ -852,8 +852,8 @@ dependencies = [
     { name = "event-model" },
     { name = "mongoquery" },
     { name = "ndindex" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pytz" },
@@ -1451,7 +1451,7 @@ dependencies = [
     { name = "click" },
     { name = "cloudpickle" },
     { name = "fsspec" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.12'" },
     { name = "packaging" },
     { name = "partd" },
     { name = "pyyaml" },
@@ -1464,12 +1464,12 @@ wheels = [
 
 [package.optional-dependencies]
 array = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 dataframe = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pandas" },
     { name = "pyarrow" },
 ]
@@ -2240,8 +2240,8 @@ name = "h5netcdf"
 version = "1.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "packaging" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ef/03/92d6cc02c0055158167255980461155d6e17f1c4143c03f8bcc18d3e3f3a/h5netcdf-1.8.1.tar.gz", hash = "sha256:9b396a4cc346050fc1a4df8523bc1853681ec3544e0449027ae397cb953c7a16", size = 78679, upload-time = "2026-01-23T07:35:31.233Z" }
@@ -2254,8 +2254,8 @@ name = "h5py"
 version = "3.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/db/33/acd0ce6863b6c0d7735007df01815403f5589a21ff8c2e1ee2587a38f548/h5py-3.16.0.tar.gz", hash = "sha256:a0dbaad796840ccaa67a4c144a0d0c8080073c34c76d5a6941d6818678ef2738", size = 446526, upload-time = "2026-03-06T13:49:08.07Z" }
 wheels = [
@@ -3881,8 +3881,8 @@ version = "0.68.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "llvmlite" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4e/cd/e8280f9ffa30fea9fabc5341223701231fcc5d53a31f51419d42d4bec3a6/numba-0.68.0.tar.gz", hash = "sha256:8a781de54b980b98f43bff7f1093701b5f07c80d031c7cfa8a87493d8bf73f2d", size = 2855363, upload-time = "2026-09-30T15:05:44.721Z" }
 wheels = [
@@ -4003,8 +4003,8 @@ name = "numexpr"
 version = "2.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/79/c4/27ea7849eb4a7e3b51db446b0414254326dba8c6bdee09b9f2abf963e55d/numexpr-2.14.2.tar.gz", hash = "sha256:e7144e83ea9e581f2273e0304f15836736c4e470e2bd2e378ce617662a1ca278", size = 121744, upload-time = "2026-07-18T10:52:43.185Z" }
 wheels = [
@@ -4231,7 +4231,7 @@ name = "obstore"
 version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version != '3.13.*'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/23/65/e14b7dba4ed71c3042fb9605fbfe3a8681bade1f5f90f18adbdc635b7c65/obstore-0.12.0.tar.gz", hash = "sha256:3f355f3333084172a8e8da2f62f929e2dd5d0909f6ba714a0b42cb1774a5be3c", size = 138191, upload-time = "2026-10-15T16:41:38.735Z" }
 wheels = [
@@ -4289,17 +4289,17 @@ wheels = [
 
 [[package]]
 name = "ome-tiled"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tiled", extra = ["server"] },
     { name = "yaozarrs" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "zarr", version = "3.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "zarr", version = "3.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/61/7f/236e1e3a5a56620c8c5c8a65967f7db2d1599dd3f2f6b35fd08e2a649446/ome_tiled-0.2.0.tar.gz", hash = "sha256:58765132cbcfc080f1b7e8da62cbc4328385e7e8d093b50fab9de18535b27b92", size = 11679, upload-time = "2026-09-18T20:26:19.19Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/99/9ced9f7d6bcc04fa29a6c912607aaf8418d80ce04eeaea24e99e580c0af7/ome_tiled-0.2.1.tar.gz", hash = "sha256:0ce3ddba0ba2867a96927e92a3574f53b7f92887958a42081c8bc8bc8c5b8778", size = 11718, upload-time = "2026-10-25T14:27:42.448Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/4a/611ffbcf257afcf0da03bcc9f4dc02aef3dbecd88047e1cfacee5c53b58b/ome_tiled-0.2.0-py3-none-any.whl", hash = "sha256:a6f20110fae43e54c042abc86be12fc79dc94ea50c5cc560a2e5d511860c3dfa", size = 12203, upload-time = "2026-09-18T20:26:17.912Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/a5/995838c5ff7c04aff0729c78f7e9cde46990d4079ada2dbc0a4ccd76b7ee/ome_tiled-0.2.1-py3-none-any.whl", hash = "sha256:888a82d81ebb1671bd5ab284d00ba8dc3016918a048861d1bba9d7b974174b7d", size = 12272, upload-time = "2026-10-25T14:27:41.366Z" },
 ]
 
 [package.optional-dependencies]
@@ -4588,8 +4588,8 @@ name = "pandas"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "python-dateutil" },
     { name = "tzdata", marker = "sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
@@ -5936,8 +5936,8 @@ version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "awkward" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dc/87/dedd347e3546a7ea20d79c0b83589b429f96a04667642331681fa68eba2c/ragged-0.3.0.tar.gz", hash = "sha256:73876f9048c1cabf7d58f4fbc09df6d2cfc7fda672fe5670ff9557a814753073", size = 104279, upload-time = "2026-06-03T06:31:25.45Z" }
 wheels = [
@@ -5949,7 +5949,7 @@ name = "redis"
 version = "8.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "async-timeout", marker = "python_full_version < '3.11.3' or python_full_version >= '3.14'" },
+    { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/99/604f0b666d4c616d891cf77ebb9db6bb21601344c051aebf1b72b9ff915f/redis-8.1.0.tar.gz", hash = "sha256:6e1a19beef9225c83efd689c7e6b7da2d5215b1f42cd13b7fc3714d0a09c7b25", size = 5254356, upload-time = "2026-07-30T08:51:00.269Z" }
 wheels = [
@@ -6028,8 +6028,8 @@ testing = [
     { name = "pytest" },
 ]
 tiled = [
-    { name = "ome-tiled", extra = ["bluesky"], marker = "python_full_version < '3.14'" },
-    { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
+    { name = "ome-tiled", extra = ["bluesky"] },
+    { name = "tiled", extra = ["client", "server"] },
 ]
 zarr = [
     { name = "acquire-zarr" },
@@ -6047,7 +6047,7 @@ dev = [
     { name = "griffe-fieldz" },
     { name = "jsonschema" },
     { name = "mypy" },
-    { name = "ome-tiled", extra = ["bluesky"], marker = "python_full_version < '3.14'" },
+    { name = "ome-tiled", extra = ["bluesky"] },
     { name = "ome-writers", extra = ["acquire-zarr"] },
     { name = "ophyd-async", extra = ["ca", "pva"] },
     { name = "p4p" },
@@ -6059,7 +6059,7 @@ dev = [
     { name = "pytest-env" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
+    { name = "tiled", extra = ["client", "server"] },
     { name = "towncrier" },
     { name = "tox-uv-bare" },
     { name = "types-pyyaml" },
@@ -6137,8 +6137,8 @@ testing = [
     { name = "pytest" },
 ]
 tiled = [
-    { name = "ome-tiled", extra = ["bluesky"], marker = "python_full_version < '3.14'" },
-    { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
+    { name = "ome-tiled", extra = ["bluesky"] },
+    { name = "tiled", extra = ["client", "server"] },
 ]
 tox = [
     { name = "tox-uv-bare" },
@@ -6169,7 +6169,7 @@ requires-dist = [
     { name = "magicgui", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qlementine-pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qt-common'", specifier = ">=0.10.2" },
-    { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.0" },
+    { name = "ome-tiled", extras = ["bluesky"], marker = "extra == 'tiled'", specifier = ">=0.2.1" },
     { name = "ome-writers", extras = ["acquire-zarr"], marker = "extra == 'ome-zarr'", specifier = ">=0.3.2" },
     { name = "ophyd-async", specifier = ">=0.21.3" },
     { name = "platformdirs", specifier = ">=4.13.5" },
@@ -6197,7 +6197,7 @@ requires-dist = [
     { name = "superqt", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qlementine-pyside'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qt-common'", specifier = ">=0.9.0" },
-    { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.20" },
+    { name = "tiled", extras = ["client", "server"], marker = "extra == 'tiled'", specifier = ">=0.2.20" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
 provides-extras = ["ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "testing", "tiled", "zarr"]
@@ -6212,7 +6212,7 @@ dev = [
     { name = "griffe-fieldz", specifier = ">=0.5.0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "mypy", specifier = ">=2.4.0" },
-    { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14'", specifier = ">=0.2.0" },
+    { name = "ome-tiled", extras = ["bluesky"], specifier = ">=0.2.1" },
     { name = "ome-writers", extras = ["acquire-zarr"], specifier = ">=0.3.2" },
     { name = "ophyd-async", extras = ["ca"], specifier = ">=0.21.3" },
     { name = "ophyd-async", extras = ["pva"], specifier = ">=0.21.3" },
@@ -6225,7 +6225,7 @@ dev = [
     { name = "pytest-env", specifier = ">=1.7.1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.17.2" },
-    { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14'", specifier = ">=0.2.20" },
+    { name = "tiled", extras = ["client", "server"], specifier = ">=0.2.20" },
     { name = "towncrier", specifier = ">=26.9.0" },
     { name = "tox-uv-bare", specifier = ">=1.37.0" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260906" },
@@ -6298,8 +6298,8 @@ qt-common = [
 ]
 testing = [{ name = "pytest", specifier = ">=8" }]
 tiled = [
-    { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14'", specifier = ">=0.2.0" },
-    { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14'", specifier = ">=0.2.20" },
+    { name = "ome-tiled", extras = ["bluesky"], specifier = ">=0.2.1" },
+    { name = "tiled", extras = ["client", "server"], specifier = ">=0.2.20" },
 ]
 tox = [{ name = "tox-uv-bare", specifier = ">=1.37.0" }]
 zarr = [{ name = "acquire-zarr", specifier = ">=0.10.0" }]
@@ -6867,8 +6867,8 @@ version = "0.19.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numba" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/86/9f/2cd5f071ce00083f74af90ae2c083393ef3e91ecd78f0f24887871473dd4/sparse-0.19.2.tar.gz", hash = "sha256:0d41a7c3f477cb4265d7193bcf12b0146674d6533ff328afa1e1d0f2b8480f00", size = 814045, upload-time = "2026-08-14T09:37:27.288Z" }
 wheels = [
@@ -7060,6 +7060,12 @@ name = "tifffile"
 version = "2026.10.15"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
+    "python_full_version >= '3.15' and sys_platform == 'win32'",
+    "python_full_version >= '3.15' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.15' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
@@ -7106,8 +7112,8 @@ client = [
     { name = "lz4" },
     { name = "ndindex" },
     { name = "numba" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "ragged" },
@@ -7153,10 +7159,10 @@ server = [
     { name = "minio" },
     { name = "ndindex" },
     { name = "numba" },
-    { name = "numcodecs", version = "0.16.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numcodecs", version = "0.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numcodecs", version = "0.16.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numcodecs", version = "0.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "obstore" },
     { name = "openpyxl" },
     { name = "packaging" },
@@ -7174,13 +7180,13 @@ server = [
     { name = "stamina" },
     { name = "starlette" },
     { name = "strawberry-graphql", extra = ["fastapi"] },
-    { name = "tifffile", version = "2026.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "tifffile", version = "2026.10.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "tifffile", version = "2026.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "tifffile", version = "2026.10.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
     { name = "xarray" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "zarr", version = "3.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "zarr", version = "3.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "zstandard" },
 ]
 
@@ -7896,8 +7902,8 @@ name = "xarray"
 version = "2026.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "packaging" },
     { name = "pandas" },
 ]

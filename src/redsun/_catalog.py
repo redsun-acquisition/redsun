@@ -23,9 +23,7 @@ def require_tiled() -> None:
     raise RuntimeError(
         "this session's 'storage' section has a 'catalog' key and "
         f"{', '.join(repr(package) for package in missing)} not installed. "
-        "Install them with 'pip install redsun[tiled]', or drop the key. "
-        "The extra installs nothing on Python 3.14, which tiled does not "
-        "support yet."
+        "Install them with 'pip install redsun[tiled]', or drop the key."
     )
 
 

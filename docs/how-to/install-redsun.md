@@ -147,11 +147,6 @@ a project that needs one of its add-on modules, such as QtCharts or
 QtMultimedia, adds `pyside6` to its own dependencies. A [headless session](run-without-a-gui.md), with no
 window, needs neither.
 
-!!! warning "The `tiled` extra on Python 3.14"
-
-    `tiled` doesn't support Python 3.14 yet, so the `tiled` extra installs
-    nothing there. Use Python 3.13 or earlier if you need a catalog.
-
 ## Check the installation
 
 With the environment still active, run:
