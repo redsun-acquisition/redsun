@@ -6236,7 +6236,7 @@ line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its <code>tmp_path</code>, drop the <code>psygnal</code>
 emissions it left queued, and turn automatic garbage collection off for the
 run, collecting after each test module on the main thread. A test using <code>qapp</code>
-that leaves the application's stylesheet, style or font changed fails.
+that leaves the application's stylesheet, style, font or palette changed fails.
 On Windows under Qt's <code>offscreen</code> platform, they also point Qt at the system
 fonts, which that platform otherwise lacks.
 The module defines no <code>qapp</code>, so it combines with <code>pytest-qt</code>.</p>
@@ -6631,7 +6631,7 @@ after it stay safe.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Fail a test using <code>qapp</code> that left the application's stylesheet, style or font changed.</p>
+        <p>Fail a test using <code>qapp</code> that left the application's stylesheet, style, font or palette changed.</p>
 <p>A hook provider undoes in <code>shutdown</code> what it changed on the application,
 and a test that changes it by hand puts it back. A test that does not ask
 for the <code>qapp</code> fixture is not checked.</p>
@@ -6652,8 +6652,9 @@ for the <code>qapp</code> fixture is not checked.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If the three differ after the test from before it; the stylesheet is
-put back first, so it does not style the tests after this one.</p>
+                <p>If one of them differs after the test from before it; the
+stylesheet and the palette are put back first, so they do not style
+the tests after this one.</p>
               </div>
             </td>
           </tr>
