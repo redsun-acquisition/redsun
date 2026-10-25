@@ -266,10 +266,12 @@ def load(declared: Source | Sequence[Source] | None) -> dict[str, Any]:
 
 
 def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
-    """Say each problem as `section.key: what`, a hook entry by its hook points.
+    """Say each problem as `section.key: what`, a hook entry by where the file writes it.
 
     The model holds hook entries as a list of groups, so a problem in one is
-    located by its position there, which the file does not show. The tag
+    located by its position there, which the file does not show. It is
+    named instead by each hook point holding it, with its index when the
+    point holds a list, such as `configure_application[1]`. The tag
     naming the kind of a layout node is left out, the file not writing it.
     """
     groups: list[dict[str, Any]] = []
@@ -281,7 +283,15 @@ def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
 
     def located(loc: list[str | int]) -> list[str | int]:
         if loc[:1] == ["hooks"] and len(loc) > 1 and isinstance(loc[1], int) and groups:
-            loc[1] = "+".join(groups[loc[1]]["moments"])
+            group = groups[loc[1]]
+            loc[1] = "+".join(
+                f"{moment}[{position}]"
+                if isinstance(data["hooks"][moment], list)
+                else moment
+                for moment, position in zip(
+                    group["moments"], group["positions"], strict=True
+                )
+            )
         # the tag naming a layout node's kind is the model's, not the file's
         return [
             part

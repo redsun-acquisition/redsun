@@ -646,8 +646,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
         A view that failed to build and asked for a dock or the centre is
         replaced there by a widget naming it and the reason. When any
-        component failed to build or to be set up, a button in the status bar
-        counts them and lists them with their tracebacks. The keyboard
+        component failed to build or to be set up, or a hook provider was
+        skipped, a button in the status bar counts them and lists them with
+        their tracebacks. The keyboard
         shortcuts are bound before the main-view hook runs, so the menus it
         builds show them. A Window menu, added after the hook has run, shows or
         hides each dock, puts every dock back where its placement says, and
@@ -665,16 +666,23 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._shown_layout = self.resolve_layout()
         attach(window, views, self._declared_placements(), self._shown_layout)
         earlier = set(window.findChildren(QDockWidget, options=DIRECT_CHILDREN))
-        failures = {**self._failed, **self._not_set_up}
-        bar = window.statusBar()
-        if failures and bar is not None:
-            bar.addPermanentWidget(FailuresButton(failures))
         # before the hook, so the menus it builds show the actions' keys
         self._bind_shortcuts(views)
         self.call_hooks(
             QtHook.CONFIGURE_MAIN_VIEW,
             lambda provider: provider.configure_main_view(window),
         )
+        failures = [
+            *self._failed.items(),
+            *self._not_set_up.items(),
+            *(
+                (f"{f.name} (hook: {', '.join(f.points)})", f.reason)
+                for f in self._failed_hooks
+            ),
+        ]
+        bar = window.statusBar()
+        if failures and bar is not None:
+            bar.addPermanentWidget(FailuresButton(failures))
         self._register_window_actions(views, earlier)
         self._default_state = window.saveState()
         self.restore_layout()

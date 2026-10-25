@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
@@ -10,7 +11,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 import pytest
 from mock_bundle.hooks import MockBoth, MockBranding, MockStyle
 from ophyd_async.core import Device
-from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
+from qtpy.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
 from redsun import (
     AsDevice,
@@ -35,6 +36,9 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
+
+SHARED = {"provider": f"{__name__}:Signs", "kwargs": 3}
+"""A hook entry written once and named at two points, as a YAML alias would."""
 
 
 class Splash:
@@ -151,6 +155,16 @@ class Breaks:
 
     def shutdown(self) -> None:
         self.log.append("breaks shut down")
+
+
+class Snaps:
+    """Raises at `configure_main_view`, whatever window it is given."""
+
+    def __init__(self, where: str) -> None:
+        self.where = where
+
+    def configure_main_view(self, view: QMainWindow) -> None:
+        raise RuntimeError("no status bar today")
 
 
 class Unbuildable:
@@ -472,6 +486,33 @@ def test_a_point_taking_one_provider_refuses_a_second() -> None:
         QtSession({"hooks": {"confirm_close": listed}}).build()
 
 
+@pytest.mark.parametrize(
+    ("hooks", "where"),
+    [
+        (
+            {
+                "configure_application": [
+                    {"provider": f"{__name__}:Heir"},
+                    {"provider": f"{__name__}:Notes", "kwargs": 3},
+                ]
+            },
+            "hooks.configure_application[1].kwargs",
+        ),
+        (
+            {"configure_application": [SHARED], "configure_main_view": SHARED},
+            "hooks.configure_application[0]+configure_main_view.kwargs",
+        ),
+    ],
+    ids=["listed", "shared"],
+)
+def test_a_problem_in_a_hook_entry_names_its_place_in_the_list(
+    hooks: dict[str, Any], where: str
+) -> None:
+    """Locate a problem in a listed hook entry by its index, and a shared entry by every place it is written."""
+    with pytest.raises(ConfigurationError, match=re.escape(where)):
+        QtSession({"hooks": hooks}).build()
+
+
 def test_a_provider_that_raises_is_skipped_and_the_rest_run(
     qapp: QApplication,
     build: BuildSession,
@@ -497,6 +538,28 @@ def test_a_provider_that_raises_is_skipped_and_the_rest_run(
     assert at_the_window == ()
     assert "no stylesheet today" in caplog.text
     assert "Hooks skipped: Breaks" in caplog.text
+
+
+def test_the_status_bar_counts_the_skipped_hooks(
+    qapp: QApplication, build: BuildSession, log: list[str]
+) -> None:
+    """Count each provider skipped at the application or the window in the status bar."""
+    hooks = {
+        "configure_application": {
+            "provider": f"{__name__}:Breaks",
+            "kwargs": {"log": log},
+        },
+        "configure_main_view": [
+            {"provider": f"{__name__}:Snaps", "kwargs": {"where": "left"}},
+            {"provider": f"{__name__}:Snaps", "kwargs": {"where": "right"}},
+        ],
+    }
+
+    app = build(QtSession, {"hooks": hooks})
+
+    bar = app.main_window.statusBar()
+    assert bar is not None
+    assert [b.text() for b in bar.findChildren(QPushButton)] == ["3 failed"]
 
 
 def test_a_provider_that_cannot_be_built_is_skipped(

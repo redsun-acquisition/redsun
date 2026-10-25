@@ -23,9 +23,11 @@ In a Qt session, the window already tells you that something is missing:
 - A view that failed to build, and that should have filled a dock or the
   centre of the window, is replaced there by a message naming the view and
   the reason. Its **Show traceback** button shows where the error came from.
-- When any component failed to build or to be set up, a button at the right
-  of the status bar counts them, such as `2 components failed`. Press it to
-  see each one with its reason, and **Show Details** for the tracebacks.
+- When any component failed to build or to be set up, or a hook provider was
+  skipped, a button at the right of the status bar counts them, such as
+  `2 failed`. Press it to see each one with its reason, and **Show Details**
+  for the tracebacks. A hook provider is listed with the hook points it
+  served, such as `MyStyle (hook: configure_application)`.
 
 ## Read the build summary
 

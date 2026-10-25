@@ -1130,7 +1130,7 @@ def test_the_status_bar_counts_the_components_that_failed(
     session = build(BrokenApp)
     bar = session.main_window.statusBar()
     assert bar is not None
-    assert [b.text() for b in bar.findChildren(QPushButton)] == ["2 components failed"]
+    assert [b.text() for b in bar.findChildren(QPushButton)] == ["2 failed"]
 
 
 def test_a_view_slot_runs_on_the_main_thread(
