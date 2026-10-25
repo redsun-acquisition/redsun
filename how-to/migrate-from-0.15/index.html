@@ -2660,6 +2660,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-strict-session-stops-when-a-service-does-not-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A strict session stops when a service does not start
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-prefix-that-defaults-to-none-is-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A prefix that defaults to <code>None</code> is optional
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3517,6 +3539,8 @@
       
         
           
+        
+      
         
       
         
@@ -4519,6 +4543,33 @@
     
   
   33. Device trees: one index of every device
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0034-a-root-device-takes-the-prefixes-of-several-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  34. A root device takes the prefixes of several services
 
     
   </span>
@@ -5809,6 +5860,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-strict-session-stops-when-a-service-does-not-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A strict session stops when a service does not start
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-prefix-that-defaults-to-none-is-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A prefix that defaults to <code>None</code> is optional
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5936,10 +6009,11 @@
 
 <h1 id="how-to-migrate-from-015">How to migrate from 0.15<a class="headerlink" href="#how-to-migrate-from-015" title="Permanent link">&para;</a></h1>
 <p>Release 0.16 removes the two things 0.15 deprecated, changes what a view of
-plan progress receives, moves some axes to another box of the positioner, and
-removes two helpers the positioner no longer uses. This page gives each change with what to write
-instead. The <a href="../../reference/changelog/">changelog</a> lists everything else the
-release changed.</p>
+plan progress receives, moves some axes to another box of the positioner,
+removes two helpers the positioner no longer uses, and changes what a session
+does when a service does not start. This page gives each change with what to
+write instead. The <a href="../../reference/changelog/">changelog</a> lists everything
+else the release changed.</p>
 <h2 id="a-views-placement-cant-come-from-a-property">A view's placement can't come from a property<a class="headerlink" href="#a-views-placement-cant-come-from-a-property" title="Permanent link">&para;</a></h2>
 <p>The session reads a view's placement before it builds the view, so the
 placement has to be a plain class attribute or part of the declaration. A view
@@ -6037,6 +6111,30 @@ parameters are keyword-only; declare the parameters as plain named ones. A
 fraction reported alone reaches the watcher alone, with <code>current</code>, <code>initial</code>
 and <code>target</code> left <code>None</code>, and a device's status that reports no unit gives
 <code>unit</code> as <code>None</code> instead of <code>"unit"</code>.</p>
+<h2 id="a-strict-session-stops-when-a-service-does-not-start">A strict session stops when a service does not start<a class="headerlink" href="#a-strict-session-stops-when-a-service-does-not-start" title="Permanent link">&para;</a></h2>
+<p>A <a href="../../explanation/glossary/#strict-session">strict session</a> now stops when
+any service fails to start, even one that no device names. In 0.15 such a
+session ran on, and stopped only if a device on the service could not be
+built. If the session declares a service it no longer uses, remove the
+service from the session file. If a service may be missing while you work,
+leave <code>strict</code> off for those runs:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">MyApp</span><span class="p">({</span><span class="s2">"strict"</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></code></pre></div>
+<h2 id="a-prefix-that-defaults-to-none-is-optional">A prefix that defaults to <code>None</code> is optional<a class="headerlink" href="#a-prefix-that-defaults-to-none-is-optional" title="Permanent link">&para;</a></h2>
+<p>A device declared with <code>service="x"</code> whose <code>prefix</code> argument defaults to <code>None</code>
+is now built when the service does not start. The session leaves <code>prefix</code> out,
+so the device gets <code>None</code>, and the build summary lists it under
+<code>Built without</code>. In 0.15 the session skipped the device. To keep it skipped,
+give <code>prefix</code> no default:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 0.15: skipped when the service does not start</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyCamera</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># now, to keep it skipped</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyCamera</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
 
 
 

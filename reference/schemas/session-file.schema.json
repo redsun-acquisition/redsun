@@ -144,6 +144,22 @@
           "description": "The service whose prefix the device gets.",
           "title": "Service"
         },
+        "services": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The service whose prefix each constructor keyword gets, by keyword.",
+          "title": "Services"
+        },
         "autoconnect": {
           "default": true,
           "description": "Whether the build connects the device.",

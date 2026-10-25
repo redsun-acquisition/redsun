@@ -3450,6 +3450,8 @@
       
         
       
+        
+      
     
     
     
@@ -4384,6 +4386,33 @@
     
   
   33. Device trees: one index of every device
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0034-a-root-device-takes-the-prefixes-of-several-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  34. A root device takes the prefixes of several services
 
     
   </span>
@@ -7582,7 +7611,8 @@ read from the plan's signature.</p>
 <p>A prefix is the beginning shared by the names of a group of
 <a href="#process-variable">process variables</a>, such as <code>CAM:</code> in <code>CAM:Exposure</code>. A
 <a href="#service">service</a> has one and gives it to every device that names the
-service. The term comes from <a href="#epics"><abbr title="A set of tools for controlling instruments over a network.">EPICS</abbr></a>.</p>
+service. A device holding several pieces can take one prefix per piece, each
+from its own service. The term comes from <a href="#epics"><abbr title="A set of tools for controlling instruments over a network.">EPICS</abbr></a>.</p>
 <h3 id="presenter">Presenter<a class="headerlink" href="#presenter" title="Permanent link">&para;</a></h3>
 <p>A presenter is a <a href="#component">component</a> with no <a href="#placement">placement</a>,
 which holds the application logic. It runs <a href="#plan">plans</a>, reacts to
@@ -7698,8 +7728,8 @@ the <a href="#run">run</a> can find the data. The term comes from
 <a href="#bluesky"><code>bluesky</code></a>.</p>
 <h3 id="strict-session">Strict session<a class="headerlink" href="#strict-session" title="Permanent link">&para;</a></h3>
 <p>A strict session is a session whose configuration sets <code>strict: true</code>. If any
-component fails to build, or its <code>setup</code> fails, the session stops with an
-error instead of running without the component.</p>
+component fails to build, its <code>setup</code> fails or a service does not start, the
+session stops with an error instead of running without it.</p>
 <h3 id="structural-subtyping">Structural subtyping<a class="headerlink" href="#structural-subtyping" title="Permanent link">&para;</a></h3>
 <p>Structural subtyping means deciding whether a class fits by the members it
 has, not by what it inherits from. A component never has to inherit from a

@@ -3450,6 +3450,8 @@
       
         
       
+        
+      
     
     
     
@@ -4384,6 +4386,33 @@
     
   
   33. Device trees: one index of every device
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0034-a-root-device-takes-the-prefixes-of-several-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  34. A root device takes the prefixes of several services
 
     
   </span>
@@ -10506,9 +10535,11 @@ connect to simulated backends, which reach no service.</p>
 
         <p>Construct the devices, which are built from no other component.</p>
 <p>They are built before the store opens, each from its own declaration
-alone. A device naming a service
-receives that service's prefix as <code>prefix</code>, and is skipped when the
-service is not declared, did not start, or gives no prefix.</p>
+alone. Each keyword a device maps to a service receives that service's
+prefix. A keyword whose service did not start is left out when its
+default is <code>None</code>, so the device builds without that piece; otherwise
+the device is skipped, as it is when the service is not declared or
+gives no prefix.</p>
 
 
     </div>
@@ -10781,8 +10812,8 @@ where each asks to be.</p>
             <td>
               <div class="doc-md-description">
                 <p>If the configuration sets <code>strict</code> and a component could not be
-built or set up, or a hook provider was skipped, naming each one
-and why.</p>
+built or set up, a service did not start, or a hook provider was
+skipped, naming each one and why.</p>
               </div>
             </td>
           </tr>
@@ -11972,7 +12003,7 @@ keywords are read from; both are the name unless a marker says otherwise.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If a device's keywords name its service ambiguously, or give an
+                <p>If a device's keywords name its services ambiguously, or give an
 <code>autoconnect</code> that is not a bool.</p>
               </div>
             </td>
