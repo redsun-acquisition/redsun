@@ -6398,7 +6398,8 @@ declared it does.</p>
 <p>When a provider can't be built, or its hook method raises, the session logs
 the error, skips the provider at every point it serves, and carries on. The
 build summary lists it as <code>Hooks skipped: DarkTheme (configure_application)</code>,
-and a skipped provider gets no <code>shutdown</code> call. A provider whose constructor
+and in a Qt session the failures button of the status bar lists it too. A
+skipped provider gets no <code>shutdown</code> call. A provider whose constructor
 raised is logged as <code>cannot construct hook provider 'X' ...</code>.</p>
 <p>Two cases stop the build instead. A <code>create_application</code> provider that
 fails stops it, because the session can't run on another application. And
@@ -6406,7 +6407,8 @@ with <code>strict: true</code> in the session file, every skipped provider stops
 <p>A wrong declaration raises <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HookError&lt;/span&gt;" href="../../reference/api/errors/#redsun.errors.HookError"><code>HookError</code></a> and names the
 point. In a session file, an entry of the wrong shape is found when the file
 is read and raised as <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfigurationError&lt;/span&gt;" href="../../reference/api/errors/#redsun.errors.ConfigurationError"><code>ConfigurationError</code></a>,
-located as <code>hooks.&lt;point&gt;.&lt;key&gt;</code>.</p>
+located as <code>hooks.&lt;point&gt;.&lt;key&gt;</code>. An entry in a list is located by its index,
+as <code>hooks.configure_application[1].kwargs</code>.</p>
 <table>
 <thead>
 <tr>

@@ -5988,9 +5988,11 @@ on the first failure instead.</p>
 <li>A view that failed to build, and that should have filled a dock or the
   centre of the window, is replaced there by a message naming the view and
   the reason. Its <strong>Show traceback</strong> button shows where the error came from.</li>
-<li>When any component failed to build or to be set up, a button at the right
-  of the status bar counts them, such as <code>2 components failed</code>. Press it to
-  see each one with its reason, and <strong>Show Details</strong> for the tracebacks.</li>
+<li>When any component failed to build or to be set up, or a hook provider was
+  skipped, a button at the right of the status bar counts them, such as
+  <code>2 failed</code>. Press it to see each one with its reason, and <strong>Show Details</strong>
+  for the tracebacks. A hook provider is listed with the hook points it
+  served, such as <code>MyStyle (hook: configure_application)</code>.</li>
 </ul>
 <h2 id="read-the-build-summary">Read the build summary<a class="headerlink" href="#read-the-build-summary" title="Permanent link">&para;</a></h2>
 <p>The log gives the full picture. At the end of every build the session logs a

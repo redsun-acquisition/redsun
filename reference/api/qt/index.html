@@ -7837,8 +7837,9 @@ be shown with it, so what it left behind is deleted.</p>
         <p>Put every view where it asks to be in the window, and ready the window to show.</p>
 <p>A view that failed to build and asked for a dock or the centre is
 replaced there by a widget naming it and the reason. When any
-component failed to build or to be set up, a button in the status bar
-counts them and lists them with their tracebacks. The keyboard
+component failed to build or to be set up, or a hook provider was
+skipped, a button in the status bar counts them and lists them with
+their tracebacks. The keyboard
 shortcuts are bound before the main-view hook runs, so the menus it
 builds show them. A Window menu, added after the hook has run, shows or
 hides each dock, puts every dock back where its placement says, and
