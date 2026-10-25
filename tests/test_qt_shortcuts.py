@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -33,6 +34,7 @@ from redsun import (
     provides,
     shortcut,
 )
+from redsun.aio import run_coro
 from redsun.qt import WINDOW_MENU, Central, Dock, MenuItem, QtSession
 from redsun.view.qt._shortcuts_dialog import ShortcutsDialog
 from tests.sdk.view.helpers import key_click
@@ -256,6 +258,45 @@ class Recorder:
         return Executed(self.record)
 
 
+class Snapper:
+    """Presenter whose key runs a coroutine method that waits for `go`."""
+
+    def __init__(
+        self,
+        name: str,
+        steps: list[str],
+        failing: bool = False,
+        stubborn: bool = False,
+    ) -> None:
+        self.name = name
+        self.steps = steps
+        self.failing = failing
+        self.stubborn = stubborn
+        self.started = asyncio.Event()
+        self.go = asyncio.Event()
+        self.finished = asyncio.Event()
+
+    @shortcut("Ctrl+T", title="Snap")
+    async def snap(self) -> None:
+        self.steps.append("started")
+        self.started.set()
+        try:
+            if self.failing:
+                raise RuntimeError("no camera")
+            await self.go.wait()
+            self.steps.append("done")
+        except asyncio.CancelledError:
+            self.steps.append("cancelled")
+            if not self.stubborn:
+                raise
+            await self.go.wait()
+        finally:
+            self.finished.set()
+
+    def shutdown(self) -> None:
+        self.steps.append("shutdown")
+
+
 class RecordingApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "recording-session"}
 
@@ -274,6 +315,28 @@ class CentralOnlyApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "central-only-session"}
 
     shadow: AsView[Shadow]
+
+
+class SnapApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "snap-session"}
+
+    other: AsView[Other]
+    snapper: AsPresenter[Snapper]
+
+
+async def set_event(event: asyncio.Event) -> None:
+    """Set *event* on the loop that waits for it."""
+    event.set()
+
+
+def wait_for(event: asyncio.Event) -> None:
+    """Block until *event* is set on the shared loop."""
+    run_coro(asyncio.wait_for(event.wait(), 5))
+
+
+def snap_app(build: BuildSession, steps: list[str], **options: bool) -> SnapApp:
+    """Build `SnapApp` recording into *steps*, with *options* for its presenter."""
+    return build(SnapApp, {"presenters": {"snapper": {"steps": steps, **options}}})
 
 
 def native(key: str) -> str:
@@ -911,3 +974,87 @@ def test_a_held_key_repeats_only_a_command_that_asks_to(
     assert climb is not None
     assert not run.autoRepeat()
     assert climb.autoRepeat()
+
+
+def test_a_presenter_coroutine_key_runs_once_however_often_pressed(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Run a presenter's coroutine from its key, ignoring a press while it runs."""
+    steps: list[str] = []
+    app = snap_app(build, steps)
+    other, snapper = app.views["other"], app.presenters["snapper"]
+    assert isinstance(other, Other)
+    assert isinstance(snapper, Snapper)
+
+    with caplog.at_level(logging.DEBUG, logger="redsun"):
+        key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+        wait_for(snapper.started)
+        key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+        run_coro(set_event(snapper.go))
+        wait_for(snapper.finished)
+
+    assert steps == ["started", "done"]
+    assert "snapper.snap still runs, so this run is ignored" in caplog.messages
+
+
+def test_a_presenter_coroutine_key_that_raises_is_logged(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log what a presenter's coroutine raised, with its traceback."""
+    app = snap_app(build, [], failing=True)
+    other, snapper = app.views["other"], app.presenters["snapper"]
+    assert isinstance(other, Other)
+    assert isinstance(snapper, Snapper)
+
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+        wait_for(snapper.finished)
+
+    [record] = [r for r in caplog.records if r.getMessage() == "snapper.snap raised"]
+    assert record.exc_info is not None
+    assert str(record.exc_info[1]) == "no camera"
+
+
+def test_shutdown_cancels_a_presenter_coroutine_still_running(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Cancel a running presenter coroutine at shutdown, before the presenter shuts down."""
+    steps: list[str] = []
+    app = snap_app(build, steps)
+    other, snapper = app.views["other"], app.presenters["snapper"]
+    assert isinstance(other, Other)
+    assert isinstance(snapper, Snapper)
+
+    key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+    wait_for(snapper.started)
+    app.shutdown()
+
+    assert steps == ["started", "cancelled", "shutdown"]
+
+
+def test_shutdown_goes_on_without_a_coroutine_that_ignores_its_cancel(
+    qapp: QApplication,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Shut down without a coroutine still running after the wait, and log it."""
+    monkeypatch.setattr("redsun.qt._session.SHUTDOWN_TIMEOUT", 0.1)
+    steps: list[str] = []
+    app = snap_app(build, steps, stubborn=True)
+    other, snapper = app.views["other"], app.presenters["snapper"]
+    assert isinstance(other, Other)
+    assert isinstance(snapper, Snapper)
+
+    key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+    wait_for(snapper.started)
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        app.shutdown()
+    run_coro(set_event(snapper.go))
+    wait_for(snapper.finished)
+
+    assert steps == ["started", "cancelled", "shutdown"]
+    assert (
+        "snapper.snap did not stop within 0.1 s of being cancelled; "
+        "shutting down without it"
+    ) in caplog.messages

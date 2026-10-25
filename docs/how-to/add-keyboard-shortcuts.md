@@ -36,9 +36,33 @@ Don't write `Cmd` for Command: in `app-model`'s names, `Cmd` and `Meta` are
 the Control key on macOS.
 
 A method can be a [slot](../explanation/glossary.md#slot) and a shortcut at
-once. A coroutine method can't be a shortcut yet, because a key fires on
-Qt's thread while coroutines run on the session's own loop: call it from a
-plain method instead.
+once.
+
+## Run a coroutine method
+
+A presenter's key can run a coroutine method, such as one that waits for a
+device:
+
+```python
+class MyController:
+    @shortcut("Ctrl+T", title="Take a picture")
+    async def snap(self) -> None:
+        await self.camera.trigger()
+```
+
+The key starts the method on the session's loop and returns at once, so the
+window keeps answering while the device works. A press while the method still
+runs is ignored, so the command never runs twice at the same time. If the
+method raises, the session logs the exception with its traceback. A method
+still running when the session shuts down is cancelled before any component
+shuts down. The session waits up to 5 seconds for it to stop, then logs a
+warning naming the command and shuts down without it.
+
+A view's coroutine method gets no key in a Qt session, because the method
+would run on the session's loop, and a widget touched from there can crash
+the program. The session logs the key as left out. Do the waiting in a
+presenter instead, and let the view show the result when the presenter
+signals it.
 
 ## Keep a key to one view
 

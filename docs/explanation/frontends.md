@@ -225,6 +225,7 @@ and `Session.view_arguments`, to add arguments to every view's constructor.
 | the regions a window layout fills | `Frontend.regions`, `Frontend.region_of` | `center`, `left`, `right`, `top`, `bottom` |
 | whether a layout may start a view hidden | `Frontend.hides` | yes |
 | which keys it can read, and how it writes them | `Frontend.key_problems`, `Frontend.canonical_key` | `app-model`'s spelling, such as `Ctrl+R` |
+| whether a key can run a view's coroutine method | `Frontend.view_coroutines` | no |
 | the thread its views' slots run on | [`Frontend.thread_of`][redsun.Frontend.thread_of] | the main thread, for a `QWidget` |
 | the delivery of the calls held for that thread | the session's `run` | `psygnal.qt.start_emitting_from_queue` |
 

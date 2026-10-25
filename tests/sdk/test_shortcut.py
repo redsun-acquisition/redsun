@@ -113,15 +113,6 @@ def test_a_method_that_needs_arguments_is_refused() -> None:
             def run(self, plan: str) -> None: ...
 
 
-def test_a_coroutine_method_is_refused_for_now() -> None:
-    """Refuse an async method, which a key would call without running."""
-    with pytest.raises(TypeError, match="coroutine"):
-
-        class Wrong:
-            @shortcut("Ctrl+R", title="Run")
-            async def run(self) -> None: ...
-
-
 def test_a_slot_can_also_be_a_shortcut() -> None:
     """Keep both records when slot and shortcut decorate one method, in either order."""
 

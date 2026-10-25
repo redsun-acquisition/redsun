@@ -44,6 +44,13 @@ class Frontend:
     hides: ClassVar[bool] = False
     """Whether a window layout may start a view hidden."""
 
+    view_coroutines: ClassVar[bool] = False
+    """Whether a key can run a view's coroutine method.
+
+    False here: such a key is left out, since a coroutine runs on the
+    session's loop, where most toolkits forbid touching a widget.
+    """
+
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
         """Refuse a view class this frontend cannot build.
