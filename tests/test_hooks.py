@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 import pytest
 from mock_bundle.hooks import MockBoth, MockBranding, MockStyle
 from ophyd_async.core import Device
-from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
+from qtpy.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
 from redsun import (
     AsDevice,
@@ -151,6 +151,16 @@ class Breaks:
 
     def shutdown(self) -> None:
         self.log.append("breaks shut down")
+
+
+class Snaps:
+    """Raises at `configure_main_view`, whatever window it is given."""
+
+    def __init__(self, where: str) -> None:
+        self.where = where
+
+    def configure_main_view(self, view: QMainWindow) -> None:
+        raise RuntimeError("no status bar today")
 
 
 class Unbuildable:
@@ -497,6 +507,28 @@ def test_a_provider_that_raises_is_skipped_and_the_rest_run(
     assert at_the_window == ()
     assert "no stylesheet today" in caplog.text
     assert "Hooks skipped: Breaks" in caplog.text
+
+
+def test_the_status_bar_counts_the_skipped_hooks(
+    qapp: QApplication, build: BuildSession, log: list[str]
+) -> None:
+    """Count each provider skipped at the application or the window in the status bar."""
+    hooks = {
+        "configure_application": {
+            "provider": f"{__name__}:Breaks",
+            "kwargs": {"log": log},
+        },
+        "configure_main_view": [
+            {"provider": f"{__name__}:Snaps", "kwargs": {"where": "left"}},
+            {"provider": f"{__name__}:Snaps", "kwargs": {"where": "right"}},
+        ],
+    }
+
+    app = build(QtSession, {"hooks": hooks})
+
+    bar = app.main_window.statusBar()
+    assert bar is not None
+    assert [b.text() for b in bar.findChildren(QPushButton)] == ["3 failed"]
 
 
 def test_a_provider_that_cannot_be_built_is_skipped(

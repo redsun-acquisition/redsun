@@ -7,7 +7,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Sequence
 
     from redsun.view import Placement
 
@@ -20,9 +20,9 @@ def described(error: BaseException) -> str:
 
 
 def show_failures(
-    parent: QWidget | None, title: str, failures: Mapping[str, BaseException]
+    parent: QWidget | None, title: str, failures: Sequence[tuple[str, BaseException]]
 ) -> None:
-    """Show a dialog naming each failed component and its reason.
+    """Show a dialog naming each thing that failed and its reason.
 
     The tracebacks are in the details of the dialog.
     """
@@ -30,11 +30,9 @@ def show_failures(
     box.setIcon(QMessageBox.Icon.Warning)
     box.setWindowTitle(title)
     box.setText(title)
-    box.setInformativeText(
-        "\n".join(f"{name}: {error}" for name, error in failures.items())
-    )
+    box.setInformativeText("\n".join(f"{name}: {error}" for name, error in failures))
     box.setDetailedText(
-        "\n\n".join(f"{name}\n{described(error)}" for name, error in failures.items())
+        "\n\n".join(f"{name}\n{described(error)}" for name, error in failures)
     )
     box.exec()
 
@@ -68,19 +66,22 @@ class FailedView(QWidget):
         layout.addStretch()
 
     def show_traceback(self) -> None:
-        show_failures(self, f"{self.name} could not be built", {self.name: self.error})
+        show_failures(
+            self, f"{self.name} could not be built", [(self.name, self.error)]
+        )
 
 
 class FailuresButton(QPushButton):
-    """A status bar button counting the components that failed, listing them on click."""
+    """A status bar button counting the components and hook providers that failed, listing them on click."""
 
     def __init__(
-        self, failures: Mapping[str, BaseException], parent: QWidget | None = None
+        self,
+        failures: Sequence[tuple[str, BaseException]],
+        parent: QWidget | None = None,
     ) -> None:
-        count = len(failures)
-        super().__init__(f"{count} component{'s' if count > 1 else ''} failed", parent)
-        self.failures = dict(failures)
+        super().__init__(f"{len(failures)} failed", parent)
+        self.failures = list(failures)
         self.clicked.connect(self.list_failures)
 
     def list_failures(self) -> None:
-        show_failures(self.window(), "Components that failed", self.failures)
+        show_failures(self.window(), "What failed", self.failures)
