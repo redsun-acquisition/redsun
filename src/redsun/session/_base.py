@@ -273,6 +273,7 @@ class Session(BuildableSession):
         "_releases",
         "_report",
         "_reported_saved_shortcuts",
+        "_reported_shortcuts",
         "_services",
         "_session_config",
         "_settings",
@@ -365,6 +366,7 @@ class Session(BuildableSession):
         self._window_layout: WindowLayout | None = None
         self._shortcut_overrides: dict[str, tuple[str, ...]] = {}
         self._reported_saved_shortcuts: set[str] = set()
+        self._reported_shortcuts: set[str] = set()
         self._hooks: dict[str, tuple[object, ...]] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
@@ -990,7 +992,7 @@ class Session(BuildableSession):
         [`set_shortcuts`][redsun.Session.set_shortcuts]; a key two commands
         ask for in one place, the whole window or one view, stays with the
         command the user saved it for, or else the first. Every change is
-        logged.
+        logged the first time it comes up.
 
         Raises
         ------
@@ -1002,13 +1004,16 @@ class Session(BuildableSession):
             If the session is not built yet.
         """
         resolved, problems = self._settle_shortcuts(extra)
-        if problems:
-            message = "Keyboard shortcuts:\n" + "\n".join(
-                f"  {line}" for line in problems
+        if problems and self._configuration().strict:
+            raise BuildError(
+                "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in problems)
             )
-            if self._configuration().strict:
-                raise BuildError(message)
-            logger.warning(message)
+        new = [line for line in problems if line not in self._reported_shortcuts]
+        if new:
+            self._reported_shortcuts.update(new)
+            logger.warning(
+                "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in new)
+            )
         return resolved
 
     def _settle_shortcuts(
