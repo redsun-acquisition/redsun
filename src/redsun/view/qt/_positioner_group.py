@@ -278,18 +278,6 @@ class AxisRow(QtW.QWidget):
             option.initFrom(self)
             painter.drawPrimitive(QtW.QStyle.PrimitiveElement.PE_FrameFocusRect, option)
 
-    def focusInEvent(self, event: QtGui.QFocusEvent | None) -> None:
-        """Repaint to show the focus frame."""
-        if event is not None:
-            super().focusInEvent(event)
-        self.update()
-
-    def focusOutEvent(self, event: QtGui.QFocusEvent | None) -> None:
-        """Repaint to clear the focus frame."""
-        if event is not None:
-            super().focusOutEvent(event)
-        self.update()
-
 
 class PositionerGroup(QtW.QGroupBox):
     """A device's axes, its state, and buttons to stop it and save where it is.
