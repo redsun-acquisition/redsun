@@ -54,8 +54,8 @@ so two spellings of one key are seen as the same. A binding that
 each time the focus moves and leave the key press to the focused widget
 while it returns false. A binding whose `repeat` is false runs its command
 once per press, so let a held key repeat only the bindings that ask for it.
-A binding's `run` can be a coroutine method, so start it without waiting and
-let the key press return at once. A presenter's coroutine methods always
+A binding's `run` can be a coroutine method. Start it without waiting, so
+the key press returns at once. A presenter's coroutine methods always
 reach you. A view's reach you only when your frontend sets `view_coroutines`
 to true, which says its views may be used from the loop the coroutine runs
 on; otherwise the session leaves those keys out.

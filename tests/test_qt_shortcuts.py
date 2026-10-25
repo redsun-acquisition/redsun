@@ -284,6 +284,9 @@ class Snapper:
         finally:
             self.finished.set()
 
+    def shutdown(self) -> None:
+        self.steps.append("shutdown")
+
 
 class RecordingApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "recording-session"}
@@ -967,7 +970,7 @@ def test_a_held_key_repeats_only_a_command_that_asks_to(
 
 
 def test_a_presenter_coroutine_key_runs_once_however_often_pressed(
-    qapp: QApplication, build: BuildSession
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Run a presenter's coroutine from its key, ignoring a press while it runs."""
     steps: list[str] = []
@@ -976,13 +979,15 @@ def test_a_presenter_coroutine_key_runs_once_however_often_pressed(
     assert isinstance(other, Other)
     assert isinstance(snapper, Snapper)
 
-    key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
-    wait_for(snapper.started)
-    key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
-    run_coro(set_event(snapper.go))
-    wait_for(snapper.finished)
+    with caplog.at_level(logging.DEBUG, logger="redsun"):
+        key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+        wait_for(snapper.started)
+        key_click(other.edit, QtNamespace.Key.Key_T, CTRL)
+        run_coro(set_event(snapper.go))
+        wait_for(snapper.finished)
 
     assert steps == ["started", "done"]
+    assert "snapper.snap still runs, so this run is ignored" in caplog.messages
 
 
 def test_a_presenter_coroutine_key_that_raises_is_logged(
@@ -1006,7 +1011,7 @@ def test_a_presenter_coroutine_key_that_raises_is_logged(
 def test_shutdown_cancels_a_presenter_coroutine_still_running(
     qapp: QApplication, build: BuildSession
 ) -> None:
-    """Cancel a running presenter coroutine when the session shuts down."""
+    """Cancel a running presenter coroutine at shutdown, before the presenter shuts down."""
     steps: list[str] = []
     app = snap_app(build, steps)
     other, snapper = app.views["other"], app.presenters["snapper"]
@@ -1017,4 +1022,4 @@ def test_shutdown_cancels_a_presenter_coroutine_still_running(
     wait_for(snapper.started)
     app.shutdown()
 
-    assert steps == ["started", "cancelled"]
+    assert steps == ["started", "cancelled", "shutdown"]

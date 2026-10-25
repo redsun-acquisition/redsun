@@ -1012,7 +1012,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     ) -> None:
         """Run *method* unless *command* still runs, logging what it raises."""
         if command in self._command_tasks:
-            logger.debug("%s still runs, so the key press is ignored", command)
+            logger.debug("%s still runs, so this run is ignored", command)
             return
         task = asyncio.current_task()
         # a coroutine run by run_coro always runs in a task

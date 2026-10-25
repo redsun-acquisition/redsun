@@ -95,7 +95,8 @@ def shortcut(
 
     A presenter's coroutine method runs on the session's loop, and a press
     while it still runs is ignored. A view's runs only on a frontend whose
-    `view_coroutines` is true; elsewhere its key is left out.
+    [`view_coroutines`][redsun.Frontend.view_coroutines] is true; elsewhere
+    its key is left out.
 
     Parameters
     ----------

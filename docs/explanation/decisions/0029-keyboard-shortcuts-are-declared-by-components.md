@@ -4,7 +4,9 @@ Date: 2026-10-09
 
 ## Status
 
-Accepted
+Accepted. Amended on 25 October 2026: a presenter's coroutine method can be
+a shortcut, and runs on the session's loop. A view's can be one only on a
+frontend whose `view_coroutines` is true, which the Qt frontend's is not.
 
 ## Context
 
