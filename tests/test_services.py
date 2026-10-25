@@ -189,6 +189,18 @@ class PrefixOrNone(StandardReadable):
         super().__init__(name=name)
 
 
+class SilentScope(StandardReadable):
+    """Root whose stage never answers and whose camera is optional."""
+
+    def __init__(
+        self, stage_prefix: str, camera_prefix: str | None = None, name: str = ""
+    ) -> None:
+        self.xy = RefusingDevice(stage_prefix)
+        if camera_prefix is not None:
+            self.camera = Piece(camera_prefix)
+        super().__init__(name=name)
+
+
 class SavedScope(Scope):
     """Root asking to be saved, with nothing of its own to save."""
 
@@ -586,6 +598,35 @@ def test_a_failed_service_leaves_out_every_optional_keyword_it_serves(
     ) in summary_in(caplog).splitlines()
 
 
+def test_a_root_that_does_not_connect_blames_only_the_services_it_reached(
+    build: BuildSession,
+    launchable: None,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Drop a partly built root that does not connect, naming the services it used."""
+    monkeypatch.setattr(session_base, "CONNECT_TIMEOUT", 0.5)
+
+    class App(Session):
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: BrokenService
+        scope: Annotated[
+            AsDevice[SilentScope],
+            Declare(services={"stage_prefix": "stages", "camera_prefix": "broken"}),
+        ]
+
+    build(App)
+
+    assert any(
+        e.startswith(
+            "Failed to connect device 'scope': service 'stages' (attached) did not "
+            "answer within 0.5 s"
+        )
+        for e in errors_in(caplog)
+    )
+    assert "Built without" not in summary_in(caplog)
+
+
 def test_a_mocked_session_gives_every_keyword_its_prefix(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -708,6 +749,23 @@ def test_a_saved_device_keeps_the_services_it_maps(
         "services": {"stage_prefix": "beamline", "camera_prefix": "optics"},
         "autoconnect": False,
     }
+
+
+def test_a_saved_device_mapping_its_prefix_loads_again(
+    build: BuildSession, tmp_path: Path
+) -> None:
+    """Load a saved session whose class maps the prefix keyword to a service."""
+
+    class App(Session):
+        beamline: Annotated[AsService, Attach("BL01:")]
+        stage: Annotated[
+            AsDevice[SavedStage],
+            Declare(services={"prefix": "beamline"}, autoconnect=False),
+        ]
+
+    saved = build(App, {"session": "saved"}).write(tmp_path / "saved.yaml")
+
+    App(str(saved)).read_configuration()
 
 
 def test_a_session_built_again_starts_its_services_again(

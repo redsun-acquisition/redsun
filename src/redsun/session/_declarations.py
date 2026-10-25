@@ -65,6 +65,9 @@ __all__ = [
     "read_services",
 ]
 
+SERVICE_KEYS = ("service", "services")
+"""The two spellings of a device's services, one replacing the other."""
+
 # not TypeForm: a NewType built at runtime is a type expression only at
 # runtime, which no type checker can model
 Key: TypeAlias = Any
@@ -684,11 +687,15 @@ def read(
                 inline = marker.kwargs
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
+        given = keywords(section.get(cfg_key))
+        # the class's service replaces the file's, under either spelling
+        if inline.keys() & set(SERVICE_KEYS):
+            given = {k: v for k, v in given.items() if k not in SERVICE_KEYS}
         declarations[name] = Declaration(
             target,
             name,
             kind,
-            {**keywords(section.get(cfg_key)), **inline},
+            {**given, **inline},
             attribute=attr,
             source=cfg_key,
             refusal=refused,

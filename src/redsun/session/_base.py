@@ -2111,6 +2111,7 @@ class Session(BuildableSession):
             reason = self._connection_failure(declaration, result)
             self._failed[name] = ConnectionError(reason)
             del self._devices[name]
+            self._built_without.pop(name, None)
             declaration.instance = None
             for attribute in self._held_as(declaration):
                 delattr(self, attribute)
@@ -2125,7 +2126,8 @@ class Session(BuildableSession):
         services = [
             f"{s.name!r} ({'launched' if s.launched else 'attached'})"
             for name in dict.fromkeys(declaration.services.values())
-            if (s := self._services.get(name)) is not None
+            if name not in self._failed_services
+            and (s := self._services.get(name)) is not None
         ]
         match services:
             case []:
