@@ -136,6 +136,20 @@ class Walker(QWidget):
         self.ran.append("walk")
 
 
+class Stepper(QWidget):
+    """A view whose key repeats while held."""
+
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    @shortcut("Up", title="Climb", repeat=True)
+    def climb(self) -> None:
+        pass
+
+
 class Misspelt(Panel):
     """A view whose key Qt cannot read."""
 
@@ -148,6 +162,13 @@ class KeysApp(QtSession):
 
     panel: AsView[Panel]
     other: AsView[Other]
+
+
+class RepeatApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "repeat-session"}
+
+    panel: AsView[Panel]
+    stepper: AsView[Stepper]
 
 
 class MisspeltApp(QtSession):
@@ -823,3 +844,19 @@ def test_a_key_cell_left_as_it_was_saves_nothing(
     edit_key(dialog, "Run", 2, QtNamespace.Key.Key_Backspace)
 
     assert "shortcuts" not in app.settings
+
+
+def test_a_held_key_repeats_only_a_command_that_asks_to(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Repeat a held key for a command declared with repeat=True, and run the rest once."""
+    session = build(RepeatApp)
+    window = session.main_window
+
+    run = window.findChild(QAction, "panel.run")
+    climb = window.findChild(QAction, "stepper.climb")
+
+    assert run is not None
+    assert climb is not None
+    assert not run.autoRepeat()
+    assert climb.autoRepeat()

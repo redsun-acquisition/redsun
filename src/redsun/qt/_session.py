@@ -843,6 +843,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             return
         action = QAction(binding.title, host)
         action.setObjectName(binding.command)
+        action.setAutoRepeat(binding.repeat)
         action.triggered.connect(partial(self._run_command, binding.command))
         action.setShortcutContext(
             QtNamespace.ShortcutContext.WindowShortcut
