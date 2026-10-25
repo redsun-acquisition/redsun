@@ -28,6 +28,7 @@ from redsun import (
     AsPresenter,
     AsService,
     Attach,
+    BuildError,
     ConfigurationError,
     Declare,
     Launch,
@@ -518,10 +519,23 @@ def test_a_root_builds_without_the_piece_whose_service_did_not_start(
     app = build(App)
 
     assert {name for name, _ in app.devices["scope"].children()} == {"xy"}
+    lines = summary_in(caplog).splitlines()
+    assert "Built without: scope (camera_prefix: broken not started)" in lines
     assert (
-        "Built without: scope (camera_prefix: broken not started)"
-        in summary_in(caplog).splitlines()
+        "Services not started: broken (exited with code 3 before it was ready)" in lines
     )
+
+
+def test_a_strict_session_stops_on_a_service_that_did_not_start(
+    build: BuildSession, launchable: None
+) -> None:
+    """Stop a strict session on a service that fails to start, used or not."""
+
+    class App(Session):
+        broken: BrokenService
+
+    with pytest.raises(BuildError, match="broken: exited with code 3"):
+        build(App, {"strict": True})
 
 
 def test_a_root_whose_required_piece_did_not_start_is_skipped(

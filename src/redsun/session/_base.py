@@ -1244,21 +1244,26 @@ class Session(BuildableSession):
         ------
         BuildError
             If the configuration sets `strict` and a component could not be
-            built or set up, or a hook provider was skipped, naming each one
-            and why.
+            built or set up, a service did not start, or a hook provider was
+            skipped, naming each one and why.
         """
         summary = self._summarise_build()
-        missing = [*self._failed.items(), *self._not_set_up.items()]
-        skipped = [(failure.name, failure.reason) for failure in self._failed_hooks]
-        if not (missing or skipped):
+        missing = {
+            "components": [*self._failed.items(), *self._not_set_up.items()],
+            "services": list(self._failed_services.items()),
+            "hooks": [(failure.name, failure.reason) for failure in self._failed_hooks],
+        }
+        if not any(missing.values()):
             logger.info(summary)
             return
         logger.warning(summary)
         if self._configuration().strict:
             reasons = "\n".join(
-                f"  {name}: {reason}" for name, reason in (*missing, *skipped)
+                f"  {name}: {reason}"
+                for found in missing.values()
+                for name, reason in found
             )
-            what = "components or hooks" if skipped else "components"
+            what = " or ".join(kind for kind, found in missing.items() if found)
             raise BuildError(f"A strict session is missing {what}:\n{reasons}")
 
     def _summarise_build(self) -> str:
@@ -1292,6 +1297,9 @@ class Session(BuildableSession):
                 for name, left_out in self._built_without.items()
             )
             summary += f"\nBuilt without: {without}"
+        if self._failed_services:
+            failed = ", ".join(f"{n} ({e})" for n, e in self._failed_services.items())
+            summary += f"\nServices not started: {failed}"
         if self._failed_hooks:
             skipped = ", ".join(
                 f"{failure.name} ({', '.join(failure.points)})"
