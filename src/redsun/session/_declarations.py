@@ -68,6 +68,9 @@ __all__ = [
 SERVICE_KEYS = ("service", "services")
 """The two spellings of a device's services, one replacing the other."""
 
+SESSION_KEYWORDS = ("name", "path_provider")
+"""Constructor keywords the session fills itself, which no service can."""
+
 # not TypeForm: a NewType built at runtime is a type expression only at
 # runtime, which no type checker can model
 Key: TypeAlias = Any
@@ -314,8 +317,9 @@ def take_device_keys(
     TypeError
         If the device's class takes one of the keywords itself, both
         `service` and `services` are given, a keyword is both mapped to a
-        service and given, the class takes no keyword `services` maps, or
-        `autoconnect` is not a bool.
+        service and given, `services` maps `name` or `path_provider`, the
+        class takes no keyword `services` maps, or `autoconnect` is not a
+        bool.
     """
     params = inspect.signature(declaration.cls).parameters
     for key in ("service", "services", "autoconnect", "path_provider"):
@@ -337,6 +341,11 @@ def take_device_keys(
     )
     any_keyword = any(p.kind is p.VAR_KEYWORD for p in params.values())
     for keyword, service_name in declaration.services.items():
+        if keyword in SESSION_KEYWORDS:
+            raise TypeError(
+                f"device {declaration.name!r} maps {keyword!r}, which the session "
+                f"gives the device itself, to service {service_name!r}"
+            )
         if keyword in rest:
             raise TypeError(
                 f"device {declaration.name!r} names service {service_name!r} and a "

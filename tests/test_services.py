@@ -245,6 +245,16 @@ class UnknownKeywordMapped(Session):
     device: Annotated[AsDevice[Piece], Declare(services={"lens": "beamline"})]
 
 
+class NameMapped(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[AsDevice[Piece], Declare(services={"name": "beamline"})]
+
+
+class PathProviderMapped(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[AsDevice[Piece], Declare(services={"path_provider": "beamline"})]
+
+
 class AutoconnectNotBool(Session):
     device: Annotated[AsDevice[Camera], Declare(prefix="X:", autoconnect="yes")]
 
@@ -655,6 +665,8 @@ def test_a_mocked_session_gives_every_keyword_its_prefix(
         (ServiceAndServices, "both service and services"),
         (MappedKeywordGiven, "and a 'prefix'"),
         (UnknownKeywordMapped, "takes no 'lens'"),
+        (NameMapped, "maps 'name', which the session gives"),
+        (PathProviderMapped, "maps 'path_provider', which the session gives"),
         (AutoconnectNotBool, "takes true or false"),
     ],
     ids=[
@@ -664,6 +676,8 @@ def test_a_mocked_session_gives_every_keyword_its_prefix(
         "service-and-services",
         "mapped-keyword-given",
         "unknown-keyword-mapped",
+        "name-mapped",
+        "path-provider-mapped",
         "autoconnect-not-bool",
     ],
 )

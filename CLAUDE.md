@@ -100,7 +100,19 @@ only break the docs build, so validate it with `uv run tox -e docs` alone. A cha
 in `src/` also runs `lint`, since ruff's `D` rules check docstrings and the
 reference pages render them: `uv run tox -e lint,docs`. A change to docstrings
 or comments in `tests/` alone runs `lint`; no test can change with it.
-Anything else touching code or tests runs the full `uv run tox`.
+A change to code or tests runs `lint`, one `mypy` leg and the test modules
+covering what it touched, under one binding:
+
+```bash
+uv run tox -e lint,mypy-pyqt
+uv run tox -e tests-pyqt -- tests/test_services.py tests/sdk/test_aio.py
+```
+
+CI runs the whole matrix on the pull request and finds what the scoped run
+missed. Run the full `uv run tox` locally only when the change reaches across
+the project (a shared fixture in `redsun.testing` or `conftest.py`, a build
+step, a dependency, the Qt binding code), or when CI failed and its log does
+not show why.
 
 The project `.venv` still works for a quick loop (`uv run pytest -q`), but it
 is not authoritative: it holds every group any `uv sync` has installed, both Qt
