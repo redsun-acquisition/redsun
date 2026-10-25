@@ -80,5 +80,5 @@ without the point's method, or a second provider at a point that takes one.
   every session in the process.
 
 In a test run, [`keep_application_as_found`][redsun.testing.keep_application_as_found]
-fails a test that left the application's stylesheet, style or font changed,
-which is how a missing `shutdown` shows up.
+fails a test that left the application's stylesheet, style, font or palette
+changed, which is how a missing `shutdown` shows up.

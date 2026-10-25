@@ -19,6 +19,49 @@ AXES = {
     "theta": AxisInfo(Readback(0.5)),
 }
 
+ARROW = 60
+"""The width in pixels of the arrow `WideArrows` draws."""
+
+
+class WideArrows(QtWidgets.QProxyStyle):
+    """Draws a combo box's arrow 60 pixels wide, and sizes the box for it."""
+
+    def sizeFromContents(
+        self,
+        kind: QtWidgets.QStyle.ContentsType,
+        option: QtWidgets.QStyleOption | None,
+        size: QtCore.QSize,
+        widget: QtWidgets.QWidget | None = None,
+    ) -> QtCore.QSize:
+        # pyside6 types both as never None; a combo box passes itself
+        assert option is not None and widget is not None
+        found = super().sizeFromContents(kind, option, size, widget)
+        if kind == QtWidgets.QStyle.ContentsType.CT_ComboBox:
+            found.setWidth(found.width() + ARROW)
+        return found
+
+    def subControlRect(
+        self,
+        control: QtWidgets.QStyle.ComplexControl,
+        option: QtWidgets.QStyleOptionComplex | None,
+        sub: QtWidgets.QStyle.SubControl,
+        widget: QtWidgets.QWidget | None = None,
+    ) -> QtCore.QRect:
+        # pyside6 types the widget as never None; a combo box passes itself
+        assert option is not None and widget is not None
+        found = super().subControlRect(control, option, sub, widget)
+        if control != QtWidgets.QStyle.ComplexControl.CC_ComboBox:
+            return found
+        whole = option.rect
+        match sub:
+            case QtWidgets.QStyle.SubControl.SC_ComboBoxArrow:
+                return QtCore.QRect(
+                    whole.right() - ARROW + 1, whole.top(), ARROW, whole.height()
+                )
+            case QtWidgets.QStyle.SubControl.SC_ComboBoxEditField:
+                found.setRight(whole.right() - ARROW)
+        return found
+
 
 @pytest.fixture
 def group(qapp: QtWidgets.QApplication) -> Generator[PositionerGroup, None, None]:
@@ -259,6 +302,23 @@ def test_the_group_fits_a_narrow_dock(group: PositionerGroup) -> None:
     digit = group.fontMetrics().horizontalAdvance("0")
 
     assert group.minimumSizeHint().width() <= 150 + 16 * digit
+
+
+def test_the_step_box_leaves_its_text_room_beside_a_wide_arrow(
+    qapp: QtWidgets.QApplication, group: PositionerGroup
+) -> None:
+    """Size the step box for its style's arrow, so a step such as 0.001 still fits."""
+    box = child(group, QtWidgets.QComboBox, "step:x")
+    style = WideArrows(QtWidgets.QStyleFactory.create("Fusion"))
+    style.setParent(group)
+
+    box.setStyle(style)
+    group.show()
+    qapp.processEvents()
+
+    edit = box.lineEdit()
+    assert edit is not None
+    assert edit.width() >= box.fontMetrics().horizontalAdvance("0.001")
 
 
 def test_a_group_without_steps_is_refused(qapp: QtWidgets.QApplication) -> None:

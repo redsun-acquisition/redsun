@@ -49,6 +49,29 @@ def tool_button(icon: str, words: str, parent: QtW.QWidget) -> QtW.QToolButton:
     return button
 
 
+class StepList(QtW.QComboBox):
+    """A list of step sizes as wide as a short step, plus the arrow and frame of its style.
+
+    Sized for its longest item, the box would claim more room than a narrow
+    dock has.
+    """
+
+    def sizeHint(self) -> QtCore.QSize:
+        option = QtW.QStyleOptionComboBox()
+        self.initStyleOption(option)
+        text = QtCore.QSize(
+            self.fontMetrics().horizontalAdvance("0.001"), super().sizeHint().height()
+        )
+        style = self.style()
+        assert style is not None
+        return style.sizeFromContents(
+            QtW.QStyle.ContentsType.CT_ComboBox, option, text, self
+        )
+
+    def minimumSizeHint(self) -> QtCore.QSize:
+        return self.sizeHint()
+
+
 class AxisRow(QtW.QWidget):
     """An axis: name, readback and units, then steps and a go-to field.
 
@@ -185,7 +208,7 @@ class AxisRow(QtW.QWidget):
     def _make_combo_box(self, steps: Sequence[float]) -> QtW.QComboBox:
         """Return a list of the step sizes in *steps*, which takes a typed size too."""
         centre = QtCore.Qt.AlignmentFlag.AlignCenter
-        box = QtW.QComboBox(self)
+        box = StepList(self)
         box.setEditable(True)
         box.setInsertPolicy(QtW.QComboBox.InsertPolicy.NoInsert)
         box.addItems([f"{step:g}" for step in steps])
@@ -195,10 +218,8 @@ class AxisRow(QtW.QWidget):
         box.setValidator(number_validator(0.0, LIMIT, box))
         if (edit := box.lineEdit()) is not None:
             edit.setAlignment(centre)
-        # the box would otherwise claim room for its arrow and frame at
-        # their widest, more than a narrow dock has; a fixed width, unlike
-        # an ignored size policy, still reserves its column in the grid
-        box.setFixedWidth(self.fontMetrics().horizontalAdvance("0.001") + 32)
+        # a fixed policy, unlike an ignored one, still reserves the column
+        box.setSizePolicy(QtW.QSizePolicy.Policy.Fixed, QtW.QSizePolicy.Policy.Fixed)
         return box
 
     def format_value(self, value: float) -> str:

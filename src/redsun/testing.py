@@ -5,7 +5,7 @@ line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and turn automatic garbage collection off for the
 run, collecting after each test module on the main thread. A test using `qapp`
-that leaves the application's stylesheet, style or font changed fails.
+that leaves the application's stylesheet, style, font or palette changed fails.
 On Windows under Qt's `offscreen` platform, they also point Qt at the system
 fonts, which that platform otherwise lacks.
 The module defines no `qapp`, so it combines with `pytest-qt`.
@@ -33,6 +33,7 @@ from .services._transports import CHANNEL_ACCESS, TRANSPORTS
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
+    from qtpy.QtGui import QPalette
     from qtpy.QtWidgets import QApplication
 
     from redsun.session import Launch
@@ -222,13 +223,22 @@ def keep_automatic_collection_off(
         )
 
 
-def application_state(app: QApplication) -> tuple[str, str, str]:
-    """Return *app*'s stylesheet, style name and font."""
+def application_state(app: QApplication) -> tuple[str, str, str, QPalette | None]:
+    """Return *app*'s stylesheet, style name and font, and its palette if one was set by hand.
+
+    A palette nobody set follows the style and the colour scheme, so it is
+    left out.
+    """
+    # only an extra installs Qt, and a test run without it loads this module too
+    from qtpy.QtCore import Qt  # noqa: PLC0415
+
     style = app.style()
+    by_hand = app.testAttribute(Qt.ApplicationAttribute.AA_SetPalette)
     return (
         app.styleSheet(),
         style.objectName() if style is not None else "",
         app.font().toString(),
+        app.palette() if by_hand else None,
     )
 
 
@@ -236,7 +246,7 @@ def application_state(app: QApplication) -> tuple[str, str, str]:
 def keep_application_as_found(
     request: pytest.FixtureRequest,
 ) -> Generator[None, None, None]:
-    """Fail a test using `qapp` that left the application's stylesheet, style or font changed.
+    """Fail a test using `qapp` that left the application's stylesheet, style, font or palette changed.
 
     A hook provider undoes in `shutdown` what it changed on the application,
     and a test that changes it by hand puts it back. A test that does not ask
@@ -245,8 +255,9 @@ def keep_application_as_found(
     Raises
     ------
     RuntimeError
-        If the three differ after the test from before it; the stylesheet is
-        put back first, so it does not style the tests after this one.
+        If one of them differs after the test from before it; the
+        stylesheet and the palette are put back first, so they do not style
+        the tests after this one.
     """
     if "qapp" not in request.fixturenames:
         yield
@@ -258,7 +269,10 @@ def keep_application_as_found(
     if after == before:
         return
     app.setStyleSheet(before[0])
-    names = ("stylesheet", "style", "font")
+    # an empty palette, of the palette's own class so that no Qt module is
+    # imported here, gives the application back the one it had unset
+    app.setPalette(before[3] if before[3] is not None else type(app.palette())())
+    names = ("stylesheet", "style", "font", "palette")
     changed = [
         name for name, was, now in zip(names, before, after, strict=True) if was != now
     ]
