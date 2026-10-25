@@ -45,6 +45,9 @@ Not set up: ctrl (presenter)
 - `Not set up` lists components that were built, and are counted as built,
   but whose `setup` raised or asked for a component that wasn't built. They
   are in the session, but they may not work.
+- `Built without` lists devices that were built without some of their
+  pieces, each with the argument it left out and the service behind it.
+- `Services not started` lists the services that failed to start, with why.
 - `Unused` lists services that no built device names. The line appears only
   when there are some.
 
@@ -183,7 +186,7 @@ MyApp({"strict": True}).run()
 
 A strict session logs the same records and shuts down what it had started.
 Then it raises [`BuildError`][redsun.BuildError], which lists each missing
-component with its reason:
+component, and each service that did not start, with its reason:
 
 ```text
 redsun.errors.BuildError: A strict session is missing components:

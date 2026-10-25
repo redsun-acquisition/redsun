@@ -68,14 +68,25 @@ only the microscope:
 
 ```python
 class MyMicroscope(StandardReadable):
-    def __init__(self, prefix: str, name: str = "") -> None:
-        self.xy = MyStage(f"{prefix}ST:")
-        self.camera = MyCamera(f"{prefix}CAM:")
+    def __init__(
+        self,
+        stage_prefix: str,
+        camera_prefix: str | None = None,
+        name: str = "",
+    ) -> None:
+        self.xy = MyStage(stage_prefix)
+        if camera_prefix is not None:
+            self.camera = MyCamera(camera_prefix)
         super().__init__(name=name)
 
 
 class MyApp(QtSession):
-    microscope: Annotated[AsDevice[MyMicroscope], Declare(service="scope_ioc")]
+    microscope: Annotated[
+        AsDevice[MyMicroscope],
+        Declare(
+            services={"stage_prefix": "stage_ioc", "camera_prefix": "camera_ioc"}
+        ),
+    ]
 ```
 
 !!! warning "A child named `stage` stops the device"
@@ -93,13 +104,38 @@ see them. A device can also declare its children with annotations, in the
 connects when it asks the IOC for its structure (`with_pvi=True`). The session
 reads the tree after connecting, so it finds them either way.
 
-A root device takes the prefix of one service. When the pieces of a setup sit
-behind different services, as the stage and the camera do in the picture
-above, declare each piece as a device of its own. One session can mix both
-styles.
+The pieces of a setup often sit behind different services, as the stage and
+the camera do in the picture above. So `services` maps each of the root's
+prefix arguments to the service that gives it: here `stage_prefix` gets the
+prefix of `stage_ioc`, and `camera_prefix` that of `camera_ioc`. A session
+file says the same under the device's entry:
+
+```yaml
+devices:
+  microscope:
+    services:
+      stage_prefix: stage_ioc
+      camera_prefix: camera_ioc
+```
+
+An argument whose default is `None` makes its piece optional. When
+`camera_ioc` does not start, the session leaves `camera_prefix` out, builds
+the microscope with its stage alone, and says so in the build summary:
+
+```text
+Built without: microscope (camera_prefix: camera_ioc not started)
+Services not started: camera_ioc (exited with code 3 before it was ready)
+```
+
+An argument with any other default, or none, is required, so the session
+skips the whole device instead. A
+[strict session](glossary.md#strict-session) stops in either case, because
+a service did not start. You can still declare each piece as a device of its
+own, and one session can mix both styles.
 
 A device declared with `service="stage_ioc"` gets that service's prefix as
-its `prefix` argument, and the prefix is all it knows of the service. So you
+its `prefix` argument, the same as `services={"prefix": "stage_ioc"}`, and the
+prefix is all it knows of the service. So you
 can change one side and keep the other:
 
 - The same components run against the lab's services or simulated ones; only

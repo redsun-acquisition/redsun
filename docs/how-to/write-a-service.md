@@ -371,9 +371,16 @@ devices:
     plugin_name: mylab
     plugin_id: camera
     service: camera_ioc
+  microscope:
+    plugin_name: mylab
+    plugin_id: microscope
+    services:
+      stage_prefix: beamline
+      camera_prefix: camera_ioc
 ```
 
-`beamline` names no module, so the session attaches to it.
+`beamline` names no module, so the session attaches to it. `microscope` takes
+two prefixes, so `services` names the service for each of its arguments.
 
 ## Name the transport
 
