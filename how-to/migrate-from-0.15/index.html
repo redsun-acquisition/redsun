@@ -2682,6 +2682,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-held-key-runs-its-command-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A held key runs its command once
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5882,6 +5893,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-held-key-runs-its-command-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A held key runs its command once
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6010,8 +6032,9 @@
 <h1 id="how-to-migrate-from-015">How to migrate from 0.15<a class="headerlink" href="#how-to-migrate-from-015" title="Permanent link">&para;</a></h1>
 <p>Release 0.16 removes the two things 0.15 deprecated, changes what a view of
 plan progress receives, moves some axes to another box of the positioner,
-removes two helpers the positioner no longer uses, and changes what a session
-does when a service does not start. This page gives each change with what to
+removes two helpers the positioner no longer uses, changes what a session
+does when a service does not start, and stops a held key from running its
+command again and again. This page gives each change with what to
 write instead. The <a href="../../reference/changelog/">changelog</a> lists everything
 else the release changed.</p>
 <h2 id="a-views-placement-cant-come-from-a-property">A view's placement can't come from a property<a class="headerlink" href="#a-views-placement-cant-come-from-a-property" title="Permanent link">&para;</a></h2>
@@ -6134,6 +6157,22 @@ give <code>prefix</code> no default:</p>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># now, to keep it skipped</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyCamera</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<h2 id="a-held-key-runs-its-command-once">A held key runs its command once<a class="headerlink" href="#a-held-key-runs-its-command-once" title="Permanent link">&para;</a></h2>
+<p>A keyboard shortcut now runs its method once per press. In 0.15 a held key
+ran it again at the keyboard's repeat rate, so holding the key that starts a
+plan started it several times. To keep a key repeating, such as one that
+steps an axis, pass <code>repeat=True</code> to <code>@shortcut</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># 0.15: repeats while held</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># now</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 
 

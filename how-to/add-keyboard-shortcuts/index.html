@@ -2099,6 +2099,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#repeat-while-the-key-is-held" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Repeat while the key is held
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#change-a-key-in-the-session-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5828,6 +5839,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#repeat-while-the-key-is-held" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Repeat while the key is held
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#change-a-key-in-the-session-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6054,19 +6076,30 @@ a tree or a tab bar of the same view the rest of the time. The session asks
 the function each time the focus moves, not at each key press, so the method
 still checks anything that can change while the focus stays put, such as
 whether the row is locked.</p>
+<h2 id="repeat-while-the-key-is-held">Repeat while the key is held<a class="headerlink" href="#repeat-while-the-key-is-held" title="Permanent link">&para;</a></h2>
+<p>A key runs its method once per press, however long the user holds it, so
+holding the key that starts a plan starts it once. A key that steps
+something is the opposite case, because the user holds it to keep stepping.
+Give it <code>repeat=True</code>, and the method runs again at the keyboard's repeat
+rate until the key is released:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
 <h2 id="change-a-key-in-the-session-file">Change a key in the session file<a class="headerlink" href="#change-a-key-in-the-session-file" title="Permanent link">&para;</a></h2>
 <p>The <code>shortcuts</code> section gives a command another key, two keys, or none. A
 command is named after the component and the method:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">my_view.run_selected</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">my_controller.stop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Escape</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Ctrl+.</span><span class="p p-Indicator">]</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">my_view.step_back</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">my_view.run_selected</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">my_controller.stop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Escape</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Ctrl+.</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">my_view.step_back</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 </span></code></pre></div>
 <p>The <a href="../../reference/session-file/#shortcuts">session file reference</a> lists
 the rules.</p>
 <h2 id="change-a-key-in-the-window">Change a key in the window<a class="headerlink" href="#change-a-key-in-the-window" title="Permanent link">&para;</a></h2>
 <p>The user changes keys in <strong>Window</strong> -&gt; <strong>Keyboard shortcuts</strong>. Double-click a
-key cell and press the new key; Backspace or Delete clears it. When another
+key cell and press the new key; Backspace or Delete clears it, and Escape
+leaves it as it was. When another
 command already has that key in the same place, the list asks "Already used
 by <em>Run</em>; move it here?", and on yes the key moves and the other command is
 left without it.</p>
@@ -6078,8 +6111,8 @@ the session file gives come back.</p>
 <p>Two components conflict when they ask for one key that acts in the same
 place: both in the whole window, or both in one view. The first declared
 keeps the key, and the log names both:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Keyboard shortcuts:
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  Ctrl+R: kept on my_view.run_selected, taken from my_controller.restart
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Keyboard shortcuts:
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  Ctrl+R: kept on my_view.run_selected, taken from my_controller.restart
 </span></code></pre></div>
 <p>Give one of them another key in the <code>shortcuts</code> section. With <code>strict: true</code>
 in the session file, a conflict stops the build instead.</p>
