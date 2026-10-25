@@ -58,6 +58,9 @@ PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
 PVA_READY = "pva stand-in ready"
 
 
+BrokenService: TypeAlias = Annotated[
+    AsService, Launch(STAND_IN, ready=READY, args=["--no-ready", "--exit", "3"])
+]
 CameraIoc: TypeAlias = Annotated[
     AsService,
     Launch("mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"),
@@ -157,6 +160,32 @@ class SavedStage(StandardReadable):
 
     def serialize(self) -> dict[str, float]:
         return {"velocity": run_coro(self.velocity.get_value())}
+
+
+class RequiredCameraScope(StandardReadable):
+    """Root whose camera is required."""
+
+    def __init__(self, stage_prefix: str, camera_prefix: str, name: str = "") -> None:
+        self.xy = Piece(stage_prefix)
+        self.camera = Piece(camera_prefix)
+        super().__init__(name=name)
+
+
+class Board(StandardReadable):
+    """Root whose two pieces are both optional and share one service."""
+
+    def __init__(
+        self,
+        stage_prefix: str | None = None,
+        laser_prefix: str | None = None,
+        name: str = "",
+    ) -> None:
+        super().__init__(name=name)
+
+
+class PrefixOrNone(StandardReadable):
+    def __init__(self, prefix: str | None = None, name: str = "") -> None:
+        super().__init__(name=name)
 
 
 class SavedScope(Scope):
@@ -467,6 +496,99 @@ def test_a_device_whose_service_is_missing_is_skipped(
         "before it was ready)"
     ) in caplog.messages
     assert summary_in(caplog).splitlines()[-1] == "Unused: unprefixed (no device built)"
+
+
+def test_a_root_builds_without_the_piece_whose_service_did_not_start(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Build a root without the optional piece whose service failed to start."""
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "devices": {
+                "scope": {
+                    "services": {"stage_prefix": "stages", "camera_prefix": "broken"}
+                }
+            }
+        }
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: BrokenService
+        scope: AsDevice[Scope]
+
+    app = build(App)
+
+    assert {name for name, _ in app.devices["scope"].children()} == {"xy"}
+    assert (
+        "Built without: scope (camera_prefix: broken not started)"
+        in summary_in(caplog).splitlines()
+    )
+
+
+def test_a_root_whose_required_piece_did_not_start_is_skipped(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a root whose required piece's service failed to start."""
+
+    class App(Session):
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: BrokenService
+        scope: Annotated[
+            AsDevice[RequiredCameraScope],
+            Declare(services={"stage_prefix": "stages", "camera_prefix": "broken"}),
+        ]
+
+    app = build(App)
+
+    assert "scope" not in app.devices
+    assert (
+        "Failed to build device 'scope': service 'broken' was not started"
+        in errors_in(caplog)
+    )
+
+
+def test_a_failed_service_leaves_out_every_optional_keyword_it_serves(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Leave out every optional keyword naming a failed service, prefix included."""
+
+    class App(Session):
+        broken: BrokenService
+        scope: Annotated[
+            AsDevice[Scope],
+            Declare(services={"stage_prefix": "broken", "camera_prefix": "broken"}),
+        ]
+        board: Annotated[
+            AsDevice[Board],
+            Declare(services={"stage_prefix": "broken", "laser_prefix": "broken"}),
+        ]
+        lamp: Annotated[AsDevice[PrefixOrNone], Declare(service="broken")]
+
+    app = build(App)
+
+    assert set(app.devices) == {"board", "lamp"}
+    assert (
+        "Built without: board (stage_prefix: broken not started, laser_prefix: "
+        "broken not started), lamp (prefix: broken not started)"
+    ) in summary_in(caplog).splitlines()
+
+
+def test_a_mocked_session_gives_every_keyword_its_prefix(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Give a mocked root every prefix, though no service starts."""
+
+    class App(Session):
+        stages: Annotated[AsService, Attach("ST:")]
+        optics: Annotated[AsService, Attach("OP:")]
+        scope: Annotated[
+            AsDevice[Scope],
+            Declare(services={"stage_prefix": "stages", "camera_prefix": "optics"}),
+        ]
+
+    app = build(App, {"mock": True})
+
+    assert {name for name, _ in app.devices["scope"].children()} == {"xy", "camera"}
+    assert "Built without" not in summary_in(caplog)
 
 
 @pytest.mark.parametrize(

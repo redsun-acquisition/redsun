@@ -251,6 +251,7 @@ class Session(BuildableSession):
         "_answered",
         "_baseline",
         "_built_components",
+        "_built_without",
         "_callbacks",
         "_catalog",
         "_class_counts",
@@ -377,6 +378,8 @@ class Session(BuildableSession):
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
+        # the keywords each device was built without, and the service of each
+        self._built_without: dict[str, dict[str, str]] = {}
         self._failed_hooks: list[HookFailure] = []
         self._skipped_hooks: set[int] = set()
         self._answered: set[str] = set()
@@ -1281,6 +1284,14 @@ class Session(BuildableSession):
                     for name, reason in names.items()
                 )
                 summary += f"\n{heading}: {named}"
+        if self._built_without:
+            without = ", ".join(
+                f"{name} ("
+                + ", ".join(f"{k}: {s} not started" for k, s in left_out.items())
+                + ")"
+                for name, left_out in self._built_without.items()
+            )
+            summary += f"\nBuilt without: {without}"
         if self._failed_hooks:
             skipped = ", ".join(
                 f"{failure.name} ({', '.join(failure.points)})"
@@ -1354,6 +1365,7 @@ class Session(BuildableSession):
         self._devices.clear()
         self._device_index.clear()
         self._failed.clear()
+        self._built_without.clear()
         self._failed_hooks.clear()
         self._skipped_hooks.clear()
         self._answered.clear()
@@ -1973,18 +1985,21 @@ class Session(BuildableSession):
         """Construct the devices, which are built from no other component.
 
         They are built before the store opens, each from its own declaration
-        alone. A device naming a service
-        receives that service's prefix as `prefix`, and is skipped when the
-        service is not declared, did not start, or gives no prefix.
+        alone. Each keyword a device maps to a service receives that service's
+        prefix. A keyword whose service did not start is left out when its
+        default is `None`, so the device builds without that piece; otherwise
+        the device is skipped, as it is when the service is not declared or
+        gives no prefix.
         """
         for declaration in self._declarations.values():
             if declaration.kind is not Layer.DEVICE or declaration.refusal is not None:
                 continue
             try:
+                prefixes = self._prefixes_for(declaration)
                 device = declaration.cls(
                     name=declaration.name,
                     **declaration.cfg_kwargs,
-                    **self._prefixes_for(declaration),
+                    **prefixes,
                     **self._path_provider_for(declaration),
                 )
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
@@ -1993,6 +2008,11 @@ class Session(BuildableSession):
                 continue
             self._devices[declaration.name] = device
             self._keep(declaration, device)
+            left_out = {
+                k: s for k, s in declaration.services.items() if k not in prefixes
+            }
+            if left_out:
+                self._built_without[declaration.name] = left_out
             # a device the session connects is given back only once it has
             # connected: one that did not has nothing to give back
             if not declaration.autoconnect:
@@ -2001,21 +2021,28 @@ class Session(BuildableSession):
     def _prefixes_for(self, declaration: Declaration) -> dict[str, str]:
         """Return the prefix each keyword of *declaration* gets from its service.
 
+        A keyword whose service did not start is left out when the device's
+        default for it is `None`.
+
         Raises
         ------
         LookupError
             If the device names a service that is not declared.
         RuntimeError
-            If the device names a service that did not start.
+            If the device names a service that did not start, for a keyword
+            whose default is not `None`.
         ValueError
             If the device names a service that gives no prefix.
         """
+        params = inspect.signature(declaration.cls).parameters
         prefixes = {}
         for keyword, name in declaration.services.items():
             service = self._services.get(name)
             if service is None:
                 raise LookupError(f"service {name!r} is not declared")
             if name in self._failed_services:
+                if keyword in params and params[keyword].default is None:
+                    continue
                 raise RuntimeError(f"service {name!r} was not started")
             if not service.prefix:
                 raise ValueError(f"service {name!r} gives no prefix")
