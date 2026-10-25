@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, replace
 from functools import partial
 from typing import TYPE_CHECKING
@@ -31,7 +32,7 @@ class Binding:
     """The view whose focus the keys need, or `None` for the whole window."""
 
     run: Callable[[], object] | None
-    """What the keys call, or `None` for a command the frontend already holds."""
+    """What the keys call, a coroutine method included, or `None` for a command the frontend already holds."""
 
     when: Callable[[], bool] | None = None
     """While it returns false the keys do nothing; `None` for always."""
@@ -41,12 +42,15 @@ class Binding:
 
 
 def candidates(
-    components: Mapping[str, object], views: Collection[str]
+    components: Mapping[str, object],
+    views: Collection[str],
+    view_coroutines: bool = False,
 ) -> tuple[list[Binding], list[str]]:
     """Return the bindings *components* declare, in order, and what had to be left out.
 
     *views* names the components that are views; a view key on any other is
-    left out and reported.
+    left out and reported, and so is a view's coroutine method unless
+    *view_coroutines* is true.
     """
     found: list[Binding] = []
     problems: list[str] = []
@@ -57,6 +61,16 @@ def candidates(
                 problems.append(
                     f"{command} asks for a key while its view has focus, but "
                     f"{name!r} is not a view; left out"
+                )
+                continue
+            if (
+                name in views
+                and not view_coroutines
+                and inspect.iscoroutinefunction(method)
+            ):
+                problems.append(
+                    f"{command} is a coroutine method of a view, which this "
+                    "frontend does not run; left out"
                 )
                 continue
             view = name if record.scope == "view" else None

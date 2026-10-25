@@ -26,6 +26,7 @@ MyApp().run()
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import inspect
@@ -76,6 +77,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from redsun.aio import run_coro
 from redsun.errors import ConfigurationInUse, HookError
 from redsun.view import Column, Placement, Row, Tabs, WindowLayout
 
@@ -105,7 +107,7 @@ from ._color_scheme import (
 from ._garbage import GarbageCollector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator, Sequence
+    from collections.abc import Callable, Coroutine, Generator, Iterator, Sequence
     from contextlib import AbstractContextManager
     from pathlib import Path
     from types import TracebackType
@@ -418,6 +420,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         "_broken_conditions",
         "_close_guard",
         "_command_actions",
+        "_command_tasks",
         "_conditional_actions",
         "_default_state",
         "_main_window",
@@ -478,6 +481,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._conditional_actions: list[tuple[QAction, str, Callable[[], bool]]] = []
         self._broken_conditions: set[str] = set()
         self._command_actions: dict[str, tuple[QAction, QWidget]] = {}
+        self._command_tasks: dict[str, asyncio.Task[None]] = {}
         self._unbindable: set[str] = set()
         self._action_key_disposers: list[Callable[[], None]] = []
         self._main_window: QModelMainWindow | None = None
@@ -801,11 +805,15 @@ class QtSession(DesktopSession[QMainWindow], Session):
         or on its view for a view's own keys. A command id another command has,
         and a view key on a view that is no widget, leave the command without
         keys for the whole session, and are logged.
+
+        A coroutine command still running at shutdown is cancelled before
+        any component shuts down.
         """
         resolved = self.resolve_shortcuts(self._action_bindings)
         for binding in resolved:
             if self._register_command(binding):
                 self._add_key_action(binding, views)
+        self.on_release(lambda: run_coro(self._cancel_coroutine_commands()))
         self.on_release(self._drop_action_keys)
         if self._command_actions:
             self.app.focusChanged.connect(self._follow_focus)
@@ -816,11 +824,15 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Register the command a component's *binding* runs, and return whether it was registered.
 
         A session file's action is registered already. A command id another
-        command has is logged, and the command left without keys.
+        command has is logged, and the command left without keys. A
+        coroutine method is started on the shared loop.
         """
         if binding.run is None:
             return False
-        action = Action(id=binding.command, title=binding.title, callback=binding.run)
+        callback = binding.run
+        if inspect.iscoroutinefunction(callback):
+            callback = partial(self._start_coroutine_command, binding.command, callback)
+        action = Action(id=binding.command, title=binding.title, callback=callback)
         try:
             self.on_release(self.model.register_action(action))
         except ValueError:
@@ -988,6 +1000,37 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _run_command(self, command: str) -> None:
         """Run *command*, so a key and a menu entry run it the same way."""
         self.model.commands.execute_command(command).result()
+
+    def _start_coroutine_command(
+        self, command: str, method: Callable[[], Coroutine[Any, Any, object]]
+    ) -> None:
+        """Start *command*'s coroutine *method* on the shared loop, without waiting."""
+        run_coro(self._run_coroutine_command(command, method), return_future=True)
+
+    async def _run_coroutine_command(
+        self, command: str, method: Callable[[], Coroutine[Any, Any, object]]
+    ) -> None:
+        """Run *method* unless *command* still runs, logging what it raises."""
+        if command in self._command_tasks:
+            logger.debug("%s still runs, so the key press is ignored", command)
+            return
+        task = asyncio.current_task()
+        # a coroutine run by run_coro always runs in a task
+        assert task is not None
+        self._command_tasks[command] = task
+        try:
+            await method()
+        except Exception:
+            logger.exception("%s raised", command)
+        finally:
+            del self._command_tasks[command]
+
+    async def _cancel_coroutine_commands(self) -> None:
+        """Cancel the coroutine commands still running, and wait until they end."""
+        tasks = list(self._command_tasks.values())
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     def _register_window_actions(
         self, views: Mapping[str, AttachableComponent], earlier: set[QDockWidget]

@@ -63,6 +63,24 @@ class Controller:
     def restart(self) -> None: ...
 
 
+class Waiter:
+    """A view whose key runs a coroutine method."""
+
+    placement: Placement = Spot("left")
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @shortcut("F6", title="Wait")
+    async def wait(self) -> None: ...
+
+
+class Awaiting(Toy):
+    """A frontend that runs a view's coroutine methods."""
+
+    view_coroutines: ClassVar[bool] = True
+
+
 class ToyApp(Session):
     """A view and a presenter whose keys meet."""
 
@@ -71,6 +89,24 @@ class ToyApp(Session):
 
     panel: AsView[Panel]
     controller: AsPresenter[Controller]
+
+
+class WaiterApp(Session):
+    """A view with a coroutine key, on a frontend that runs none in views."""
+
+    frontend = Toy
+    config: ClassVar[dict[str, Any]] = {"session": "toy-waiter"}
+
+    waiter: AsView[Waiter]
+
+
+class AwaitingWaiterApp(Session):
+    """The same view, on a frontend that runs its coroutine methods."""
+
+    frontend = Awaiting
+    config: ClassVar[dict[str, Any]] = {"session": "toy-awaiting-waiter"}
+
+    waiter: AsView[Waiter]
 
 
 def test_the_session_file_replaces_and_drops_keys(build: BuildSession) -> None:
@@ -222,3 +258,24 @@ def test_a_saved_key_taking_a_default_does_not_stop_a_strict_session(
 
     assert (keys["panel.run"], keys["controller.restart"]) == ((), ("Ctrl+R",))
     assert "kept on controller.restart, taken from panel.run" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("app_class", "kept"),
+    [(WaiterApp, False), (AwaitingWaiterApp, True)],
+    ids=["not-run", "run"],
+)
+def test_a_view_coroutine_key_is_kept_only_where_the_frontend_runs_it(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    app_class: type[Session],
+    kept: bool,
+) -> None:
+    """Leave a view's coroutine key out, logged, unless the frontend runs view coroutines."""
+    app = build(app_class)
+    caplog.set_level(logging.WARNING, logger="redsun")
+
+    commands = [b.command for b in app.resolve_shortcuts()]
+
+    assert ("waiter.wait" in commands) is kept
+    assert ("waiter.wait is a coroutine method" in caplog.text) is not kept

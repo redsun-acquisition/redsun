@@ -93,6 +93,10 @@ def shortcut(
     binds the key once the component is built: anywhere in the window, or
     with `scope="view"` only while the component's own view has focus.
 
+    A presenter's coroutine method runs on the session's loop, and a press
+    while it still runs is ignored. A view's runs only on a frontend whose
+    `view_coroutines` is true; elsewhere its key is left out.
+
     Parameters
     ----------
     when
@@ -111,8 +115,8 @@ def shortcut(
         If the key or the title is empty, the scope is unknown, or *when* is
         not a function.
     TypeError
-        When applied to a method that needs arguments besides itself, to a
-        coroutine method, or to a method that already has a key.
+        When applied to a method that needs arguments besides itself, or to
+        a method that already has a key.
     """
     record = Shortcut(key, title, scope, mac, win, linux, when, repeat)
 
@@ -121,11 +125,6 @@ def shortcut(
             raise TypeError(
                 f"{method.__qualname__} already has a key; give a second one in "
                 "the session file's shortcuts section"
-            )
-        if inspect.iscoroutinefunction(method):
-            raise TypeError(
-                f"{method.__qualname__} is a coroutine method, which a key "
-                "cannot run yet; call it from a plain method"
             )
         needed = [
             name

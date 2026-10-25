@@ -1026,7 +1026,11 @@ class Session(BuildableSession):
             if declaration.kind in (Layer.PRESENTER, Layer.VIEW)
             and declaration.instance is not None
         }
-        found, problems = candidates(components, views=set(self.views))
+        found, problems = candidates(
+            components,
+            views=set(self.views),
+            view_coroutines=self.frontend.view_coroutines,
+        )
         checked = []
         for binding in [*found, *extra]:
             keys, refusals = self._read_keys(binding.keys)
