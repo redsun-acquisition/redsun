@@ -365,7 +365,7 @@ set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]
-dependency_groups = ["dev", "docs", "pyqt"]
+dependency_groups = ["dev", "docs", "qlementine-pyqt"]
 pass_env = ["DISPLAY", "QT_QPA_PLATFORM"]
 commands = [
     ["python", "scripts/export_schemas.py"],

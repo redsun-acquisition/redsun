@@ -108,6 +108,11 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (460, 560),
         None,
     ),
+    Path("docs/examples/qlementine_style.py"): (
+        Path("docs/how-to/images/qlementine-style.png"),
+        (460, 560),
+        None,
+    ),
     Path("docs/examples/log_view.py"): (
         Path("docs/how-to/images/log-view.png"),
         (820, 360),
@@ -131,6 +136,13 @@ WIDGET_SCHEMES = (ColorSchemeMode.LIGHT, ColorSchemeMode.DARK)
 
 WIDGET_WIDTH = 420
 """Width in pixels of a picture of parameter widgets."""
+
+
+def settle(app: QApplication) -> None:
+    """Let *app* handle its events for half a second."""
+    for _ in range(10):
+        app.processEvents()
+        time.sleep(0.05)
 
 
 def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
@@ -161,9 +173,12 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
             app.processEvents()
             time.sleep(0.05)
     # let queued signals and the layout settle before the picture is taken
-    for _ in range(10):
-        app.processEvents()
-        time.sleep(0.05)
+    settle(app)
+    # some styles, and the positioner row itself, draw a frame around the
+    # control the window gave the focus to while it settled
+    if (focused := app.focusWidget()) is not None:
+        focused.clearFocus()
+        settle(app)
     target.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(target))
     # what quitting the event loop sends, and what shuts the session down
@@ -231,9 +246,7 @@ def photograph_plan(
     widget = create_plan_widget(create_plan_spec(plan, devices))
     widget.group_box.resize(WIDGET_WIDTH, widget.group_box.sizeHint().height())
     widget.group_box.show()
-    for _ in range(10):
-        app.processEvents()
-        time.sleep(0.05)
+    settle(app)
     # the first input takes the focus, and its cursor would be in the picture
     focused = app.focusWidget()
     if focused is not None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 from importlib.util import find_spec
@@ -359,3 +360,15 @@ def test_a_keyword_of_the_wrong_type_is_refused(kwargs: dict[str, Any]) -> None:
     """Refuse a theme that is not a path and an animations value that is not true or false."""
     with pytest.raises(TypeError, match=f"{next(iter(kwargs))} must be"):
         QlementineStyle(**kwargs)
+
+
+@needs_qlementine
+def test_the_session_of_the_guides_picture_builds(
+    qapp: QApplication, tmp_path: Path
+) -> None:
+    """Build every component of the session the guide's qlementine picture shows."""
+    app = importlib.import_module("docs.examples.qlementine_style").MyApp
+    session = app(
+        {"mock": True, "strict": True, "storage": {"base_dir": str(tmp_path)}}
+    ).build()
+    session.shutdown()
