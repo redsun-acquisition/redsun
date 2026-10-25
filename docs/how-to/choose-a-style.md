@@ -223,8 +223,9 @@ from pathlib import Path
 
 import PyQt6Qlementine as qlementine  # or PySide6Qlementine
 
-theme = qlementine.Theme.makeDark().toJson()
-Path("themes/my-dark.json").write_bytes(bytes(theme.toJson()))
+document = qlementine.Theme.makeDark().toJson()
+Path("themes").mkdir(exist_ok=True)
+Path("themes/my-dark.json").write_bytes(bytes(document.toJson()))
 ```
 
 The session reads a relative path from the folder the program starts in.

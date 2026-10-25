@@ -314,7 +314,7 @@ def test_a_theme_file_that_cannot_be_read_skips_the_style_naming_it(
 
     assert session.hooks[QtHook.CONFIGURE_APPLICATION] == ()
     assert style_name(qapp) == before
-    assert f"the light theme file {missing}" in caplog.text
+    assert f"the light theme file {missing} does not exist" in caplog.text
 
 
 @pytest.mark.parametrize(

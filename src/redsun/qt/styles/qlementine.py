@@ -61,7 +61,7 @@ def load_qlementine() -> ModuleType:
 
 
 def theme_path(value: object, scheme: str) -> Path | None:
-    """Return *value* as the path of the theme file for *scheme*, or `None` for qlementine's own.
+    """Return *value* as the path of the theme file for *scheme*, or `None` for `qlementine`'s own.
 
     Raises
     ------
@@ -81,14 +81,17 @@ def load_theme(qlementine: ModuleType, path: Path, scheme: str) -> Any:
     Raises
     ------
     ValueError
-        If the file cannot be read as a theme, naming it and *scheme*.
+        If there is no file at *path*, or it cannot be read as a theme,
+        naming it and *scheme*.
     """
+    if not path.is_file():
+        raise ValueError(f"the {scheme} theme file {path} does not exist")
     try:
         return qlementine.Theme.fromJsonPath(str(path))
     except ValueError as e:
         raise ValueError(
-            f"the {scheme} theme file {path} cannot be read: it is missing, is "
-            "not JSON, or has no 'meta' entry with 'name', 'author' and 'version'"
+            f"the {scheme} theme file {path} cannot be read: it is not JSON, "
+            "or has no 'meta' entry with 'name', 'author' and 'version'"
         ) from e
 
 
