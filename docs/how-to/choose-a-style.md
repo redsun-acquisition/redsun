@@ -120,8 +120,11 @@ user cache folder, and a file that hasn't changed isn't written again.
 ## Use the qlementine style
 
 `qlementine` is a style that draws every control itself, where the `napari`
-style is a stylesheet over your platform's. `redsun` doesn't ship it, so
-install the extra for your Qt binding first:
+style is a stylesheet over your platform's:
+
+![The positioner view in qlementine's dark theme](images/qlementine-style.png)
+
+`redsun` doesn't ship it, so install the extra for your Qt binding first:
 
 ```bash
 pip install "redsun[qlementine-pyqt]"     # with PyQt6

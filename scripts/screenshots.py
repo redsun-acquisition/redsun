@@ -108,6 +108,11 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (460, 560),
         None,
     ),
+    Path("docs/examples/qlementine_style.py"): (
+        Path("docs/how-to/images/qlementine-style.png"),
+        (460, 560),
+        None,
+    ),
     Path("docs/examples/log_view.py"): (
         Path("docs/how-to/images/log-view.png"),
         (820, 360),
@@ -131,6 +136,13 @@ WIDGET_SCHEMES = (ColorSchemeMode.LIGHT, ColorSchemeMode.DARK)
 
 WIDGET_WIDTH = 420
 """Width in pixels of a picture of parameter widgets."""
+
+
+def settle(app: QApplication) -> None:
+    """Let *app* handle its events for half a second."""
+    for _ in range(10):
+        app.processEvents()
+        time.sleep(0.05)
 
 
 def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
@@ -161,9 +173,12 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
             app.processEvents()
             time.sleep(0.05)
     # let queued signals and the layout settle before the picture is taken
-    for _ in range(10):
-        app.processEvents()
-        time.sleep(0.05)
+    settle(app)
+    # a style that draws the focus would ring the control the window gave it
+    # to while it settled
+    if (focused := app.focusWidget()) is not None:
+        focused.clearFocus()
+        settle(app)
     target.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(target))
     # what quitting the event loop sends, and what shuts the session down
