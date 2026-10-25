@@ -174,8 +174,8 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
             time.sleep(0.05)
     # let queued signals and the layout settle before the picture is taken
     settle(app)
-    # a style that draws the focus would ring the control the window gave it
-    # to while it settled
+    # some styles, and the positioner row itself, draw a frame around the
+    # control the window gave the focus to while it settled
     if (focused := app.focusWidget()) is not None:
         focused.clearFocus()
         settle(app)
@@ -246,9 +246,7 @@ def photograph_plan(
     widget = create_plan_widget(create_plan_spec(plan, devices))
     widget.group_box.resize(WIDGET_WIDTH, widget.group_box.sizeHint().height())
     widget.group_box.show()
-    for _ in range(10):
-        app.processEvents()
-        time.sleep(0.05)
+    settle(app)
     # the first input takes the focus, and its cursor would be in the picture
     focused = app.focusWidget()
     if focused is not None:
