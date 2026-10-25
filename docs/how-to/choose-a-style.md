@@ -151,10 +151,9 @@ Then install `QlementineStyle` at the same hook point:
 
 To see it first, run `redsun --example qlementine`.
 
-The style follows the colour scheme as the `napari` style does, and takes no
-setting. It changes the application's font as well as its colours. When the
-session shuts down it puts back the style, the font and the palette the
-application had.
+The style follows the colour scheme as the `napari` style does. It changes
+the application's font as well as its colours. When the session shuts down
+it puts back the style, the font and the palette the application had.
 
 `qlementine` draws every icon in the window in one colour, the colour of the
 control the icon is on. That keeps the icons of the built-in views readable
@@ -179,6 +178,80 @@ Before you choose it:
 - If the package is missing, the session logs the extra to install and
   starts with your platform's look. A session that sets `strict` stops
   instead.
+
+## Give qlementine your own theme
+
+You can replace `qlementine`'s dark theme, its light theme or both with a
+theme file of your own. Give the file's path as `dark` or `light`:
+
+=== "Session class"
+
+    ```python
+    from typing import Annotated
+
+    from redsun import AsHook, Declare
+    from redsun.qt.styles.qlementine import QlementineStyle
+
+
+    class MyApp(QtSession):
+        configure_application: Annotated[
+            AsHook[QlementineStyle], Declare(dark="themes/my-dark.json")
+        ]
+    ```
+
+=== "Session file"
+
+    ```yaml
+    hooks:
+      configure_application:
+        provider: qlementine
+        kwargs:
+          dark: themes/my-dark.json
+    ```
+
+The scheme you don't give keeps `qlementine`'s own theme, so the colour
+scheme control still switches between the two. For one theme in both
+schemes, give the same file as `dark` and `light`.
+
+A theme file is JSON. It needs a `meta` entry holding `name`, `author` and
+`version`, and every colour it leaves out takes `qlementine`'s default,
+which is the light theme's. The easiest start is a copy of a built-in theme,
+which you then edit:
+
+```python
+from pathlib import Path
+
+import PyQt6Qlementine as qlementine  # or PySide6Qlementine
+
+document = qlementine.Theme.makeDark().toJson()
+Path("themes").mkdir(exist_ok=True)
+Path("themes/my-dark.json").write_bytes(bytes(document.toJson()))
+```
+
+Write a colour as `#rrggbb`, or `#rrggbbaa` with its opacity last.
+`qlementine` uses its default for a value it can't read, so a misspelt
+colour leaves the default in place. The session logs a warning for a key
+`qlementine` doesn't know and for a value of the wrong kind, such as text
+where a number belongs.
+
+The session reads a relative path from the folder the program starts in.
+If it can't read a file, it logs which one and starts with your platform's
+look, and a session that sets `strict` stops instead.
+
+## Turn qlementine's animations off
+
+`qlementine` animates a control as it changes, such as a button you point
+at. Give `animations: false` to draw every change at once:
+
+```yaml
+hooks:
+  configure_application:
+    provider: qlementine
+    kwargs:
+      animations: false
+```
+
+In a session class, write `Declare(animations=False)`, as for a theme.
 
 ## See also
 
