@@ -25,14 +25,14 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "annotated-types>=0.7",
+    "annotated-types>=0.8.0",
     "bluesky>=1.15.1",
     "culsans>=0.11.0",
     "in-n-out>=0.2.1",
     "ophyd-async>=0.21.3",
-    "platformdirs>=4.12.1",
+    "platformdirs>=4.13.5",
     "psygnal>=0.16.1",
-    "pydantic>=2.13.5",
+    "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
     "typing-extensions>=4.16.0",
 ]
@@ -49,7 +49,7 @@ dev = [
     { include-group = "zarr" },
     { include-group = "ome-zarr" },
     { include-group = "profile" },
-    "mypy>=2.3.1",
+    "mypy>=2.4.0",
     # pytest 9.1.0 and 9.1.1 lose a package's conftest fixtures when its files
     # are named on the command line with another path between them
     # (pytest-dev/pytest#14971); lift the cap once a release fixes it
@@ -59,15 +59,15 @@ dev = [
     "griffe-fieldz>=0.5.0",
     "pytest-asyncio>=1.4.0",
     "jsonschema>=4.26.0",
-    "fastcs[epicspva]>=0.14.2",
+    "fastcs[epicspva]>=0.14.4",
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
 ]
 docs = [
     "markdown-d2>=0.4.2",
-    "mkdocstrings-python>=2.0.9",
-    "zensical>=0.0.66",
+    "mkdocstrings-python>=2.0.10",
+    "zensical>=0.0.72",
 ]
 
 qt-common = [
@@ -75,7 +75,7 @@ qt-common = [
     "fonticon-materialdesignicons7>=7.2.96",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
-    "superqt>=0.8.2",
+    "superqt>=0.9.0",
 ]
 
 pyqt = [
@@ -100,24 +100,24 @@ zarr = [
 ]
 tiled = [
     "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
-    "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
+    "tiled[client,server]>=0.2.20 ; python_full_version < '3.14'",
 ]
 pva = [
     "ophyd-async[pva]>=0.21.3",
-    "p4p>=4.2.2",
+    "p4p>=4.3.0",
 ]
 ome-zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
 ]
 lint = [
-    "prek>=0.5.4",
-    "ruff>=0.16.9",
+    "prek>=0.5.7",
+    "ruff>=0.17.2",
 ]
 coverage = [
-    "coverage>=7.16.2",
+    "coverage>=7.17.0",
 ]
 tox = [
-    "tox-uv-bare>=1.36.0",
+    "tox-uv-bare>=1.37.0",
 ]
 testing = [
     "pytest>=8",
@@ -145,7 +145,7 @@ qt-common = [
     "fonticon-materialdesignicons7>=7.2.96",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
-    "superqt>=0.8.2",
+    "superqt>=0.9.0",
 ]
 pyqt = [
     "redsun[qt-common]",
@@ -169,7 +169,7 @@ zarr = [
 ]
 tiled = [
     "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
-    "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
+    "tiled[client,server]>=0.2.20 ; python_full_version < '3.14'",
 ]
 ome-zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
