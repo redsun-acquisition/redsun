@@ -102,6 +102,19 @@ def test_a_conflict_is_logged_naming_both(
     assert "Ctrl+R: kept on panel.run, taken from controller.restart" in caplog.text
 
 
+def test_a_conflict_is_logged_once_however_often_keys_are_resolved(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log a settled conflict the first time the keys are resolved, not again."""
+    app = build(ToyApp)
+    caplog.set_level(logging.WARNING, logger="redsun")
+
+    app.resolve_shortcuts()
+    app.resolve_shortcuts()
+
+    assert caplog.text.count("kept on panel.run") == 1
+
+
 def test_a_strict_session_refuses_a_conflict(build: BuildSession) -> None:
     """Raise BuildError for a conflict when the configuration sets strict."""
     app = build(ToyApp, {"strict": True})

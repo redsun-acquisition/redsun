@@ -420,14 +420,22 @@ class PositionerView(QtW.QWidget, Loggable):
         return any(group.focused_axis() is not None for group in self._groups.values())
 
     @shortcut(
-        "Left", title="Step the focused axis down", scope="view", when=_row_has_focus
+        "Left",
+        title="Step the focused axis down",
+        scope="view",
+        when=_row_has_focus,
+        repeat=True,
     )
     def step_down(self) -> None:
         """Step the axis whose row has focus down by its step size."""
         self._step_focused(-1.0)
 
     @shortcut(
-        "Right", title="Step the focused axis up", scope="view", when=_row_has_focus
+        "Right",
+        title="Step the focused axis up",
+        scope="view",
+        when=_row_has_focus,
+        repeat=True,
     )
     def step_up(self) -> None:
         """Step the axis whose row has focus up by its step size."""

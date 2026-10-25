@@ -36,6 +36,9 @@ class Binding:
     when: Callable[[], bool] | None = None
     """While it returns false the keys do nothing; `None` for always."""
 
+    repeat: bool = False
+    """Whether a held key runs the command again at the keyboard's repeat rate."""
+
 
 def candidates(
     components: Mapping[str, object], views: Collection[str]
@@ -59,7 +62,15 @@ def candidates(
             view = name if record.scope == "view" else None
             when = None if record.when is None else partial(record.when, component)
             found.append(
-                Binding(command, record.title, (record.key_here(),), view, method, when)
+                Binding(
+                    command,
+                    record.title,
+                    (record.key_here(),),
+                    view,
+                    method,
+                    when,
+                    record.repeat,
+                )
             )
     return found, problems
 

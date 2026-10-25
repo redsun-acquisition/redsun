@@ -84,6 +84,20 @@ the function each time the focus moves, not at each key press, so the method
 still checks anything that can change while the focus stays put, such as
 whether the row is locked.
 
+## Repeat while the key is held
+
+A key runs its method once per press, however long the user holds it, so
+holding the key that starts a plan starts it once. A key that steps
+something is the opposite case, because the user holds it to keep stepping.
+Give it `repeat=True`, and the method runs again at the keyboard's repeat
+rate until the key is released:
+
+```python
+class MyView(QWidget):
+    @shortcut("Right", title="Step forward", scope="view", repeat=True)
+    def step_forward(self) -> None: ...
+```
+
 ## Change a key in the session file
 
 The `shortcuts` section gives a command another key, two keys, or none. A
@@ -102,7 +116,8 @@ the rules.
 ## Change a key in the window
 
 The user changes keys in **Window** -> **Keyboard shortcuts**. Double-click a
-key cell and press the new key; Backspace or Delete clears it. When another
+key cell and press the new key; Backspace or Delete clears it, and Escape
+leaves it as it was. When another
 command already has that key in the same place, the list asks "Already used
 by *Run*; move it here?", and on yes the key moves and the other command is
 left without it.

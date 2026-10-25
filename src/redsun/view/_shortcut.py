@@ -53,6 +53,9 @@ class Shortcut:
     when: Callable[[Any], bool] | None = None
     """A function of the component; while it returns false the key does nothing."""
 
+    repeat: bool = False
+    """Whether a held key runs the method again at the keyboard's repeat rate."""
+
     def __post_init__(self) -> None:
         problems = []
         if not self.key:
@@ -82,6 +85,7 @@ def shortcut(
     win: str | None = None,
     linux: str | None = None,
     when: Callable[[Any], bool] | None = None,
+    repeat: bool = False,
 ) -> Callable[[F], F]:
     """Return a decorator recording that *key* runs the method it decorates.
 
@@ -96,6 +100,10 @@ def shortcut(
         decorated one. The key acts only while it returns true; the rest of
         the time the key press goes to the widget that has focus. A frontend
         asks again each time the focus moves.
+    repeat
+        Whether holding the key runs the method again at the keyboard's
+        repeat rate, as stepping a motor wants. By default a held key runs it
+        once.
 
     Raises
     ------
@@ -106,7 +114,7 @@ def shortcut(
         When applied to a method that needs arguments besides itself, to a
         coroutine method, or to a method that already has a key.
     """
-    record = Shortcut(key, title, scope, mac, win, linux, when)
+    record = Shortcut(key, title, scope, mac, win, linux, when, repeat)
 
     def decorate(method: F) -> F:
         if isinstance(getattr(method, SHORTCUT_ATTR, None), Shortcut):

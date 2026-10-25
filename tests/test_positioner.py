@@ -13,6 +13,7 @@ from redsun import AsDevice, AsPresenter, AsView, Declare, Link
 from redsun.presenter import AcquisitionPresenter, PositionerPresenter
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import PositionerView
+from redsun.view.qt.treeview import DescriptorTreeView
 from tests.sdk.mocks import Stage
 from tests.sdk.view.helpers import child, key_click
 
@@ -201,3 +202,24 @@ def test_arrow_keys_step_the_focused_axis_and_leave_the_tab_bar_its_own(
 
     assert steps == [("stage-axis", "x", 1.0), ("stage-axis", "x", -1.0)]
     assert view.tabs.currentIndex() == 1
+
+
+def test_arrow_keys_stay_with_the_slider_and_the_tree(
+    qapp: QtWidgets.QApplication, build: BuildSession
+) -> None:
+    """Leave Right and Left to the interval slider and the settings tree, stepping no axis."""
+    session = build(Lab)
+    view = session.views["positioner_view"]
+    assert isinstance(view, PositionerView)
+    steps: list[tuple[str, str, float]] = []
+    view.sig_move.connect(lambda *args: steps.append(args))
+    slider = child(view, QtWidgets.QSlider)
+    tree = child(view, DescriptorTreeView)
+    before = slider.value()
+
+    key_click(slider, QtCore.Qt.Key.Key_Right)
+    key_click(tree, QtCore.Qt.Key.Key_Right)
+    key_click(tree, QtCore.Qt.Key.Key_Left)
+
+    assert slider.value() > before
+    assert steps == []
