@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from bluesky.protocols import Reading
     from event_model import DataKey
-    from ophyd_async.core import AsyncConfigurable
+    from ophyd_async.core import AsyncConfigurable, AsyncStatus, WatchableAsyncStatus
 
 __all__ = [
     "Axis",
@@ -67,6 +67,14 @@ class Axis(AsyncLocatable[float], Subscribable[float], Protocol):
     cancels to stop the move. Checking an object against this protocol at run
     time finds the methods only, not what `set` returns.
     """
+
+    def set(self, value: float, /) -> AsyncStatus[Any] | WatchableAsyncStatus[float]:
+        """Start a move to *value*, which is passed by position.
+
+        An axis may name the parameter as it likes, `new_position` for an
+        `ophyd-async` `StandardMovable`.
+        """
+        ...
 
 
 @dataclass(frozen=True, slots=True)
