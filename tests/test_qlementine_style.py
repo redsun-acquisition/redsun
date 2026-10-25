@@ -317,6 +317,39 @@ def test_a_theme_file_that_cannot_be_read_skips_the_style_naming_it(
     assert f"the light theme file {missing} does not exist" in caplog.text
 
 
+@needs_qlementine
+def test_entries_qlementine_ignores_are_logged_and_the_rest_applied(
+    qapp: QApplication,
+    build: BuildSession,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log a theme key qlementine doesn't know and a value of the wrong kind, and apply the rest."""
+    path = tmp_path / "typo.json"
+    meta = {"name": "Typo", "author": "Lab", "version": "1.0"}
+    entries = {
+        "meta": meta,
+        "backgroundColorMain2": LAB_WINDOW,
+        "backgroundColourMain3": "#000000",
+        "borderRadius": "big",
+    }
+    path.write_text(json.dumps(entries))
+    hints = QGuiApplication.styleHints()
+    assert hints is not None
+
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        styled(build, dark=str(path))
+    hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
+
+    assert window_colour(qapp).name() == LAB_WINDOW
+    [record] = [r for r in caplog.records if str(path) in r.getMessage()]
+    lines = record.getMessage().splitlines()[1:]
+    assert lines == [
+        "  'backgroundColourMain3' is not a theme key",
+        "  'borderRadius' should be a number, got 'big'",
+    ]
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [{"dark": 3}, {"light": ["lab.json"]}, {"animations": "false"}],

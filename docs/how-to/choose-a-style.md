@@ -228,6 +228,12 @@ Path("themes").mkdir(exist_ok=True)
 Path("themes/my-dark.json").write_bytes(bytes(document.toJson()))
 ```
 
+Write a colour as `#rrggbb`, or `#rrggbbaa` with its opacity last.
+`qlementine` uses its default for a value it can't read, so a misspelt
+colour leaves the default in place. The session logs a warning for a key
+`qlementine` doesn't know and for a value of the wrong kind, such as text
+where a number belongs.
+
 The session reads a relative path from the folder the program starts in.
 If it can't read a file, it logs which one and starts with your platform's
 look, and a session that sets `strict` stops instead.

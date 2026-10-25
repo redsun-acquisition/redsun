@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -15,6 +17,7 @@ from qtpy.QtWidgets import QStyle
 from ._scheme import SchemeFollower
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import ModuleType
 
     from qtpy.QtGui import QFont
@@ -27,6 +30,8 @@ MODULES = {"pyqt6": "PyQt6Qlementine", "pyside6": "PySide6Qlementine"}
 
 EXTRAS = {"pyqt6": "qlementine-pyqt", "pyside6": "qlementine-pyside"}
 """The extra of `redsun` that installs the package, for each Qt binding."""
+
+logger = logging.getLogger("redsun")
 
 
 class Earlier(NamedTuple):
@@ -87,12 +92,57 @@ def load_theme(qlementine: ModuleType, path: Path, scheme: str) -> Any:
     if not path.is_file():
         raise ValueError(f"the {scheme} theme file {path} does not exist")
     try:
-        return qlementine.Theme.fromJsonPath(str(path))
+        theme = qlementine.Theme.fromJsonPath(str(path))
     except ValueError as e:
         raise ValueError(
             f"the {scheme} theme file {path} cannot be read: it is not JSON, "
             "or has no 'meta' entry with 'name', 'author' and 'version'"
         ) from e
+    defaults = json.loads(bytes(qlementine.Theme().toJson().toJson()))
+    problems = ignored_entries(json.loads(path.read_text(encoding="utf-8")), defaults)
+    if problems:
+        logger.warning(
+            "The %s theme file %s has entries qlementine ignores, using its "
+            "defaults instead:\n%s",
+            scheme,
+            path,
+            "\n".join(f"  {line}" for line in problems),
+        )
+    return theme
+
+
+def ignored_entries(
+    written: Mapping[str, object], defaults: Mapping[str, object]
+) -> list[str]:
+    """Return a line per entry of *written* that `qlementine` ignores.
+
+    Such an entry has a key *defaults* lacks, or a value of another kind
+    than the default's, such as text where a number belongs.
+    """
+    return [
+        f"{key!r} is not a theme key"
+        if key not in defaults
+        else f"{key!r} should be {kind(defaults[key])}, got {value!r}"
+        for key, value in written.items()
+        if key not in defaults or kind(value) != kind(defaults[key])
+    ]
+
+
+def kind(value: object) -> str:
+    """Return the kind of JSON value *value* is, as a message names it."""
+    match value:
+        case bool():
+            return "true or false"
+        case int() | float():
+            return "a number"
+        case str():
+            return "text"
+        case dict():
+            return "an object"
+        case list():
+            return "a list"
+        case _:
+            return "null"
 
 
 def name_of(style: QStyle | None) -> str:
