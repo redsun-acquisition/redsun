@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 from qtpy import API
@@ -58,6 +60,38 @@ def load_qlementine() -> ModuleType:
         ) from e
 
 
+def theme_path(value: object, scheme: str) -> Path | None:
+    """Return *value* as the path of the theme file for *scheme*, or `None` for qlementine's own.
+
+    Raises
+    ------
+    TypeError
+        If *value* is neither a path nor `None`.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str | os.PathLike):
+        raise TypeError(f"{scheme} must be a path to a theme file, got {value!r}")
+    return Path(value)
+
+
+def load_theme(qlementine: ModuleType, path: Path, scheme: str) -> Any:
+    """Return the theme in the file at *path*.
+
+    Raises
+    ------
+    ValueError
+        If the file cannot be read as a theme, naming it and *scheme*.
+    """
+    try:
+        return qlementine.Theme.fromJsonPath(str(path))
+    except ValueError as e:
+        raise ValueError(
+            f"the {scheme} theme file {path} cannot be read: it is missing, is "
+            "not JSON, or has no 'meta' entry with 'name', 'author' and 'version'"
+        ) from e
+
+
 def name_of(style: QStyle | None) -> str:
     """Return the name *style* can be set again by, or nothing for a style that has none.
 
@@ -104,10 +138,39 @@ class QlementineStyle:
     replaced.
 
     `qlementine`'s package is imported when the hook runs, so only a session
-    that names this style needs it.
+    that names this style needs it. The theme files are read then too.
+
+    Parameters
+    ----------
+    dark
+        A `qlementine` theme file used while the colour scheme is dark, in
+        place of `qlementine`'s dark theme. A relative path is read from the
+        working directory.
+    light
+        The same, for the light scheme.
+    animations
+        Whether `qlementine` animates a control changing state.
+
+    Raises
+    ------
+    TypeError
+        If a theme is neither a path nor `None`, or *animations* is not a
+        `bool`.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        dark: str | os.PathLike[str] | None = None,
+        light: str | os.PathLike[str] | None = None,
+        animations: bool = True,
+    ) -> None:
+        if not isinstance(animations, bool):
+            raise TypeError(f"animations must be true or false, got {animations!r}")
+        self._files = {
+            True: theme_path(dark, "dark"),
+            False: theme_path(light, "light"),
+        }
+        self._animations = animations
         self._app: QApplication | None = None
         self._earlier: Earlier | None = None
         self._follower: SchemeFollower | None = None
@@ -124,11 +187,16 @@ class QlementineStyle:
         ImportError
             If `qlementine`'s package for the Qt binding in use cannot be
             imported.
+        ValueError
+            If a theme file cannot be read.
         """
         qlementine = load_qlementine()
+        built_in = {True: qlementine.Theme.makeDark, False: qlementine.Theme.makeLight}
         self._themes = {
-            True: qlementine.Theme.makeDark(),
-            False: qlementine.Theme.makeLight(),
+            dark: built_in[dark]()
+            if path is None
+            else load_theme(qlementine, path, "dark" if dark else "light")
+            for dark, path in self._files.items()
         }
         earlier = look_of(app)
         self._style = qlementine.QlementineStyle(app)
@@ -136,6 +204,7 @@ class QlementineStyle:
         # accent buttons, so an icon drawn in it vanishes on every other
         # button; the style colours each icon for the control it is on
         self._style.setAutoIconColor(qlementine.AutoIconColor.ForegroundColor)
+        self._style.setAnimationsEnabled(self._animations)
         app.setStyle(self._style)
         try:
             self._follower = SchemeFollower(self._apply)

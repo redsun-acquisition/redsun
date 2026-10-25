@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
@@ -21,6 +22,8 @@ from redsun.qt.styles.qlementine import QlementineStyle
 from redsun.view.qt.icons import set_collapsible_icons, set_icon
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
@@ -33,8 +36,31 @@ needs_qlementine = pytest.mark.skipif(
 )
 
 
+LAB_WINDOW = "#305070"
+"""The window colour of the theme `lab_theme` writes."""
+
+
 class StyledApp(QtSession):
     configure_application: AsHook[QlementineStyle]
+
+
+class BareApp(QtSession):
+    pass
+
+
+@pytest.fixture
+def lab_theme(tmp_path: Path) -> Path:
+    """Return a theme file giving windows `LAB_WINDOW`, and the rest qlementine's defaults."""
+    path = tmp_path / "lab.json"
+    meta = {"name": "Lab", "author": "Lab", "version": "1.0"}
+    path.write_text(json.dumps({"meta": meta, "backgroundColorMain2": LAB_WINDOW}))
+    return path
+
+
+def styled(build: BuildSession, **kwargs: object) -> QtSession:
+    """Build a session whose file installs the style with *kwargs*."""
+    hook = {"provider": "qlementine", "kwargs": kwargs}
+    return build(BareApp, {"hooks": {"configure_application": hook}})
 
 
 def window_colour(app: QApplication) -> QColor:
@@ -243,3 +269,60 @@ def test_a_missing_package_skips_the_style_and_names_the_extra(
     assert style_name(qapp) == before
     assert f"redsun[{qlementine.EXTRAS[API]}]" in caplog.text
     assert "No module named 'no_such_qlementine_package'" in caplog.text
+
+
+@needs_qlementine
+def test_a_theme_file_replaces_the_built_in_theme_of_its_scheme(
+    qapp: QApplication, build: BuildSession, lab_theme: Path
+) -> None:
+    """Use the dark theme file under the dark scheme, and qlementine's light theme under the light one."""
+    styled(build, dark=str(lab_theme))
+    hints = QGuiApplication.styleHints()
+    assert hints is not None
+
+    hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Dark)
+    dark = window_colour(qapp).name()
+    hints.colorSchemeChanged.emit(QtNamespace.ColorScheme.Light)
+
+    assert dark == LAB_WINDOW
+    assert not is_dark(qapp)
+
+
+@needs_qlementine
+def test_animations_can_be_turned_off(qapp: QApplication, build: BuildSession) -> None:
+    """Turn qlementine's animations off when the session file says so."""
+    styled(build, animations=False)
+    # the style is qlementine's own class, which the stubs here don't know
+    style: Any = qapp.style()
+
+    assert not style.animationsEnabled()
+
+
+@needs_qlementine
+def test_a_theme_file_that_cannot_be_read_skips_the_style_naming_it(
+    qapp: QApplication,
+    build: BuildSession,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Start unstyled when a theme file cannot be read, logging the file and its scheme."""
+    missing = tmp_path / "missing.json"
+    before = style_name(qapp)
+
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        session = styled(build, light=str(missing))
+
+    assert session.hooks[QtHook.CONFIGURE_APPLICATION] == ()
+    assert style_name(qapp) == before
+    assert f"the light theme file {missing}" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"dark": 3}, {"light": ["lab.json"]}, {"animations": "false"}],
+    ids=["number", "list", "text"],
+)
+def test_a_keyword_of_the_wrong_type_is_refused(kwargs: dict[str, Any]) -> None:
+    """Refuse a theme that is not a path and an animations value that is not true or false."""
+    with pytest.raises(TypeError, match=f"{next(iter(kwargs))} must be"):
+        QlementineStyle(**kwargs)
