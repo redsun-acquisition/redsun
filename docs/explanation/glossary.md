@@ -302,7 +302,8 @@ A port is one end of a connection: a [signal](#signal) on the sending side, a
 A prefix is the beginning shared by the names of a group of
 [process variables](#process-variable), such as `CAM:` in `CAM:Exposure`. A
 [service](#service) has one and gives it to every device that names the
-service. The term comes from [EPICS](#epics).
+service. A device holding several pieces can take one prefix per piece, each
+from its own service. The term comes from [EPICS](#epics).
 
 ### Presenter
 
@@ -466,8 +467,8 @@ the [run](#run) can find the data. The term comes from
 ### Strict session
 
 A strict session is a session whose configuration sets `strict: true`. If any
-component fails to build, or its `setup` fails, the session stops with an
-error instead of running without the component.
+component fails to build, its `setup` fails or a service does not start, the
+session stops with an error instead of running without it.
 
 ### Structural subtyping
 

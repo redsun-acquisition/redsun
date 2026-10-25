@@ -5,10 +5,11 @@ icon: lucide/arrow-right-left
 # How to migrate from 0.15
 
 Release 0.16 removes the two things 0.15 deprecated, changes what a view of
-plan progress receives, moves some axes to another box of the positioner, and
-removes two helpers the positioner no longer uses. This page gives each change with what to write
-instead. The [changelog](../reference/changelog.md) lists everything else the
-release changed.
+plan progress receives, moves some axes to another box of the positioner,
+removes two helpers the positioner no longer uses, and changes what a session
+does when a service does not start. This page gives each change with what to
+write instead. The [changelog](../reference/changelog.md) lists everything
+else the release changed.
 
 ## A view's placement can't come from a property
 
@@ -130,3 +131,35 @@ parameters are keyword-only; declare the parameters as plain named ones. A
 fraction reported alone reaches the watcher alone, with `current`, `initial`
 and `target` left `None`, and a device's status that reports no unit gives
 `unit` as `None` instead of `"unit"`.
+
+## A strict session stops when a service does not start
+
+A [strict session](../explanation/glossary.md#strict-session) now stops when
+any service fails to start, even one that no device names. In 0.15 such a
+session ran on, and stopped only if a device on the service could not be
+built. If the session declares a service it no longer uses, remove the
+service from the session file. If a service may be missing while you work,
+leave `strict` off for those runs:
+
+```python
+MyApp({"strict": False}).run()
+```
+
+## A prefix that defaults to `None` is optional
+
+A device declared with `service="x"` whose `prefix` argument defaults to `None`
+is now built when the service does not start. The session leaves `prefix` out,
+so the device gets `None`, and the build summary lists it under
+`Built without`. In 0.15 the session skipped the device. To keep it skipped,
+give `prefix` no default:
+
+```python
+# 0.15: skipped when the service does not start
+class MyCamera(StandardReadable):
+    def __init__(self, prefix: str | None = None, name: str = "") -> None: ...
+
+
+# now, to keep it skipped
+class MyCamera(StandardReadable):
+    def __init__(self, prefix: str, name: str = "") -> None: ...
+```

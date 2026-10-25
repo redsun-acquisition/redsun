@@ -65,6 +65,9 @@ __all__ = [
     "read_services",
 ]
 
+SERVICE_KEYS = ("service", "services")
+"""The two spellings of a device's services, one replacing the other."""
+
 # not TypeForm: a NewType built at runtime is a type expression only at
 # runtime, which no type checker can model
 Key: TypeAlias = Any
@@ -229,7 +232,7 @@ class Declaration:
     Raises
     ------
     TypeError
-        If a device's keywords name its service ambiguously, or give an
+        If a device's keywords name its services ambiguously, or give an
         `autoconnect` that is not a bool.
     """
 
@@ -244,7 +247,7 @@ class Declaration:
         "name",
         "placement",
         "refusal",
-        "service",
+        "services",
         "source",
     )
 
@@ -265,7 +268,7 @@ class Declaration:
         self.attribute = name if attribute is None else attribute
         self.source = name if source is None else source
         self.kind = kind
-        self.service: str | None = None
+        self.services: dict[str, str] = {}
         self.autoconnect = True
         self.placement: Placement | None = None
         if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
@@ -273,7 +276,7 @@ class Declaration:
                 f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
             )
         if kind is Layer.DEVICE:
-            cfg_kwargs = take_device_keys(self, cfg_kwargs)
+            cfg_kwargs = take_device_keys(self, cfg_kwargs, refused=refusal is not None)
         elif kind is Layer.VIEW and refusal is None:
             try:
                 cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
@@ -290,22 +293,32 @@ class Declaration:
 
 
 def take_device_keys(
-    declaration: Declaration, kwargs: dict[str, Any]
+    declaration: Declaration, kwargs: dict[str, Any], *, refused: bool = False
 ) -> dict[str, Any]:
-    """Move `service` and `autoconnect` from *kwargs* onto *declaration*.
+    """Move `service`, `services` and `autoconnect` from *kwargs* onto *declaration*.
 
-    `path_provider` is reserved too: a device taking one gets the session's.
+    `services` maps each constructor keyword to the service whose prefix it
+    gets, and `service` is short for `{"prefix": service}`. `path_provider`
+    is reserved too: a device taking one gets the session's.
 
     Returns the keywords left for the device's constructor.
+
+    Parameters
+    ----------
+    refused
+        Whether the declaration is already refused, so its class is not the
+        device's and its keywords are not checked against it.
 
     Raises
     ------
     TypeError
-        If the device's class takes one of the keywords itself, a service and a
-        prefix are both given, or `autoconnect` is not a bool.
+        If the device's class takes one of the keywords itself, both
+        `service` and `services` are given, a keyword is both mapped to a
+        service and given, the class takes no keyword `services` maps, or
+        `autoconnect` is not a bool.
     """
     params = inspect.signature(declaration.cls).parameters
-    for key in ("service", "autoconnect", "path_provider"):
+    for key in ("service", "services", "autoconnect", "path_provider"):
         if key in kwargs and key in params:
             raise TypeError(
                 f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
@@ -313,12 +326,27 @@ def take_device_keys(
                 "reserves for the session"
             )
     rest = dict(kwargs)
-    declaration.service = rest.pop("service", None)
-    if declaration.service is not None and "prefix" in rest:
+    service = rest.pop("service", None)
+    services = rest.pop("services", None)
+    if service is not None and services is not None:
         raise TypeError(
-            f"device {declaration.name!r} names service {declaration.service!r} "
-            "and a prefix; give one, since the service's prefix is the device's"
+            f"device {declaration.name!r} names both service and services; give one"
         )
+    declaration.services = (
+        {"prefix": service} if service is not None else dict(services or {})
+    )
+    any_keyword = any(p.kind is p.VAR_KEYWORD for p in params.values())
+    for keyword, service_name in declaration.services.items():
+        if keyword in rest:
+            raise TypeError(
+                f"device {declaration.name!r} names service {service_name!r} and a "
+                f"{keyword!r}; give one, since the service's prefix is the device's"
+            )
+        if not (refused or any_keyword or keyword in params):
+            raise TypeError(
+                f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
+                f"no {keyword!r} keyword, which services maps"
+            )
     autoconnect = rest.pop("autoconnect", True)
     if not isinstance(autoconnect, bool):
         raise TypeError(
@@ -659,11 +687,15 @@ def read(
                 inline = marker.kwargs
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
+        given = keywords(section.get(cfg_key))
+        # the class's service replaces the file's, under either spelling
+        if inline.keys() & set(SERVICE_KEYS):
+            given = {k: v for k, v in given.items() if k not in SERVICE_KEYS}
         declarations[name] = Declaration(
             target,
             name,
             kind,
-            {**keywords(section.get(cfg_key)), **inline},
+            {**given, **inline},
             attribute=attr,
             source=cfg_key,
             refusal=refused,
@@ -974,6 +1006,8 @@ def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
     if isinstance(entry, DeviceEntry):
         if "service" in entry.model_fields_set:
             found["service"] = entry.service
+        if "services" in entry.model_fields_set:
+            found["services"] = entry.services
         if "autoconnect" in entry.model_fields_set:
             found["autoconnect"] = entry.autoconnect
     if isinstance(entry, ViewEntry) and "placement" in entry.model_fields_set:

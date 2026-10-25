@@ -28,6 +28,7 @@ from redsun import (
     AsPresenter,
     AsService,
     Attach,
+    BuildError,
     ConfigurationError,
     Declare,
     Launch,
@@ -58,6 +59,9 @@ PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
 PVA_READY = "pva stand-in ready"
 
 
+BrokenService: TypeAlias = Annotated[
+    AsService, Launch(STAND_IN, ready=READY, args=["--no-ready", "--exit", "3"])
+]
 CameraIoc: TypeAlias = Annotated[
     AsService,
     Launch("mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"),
@@ -103,6 +107,31 @@ class DeviceWithServiceKeyword(Device):
         super().__init__(name=name)
 
 
+class DeviceWithServicesKeyword(Device):
+    def __init__(self, name: str = "", services: str = "") -> None:
+        super().__init__(name=name)
+
+
+class Piece(StandardReadable):
+    """Soft device standing for a stage or a camera behind a service."""
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        self.position = soft_signal_rw(float)
+        super().__init__(name=name)
+
+
+class Scope(StandardReadable):
+    """Root whose camera is optional."""
+
+    def __init__(
+        self, stage_prefix: str, camera_prefix: str | None = None, name: str = ""
+    ) -> None:
+        self.xy = Piece(stage_prefix)
+        if camera_prefix is not None:
+            self.camera = Piece(camera_prefix)
+        super().__init__(name=name)
+
+
 class ExitWatcher:
     """Presenter recording each service exit it hears, and the thread it ran on."""
 
@@ -134,6 +163,51 @@ class SavedStage(StandardReadable):
         return {"velocity": run_coro(self.velocity.get_value())}
 
 
+class RequiredCameraScope(StandardReadable):
+    """Root whose camera is required."""
+
+    def __init__(self, stage_prefix: str, camera_prefix: str, name: str = "") -> None:
+        self.xy = Piece(stage_prefix)
+        self.camera = Piece(camera_prefix)
+        super().__init__(name=name)
+
+
+class Board(StandardReadable):
+    """Root whose two pieces are both optional and share one service."""
+
+    def __init__(
+        self,
+        stage_prefix: str | None = None,
+        laser_prefix: str | None = None,
+        name: str = "",
+    ) -> None:
+        super().__init__(name=name)
+
+
+class PrefixOrNone(StandardReadable):
+    def __init__(self, prefix: str | None = None, name: str = "") -> None:
+        super().__init__(name=name)
+
+
+class SilentScope(StandardReadable):
+    """Root whose stage never answers and whose camera is optional."""
+
+    def __init__(
+        self, stage_prefix: str, camera_prefix: str | None = None, name: str = ""
+    ) -> None:
+        self.xy = RefusingDevice(stage_prefix)
+        if camera_prefix is not None:
+            self.camera = Piece(camera_prefix)
+        super().__init__(name=name)
+
+
+class SavedScope(Scope):
+    """Root asking to be saved, with nothing of its own to save."""
+
+    def serialize(self) -> dict[str, Any]:
+        return {}
+
+
 class ServiceAndPrefix(Session):
     beamline: Annotated[AsService, Attach("BL01:")]
     device: Annotated[AsDevice[Camera], Declare(service="beamline", prefix="X:")]
@@ -142,6 +216,33 @@ class ServiceAndPrefix(Session):
 class OwnServiceKeyword(Session):
     beamline: Annotated[AsService, Attach("BL01:")]
     device: Annotated[AsDevice[DeviceWithServiceKeyword], Declare(service="beamline")]
+
+
+class OwnServicesKeyword(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[
+        AsDevice[DeviceWithServicesKeyword], Declare(services={"name": "beamline"})
+    ]
+
+
+class ServiceAndServices(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[
+        AsDevice[Camera],
+        Declare(service="beamline", services={"prefix": "beamline"}),
+    ]
+
+
+class MappedKeywordGiven(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[
+        AsDevice[Camera], Declare(services={"prefix": "beamline"}, prefix="X:")
+    ]
+
+
+class UnknownKeywordMapped(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[AsDevice[Piece], Declare(services={"lens": "beamline"})]
 
 
 class AutoconnectNotBool(Session):
@@ -410,19 +511,166 @@ def test_a_device_whose_service_is_missing_is_skipped(
     assert summary_in(caplog).splitlines()[-1] == "Unused: unprefixed (no device built)"
 
 
+def test_a_root_builds_without_the_piece_whose_service_did_not_start(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Build a root without the optional piece whose service failed to start."""
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "devices": {
+                "scope": {
+                    "services": {"stage_prefix": "stages", "camera_prefix": "broken"}
+                }
+            }
+        }
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: BrokenService
+        scope: AsDevice[Scope]
+
+    app = build(App)
+
+    assert {name for name, _ in app.devices["scope"].children()} == {"xy"}
+    lines = summary_in(caplog).splitlines()
+    assert "Built without: scope (camera_prefix: broken not started)" in lines
+    assert (
+        "Services not started: broken (exited with code 3 before it was ready)" in lines
+    )
+
+
+def test_a_strict_session_stops_on_a_service_that_did_not_start(
+    build: BuildSession, launchable: None
+) -> None:
+    """Stop a strict session on a service that fails to start, used or not."""
+
+    class App(Session):
+        broken: BrokenService
+
+    with pytest.raises(BuildError, match="broken: exited with code 3"):
+        build(App, {"strict": True})
+
+
+def test_a_root_whose_required_piece_did_not_start_is_skipped(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a root whose required piece's service failed to start."""
+
+    class App(Session):
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: BrokenService
+        scope: Annotated[
+            AsDevice[RequiredCameraScope],
+            Declare(services={"stage_prefix": "stages", "camera_prefix": "broken"}),
+        ]
+
+    app = build(App)
+
+    assert "scope" not in app.devices
+    assert (
+        "Failed to build device 'scope': service 'broken' was not started"
+        in errors_in(caplog)
+    )
+
+
+def test_a_failed_service_leaves_out_every_optional_keyword_it_serves(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Leave out every optional keyword naming a failed service, prefix included."""
+
+    class App(Session):
+        broken: BrokenService
+        scope: Annotated[
+            AsDevice[Scope],
+            Declare(services={"stage_prefix": "broken", "camera_prefix": "broken"}),
+        ]
+        board: Annotated[
+            AsDevice[Board],
+            Declare(services={"stage_prefix": "broken", "laser_prefix": "broken"}),
+        ]
+        lamp: Annotated[AsDevice[PrefixOrNone], Declare(service="broken")]
+
+    app = build(App)
+
+    assert set(app.devices) == {"board", "lamp"}
+    assert (
+        "Built without: board (stage_prefix: broken not started, laser_prefix: "
+        "broken not started), lamp (prefix: broken not started)"
+    ) in summary_in(caplog).splitlines()
+
+
+def test_a_root_that_does_not_connect_blames_only_the_services_it_reached(
+    build: BuildSession,
+    launchable: None,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Drop a partly built root that does not connect, naming the services it used."""
+    monkeypatch.setattr(session_base, "CONNECT_TIMEOUT", 0.5)
+
+    class App(Session):
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: BrokenService
+        scope: Annotated[
+            AsDevice[SilentScope],
+            Declare(services={"stage_prefix": "stages", "camera_prefix": "broken"}),
+        ]
+
+    build(App)
+
+    assert any(
+        e.startswith(
+            "Failed to connect device 'scope': service 'stages' (attached) did not "
+            "answer within 0.5 s"
+        )
+        for e in errors_in(caplog)
+    )
+    assert "Built without" not in summary_in(caplog)
+
+
+def test_a_mocked_session_gives_every_keyword_its_prefix(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Give a mocked root every prefix, though no service starts."""
+
+    class App(Session):
+        stages: Annotated[AsService, Attach("ST:")]
+        optics: Annotated[AsService, Attach("OP:")]
+        scope: Annotated[
+            AsDevice[Scope],
+            Declare(services={"stage_prefix": "stages", "camera_prefix": "optics"}),
+        ]
+
+    app = build(App, {"mock": True})
+
+    assert {name for name, _ in app.devices["scope"].children()} == {"xy", "camera"}
+    assert "Built without" not in summary_in(caplog)
+
+
 @pytest.mark.parametrize(
     ("cls", "reason"),
     [
-        (ServiceAndPrefix, "and a prefix"),
+        (ServiceAndPrefix, "and a 'prefix'"),
         (OwnServiceKeyword, "'service' keyword"),
+        (OwnServicesKeyword, "'services' keyword"),
+        (ServiceAndServices, "both service and services"),
+        (MappedKeywordGiven, "and a 'prefix'"),
+        (UnknownKeywordMapped, "takes no 'lens'"),
         (AutoconnectNotBool, "takes true or false"),
     ],
-    ids=["service-and-prefix", "own-service-keyword", "autoconnect-not-bool"],
+    ids=[
+        "service-and-prefix",
+        "own-service-keyword",
+        "own-services-keyword",
+        "service-and-services",
+        "mapped-keyword-given",
+        "unknown-keyword-mapped",
+        "autoconnect-not-bool",
+    ],
 )
 def test_a_device_declared_with_keywords_the_session_cannot_read_is_refused(
     cls: type[Session], reason: str
 ) -> None:
-    """Refuse a device declared with both service and prefix, or with a bad keyword."""
+    """Refuse a device whose services, prefixes or reserved keywords conflict."""
     with pytest.raises(TypeError, match=reason):
         cls().read_configuration()
 
@@ -467,6 +715,57 @@ def test_a_saved_device_keeps_the_service_it_names(
         "service": "beamline",
         "autoconnect": False,
     }
+
+
+def test_a_saved_device_keeps_the_services_it_maps(
+    build: BuildSession, tmp_path: Path
+) -> None:
+    """Save a device's services mapping as it was given."""
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "session": "saved",
+            "services": {
+                "beamline": {"prefix": "BL01:"},
+                "optics": {"prefix": "OP:"},
+            },
+            "devices": {
+                "scope": {
+                    "services": {
+                        "stage_prefix": "beamline",
+                        "camera_prefix": "optics",
+                    },
+                    "autoconnect": False,
+                }
+            },
+        }
+        scope: AsDevice[SavedScope]
+
+    app = build(App)
+    written = yaml.safe_load(app.write(tmp_path / "saved.yaml").read_text())
+
+    assert "scope" in app.devices
+    assert written["devices"]["scope"] == {
+        "services": {"stage_prefix": "beamline", "camera_prefix": "optics"},
+        "autoconnect": False,
+    }
+
+
+def test_a_saved_device_mapping_its_prefix_loads_again(
+    build: BuildSession, tmp_path: Path
+) -> None:
+    """Load a saved session whose class maps the prefix keyword to a service."""
+
+    class App(Session):
+        beamline: Annotated[AsService, Attach("BL01:")]
+        stage: Annotated[
+            AsDevice[SavedStage],
+            Declare(services={"prefix": "beamline"}, autoconnect=False),
+        ]
+
+    saved = build(App, {"session": "saved"}).write(tmp_path / "saved.yaml")
+
+    App(str(saved)).read_configuration()
 
 
 def test_a_session_built_again_starts_its_services_again(

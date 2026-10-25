@@ -139,6 +139,7 @@ Other options were rejected:
   so it sees both. A device that adds children without naming them stops the
   build.
 - A root device takes the [prefix](../glossary.md#prefix) of one service.
-  Pieces that sit behind different services are still declared one by one.
+  [ADR 34](0034-a-root-device-takes-the-prefixes-of-several-services.md) lets
+  it take one prefix per piece, from several services.
 - A custom view written for 0.15 keeps working, and shows names where the new
   fields would give paths.
