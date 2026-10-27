@@ -35,7 +35,7 @@ jobs:
 
       - name: Install uv
         if: steps.labels.outputs.skip != 'true'
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.2
 
       - name: Check for an entry in changelog.d
         if: steps.labels.outputs.skip != 'true'
