@@ -1051,6 +1051,8 @@
       
         
       
+        
+      
     
     
     
@@ -1373,6 +1375,35 @@
     
   
   How to connect a device on demand
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/serve-over-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-memory-stick" viewBox="0 0 24 24"><path d="M12 12v-2M12 18v-2M16 12v-2M16 18v-2M2 11h1.5M20 18v-2M20.5 11H22M4 18v-2M8 12v-2M8 18v-2"/><rect width="20" height="10" x="2" y="6" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to serve a FastCS controller over sharedbox
 
     
   </span>
@@ -3454,6 +3485,8 @@
       
         
       
+        
+      
     
     
     
@@ -4427,6 +4460,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4651,6 +4711,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         bluesky
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#box" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Box
       </span>
     </span>
   </a>
@@ -5241,6 +5312,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sharedbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        sharedbox
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#signal" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5689,6 +5771,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -5782,6 +5868,35 @@
     
   
   redsun.catalog
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/device-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.device.sharedbox
 
     
   </span>
@@ -6072,6 +6187,35 @@
     
   
   redsun.services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/services-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.services.sharedbox
 
     
   </span>
@@ -6561,6 +6705,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#box" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Box
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#build" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7144,6 +7299,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sharedbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        sharedbox
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#signal" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7425,6 +7591,12 @@ your session's code connects it.</p>
 reports what happened as <a href="#document">documents</a>. Nothing is stored unless
 something is listening for those documents. See the
 <a href="https://blueskyproject.io/bluesky/main/index.html">documentation of <code>bluesky</code></a>.</p>
+<h3 id="box">Box<a class="headerlink" href="#box" title="Permanent link">&para;</a></h3>
+<p>A box is a named block of shared memory with typed fields, made by
+<a href="#sharedbox"><code>sharedbox</code></a>. Any process on the same computer opens a box by its
+name, reads and writes its fields, and can wait for a field to change. Under
+the <code>sharedbox</code> <a href="#transport">transport</a>, a service keeps each controller's
+values in a box of its own.</p>
 <h3 id="build">Build<a class="headerlink" href="#build" title="Permanent link">&para;</a></h3>
 <p>A build is what <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/session/#redsun.Session.build"><code>Session.build</code></a> does. It reads the
 configuration and starts the toolkit the session runs on, such as Qt, then
@@ -7694,6 +7866,12 @@ exists.</p>
 available to the others by marking a method with
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;provides&lt;/span&gt;" href="../../reference/api/injection/#redsun.provides"><code>provides</code></a>. A component asks for a shared value by its type
 in <code>setup</code>, or in its constructor when a provider shares it.</p>
+<h3 id="sharedbox">sharedbox<a class="headerlink" href="#sharedbox" title="Permanent link">&para;</a></h3>
+<p><code>sharedbox</code> is a library that shares typed values between processes on one
+computer through shared memory, as <a href="#box">boxes</a> and streams. A stream is a
+named queue of items that one process sends and others read. <code>redsun</code> uses it
+for the <code>sharedbox</code> <a href="#transport">transport</a>. See the
+<a href="https://pypi.org/project/sharedbox/"><code>sharedbox</code> package</a>.</p>
 <h3 id="signal">Signal<a class="headerlink" href="#signal" title="Permanent link">&para;</a></h3>
 <p>A signal is a message that a component sends, through <a href="#psygnal"><code>psygnal</code></a>, to
 every <a href="#slot">slot</a> connected to it, and by convention its name starts with
@@ -7745,10 +7923,11 @@ their data to a program or a browser over the network. See the
 views with, such as Qt. Only the frontend's own package imports it, so a session without a
 window doesn't need it installed.</p>
 <h3 id="transport">Transport<a class="headerlink" href="#transport" title="Permanent link">&para;</a></h3>
-<p>The transport is the network protocol that every service of a session speaks,
+<p>The transport is the way every service of a session talks to its devices,
 set by the <code>services.transport</code> key: <code>channel-access</code> for
-<a href="#channel-access">Channel Access</a>, the default, or <code>pv-access</code> for
-<a href="#pvaccess">PVAccess</a>. The word comes from <code>fastcs</code>, a library for writing
+<a href="#channel-access">Channel Access</a>, the default, <code>pv-access</code> for
+<a href="#pvaccess">PVAccess</a>, or <code>sharedbox</code> for <a href="#box">boxes</a> in shared memory on the
+same computer. The word comes from <code>fastcs</code>, a library for writing
 services, which <a href="../../how-to/write-a-service/">How to write a service</a> uses.</p>
 <h3 id="view">View<a class="headerlink" href="#view" title="Permanent link">&para;</a></h3>
 <p>A view is a <a href="#component">component</a> with a <a href="#placement">placement</a>, which

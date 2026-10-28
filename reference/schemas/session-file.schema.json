@@ -492,7 +492,8 @@
             "transport": {
               "enum": [
                 "channel-access",
-                "pv-access"
+                "pv-access",
+                "sharedbox"
               ]
             }
           },

@@ -1051,6 +1051,8 @@
       
         
       
+        
+      
     
     
     
@@ -1373,6 +1375,35 @@
     
   
   How to connect a device on demand
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/serve-over-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-memory-stick" viewBox="0 0 24 24"><path d="M12 12v-2M12 18v-2M16 12v-2M16 18v-2M2 11h1.5M20 18v-2M20.5 11H22M4 18v-2M8 12v-2M8 18v-2"/><rect width="20" height="10" x="2" y="6" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to serve a FastCS controller over sharedbox
 
     
   </span>
@@ -3624,6 +3655,8 @@
       
         
       
+        
+      
     
     
     
@@ -4600,6 +4633,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -5013,6 +5073,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -5103,6 +5167,35 @@
     
   
   redsun.catalog
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/device-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.device.sharedbox
 
     
   </span>
@@ -5393,6 +5486,35 @@
     
   
   redsun.services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/services-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.services.sharedbox
 
     
   </span>
@@ -7944,6 +8066,11 @@ libca reads its list of server addresses once per process, so each service
 keeps its port for as long as the session process runs. PVAccess servers
 share the search port, and the client is told to look at <code>127.0.0.1</code> because
 it doesn't search the loopback address otherwise.</p>
+<p>Under <code>sharedbox</code> the session sets up nothing, because a device finds its
+service's <a href="../glossary/#box">boxes</a> by name, under the service's prefix, with
+no port or address involved. The service and the session then have to run on
+the same computer. <a href="../../how-to/serve-over-sharedbox/">How to serve a FastCS controller over
+sharedbox</a> shows both sides.</p>
 <div class="admonition warning">
 <p class="admonition-title">Another program can take the port first</p>
 <p>A port is free when the session chooses it, but nothing holds it until
@@ -7952,10 +8079,11 @@ between. If that happens, the service fails to start or its devices don't
 connect. The service keeps its port for the life of the session process,
 so to get a different port, start the session again in a new process.</p>
 </div>
-<p><code>redsun</code> itself depends on <code>ophyd-async</code> and on nothing that either protocol
-needs. Each component brings what its own service speaks, such as <code>caproto</code>,
-<code>p4p</code> or <code>fastcs</code>, plus <code>ophyd-async[ca]</code> or <code>ophyd-async[pva]</code> for the device
-side; see <a href="../../how-to/write-a-service/">Write a service</a>.</p>
+<p><code>redsun</code> itself depends on <code>ophyd-async</code> and on nothing that either network
+protocol needs. Each component brings what its own service speaks, such as
+<code>caproto</code>, <code>p4p</code> or <code>fastcs</code>, plus <code>ophyd-async[ca]</code> or <code>ophyd-async[pva]</code> for
+the device side; see <a href="../../how-to/write-a-service/">Write a service</a>. The
+<code>sharedbox</code> transport comes with the <code>sharedbox</code> extra of <code>redsun</code>.</p>
 <h2 id="what-a-launched-service-receives">What a launched service receives<a class="headerlink" href="#what-a-launched-service-receives" title="Permanent link">&para;</a></h2>
 <p>A launched service is told its name and prefix, its ready text and the
 session's log level, on top of the transport's variables. A Python service

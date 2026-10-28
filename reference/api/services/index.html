@@ -19,7 +19,7 @@
         <link rel="prev" href="../registry/">
       
       
-        <link rel="next" href="../session/">
+        <link rel="next" href="../services-sharedbox/">
       
       
         
@@ -1051,6 +1051,8 @@
       
         
       
+        
+      
     
     
     
@@ -1373,6 +1375,35 @@
     
   
   How to connect a device on demand
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/serve-over-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-memory-stick" viewBox="0 0 24 24"><path d="M12 12v-2M12 18v-2M16 12v-2M16 18v-2M2 11h1.5M20 18v-2M20.5 11H22M4 18v-2M8 12v-2M8 18v-2"/><rect width="20" height="10" x="2" y="6" rx="2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to serve a FastCS controller over sharedbox
 
     
   </span>
@@ -3454,6 +3485,8 @@
       
         
       
+        
+      
     
     
     
@@ -4427,6 +4460,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4850,6 +4910,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4943,6 +5007,35 @@
     
   
   redsun.catalog
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../device-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.device.sharedbox
 
     
   </span>
@@ -5463,6 +5556,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.services.serve_controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;serve_controller
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.services.wait_for_stop" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5499,6 +5603,35 @@
   
 </nav>
       
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services-sharedbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.services.sharedbox
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -6103,6 +6236,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.services.serve_controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;serve_controller
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.services.wait_for_stop" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6222,6 +6366,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -6957,6 +7105,62 @@ other than a timeout is logged as a warning and retried.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="redsun.services.serve_controller" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">serve_controller</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#redsun.services.serve_controller" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">serve_controller</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">controller</span><span class="p">:</span> <span class="n">Controller</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">transport</span><span class="p">:</span> <span class="n">Transport</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Serve <code>controller</code> over <code>transport</code> until the session asks this service to stop.</p>
+<p><code>prefix</code> defaults to the one the session gave this process, and one trailing
+colon is taken off it, so a device given <code>STAGE:</code> finds a controller served
+as <code>STAGE</code>. The service is ready once its transport is reachable: a
+transport with a <code>reachable</code> method is awaited on it, any other is asked for
+the <abbr title="Process variable. One named value an IOC offers.">PV</abbr> <code>&lt;prefix&gt;:PVI</code>.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If there is no prefix, given or from a session.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="redsun.services.wait_for_stop" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">wait_for_stop</span>
 
@@ -7099,13 +7303,13 @@ written twice.</p>
         
         
           
-          <a href="../session/" class="md-footer__link md-footer__link--next" aria-label="Next: redsun.session">
+          <a href="../services-sharedbox/" class="md-footer__link md-footer__link--next" aria-label="Next: redsun.services.sharedbox">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                redsun.session
+                redsun.services.sharedbox
               </div>
             </div>
             <div class="md-footer__button md-icon">
