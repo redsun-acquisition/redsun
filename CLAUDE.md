@@ -36,7 +36,7 @@ redsun/
 |   |   `-- qt/                Qt widgets and the built-in LogView
 |   `-- utils/                 descriptor helpers, session_folder (_paths.py)
 |-- tests/
-|   |-- conftest.py            qt marker, qapp, mock plugin (the rest: redsun.testing)
+|   |-- conftest.py            qt marker, mock plugin (the rest: redsun.testing and .qt)
 |   |-- test_*.py              session tests, one module per subject
 |   |-- configs/               session YAML files the tests load
 |   |-- launchable/            on pytest's and mypy's path:

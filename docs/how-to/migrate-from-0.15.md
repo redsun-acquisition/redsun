@@ -189,7 +189,8 @@ class MyView(QWidget):
 
 [`keep_application_as_found`][redsun.testing.qt.keep_application_as_found],
 the fixture that fails a test leaving the application changed, moved from
-`redsun.testing` to `redsun.testing.qt`. That module is a second `pytest`
+`redsun.testing` to `redsun.testing.qt`, and so did the setting that gives
+Qt's `offscreen` platform the system fonts on Windows. That module is a second `pytest`
 plugin, installed with the `testing-qt` extra, so a suite that tests no Qt
 components never imports Qt. A suite that tests Qt components changes its
 install line and its `addopts`:

@@ -85,14 +85,19 @@ it with the `testing-qt` extra and the Qt binding your plugin uses:
 uv add --dev "redsun[testing-qt,pyqt]" pytest-asyncio
 ```
 
-Write `pyside` instead of `pyqt` for `pyside6`. Then load the Qt plugin after
-the core one, because it needs the core one's fixtures:
+Write `pyside` instead of `pyqt` for `pyside6`. Then load the Qt plugin together
+with the core one, whose fixtures it needs:
 
 ```toml
 [tool.pytest.ini_options]
 addopts = "-p redsun.testing -p redsun.testing.qt"
 asyncio_mode = "auto"
 ```
+
+The plugin imports Qt as soon as `pytest` loads it, before the `env` table of
+`pytest-env` sets its variables. A suite with both bindings installed
+therefore sets `QT_API` in the environment `pytest` starts in, such as the
+`set_env` of `tox`, rather than in `pytest-env`.
 
 A test then asks for the [`qapp`][redsun.testing.qt.qapp] fixture to get the
 run's one `QApplication`. After every test that asks for it, the plugin
