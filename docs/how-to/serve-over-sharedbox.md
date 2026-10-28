@@ -86,7 +86,7 @@ sub-controllers, becomes an `ophyd-async` `DeviceVector`, its numbered list of
 sub-devices. A `fastcs` command becomes a `TriggerableCommand`.
 
 The values of a declared enum must be the names of the members of the `fastcs`
-enum, since an enum travels by name.
+enum, because the index lists only those names.
 
 ## Declare it
 
