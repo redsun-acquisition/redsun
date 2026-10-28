@@ -75,7 +75,7 @@ class BoxPutError(Exception):
         self.attribute = attribute
 
 
-def box_key(description: ControllerDescription) -> str:
+def _box_key(description: ControllerDescription) -> str:
     """Return the key of the box of `description`, the same across runs of a service."""
     return ":".join(description["path"])
 
@@ -350,7 +350,7 @@ class BoxCommandBackend(CommandBackend[[], None]):
             await request(self._boxes[self._box_key], self._command, self._command)
 
 
-def command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:
+def _command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:
     """Return a command backend, refusing a command with arguments or a result."""
     if signature is not None:
         raise TypeError(
@@ -386,7 +386,7 @@ class BoxDeviceConnector(DeviceConnector):
                 device=device,
                 signal_backend_factory=BoxSignalBackend,
                 device_connector_factory=BoxDeviceConnector,
-                command_backend_factory=command_backend,
+                command_backend_factory=_command_backend,
             )
         )
         for create in (
@@ -465,7 +465,7 @@ class BoxDeviceConnector(DeviceConnector):
     ) -> None:
         """Attach the box of `description` and of every child below it."""
         if description["box"] is not None:
-            attached[box_key(description)] = box_class(description).attach(
+            attached[_box_key(description)] = box_class(description).attach(
                 description["box"]
             )
         for child in description["children"].values():
@@ -477,11 +477,11 @@ class BoxDeviceConnector(DeviceConnector):
         for name, attribute in description["attributes"].items():
             assert box is not None
             backend = self._filler.fill_child_signal(name, SIGNALS[attribute["access"]])
-            backend._bind(self._boxes, box_key(description), name, attribute)
+            backend._bind(self._boxes, _box_key(description), name, attribute)
         for name in description["commands"]:
             assert box is not None
             self._filler.fill_child_command(name, TriggerableCommand)._bind(
-                self._boxes, box_key(description), name
+                self._boxes, _box_key(description), name
             )
         for key, child in description["children"].items():
             if isinstance(device, DeviceVector):

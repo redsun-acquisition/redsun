@@ -123,7 +123,14 @@ def box_name(prefix: str, run: str, path: Sequence[str]) -> str:
 
 
 def stream_name(prefix: str, part: str) -> str:
-    """Return the name of a stream the service publishes outside the controller boxes."""
+    """Return the name of a stream the service publishes outside the controller boxes.
+
+    Raises
+    ------
+    ValueError
+        If `part` is `fastcs`, which the controller boxes use, or holds a
+        character other than a letter, a digit, `_` or `-`.
+    """
     if part == RESERVED or not PART.fullmatch(part):
         raise ValueError(f"invalid stream name part {part!r}")
     return check_name(f"{namespace(prefix)}:{part}")
