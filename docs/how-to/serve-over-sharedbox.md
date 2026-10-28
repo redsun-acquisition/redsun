@@ -24,6 +24,8 @@ Install `redsun` with the `sharedbox` extra, which brings `sharedbox` and
 uv add "redsun[sharedbox]"
 ```
 
+`sharedbox` runs on Windows x64 and Linux x86_64.
+
 The service and the session have to run on the same computer, because a box
 lives in that computer's memory. A service other machines must reach needs
 one of the network transports.
@@ -63,7 +65,7 @@ Then serve it with [`serve_controller`][redsun.services.serve_controller] and a
 box of its own. It then publishes one more box under the prefix, the index,
 which lists every box and the attributes and commands in it. The session
 learns the layout from the index, so a controller whose attributes are read
-from the hardware when it connects works without any change.
+from the hardware in `initialise` works without any change.
 
 ## Point a device at it
 
@@ -82,6 +84,9 @@ declared child the service doesn't serve, or one whose type differs from what
 the service serves. A `fastcs` `ControllerVector`, a numbered list of
 sub-controllers, becomes an `ophyd-async` `DeviceVector`, its numbered list of
 sub-devices. A `fastcs` command becomes a `TriggerableCommand`.
+
+The values of a declared enum must be the names of the members of the `fastcs`
+enum, since an enum travels by name.
 
 ## Declare it
 

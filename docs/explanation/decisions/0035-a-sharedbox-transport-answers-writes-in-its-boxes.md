@@ -26,7 +26,7 @@ how its answer comes back.
 It also had to decide how a controller's attributes are laid out in boxes.
 `sharedbox` refuses to open a box unless the process opening it declares the
 same fields as the process that made it. A controller whose attributes are
-read from the hardware when it connects can't have its fields written down
+read from the hardware in `initialise` can't have its fields written down
 ahead of time, so the session has to learn them from the service.
 
 ## Decision
