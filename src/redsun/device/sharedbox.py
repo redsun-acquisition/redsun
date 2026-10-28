@@ -104,15 +104,17 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
 
     def __init__(self, datatype: type[SignalDatatypeT] | None) -> None:
         super().__init__(datatype)
-        self.boxes: Mapping[str, Any] = {}
-        self.box_key = ""
-        self.attribute = ""
-        self.description: AttributeDescription
-        self.lock = asyncio.Lock()
-        self.callback: Any = None
-        self.follower: asyncio.Task[None] | None = None
+        self._boxes: Mapping[str, Any] = {}
+        self._box_key = ""
+        self._attribute = ""
+        self._description: AttributeDescription
+        self._names: list[str] = []
+        self._readback = ""
+        self._lock = asyncio.Lock()
+        self._callback: Any = None
+        self._follower: asyncio.Task[None] | None = None
 
-    def bind(
+    def _bind(
         self,
         boxes: Mapping[str, Any],
         box_key: str,
@@ -120,36 +122,26 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         description: AttributeDescription,
     ) -> None:
         """Say which attribute of which box this backend reads and writes."""
-        self.boxes = boxes
-        self.box_key = box_key
-        self.attribute = attribute
-        self.description = description
+        self._boxes = boxes
+        self._box_key = box_key
+        self._attribute = attribute
+        self._description = description
+        self._names = description["datatype"].get("names", [])
+        field = "value" if "r" in description["access"] else "setpoint"
+        self._readback = f"{attribute}__{field}"
 
-    @property
-    def box_name(self) -> str:
-        """Name of the attached box, which changes when a service restarts; the key before it is attached."""
-        box = self.boxes.get(self.box_key)
-        return self.box_key if box is None else str(box.name)
+    def _box_name(self) -> str:
+        """Return the name of the attached box, the key before it is attached."""
+        box = self._boxes.get(self._box_key)
+        return self._box_key if box is None else str(box.name)
 
-    @property
-    def box(self) -> Any:
-        """The attached box of the attribute."""
-        return self.boxes[self.box_key]
-
-    @property
-    def names(self) -> list[str]:
-        """Names of the choices of an enum attribute."""
-        return self.description["datatype"].get("names", [])
-
-    @property
-    def readback(self) -> str:
-        """Name of the box field holding the current value."""
-        field = "value" if "r" in self.description["access"] else "setpoint"
-        return f"{self.attribute}__{field}"
+    def _box(self) -> Any:
+        """Return the attached box of the attribute."""
+        return self._boxes[self._box_key]
 
     def source(self, name: str, read: bool) -> str:
         """Return the location of the attribute."""
-        return f"sharedbox://{self.box_name}/{self.attribute}"
+        return f"sharedbox://{self._box_name()}/{self._attribute}"
 
     async def connect(self, timeout: float) -> None:
         """Check the declared datatype against the description.
@@ -159,56 +151,56 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         TypeError
             The declared datatype is not what the service serves.
         """
-        kind = self.description["datatype"]["kind"]
+        kind = self._description["datatype"]["kind"]
         if kind == "enum":
             if self.datatype is None:
                 self.datatype = StrictEnum(  # type: ignore[call-arg, assignment]
-                    self.attribute, {name.upper(): name for name in self.names}
+                    self._attribute, {name.upper(): name for name in self._names}
                 )
             elif not (
                 isinstance(self.datatype, type)
                 and issubclass(self.datatype, enum.Enum)
-                and {member.value for member in self.datatype} == set(self.names)
+                and {member.value for member in self.datatype} == set(self._names)
             ):
-                self.mismatch(f"enum of {self.names}")
-            if self.callback:
-                self.follow_readback()
+                self._mismatch(f"enum of {self._names}")
+            if self._callback:
+                self._follow_readback()
             return
         expected = DATATYPES[kind]
         if self.datatype is None:
             self.datatype = expected
         elif (get_origin(self.datatype) or self.datatype) is not expected:
-            self.mismatch(expected.__name__)
-        if self.callback:
-            self.follow_readback()
+            self._mismatch(expected.__name__)
+        if self._callback:
+            self._follow_readback()
 
-    def mismatch(self, served: str) -> None:
+    def _mismatch(self, served: str) -> None:
         """Raise the error of a declared datatype the service does not serve."""
         raise TypeError(
-            f"{self.box_name}: {self.attribute} is declared as {self.datatype} "
+            f"{self._box_name()}: {self._attribute} is declared as {self.datatype} "
             f"but the service serves {served}"
         )
 
-    def from_box(self, raw: Any) -> Any:
+    def _from_box(self, raw: Any) -> Any:
         """Return the value a box field holds, as the signal's datatype."""
-        match self.description["datatype"]["kind"]:
+        match self._description["datatype"]["kind"]:
             case "uint":
                 return int(raw[0])
             case "enum":
                 choices: Any = self.datatype
-                return choices(self.names[raw])
+                return choices(self._names[raw])
             case "waveform":
                 return np.array(raw)
         return raw
 
-    def to_box(self, value: Any) -> Any:
+    def _to_box(self, value: Any) -> Any:
         """Return the box field content holding `value`."""
-        datatype = self.description["datatype"]
+        datatype = self._description["datatype"]
         match datatype["kind"]:
             case "uint":
                 return np.array([value], dtype="uint64")
             case "enum":
-                return self.names.index(
+                return self._names.index(
                     value.value if isinstance(value, enum.Enum) else value
                 )
             case "waveform":
@@ -217,14 +209,14 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                 return padded
         return value
 
-    def current(self) -> Reading[Any]:
+    def _current(self) -> Reading[Any]:
         """Return the current value as a reading."""
-        raw = getattr(self.box, self.readback)
-        if self.description["datatype"]["kind"] == "waveform":
-            shape = getattr(self.box, f"{self.attribute}__shape")
+        raw = getattr(self._box(), self._readback)
+        if self._description["datatype"]["kind"] == "waveform":
+            shape = getattr(self._box(), f"{self._attribute}__shape")
             raw = raw[tuple(slice(0, size) for size in shape)]
         return Reading(
-            value=self.from_box(raw), timestamp=time.time(), alarm_severity=0
+            value=self._from_box(raw), timestamp=time.time(), alarm_severity=0
         )
 
     async def put(self, value: SignalDatatypeT | None) -> None:
@@ -235,24 +227,24 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         BoxPutError
             The service refused the value or its put raised.
         """
-        async with self.lock:
+        async with self._lock:
             await request(
-                self.box,
-                self.attribute,
-                self.attribute,
-                **{f"{self.attribute}__setpoint": self.to_box(value)},
+                self._box(),
+                self._attribute,
+                self._attribute,
+                **{f"{self._attribute}__setpoint": self._to_box(value)},
             )
 
     async def get_datakey(self, source: str) -> Any:
         """Return the data key, with the units, precision, limits and choices served."""
-        datatype: Mapping[str, Any] = self.description["datatype"]
+        datatype: Mapping[str, Any] = self._description["datatype"]
         metadata = SignalMetadata()
         if "units" in datatype:
             metadata["units"] = datatype["units"]
         if "precision" in datatype:
             metadata["precision"] = datatype["precision"]
         if datatype["kind"] == "enum":
-            metadata["choices"] = self.names
+            metadata["choices"] = self._names
         limits = Limits()
         for key, low, high in (
             ("control", "min", "max"),
@@ -266,55 +258,55 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             metadata["limits"] = limits
         return make_datakey(
             self.datatype,  # type: ignore[arg-type]
-            self.current()["value"],
+            self._current()["value"],
             source,
             metadata,
         )
 
     async def get_reading(self) -> Reading[SignalDatatypeT]:
         """Return the current value."""
-        return self.current()
+        return self._current()
 
     async def get_value(self) -> SignalDatatypeT:
         """Return the current value."""
-        return self.current()["value"]  # type: ignore[no-any-return]
+        return self._current()["value"]  # type: ignore[no-any-return]
 
     async def get_setpoint(self) -> SignalDatatypeT:
         """Return the last value written."""
-        if "w" not in self.description["access"]:
+        if "w" not in self._description["access"]:
             return await self.get_value()
-        return self.from_box(getattr(self.box, f"{self.attribute}__setpoint"))  # type: ignore[no-any-return]
+        return self._from_box(getattr(self._box(), f"{self._attribute}__setpoint"))  # type: ignore[no-any-return]
 
     def set_callback(self, callback: Any) -> None:
         """Call `callback` with the current reading, then with each new one."""
-        if callback and self.callback:
+        if callback and self._callback:
             raise RuntimeError("Cannot set a callback when one is already set")
-        self.callback = callback
+        self._callback = callback
         if callback:
-            self.follow_readback()
-        elif self.follower is not None:
-            self.follower.cancel()
-            self.follower = None
+            self._follow_readback()
+        elif self._follower is not None:
+            self._follower.cancel()
+            self._follower = None
 
-    def follow_readback(self) -> None:
+    def _follow_readback(self) -> None:
         """Call the callback with the current reading, then follow the box's value."""
-        if self.follower is not None:
-            self.follower.cancel()
-        watch = self.box.watch(self.readback)
-        self.callback(self.current())
-        self.follower = asyncio.create_task(self.follow(watch))
+        if self._follower is not None:
+            self._follower.cancel()
+        watch = self._box().watch(self._readback)
+        self._callback(self._current())
+        self._follower = asyncio.create_task(self._follow(watch))
 
-    async def follow(self, watch: Any) -> None:
+    async def _follow(self, watch: Any) -> None:
         """Call the callback with the reading after each write to the value."""
         try:
             async for _ in watch:
                 try:
-                    self.callback(self.current())
+                    self._callback(self._current())
                 except BoxClosedError:
                     return
                 except Exception:  # noqa: BLE001
                     logger.exception(
-                        "callback of %s/%s failed", self.box_name, self.attribute
+                        "callback of %s/%s failed", self._box_name(), self._attribute
                     )
         except BoxClosedError:
             return
@@ -325,21 +317,23 @@ class BoxCommandBackend(CommandBackend[[], None]):
 
     def __init__(self) -> None:
         super().__init__(NO_ARG_VOID_SIGNATURE)
-        self.boxes: Mapping[str, Any] = {}
-        self.box_key = ""
-        self.command = ""
-        self.lock = asyncio.Lock()
+        self._boxes: Mapping[str, Any] = {}
+        self._box_key = ""
+        self._command = ""
+        self._lock = asyncio.Lock()
 
-    def bind(self, boxes: Mapping[str, Any], box_key: str, command: str) -> None:
+    def _bind(self, boxes: Mapping[str, Any], box_key: str, command: str) -> None:
         """Say which command of which box this backend runs."""
-        self.boxes = boxes
-        self.box_key = box_key
-        self.command = command
+        self._boxes = boxes
+        self._box_key = box_key
+        self._command = command
 
     def source(self, name: str) -> str:
         """Return the location of the command."""
-        box = self.boxes.get(self.box_key)
-        return f"sharedbox://{self.box_key if box is None else box.name}/{self.command}"
+        box = self._boxes.get(self._box_key)
+        return (
+            f"sharedbox://{self._box_key if box is None else box.name}/{self._command}"
+        )
 
     async def connect(self, timeout: float) -> None:
         """Do nothing: the box is attached with the device."""
@@ -352,8 +346,8 @@ class BoxCommandBackend(CommandBackend[[], None]):
         BoxPutError
             The command raised in the service.
         """
-        async with self.lock:
-            await request(self.boxes[self.box_key], self.command, self.command)
+        async with self._lock:
+            await request(self._boxes[self._box_key], self._command, self._command)
 
 
 def command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:
@@ -377,17 +371,17 @@ class BoxDeviceConnector(DeviceConnector):
     mock_device_vector_children: ClassVar[list[int]] = [1, 2]
 
     def __init__(self, prefix: str = "") -> None:
-        self.prefix = prefix
-        self.description: ControllerDescription | None = None
-        self.boxes: dict[str, Any] = {}
-        self.is_child = False
-        self.is_filled = False
+        self._prefix = prefix
+        self._description: ControllerDescription | None = None
+        self._boxes: dict[str, Any] = {}
+        self._is_child = False
+        self._is_filled = False
 
     def create_children_from_annotations(self, device: Device) -> None:
         """Create the signals, commands and children the device declares."""
         if hasattr(self, "filler"):
             return
-        self.filler: DeviceFiller[Any, BoxDeviceConnector, BoxCommandBackend] = (
+        self._filler: DeviceFiller[Any, BoxDeviceConnector, BoxCommandBackend] = (
             DeviceFiller(
                 device=device,
                 signal_backend_factory=BoxSignalBackend,
@@ -396,17 +390,17 @@ class BoxDeviceConnector(DeviceConnector):
             )
         )
         for create in (
-            self.filler.create_signals_from_annotations,
-            self.filler.create_commands_from_annotations,
-            self.filler.create_devices_from_annotations,
+            self._filler.create_signals_from_annotations,
+            self._filler.create_commands_from_annotations,
+            self._filler.create_devices_from_annotations,
         ):
             list(create(filled=False))
-        self.filler.check_created()
+        self._filler.check_created()
 
     async def connect_mock(self, device: Device, mock: DeviceMock[Any]) -> None:
         """Connect with mock backends, needing no service."""
         if isinstance(device, DeviceVector):
-            self.filler.create_device_dict_entries_to_mock(
+            self._filler.create_device_dict_entries_to_mock(
                 self.mock_device_vector_children
             )
         device.set_name(device.name)
@@ -416,13 +410,13 @@ class BoxDeviceConnector(DeviceConnector):
         self, device: Device, timeout: float, force_reconnect: bool
     ) -> None:
         """Attach the boxes of the service, fill the device from them and connect it."""
-        if not self.is_child and (self.description is None or force_reconnect):
-            await self.attach(timeout)
-        description = self.description
+        if not self._is_child and (self._description is None or force_reconnect):
+            await self._attach(timeout)
+        description = self._description
         assert description is not None
-        if not self.is_filled:
-            self.fill(device, description)
-            self.is_filled = True
+        if not self._is_filled:
+            self._fill(device, description)
+            self._is_filled = True
         where = description["box"] or ":".join(["root", *description["path"]])
         names = sorted(
             [
@@ -431,13 +425,13 @@ class BoxDeviceConnector(DeviceConnector):
                 *description["children"],
             ]
         )
-        self.filler.check_filled(f"{where}: {names}")
+        self._filler.check_filled(f"{where}: {names}")
         device.set_name(device.name)
         await super().connect_real(device, timeout, force_reconnect)
 
-    async def attach(self, timeout: float) -> None:
+    async def _attach(self, timeout: float) -> None:
         """Attach the index, retrying until `timeout`, then every box it names."""
-        name = index_name(self.prefix)
+        name = index_name(self._prefix)
         try:
             async with asyncio.timeout(timeout):
                 while True:
@@ -454,19 +448,19 @@ class BoxDeviceConnector(DeviceConnector):
             index.close()
         attached: dict[str, Any] = {}
         try:
-            self.attach_boxes(description, attached)
+            self._attach_boxes(description, attached)
         except BaseException:
             for box in attached.values():
                 box.close()
             raise
-        old = list(self.boxes.values())
-        self.boxes.clear()
-        self.boxes.update(attached)
+        old = list(self._boxes.values())
+        self._boxes.clear()
+        self._boxes.update(attached)
         for box in old:
             box.close()
-        self.description = description
+        self._description = description
 
-    def attach_boxes(
+    def _attach_boxes(
         self, description: ControllerDescription, attached: dict[str, Any]
     ) -> None:
         """Attach the box of `description` and of every child below it."""
@@ -475,32 +469,32 @@ class BoxDeviceConnector(DeviceConnector):
                 description["box"]
             )
         for child in description["children"].values():
-            self.attach_boxes(child, attached)
+            self._attach_boxes(child, attached)
 
-    def fill(self, device: Device, description: ControllerDescription) -> None:
+    def _fill(self, device: Device, description: ControllerDescription) -> None:
         """Create the signals, commands and children `description` names."""
         box = description["box"]
         for name, attribute in description["attributes"].items():
             assert box is not None
-            backend = self.filler.fill_child_signal(name, SIGNALS[attribute["access"]])
-            backend.bind(self.boxes, box_key(description), name, attribute)
+            backend = self._filler.fill_child_signal(name, SIGNALS[attribute["access"]])
+            backend._bind(self._boxes, box_key(description), name, attribute)
         for name in description["commands"]:
             assert box is not None
-            self.filler.fill_child_command(name, TriggerableCommand).bind(
-                self.boxes, box_key(description), name
+            self._filler.fill_child_command(name, TriggerableCommand)._bind(
+                self._boxes, box_key(description), name
             )
         for key, child in description["children"].items():
             if isinstance(device, DeviceVector):
-                connector = self.filler.fill_child_device(
+                connector = self._filler.fill_child_device(
                     device.name, Device, map_key=int(key)
                 )
             else:
                 vector = bool(child["children"]) and all(
                     part.isdigit() for part in child["children"]
                 )
-                connector = self.filler.fill_child_device(
+                connector = self._filler.fill_child_device(
                     key, DeviceVector if vector else Device
                 )
-            connector.description = child
-            connector.boxes = self.boxes
-            connector.is_child = True
+            connector._description = child
+            connector._boxes = self._boxes
+            connector._is_child = True

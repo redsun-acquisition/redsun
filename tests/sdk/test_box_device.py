@@ -89,7 +89,7 @@ async def detector(
     device = MyDetector(served[1], name="det")
     await device.connect(timeout=5)
     yield device
-    for box in device._connector.boxes.values():  # type: ignore[attr-defined]
+    for box in device._connector._boxes.values():  # type: ignore[attr-defined]
         box.close()
 
 
@@ -282,7 +282,7 @@ async def test_a_device_reconnects_after_the_service_restarts() -> None:
         observer.cancel()
         task.cancel()
         await asyncio.gather(observer, task, return_exceptions=True)
-        for box in device._connector.boxes.values():  # type: ignore[attr-defined]
+        for box in device._connector._boxes.values():  # type: ignore[attr-defined]
             box.close()
 
 
