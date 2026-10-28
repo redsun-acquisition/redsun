@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 __all__ = [
     "CHANNEL_ACCESS",
     "PV_ACCESS",
+    "SHAREDBOX",
     "TRANSPORTS",
     "TRANSPORT_KEY",
     "Transport",
@@ -22,6 +23,9 @@ CHANNEL_ACCESS: Final = "channel-access"
 
 PV_ACCESS: Final = "pv-access"
 """The other protocol a session may name."""
+
+SHAREDBOX: Final = "sharedbox"
+"""The transport a `fastcs` service serves its controller over."""
 
 TRANSPORT_KEY: Final = "transport"
 """The key of the `services` section naming what its services speak."""
@@ -147,9 +151,29 @@ class PVAccess:
         """Nothing: a client reaches a restarted service without being told."""
 
 
+class SharedboxTransport:
+    """The sharedbox transport, which sets nothing in this process's environment."""
+
+    name = SHAREDBOX
+
+    def reserve(self, service: str) -> Mapping[str, str]:
+        """Return no environment for the service."""
+        return {}
+
+    def publish(self, service: str) -> None:
+        """Do nothing."""
+
+    def attach(self, address: str) -> None:
+        """Do nothing."""
+
+    async def release(self) -> None:
+        """Do nothing."""
+
+
 TRANSPORTS: dict[str, Transport] = {
     CHANNEL_ACCESS: ChannelAccess(),
     PV_ACCESS: PVAccess(),
+    SHAREDBOX: SharedboxTransport(),
 }
 """The transports a session may name, by the name a session file writes."""
 

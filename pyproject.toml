@@ -63,6 +63,7 @@ dev = [
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
+    "sharedbox>=0.6.0",
 ]
 docs = [
     "markdown-d2>=0.4.2",
@@ -138,6 +139,10 @@ qlementine-pyside = [
     "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "pyside6-qlementine>=1.5.1",
 ]
+sharedbox = [
+    "fastcs>=0.14.4",
+    "sharedbox>=0.6.0",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -194,6 +199,10 @@ qlementine-pyside = [
     # holds pyside6 at 6.10.2 today, and these hold once it no longer does
     "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "pyside6-qlementine>=1.5.1",
+]
+sharedbox = [
+    "fastcs>=0.14.4",
+    "sharedbox>=0.6.0",
 ]
 
 [project.scripts]

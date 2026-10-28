@@ -6024,6 +6024,10 @@ qt-common = [
     { name = "qtpy" },
     { name = "superqt" },
 ]
+sharedbox = [
+    { name = "fastcs" },
+    { name = "sharedbox" },
+]
 testing = [
     { name = "pytest" },
 ]
@@ -6059,6 +6063,7 @@ dev = [
     { name = "pytest-env" },
     { name = "pytest-xdist" },
     { name = "ruff" },
+    { name = "sharedbox" },
     { name = "tiled", extra = ["client", "server"] },
     { name = "towncrier" },
     { name = "tox-uv-bare" },
@@ -6133,6 +6138,10 @@ qt-common = [
     { name = "qtpy" },
     { name = "superqt" },
 ]
+sharedbox = [
+    { name = "fastcs" },
+    { name = "sharedbox" },
+]
 testing = [
     { name = "pytest" },
 ]
@@ -6158,6 +6167,7 @@ requires-dist = [
     { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
+    { name = "fastcs", marker = "extra == 'sharedbox'", specifier = ">=0.14.4" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'pyqt'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'pyside'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'qlementine-pyqt'", specifier = ">=7.2.96" },
@@ -6192,6 +6202,7 @@ requires-dist = [
     { name = "qtpy", marker = "extra == 'qlementine-pyqt'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qlementine-pyside'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qt-common'", specifier = ">=2.4.3" },
+    { name = "sharedbox", marker = "extra == 'sharedbox'", specifier = ">=0.6.0" },
     { name = "superqt", marker = "extra == 'pyqt'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'pyside'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.9.0" },
@@ -6200,7 +6211,7 @@ requires-dist = [
     { name = "tiled", extras = ["client", "server"], marker = "extra == 'tiled'", specifier = ">=0.2.20" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "testing", "tiled", "zarr"]
+provides-extras = ["ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "sharedbox", "testing", "tiled", "zarr"]
 
 [package.metadata.requires-dev]
 coverage = [{ name = "coverage", specifier = ">=7.17.0" }]
@@ -6225,6 +6236,7 @@ dev = [
     { name = "pytest-env", specifier = ">=1.7.1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.17.2" },
+    { name = "sharedbox", specifier = ">=0.6.0" },
     { name = "tiled", extras = ["client", "server"], specifier = ">=0.2.20" },
     { name = "towncrier", specifier = ">=26.9.0" },
     { name = "tox-uv-bare", specifier = ">=1.37.0" },
@@ -6295,6 +6307,10 @@ qt-common = [
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
     { name = "superqt", specifier = ">=0.9.0" },
+]
+sharedbox = [
+    { name = "fastcs", specifier = ">=0.14.4" },
+    { name = "sharedbox", specifier = ">=0.6.0" },
 ]
 testing = [{ name = "pytest", specifier = ">=8" }]
 tiled = [
@@ -6774,6 +6790,26 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/62/16/3193318f3012890c3499a74c58b6ba27c9b9bad793479852f2f21508e6c2/setuptools_dso-2.12.4.tar.gz", hash = "sha256:5b665849c0b37c019dee72c8b8b4cfbae131d06d49364bc90444e8596942ed6f", size = 21729, upload-time = "2026-08-28T17:17:56.847Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/26/c2/2ec71837ac862d823de280e72c245686b37de6dde0a18a02c9c18f589c39/setuptools_dso-2.12.4-py2.py3-none-any.whl", hash = "sha256:fce70c8b6fb58f1ba609e455355776ddaa53363b84d1b7f0ec2c820e63544033", size = 24201, upload-time = "2026-08-28T17:17:55.895Z" },
+]
+
+[[package]]
+name = "sharedbox"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "psygnal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a6/80/bac123ff31ef70021cf338f4f638a7b68d54f86789741f7c820acfafa71d/sharedbox-0.6.0.tar.gz", hash = "sha256:3d01ca577f6a6c9fd1d05ffd4960f8bdd7fa7d57ed5994f15772a7cd57e79b14", size = 600007, upload-time = "2026-10-24T11:18:21.492Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ad/5f/6a33f92cd23b7a05a4d171bf28f9590339872c7ab32d9e2914b8e55ac44c/sharedbox-0.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:bf662c289441e3308aefa9e9f6180e694fd6804292a1211616056eec04934c7b", size = 409635, upload-time = "2026-10-24T11:18:06.894Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/b8/79781a378bd8f401341dadea23d0017a1f6f8ac6cf674a23970b0c673e0d/sharedbox-0.6.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:3284799ed49d1d4d47cafebcf1806324adf967406a606b419467953ff265a3e7", size = 508542, upload-time = "2026-10-24T11:18:08.875Z" },
+    { url = "https://files.pythonhosted.org/packages/88/55/e3ba12a4f43869e02333ab1f31e8e050dc4b5708835f84d48e50d0746b47/sharedbox-0.6.0-cp311-cp311-win_amd64.whl", hash = "sha256:83c24153b53f090a2a2ef14317a78f20d9e06b16908ff6f3e1970a08d08fe9b5", size = 604064, upload-time = "2026-10-24T11:18:10.458Z" },
+    { url = "https://files.pythonhosted.org/packages/67/56/e428837bfdffadf9abad5453f48fd182c0ad0ec449472623144298ec4d34/sharedbox-0.6.0-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:672394c979d8500909670c45dc721249ef09980574d26f308dc10a7c5dcdf235", size = 405671, upload-time = "2026-10-24T11:18:12.062Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/ee/6eb7776a47c76300e37f8253030cfec1f454a9f041cf627cd3b6013da8e0/sharedbox-0.6.0-cp312-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:2764af37c6ce0cbec894fa2624c75e35ce6a0ec6ca8f11c038c4b3b906848025", size = 504864, upload-time = "2026-10-24T11:18:13.466Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/d9/5c8ed2ff6ef50e0d995ce1ad6ca8246af9687129d2cdb73eb20c57dda491/sharedbox-0.6.0-cp312-abi3-win_amd64.whl", hash = "sha256:85ea12f92d1ce0651d7a2040e262dd88ec9e4bc918d6776ff70cd5213dfb921c", size = 604088, upload-time = "2026-10-24T11:18:15.392Z" },
+    { url = "https://files.pythonhosted.org/packages/57/6e/d6baad7d5b26ec7dd7430e1a16ff27ba4f47379ac1e1e57e454376b5219e/sharedbox-0.6.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ad791eb21e9c37f69fbd73b28266ac40d7e5edf64968cd2827206231ae8883ef", size = 411647, upload-time = "2026-10-24T11:18:16.994Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/6d/d982107ba90198e6b5688f736317b1004c7d66f6ea0e637d2ec76a7f2948/sharedbox-0.6.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:6b6543703bb497eabb07a831ca2b92b6bb51e5a7a3ddaef298fd64656d562802", size = 512413, upload-time = "2026-10-24T11:18:18.694Z" },
+    { url = "https://files.pythonhosted.org/packages/33/36/def252a011a97f35f58ea8c5788a9461f43c14c6a5d6fa9e08b38f36e934/sharedbox-0.6.0-cp314-cp314t-win_amd64.whl", hash = "sha256:c76f6bd6f3b20b61dabeb89a0dcb7a0a0216f3b1c4d6755b99647a551c614ab2", size = 621438, upload-time = "2026-10-24T11:18:20.022Z" },
 ]
 
 [[package]]
@@ -8138,7 +8174,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/df/b2/30d59a91ed2828fbe6d9a297990dd6de1fd3c5d722354421d80352bba322/zensical-0.0.72-cp311-abi3-macosx_10_12_x86_64.whl", hash = "sha256:9afa0bdb357e0197f5d65cb882e2ad1652d7a3790e2fc3d243f0669092aab536", size = 18269323, upload-time = "2026-10-23T14:52:02.987Z" },
     { url = "https://files.pythonhosted.org/packages/2b/46/33d705f40d8fb3c2291fff63fce8b0688d11e11b4729c7bd11491ead3649/zensical-0.0.72-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:2103dabfb6fcbea16ffbf226b5405389f3ac67370293eb649f949f03314dd64c", size = 17790144, upload-time = "2026-10-23T14:52:06.092Z" },
     { url = "https://files.pythonhosted.org/packages/45/02/9d4ed7fa43f0cc8464e4ba4e844201c83abcfce9043073c06acf3518f4ba/zensical-0.0.72-cp311-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3631d44074d4b28448e710d7b54a506caacb6156b38bd0d91d6a033d65da6ad3", size = 18290933, upload-time = "2026-10-23T14:52:09.003Z" },
-    { url = "https://files.pythonhosted.org/packages/5b/e9/8aa7a24085811cb62987427e86bb5071dbc7c8da7a541a1128996311f070/zensical-0.0.72-cp311-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:1298ced62e0acfe52787ab59607358fbcf6643bf793a1a66813fb760aec009f9", size = 18237453, upload-time = "2026-10-23T14:52:11.589Z" },
     { url = "https://files.pythonhosted.org/packages/98/d8/d176cc7515465c5347c20b412f7e52313f051dc4bcf585b18060044d0d61/zensical-0.0.72-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3513bf501ff5e28b9e8b7255f225bb117d5651c5d50af39a1eb7bb3bbd7251b0", size = 18789079, upload-time = "2026-10-23T14:52:13.896Z" },
     { url = "https://files.pythonhosted.org/packages/07/01/e378f3cb316bd0f3d1e7c2610d4eb8e6a4adf8797fdfebcaf6cb7e15f85f/zensical-0.0.72-cp311-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:a0603827ea0a04f920cf2a5be555f9e81818beaac1ff5a92399f19f79e330b2e", size = 18467423, upload-time = "2026-10-23T14:52:16.554Z" },
     { url = "https://files.pythonhosted.org/packages/95/b3/979d2344d0efcb3d43bdcf613fa9846daae174993ba79ba5bab6e02aad45/zensical-0.0.72-cp311-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:042795a983823efd2478630164afa708b04b6aff7708a04177657e57292bc1b8", size = 19047304, upload-time = "2026-10-23T14:52:19.283Z" },
