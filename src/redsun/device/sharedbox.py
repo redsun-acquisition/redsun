@@ -27,8 +27,9 @@ from ophyd_async.core import (
     TriggerableCommand,
     make_datakey,
 )
-from sharedbox import SegmentNotFoundError
+from sharedbox import BoxClosedError, SegmentNotFoundError
 
+from redsun.log import logger
 from redsun.services._layout import (
     AttributeDescription,
     ControllerDescription,
@@ -156,15 +157,19 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             elif not (
                 isinstance(self.datatype, type)
                 and issubclass(self.datatype, enum.Enum)
-                and {member.value for member in self.datatype} <= set(self.names)
+                and {member.value for member in self.datatype} == set(self.names)
             ):
                 self.mismatch(f"enum of {self.names}")
+            if self.callback:
+                self.follow_readback()
             return
         expected = DATATYPES[kind]
         if self.datatype is None:
             self.datatype = expected
         elif (get_origin(self.datatype) or self.datatype) is not expected:
             self.mismatch(expected.__name__)
+        if self.callback:
+            self.follow_readback()
 
     def mismatch(self, served: str) -> None:
         """Raise the error of a declared datatype the service does not serve."""
@@ -273,19 +278,35 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """Call `callback` with the current reading, then with each new one."""
         if callback and self.callback:
             raise RuntimeError("Cannot set a callback when one is already set")
+        self.callback = callback
         if callback:
-            watch = self.box.watch(self.readback)
-            callback(self.current())
-            self.follower = asyncio.create_task(self.follow(watch, callback))
+            self.follow_readback()
         elif self.follower is not None:
             self.follower.cancel()
             self.follower = None
-        self.callback = callback
 
-    async def follow(self, watch: Any, callback: Any) -> None:
-        """Call `callback` with the reading after each write to the value."""
-        async for _ in watch:
-            callback(self.current())
+    def follow_readback(self) -> None:
+        """Call the callback with the current reading, then follow the box's value."""
+        if self.follower is not None:
+            self.follower.cancel()
+        watch = self.box.watch(self.readback)
+        self.callback(self.current())
+        self.follower = asyncio.create_task(self.follow(watch))
+
+    async def follow(self, watch: Any) -> None:
+        """Call the callback with the reading after each write to the value."""
+        try:
+            async for _ in watch:
+                try:
+                    self.callback(self.current())
+                except BoxClosedError:
+                    return
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "callback of %s/%s failed", self.box_name, self.attribute
+                    )
+        except BoxClosedError:
+            return
 
 
 class BoxCommandBackend(CommandBackend[[], None]):
@@ -390,10 +411,15 @@ class BoxDeviceConnector(DeviceConnector):
         if not self.is_filled:
             self.fill(device, description)
             self.is_filled = True
-        if not self.is_child:
-            self.filler.check_filled(
-                f"{index_name(self.prefix)}: {sorted(description['attributes'])}"
-            )
+        where = description["box"] or ":".join(["root", *description["path"]])
+        names = sorted(
+            [
+                *description["attributes"],
+                *description["commands"],
+                *description["children"],
+            ]
+        )
+        self.filler.check_filled(f"{where}: {names}")
         device.set_name(device.name)
         await super().connect_real(device, timeout, force_reconnect)
 
@@ -412,20 +438,30 @@ class BoxDeviceConnector(DeviceConnector):
             raise TimeoutError(f"no sharedbox service publishes {name!r}") from None
         description: ControllerDescription = json.loads(index.description)
         index.close()
-        for box in self.boxes.values():
-            box.close()
+        attached: dict[str, Any] = {}
+        try:
+            self.attach_boxes(description, attached)
+        except BaseException:
+            for box in attached.values():
+                box.close()
+            raise
+        old = list(self.boxes.values())
         self.boxes.clear()
+        self.boxes.update(attached)
+        for box in old:
+            box.close()
         self.description = description
-        self.attach_boxes(description)
 
-    def attach_boxes(self, description: ControllerDescription) -> None:
+    def attach_boxes(
+        self, description: ControllerDescription, attached: dict[str, Any]
+    ) -> None:
         """Attach the box of `description` and of every child below it."""
         if description["box"] is not None:
-            self.boxes[description["box"]] = box_class(description).attach(
+            attached[description["box"]] = box_class(description).attach(
                 description["box"]
             )
         for child in description["children"].values():
-            self.attach_boxes(child)
+            self.attach_boxes(child, attached)
 
     def fill(self, device: Device, description: ControllerDescription) -> None:
         """Create the signals, commands and children `description` names."""

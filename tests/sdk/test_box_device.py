@@ -15,6 +15,7 @@ from ophyd_async.core import (
     DeviceVector,
     SignalR,
     SignalRW,
+    StrictEnum,
     TriggerableCommand,
     observe_value,
 )
@@ -41,6 +42,29 @@ class MissingChild(Device):
 
 class WrongDatatype(Device):
     exposure: SignalRW[int]
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+
+
+class WrongMode(StrictEnum):
+    IDLE = "IDLE"
+
+
+class WrongEnum(Device):
+    mode: SignalRW[WrongMode]
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+
+
+class Axis(Device):
+    position: SignalRW[float]
+    speed: SignalR[float]
+
+
+class Stage(Device):
+    axes: DeviceVector[Axis]
 
     def __init__(self, prefix: str, name: str = "") -> None:
         super().__init__(name=name, connector=BoxDeviceConnector(prefix))
@@ -182,6 +206,41 @@ async def test_a_declared_datatype_that_disagrees_fails_connect(
     device = WrongDatatype(served[1], name="bad")
     with pytest.raises(Exception, match="exposure"):
         await device.connect(timeout=5)
+
+
+async def test_a_declared_enum_that_disagrees_fails_connect(
+    served: tuple[BoxController, str],
+) -> None:
+    """Refuse a declared enum whose members differ from the served names."""
+    device = WrongEnum(served[1], name="bad")
+    with pytest.raises(Exception, match="mode"):
+        await device.connect(timeout=5)
+
+
+async def test_a_declared_signal_missing_from_a_child_fails_connect(
+    served: tuple[BoxController, str],
+) -> None:
+    """Name a signal a child device declares and its controller does not serve."""
+    device = Stage(served[1], name="bad")
+    with pytest.raises(Exception, match="speed"):
+        await device.connect(timeout=5)
+
+
+async def test_an_observer_survives_a_reconnect(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Keep yielding values after the connector attaches the boxes again."""
+    controller, _ = served
+    seen: list[float] = []
+    async with asyncio.timeout(5):
+        async for value in observe_value(detector.exposure):
+            seen.append(value)
+            if len(seen) == 1:
+                await detector.connect(timeout=5, force_reconnect=True)
+                await controller.exposure.update(7.0)
+            if value == 7.0:
+                break
+    assert seen[-1] == 7.0
 
 
 async def test_a_mock_connect_needs_no_service() -> None:
