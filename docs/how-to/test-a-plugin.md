@@ -127,6 +127,16 @@ whose signals come from its service when it connects, as a `fastcs` device's
 do, because a mocked one has none. Test such a device against its service
 instead.
 
+When the test is over, `build` checks that each session it built has been
+freed. A session still alive fails the test with an error at teardown that
+names it. Something outside the session still refers to it, or to something it
+built, such as a list at module level or a signal connected to an object that
+outlives the test. To find what, build and shut down the session in a short
+script, then call `gc.get_referrers`, which returns the objects referring to its
+argument, on the session and on each referrer in turn, until you reach an
+object your plugin owns. A test that raised is not checked, because its
+traceback keeps its variables, and with them its session.
+
 ## Start a service
 
 Declare the service once, with the [`Launch`][redsun.Launch] a session class

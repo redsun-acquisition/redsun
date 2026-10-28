@@ -371,6 +371,9 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   close) write one happy-path test driving the whole sequence and asserting the
   observable end state, then small focused tests for unhappy paths.
 - Parametrize normal and edge cases together in one `@pytest.mark.parametrize`.
+- **A session built with `build` is freed by the end of its test**:
+  `redsun.testing` fails the test at teardown otherwise, unless the test
+  raised.
 - **A test that checks an object was freed calls `gc.collect()` itself**:
   automatic collection is off during a run. A test that turns it on or off
   restores the state it found (`tests.sdk.helpers.automatic_collection`); a
