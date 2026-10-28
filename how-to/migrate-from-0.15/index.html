@@ -2726,6 +2726,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#the-qt-test-fixtures-are-a-plugin-of-their-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Qt test fixtures are a plugin of their own
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6028,6 +6039,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#the-qt-test-fixtures-are-a-plugin-of-their-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Qt test fixtures are a plugin of their own
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6157,10 +6179,11 @@
 <p>Release 0.16 removes the two things 0.15 deprecated, changes what a view of
 plan progress receives, moves some axes to another box of the positioner,
 removes two helpers the positioner no longer uses, changes what a session
-does when a service does not start, and stops a held key from running its
-command again and again. This page gives each change with what to
-write instead. The <a href="../../reference/changelog/">changelog</a> lists everything
-else the release changed.</p>
+does when a service does not start, stops a held key from running its
+command again and again, and moves the test fixtures for Qt into a plugin of
+their own. This page gives each change with what to write instead. The
+<a href="../../reference/changelog/">changelog</a> lists everything else the release
+changed.</p>
 <h2 id="a-views-placement-cant-come-from-a-property">A view's placement can't come from a property<a class="headerlink" href="#a-views-placement-cant-come-from-a-property" title="Permanent link">&para;</a></h2>
 <p>The session reads a view's placement before it builds the view, so the
 placement has to be a plain class attribute or part of the declaration. A view
@@ -6298,6 +6321,31 @@ steps an axis, pass <code>repeat=True</code> to <code>@shortcut</code>:</p>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
+<h2 id="the-qt-test-fixtures-are-a-plugin-of-their-own">The Qt test fixtures are a plugin of their own<a class="headerlink" href="#the-qt-test-fixtures-are-a-plugin-of-their-own" title="Permanent link">&para;</a></h2>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;keep_application_as_found&lt;/span&gt;" href="../../reference/api/testing/#redsun.testing.qt.keep_application_as_found"><code>keep_application_as_found</code></a>,
+the fixture that fails a test leaving the application changed, moved from
+<code>redsun.testing</code> to <code>redsun.testing.qt</code>, and so did the setting that gives
+Qt's <code>offscreen</code> platform the system fonts on Windows. That module is a second <code>pytest</code>
+plugin, installed with the <code>testing-qt</code> extra, so a suite that tests no Qt
+components never imports Qt. A suite that tests Qt components changes its
+install line and its <code>addopts</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 0.15</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span><span class="s2">"redsun[testing]"</span><span class="w"> </span>pytest-asyncio
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># now</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span><span class="s2">"redsun[testing-qt]"</span><span class="w"> </span>pytest-asyncio
+</span></code></pre></div>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># 0.15</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing"</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># now</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing -p redsun.testing.qt"</span>
+</span></code></pre></div>
+<p>The extra installs no Qt binding, so the suite keeps the one it installs
+today. <code>redsun.testing.qt</code> also defines a <code>qapp</code> fixture, and a suite that
+takes <code>pytest-qt</code>'s or defines its own can keep it.
+<a href="../test-a-plugin/#test-qt-components">How to test a plugin</a> says what happens
+when <code>pytest-qt</code> is loaded too.</p>
 
 
 
