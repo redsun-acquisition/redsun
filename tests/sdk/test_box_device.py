@@ -293,6 +293,19 @@ async def test_a_mock_connect_needs_no_service() -> None:
     assert await device.exposure.get_value() == 0.0
 
 
+def test_creating_children_twice_keeps_the_first_ones() -> None:
+    """Leave the declared children in place when the connector is asked again."""
+
+    class Stage(Device):
+        exposure: SignalRW[float]
+
+    connector = BoxDeviceConnector("NOBODY")
+    device = Stage(connector=connector)
+    exposure = device.exposure
+    connector.create_children_from_annotations(device)
+    assert device.exposure is exposure
+
+
 async def test_a_connect_without_a_service_times_out() -> None:
     """Raise once the timeout passes with no index published."""
     device = MyDetector(f"T{uuid4().hex[:8]}", name="det")

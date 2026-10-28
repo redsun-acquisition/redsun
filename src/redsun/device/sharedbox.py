@@ -379,7 +379,7 @@ class BoxDeviceConnector(DeviceConnector):
 
     def create_children_from_annotations(self, device: Device) -> None:
         """Create the signals, commands and children the device declares."""
-        if hasattr(self, "filler"):
+        if hasattr(self, "_filler"):
             return
         self._filler: DeviceFiller[Any, BoxDeviceConnector, BoxCommandBackend] = (
             DeviceFiller(
