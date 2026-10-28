@@ -6,7 +6,7 @@ import json
 import secrets
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 import numpy as np
 from fastcs.attributes import AttrR, AttrW
@@ -24,6 +24,7 @@ from ._layout import (
     DESCRIPTION_CAPACITY,
     ERROR_CAPACITY,
     STRING_CAPACITY,
+    AttributeDescription,
     ControllerDescription,
     DatatypeDescription,
     ServiceIndex,
@@ -36,10 +37,22 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from fastcs.controllers import ControllerAPI
+    from fastcs.datatypes import DataType, DType_T
 
 __all__ = ["BoxTransport"]
 
 _INT64_MAX = 2**63 - 1
+
+_NUMERIC_KEYS: tuple[Literal["units", "min", "max", "min_alarm", "max_alarm"], ...] = (
+    "units",
+    "min",
+    "max",
+    "min_alarm",
+    "max_alarm",
+)
+"""Settings of a FastCS `Int` or `Float` the description carries when set."""
+
+_BoxT = TypeVar("_BoxT", bound=SharedBox)
 
 
 def _cut(text: str, capacity: int) -> str:
@@ -57,7 +70,7 @@ def _is_unsigned(datatype: Int) -> bool:
     )
 
 
-def _describe_datatype(datatype: Any, where: str) -> DatatypeDescription:
+def _describe_datatype(datatype: DataType[DType_T], where: str) -> DatatypeDescription:
     """Return the description of a FastCS datatype, or raise `ValueError` for a table."""
     match datatype:
         case Table():
@@ -77,21 +90,21 @@ def _describe_datatype(datatype: Any, where: str) -> DatatypeDescription:
                 "shape": list(datatype.shape),
             }
         case Int() | Float():
-            description: dict[str, Any] = {
+            description: DatatypeDescription = {
                 "kind": "float" if isinstance(datatype, Float) else "int"
             }
             if isinstance(datatype, Int) and _is_unsigned(datatype):
                 description["kind"] = "uint"
             if isinstance(datatype, Float):
                 description["precision"] = datatype.prec
-            for key in ("units", "min", "max", "min_alarm", "max_alarm"):
-                if getattr(datatype, key) is not None:
-                    description[key] = getattr(datatype, key)
-            return description  # type: ignore[return-value]
+            for key in _NUMERIC_KEYS:
+                if (setting := getattr(datatype, key)) is not None:
+                    description[key] = setting
+            return description
     raise ValueError(f"attribute {where!r} has unsupported datatype {datatype!r}")
 
 
-def _to_box(datatype: Any, value: Any) -> dict[str, Any]:
+def _to_box(datatype: DataType[DType_T], value: DType_T) -> dict[str, object]:
     """Return the box fields (without the attribute name) holding `value`."""
     match datatype:
         case Enum():
@@ -107,14 +120,16 @@ def _to_box(datatype: Any, value: Any) -> dict[str, Any]:
     return {"": value}
 
 
-def _from_box(datatype: Any, raw: Any, shape: Any = None) -> Any:
-    """Return the FastCS value of a setpoint read from a box, a waveform cut to `shape`."""
+def _setpoint(box: SharedBox, name: str, datatype: DataType[DType_T]) -> DType_T:
+    """Return the setpoint `box` holds for the attribute `name`, as a FastCS value."""
+    raw = getattr(box, f"{name}__setpoint")
     match datatype:
         case Enum():
             return datatype.members[raw]
         case Int() if _is_unsigned(datatype):
             return int(raw[0])
         case Waveform():
+            shape = getattr(box, f"{name}__setpoint_shape")
             return np.array(raw[tuple(slice(0, size) for size in shape)])
     return raw
 
@@ -173,7 +188,7 @@ class BoxTransport(Transport):
     def _describe(self, api: ControllerAPI) -> ControllerDescription:
         """Return the description of `api` and its sub-APIs, recording each pair."""
         path = list(api.path[1:])
-        attributes = {
+        attributes: dict[str, AttributeDescription] = {
             name: {
                 "access": attribute.access_mode,
                 "datatype": _describe_datatype(
@@ -189,7 +204,7 @@ class BoxTransport(Transport):
             "box": box_name(self._prefix, self._run, path)
             if attributes or commands
             else None,
-            "attributes": attributes,  # type: ignore[typeddict-item]
+            "attributes": attributes,
             "commands": commands,
             "children": {},
         }
@@ -217,14 +232,14 @@ class BoxTransport(Transport):
             old.unlink()
             old.close()
 
-    def _box_names(self, node: Any) -> list[str]:
+    def _box_names(self, node: ControllerDescription) -> list[str]:
         """Return the box names of the description `node` and its children."""
         names = [node["box"]] if node["box"] is not None else []
         for child in node["children"].values():
             names.extend(self._box_names(child))
         return names
 
-    def _publish(self, cls: type[SharedBox], name: str, values: dict[str, Any]) -> Any:
+    def _publish(self, cls: type[_BoxT], name: str, values: dict[str, object]) -> _BoxT:
         """Create the box `name`, replacing one a stopped service left behind."""
         try:
             return cls.create(name, **values)
@@ -232,16 +247,18 @@ class BoxTransport(Transport):
             cls.unlink(name)
             return cls.create(name, **values)
 
-    def _initial_values(self, api: ControllerAPI) -> dict[str, Any]:
+    def _initial_values(self, api: ControllerAPI) -> dict[str, object]:
         """Return the box fields holding the current value of each readable attribute."""
-        values: dict[str, Any] = {}
+        values: dict[str, object] = {}
         for name, attribute in api.attributes.items():
             if isinstance(attribute, AttrR):
                 values.update(self._fields(name, attribute.datatype, attribute.get()))
         return values
 
     @staticmethod
-    def _fields(name: str, datatype: Any, value: Any) -> dict[str, Any]:
+    def _fields(
+        name: str, datatype: DataType[DType_T], value: DType_T
+    ) -> dict[str, object]:
         """Return the box fields holding the value of the attribute `name`."""
         return {
             f"{name}__{key or 'value'}": field
@@ -279,7 +296,9 @@ class BoxTransport(Transport):
         """Return once the index is published."""
         await self._published.wait()
 
-    async def _update(self, box: Any, name: str, datatype: Any, value: Any) -> None:
+    async def _update(
+        self, box: SharedBox, name: str, datatype: DataType[DType_T], value: DType_T
+    ) -> None:
         """Write the value of the attribute `name` to its box."""
         if box.closed:
             return
@@ -291,17 +310,16 @@ class BoxTransport(Transport):
             ) from exc
 
     @staticmethod
-    async def _put(box: Any, name: str, attribute: Any) -> None:
+    async def _put(box: SharedBox, name: str, attribute: AttrW[DType_T]) -> None:
         """Put the setpoint in the box to the attribute `name`."""
-        setpoint = _from_box(
-            attribute.datatype,
-            getattr(box, f"{name}__setpoint"),
-            getattr(box, f"{name}__setpoint_shape", None),
+        await attribute.put(
+            _setpoint(box, name, attribute.datatype), sync_setpoint=True
         )
-        await attribute.put(setpoint, sync_setpoint=True)
 
     @staticmethod
-    async def _answer(box: Any, stem: str, run: Callable[[], Awaitable[Any]]) -> None:
+    async def _answer(
+        box: SharedBox, stem: str, run: Callable[[], Awaitable[object]]
+    ) -> None:
         """Run `run` for every request number written to `<stem>__request`.
 
         A watch skips to the latest write, so after each wake the request

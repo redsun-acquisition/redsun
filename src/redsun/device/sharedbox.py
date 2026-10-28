@@ -4,7 +4,7 @@ import asyncio
 import enum
 import json
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, get_origin
+from typing import TYPE_CHECKING, ClassVar, cast, get_origin
 
 import numpy as np
 from bluesky.protocols import Reading
@@ -43,6 +43,10 @@ from ..services._layout import (
 if TYPE_CHECKING:
     import inspect
     from collections.abc import Mapping
+
+    from event_model import DataKey
+    from ophyd_async.core import Callback, SignalDatatype
+    from sharedbox import FieldWatch, SharedBox
 
 __all__ = [
     "BoxCommandBackend",
@@ -109,7 +113,7 @@ def _box_key(description: ControllerDescription) -> str:
     return ":".join(description["path"])
 
 
-async def _request(box: Any, stem: str, name: str, **values: Any) -> None:
+async def _request(box: SharedBox, stem: str, name: str, **values: object) -> None:
     """Write `values` and a new request number to `box`, then wait for the answer.
 
     Raises
@@ -133,7 +137,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
 
     def __init__(self, datatype: type[SignalDatatypeT] | None) -> None:
         super().__init__(datatype)
-        self._boxes: Mapping[str, Any] = {}
+        self._boxes: Mapping[str, SharedBox] = {}
         self._box_key = ""
         self._attribute = ""
         self._description: AttributeDescription
@@ -141,12 +145,12 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self._readback = ""
         self._readback_shape = ""
         self._lock = asyncio.Lock()
-        self._callback: Any = None
+        self._callback: Callback[Reading[SignalDatatypeT]] | None = None
         self._follower: asyncio.Task[None] | None = None
 
     def _bind(
         self,
-        boxes: Mapping[str, Any],
+        boxes: Mapping[str, SharedBox],
         box_key: str,
         attribute: str,
         description: AttributeDescription,
@@ -168,9 +172,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     def _box_name(self) -> str:
         """Return the name of the attached box, the key before it is attached."""
         box = self._boxes.get(self._box_key)
-        return self._box_key if box is None else str(box.name)
+        return self._box_key if box is None else box.name
 
-    def _box(self) -> Any:
+    def _box(self) -> SharedBox:
         """Return the attached box of the attribute."""
         return self._boxes[self._box_key]
 
@@ -199,7 +203,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             ):
                 self._mismatch(f"enum of {self._names}")
             if self._callback:
-                self._follow_readback()
+                self._follow_readback(self._callback)
             return
         expected = _DATATYPES[kind]
         if self.datatype is None:
@@ -207,7 +211,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         elif (get_origin(self.datatype) or self.datatype) is not expected:
             self._mismatch(expected.__name__)
         if self._callback:
-            self._follow_readback()
+            self._follow_readback(self._callback)
 
     def _mismatch(self, served: str) -> None:
         """Raise the error of a declared datatype the service does not serve."""
@@ -216,49 +220,49 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             f"but the service serves {served}"
         )
 
-    def _from_box(self, raw: Any) -> Any:
-        """Return the value a box field holds, as the signal's datatype."""
+    def _read(self, field: str, shape_field: str) -> SignalDatatypeT:
+        """Return the value the box field `field` holds, as the signal's datatype.
+
+        A waveform is cut to the shape the field `shape_field` holds.
+        """
+        box = self._box()
+        raw = getattr(box, field)
+        value: object = raw
         match self._description["datatype"]["kind"]:
             case "uint":
-                return int(raw[0])
+                value = int(raw[0])
             case "enum":
-                choices: Any = self.datatype
-                return choices(self._names[raw])
+                value = cast("type[enum.Enum]", self.datatype)(self._names[raw])
             case "waveform":
-                return np.array(raw)
-        return raw
+                shape = getattr(box, shape_field)
+                value = np.array(raw[tuple(slice(0, size) for size in shape)])
+        # sharedbox builds the box class at runtime, so no checker sees the
+        # field's type; connect checked it against the signal's datatype
+        return cast("SignalDatatypeT", value)
 
-    def _to_box(self, value: Any) -> Any:
-        """Return the box field content holding `value`."""
+    def _setpoint_fields(self, value: SignalDatatypeT) -> dict[str, object]:
+        """Return the box fields a write of `value` sets."""
         datatype = self._description["datatype"]
+        setpoint = f"{self._attribute}__setpoint"
         match datatype["kind"]:
             case "uint":
-                return np.array([value], dtype="uint64")
+                return {setpoint: np.array([value], dtype="uint64")}
             case "enum":
-                return self._names.index(
-                    value.value if isinstance(value, enum.Enum) else value
-                )
+                name = value.value if isinstance(value, enum.Enum) else value
+                return {setpoint: self._names.index(str(name))}
             case "waveform":
+                array = np.asarray(value)
                 padded = np.zeros(datatype["shape"], dtype=datatype["dtype"])
-                padded[tuple(slice(0, size) for size in np.shape(value))] = value
-                return padded
-        return value
+                padded[tuple(slice(0, size) for size in array.shape)] = array
+                return {setpoint: padded, f"{setpoint}_shape": array.shape}
+        return {setpoint: value}
 
-    def _setpoint_fields(self, value: Any) -> dict[str, Any]:
-        """Return the box fields a write of `value` sets."""
-        fields = {f"{self._attribute}__setpoint": self._to_box(value)}
-        if self._description["datatype"]["kind"] == "waveform":
-            fields[f"{self._attribute}__setpoint_shape"] = tuple(np.shape(value))
-        return fields
-
-    def _current(self) -> Reading[Any]:
+    def _current(self) -> Reading[SignalDatatypeT]:
         """Return the current value as a reading."""
-        raw = getattr(self._box(), self._readback)
-        if self._description["datatype"]["kind"] == "waveform":
-            shape = getattr(self._box(), self._readback_shape)
-            raw = raw[tuple(slice(0, size) for size in shape)]
         return Reading(
-            value=self._from_box(raw), timestamp=time.time(), alarm_severity=0
+            value=self._read(self._readback, self._readback_shape),
+            timestamp=time.time(),
+            alarm_severity=0,
         )
 
     async def put(self, value: SignalDatatypeT | None) -> None:
@@ -266,9 +270,13 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
 
         Raises
         ------
+        TypeError
+            `value` is None.
         BoxPutError
             The service refused the value or its put raised.
         """
+        if value is None:
+            raise TypeError(f"{self._attribute}: a put to a box needs a value")
         async with self._lock:
             await _request(
                 self._box(),
@@ -277,9 +285,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                 **self._setpoint_fields(value),
             )
 
-    async def get_datakey(self, source: str) -> Any:
+    async def get_datakey(self, source: str) -> DataKey:
         """Return the data key, with the units, precision, limits and choices served."""
-        datatype: Mapping[str, Any] = self._description["datatype"]
+        datatype = self._description["datatype"]
         metadata = SignalMetadata()
         if "units" in datatype:
             metadata["units"] = datatype["units"]
@@ -288,14 +296,14 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         if datatype["kind"] == "enum":
             metadata["choices"] = self._names
         limits = Limits()
-        for key, low, high in (
-            ("control", "min", "max"),
-            ("alarm", "min_alarm", "max_alarm"),
-        ):
-            if low in datatype or high in datatype:
-                limits[key] = LimitsRange(  # type: ignore[literal-required]
-                    low=datatype.get(low), high=datatype.get(high)
-                )
+        if "min" in datatype or "max" in datatype:
+            limits["control"] = LimitsRange(
+                low=datatype.get("min"), high=datatype.get("max")
+            )
+        if "min_alarm" in datatype or "max_alarm" in datatype:
+            limits["alarm"] = LimitsRange(
+                low=datatype.get("min_alarm"), high=datatype.get("max_alarm")
+            )
         if limits:
             metadata["limits"] = limits
         return make_datakey(
@@ -311,43 +319,43 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
 
     async def get_value(self) -> SignalDatatypeT:
         """Return the current value."""
-        return self._current()["value"]  # type: ignore[no-any-return]
+        return self._current()["value"]
 
     async def get_setpoint(self) -> SignalDatatypeT:
         """Return the last value written."""
         if "w" not in self._description["access"]:
             return await self.get_value()
-        raw = getattr(self._box(), f"{self._attribute}__setpoint")
-        if self._description["datatype"]["kind"] == "waveform":
-            shape = getattr(self._box(), f"{self._attribute}__setpoint_shape")
-            raw = raw[tuple(slice(0, size) for size in shape)]
-        return self._from_box(raw)  # type: ignore[no-any-return]
+        return self._read(
+            f"{self._attribute}__setpoint", f"{self._attribute}__setpoint_shape"
+        )
 
-    def set_callback(self, callback: Any) -> None:
+    def set_callback(self, callback: Callback[Reading[SignalDatatypeT]] | None) -> None:
         """Call `callback` with the current reading, then with each new one."""
         if callback and self._callback:
             raise RuntimeError("Cannot set a callback when one is already set")
         self._callback = callback
         if callback:
-            self._follow_readback()
+            self._follow_readback(callback)
         elif self._follower is not None:
             self._follower.cancel()
             self._follower = None
 
-    def _follow_readback(self) -> None:
-        """Call the callback with the current reading, then follow the box's value."""
+    def _follow_readback(self, callback: Callback[Reading[SignalDatatypeT]]) -> None:
+        """Call `callback` with the current reading, then follow the box's value."""
         if self._follower is not None:
             self._follower.cancel()
         watch = self._box().watch(self._readback)
-        self._callback(self._current())
-        self._follower = asyncio.create_task(self._follow(watch))
+        callback(self._current())
+        self._follower = asyncio.create_task(self._follow(watch, callback))
 
-    async def _follow(self, watch: Any) -> None:
-        """Call the callback with the reading after each write to the value."""
+    async def _follow(
+        self, watch: FieldWatch[object], callback: Callback[Reading[SignalDatatypeT]]
+    ) -> None:
+        """Call `callback` with the reading after each write to the value."""
         try:
             async for _ in watch:
                 try:
-                    self._callback(self._current())
+                    callback(self._current())
                 except BoxClosedError:
                     return
                 except Exception:  # noqa: BLE001
@@ -363,12 +371,12 @@ class BoxCommandBackend(CommandBackend[[], None]):
 
     def __init__(self) -> None:
         super().__init__(NO_ARG_VOID_SIGNATURE)
-        self._boxes: Mapping[str, Any] = {}
+        self._boxes: Mapping[str, SharedBox] = {}
         self._box_key = ""
         self._command = ""
         self._lock = asyncio.Lock()
 
-    def _bind(self, boxes: Mapping[str, Any], box_key: str, command: str) -> None:
+    def _bind(self, boxes: Mapping[str, SharedBox], box_key: str, command: str) -> None:
         """Say which command of which box this backend runs."""
         self._boxes = boxes
         self._box_key = box_key
@@ -419,7 +427,7 @@ class BoxDeviceConnector(DeviceConnector):
     def __init__(self, prefix: str = "") -> None:
         self._prefix = prefix
         self._description: ControllerDescription | None = None
-        self._boxes: dict[str, Any] = {}
+        self._boxes: dict[str, SharedBox] = {}
         self._is_child = False
         self._is_filled = False
 
@@ -427,13 +435,13 @@ class BoxDeviceConnector(DeviceConnector):
         """Create the signals, commands and children the device declares."""
         if hasattr(self, "_filler"):
             return
-        self._filler: DeviceFiller[Any, BoxDeviceConnector, BoxCommandBackend] = (
-            DeviceFiller(
-                device=device,
-                signal_backend_factory=BoxSignalBackend,
-                device_connector_factory=BoxDeviceConnector,
-                command_backend_factory=_command_backend,
-            )
+        self._filler: DeviceFiller[
+            BoxSignalBackend[SignalDatatype], BoxDeviceConnector, BoxCommandBackend
+        ] = DeviceFiller(
+            device=device,
+            signal_backend_factory=BoxSignalBackend,
+            device_connector_factory=BoxDeviceConnector,
+            command_backend_factory=_command_backend,
         )
         for create in (
             self._filler.create_signals_from_annotations,
@@ -443,7 +451,7 @@ class BoxDeviceConnector(DeviceConnector):
             list(create(filled=False))
         self._filler.check_created()
 
-    async def connect_mock(self, device: Device, mock: DeviceMock[Any]) -> None:
+    async def connect_mock(self, device: Device, mock: DeviceMock[Device]) -> None:
         """Connect with mock backends, needing no service."""
         if isinstance(device, DeviceVector):
             self._filler.create_device_dict_entries_to_mock(
@@ -501,7 +509,7 @@ class BoxDeviceConnector(DeviceConnector):
                 f"{difference} differs from what the device was filled from; "
                 f"the device must be built again"
             )
-        attached: dict[str, Any] = {}
+        attached: dict[str, SharedBox] = {}
         try:
             self._attach_boxes(description, attached)
         except BaseException:
@@ -516,7 +524,7 @@ class BoxDeviceConnector(DeviceConnector):
         self._description = description
 
     def _attach_boxes(
-        self, description: ControllerDescription, attached: dict[str, Any]
+        self, description: ControllerDescription, attached: dict[str, SharedBox]
     ) -> None:
         """Attach the box of `description` and of every child below it."""
         if description["box"] is not None:

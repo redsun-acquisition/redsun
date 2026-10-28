@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Final, Literal, TypedDict
 
 import numpy as np
 from sharedbox import Capacity, DType, Shape, SharedBox
@@ -136,7 +136,7 @@ def stream_name(prefix: str, part: str) -> str:
     return check_name(f"{namespace(prefix)}:{part}")
 
 
-def datatype_field(datatype: DatatypeDescription) -> tuple[Any, Any]:
+def datatype_field(datatype: DatatypeDescription) -> tuple[object, object]:
     """Return the annotation and the default of a field holding `datatype`."""
     match datatype["kind"]:
         case "int":
@@ -170,10 +170,10 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
         raise ValueError(
             f"controller {':'.join(['root', *controller['path']])!r} has no attributes or commands"
         )
-    annotations: dict[str, Any] = {}
-    body: dict[str, Any] = {"__annotations__": annotations}
+    annotations: dict[str, object] = {}
+    body: dict[str, object] = {"__annotations__": annotations}
 
-    def add(name: str, annotation: Any, default: Any) -> None:
+    def add(name: str, annotation: object, default: object) -> None:
         annotations[name] = annotation
         body[name] = default
 
