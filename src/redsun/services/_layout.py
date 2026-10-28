@@ -1,0 +1,198 @@
+from __future__ import annotations
+
+import re
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, TypedDict
+
+import numpy as np
+from sharedbox import Capacity, DType, Shape, SharedBox
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+__all__ = [
+    "DESCRIPTION_CAPACITY",
+    "ERROR_CAPACITY",
+    "IDENTITY",
+    "RESERVED",
+    "STRING_CAPACITY",
+    "AttributeDescription",
+    "ControllerDescription",
+    "DatatypeDescription",
+    "ServiceIndex",
+    "box_class",
+    "box_name",
+    "index_name",
+    "namespace",
+    "stream_name",
+]
+
+RESERVED: Final = "fastcs"
+"""The name part under which a service publishes its controller boxes."""
+
+ERROR_CAPACITY: Final = 256
+"""Bytes of an `x__error` field."""
+
+STRING_CAPACITY: Final = 256
+"""Bytes of a string attribute that gives no capacity."""
+
+DESCRIPTION_CAPACITY: Final = 262_144
+"""Bytes of the controller description in the index box."""
+
+IDENTITY: Final = "redsun.services.sharedbox"
+"""Schema identity both sides give every box class, so equal layouts match."""
+
+MAX_FIELDS: Final = 256
+PART = re.compile(r"[A-Za-z0-9_-]+")
+NAME = re.compile(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*")
+MAX_NAME: Final = 240
+
+
+class DatatypeDescription(TypedDict, total=False):
+    """The datatype of an attribute, as the service describes it."""
+
+    kind: Literal["int", "uint", "float", "bool", "str", "enum", "waveform"]
+    units: str
+    min: float
+    max: float
+    min_alarm: float
+    max_alarm: float
+    precision: int
+    capacity: int
+    names: list[str]
+    dtype: str
+    shape: list[int]
+
+
+class AttributeDescription(TypedDict):
+    """One attribute of a controller."""
+
+    access: Literal["r", "w", "rw"]
+    datatype: DatatypeDescription
+    description: str
+
+
+class ControllerDescription(TypedDict):
+    """A controller and its children, as the index box carries them."""
+
+    path: list[str]
+    box: str
+    attributes: dict[str, AttributeDescription]
+    commands: list[str]
+    children: dict[str, ControllerDescription]
+
+
+class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
+    """The box a service publishes first: its description, versioned."""
+
+    version: int = 0
+    description: Annotated[bytes, Capacity(DESCRIPTION_CAPACITY)] = b""
+
+
+def check_name(name: str) -> str:
+    """Return `name` if sharedbox accepts it as a box name, else raise `ValueError`."""
+    if len(name) > MAX_NAME or not NAME.fullmatch(name):
+        raise ValueError(
+            f"box names are parts of [A-Za-z0-9_-] joined by ':', "
+            f"at most {MAX_NAME} characters; got {name!r}"
+        )
+    return name
+
+
+def namespace(prefix: str) -> str:
+    """Return `prefix` without one trailing colon, checked as a box name."""
+    return check_name(prefix.removesuffix(":"))
+
+
+def index_name(prefix: str) -> str:
+    """Return the name of the service's index box."""
+    return f"{namespace(prefix)}:{RESERVED}:index"
+
+
+def box_name(prefix: str, path: Sequence[str]) -> str:
+    """Return the name of the box of the controller at `path`."""
+    return check_name(":".join((namespace(prefix), RESERVED, *path)))
+
+
+def stream_name(prefix: str, part: str) -> str:
+    """Return the name of a stream the service publishes outside the controller boxes."""
+    if part == RESERVED or not PART.fullmatch(part):
+        raise ValueError(f"invalid stream name part {part!r}")
+    return check_name(f"{namespace(prefix)}:{part}")
+
+
+def datatype_field(datatype: DatatypeDescription) -> tuple[Any, Any]:
+    """Return the annotation and the default of a field holding `datatype`."""
+    match datatype["kind"]:
+        case "int":
+            return int, 0
+        case "uint":
+            return Annotated[np.ndarray, Shape(1), DType("uint64")], np.zeros(
+                1, dtype="uint64"
+            )
+        case "float":
+            return float, 0.0
+        case "bool":
+            return bool, False
+        case "str":
+            return Annotated[
+                str, Capacity(datatype.get("capacity", STRING_CAPACITY))
+            ], ""
+        case "enum":
+            return int, 0
+        case "waveform":
+            shape = datatype["shape"]
+            dtype = datatype["dtype"]
+            return (
+                Annotated[np.ndarray, Shape(*shape), DType(dtype)],
+                np.zeros(shape, dtype=dtype),
+            )
+
+
+def box_class(controller: ControllerDescription) -> type[SharedBox]:
+    """Return the box class of one controller, equal for equal descriptions."""
+    annotations: dict[str, Any] = {}
+    namespace_: dict[str, Any] = {"__annotations__": annotations}
+
+    def add(name: str, annotation: Any, default: Any) -> None:
+        annotations[name] = annotation
+        namespace_[name] = default
+
+    def add_request(stem: str) -> None:
+        add(f"{stem}__request", int, 0)
+        add(f"{stem}__done", int, 0)
+        add(f"{stem}__error", Annotated[str, Capacity(ERROR_CAPACITY)], "")
+
+    for name, attribute in controller["attributes"].items():
+        if "__" in name:
+            raise ValueError(f"attribute name {name!r} contains '__'")
+        annotation, default = datatype_field(attribute["datatype"])
+        if "r" in attribute["access"]:
+            add(f"{name}__value", annotation, default)
+        if "w" in attribute["access"]:
+            add(f"{name}__setpoint", annotation, default)
+            add_request(name)
+        if attribute["datatype"]["kind"] == "waveform":
+            ndim = len(attribute["datatype"]["shape"])
+            add(
+                f"{name}__shape",
+                Annotated[tuple[int, ...], Capacity(ndim)],
+                (0,) * ndim,
+            )
+    for command in controller["commands"]:
+        if "__" in command:
+            raise ValueError(f"command name {command!r} contains '__'")
+        add_request(command)
+
+    if len(annotations) > MAX_FIELDS:
+        raise ValueError(
+            f"controller {'/'.join(controller['path'])!r} has {len(annotations)} fields; "
+            f"a box holds at most {MAX_FIELDS}"
+        )
+    return type(
+        "ControllerBox",
+        (SharedBox,),
+        namespace_,
+        identity=IDENTITY,
+        kw_only=True,
+        max_waiters=len(annotations),
+    )
