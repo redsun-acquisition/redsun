@@ -9,8 +9,9 @@ plan progress receives, moves some axes to another box of the positioner,
 removes two helpers the positioner no longer uses, changes what a session
 does when a service does not start, stops a held key from running its
 command again and again, and moves the test fixtures for Qt into a plugin of
-their own. This page gives each change with what to write instead. The [changelog](../reference/changelog.md) lists everything
-else the release changed.
+their own. This page gives each change with what to write instead. The
+[changelog](../reference/changelog.md) lists everything else the release
+changed.
 
 ## A view's placement can't come from a property
 
