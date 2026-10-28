@@ -62,7 +62,7 @@ def test_a_session_builds_a_device_from_a_box_service(
     run_coro(round_trip())
 
 
-def test_a_channel_access_session_loads_neither_sharedbox_nor_fastcs(
+def test_a_session_without_sharedbox_loads_neither_sharedbox_nor_fastcs(
     tmp_path: Path,
 ) -> None:
     """Import neither package while building a session with no services."""
