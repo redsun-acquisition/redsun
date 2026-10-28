@@ -217,11 +217,13 @@ def interrupt_when_stdin_closes() -> None:
 async def serve_controller(
     controller: Controller, transport: Transport, prefix: str | None = None
 ) -> None:
-    """Serve *controller* over *transport* until the session asks this service to stop.
+    """Serve `controller` over `transport` until the session asks this service to stop.
 
-    *prefix* defaults to the one the session gave this process. The service is
-    ready once its transport is reachable: a transport with a `reachable`
-    method is awaited on it, any other is asked for the PV `<prefix>:PVI`.
+    `prefix` defaults to the one the session gave this process, and one trailing
+    colon is taken off it, so a device given `STAGE:` finds a controller served
+    as `STAGE`. The service is ready once its transport is reachable: a
+    transport with a `reachable` method is awaited on it, any other is asked for
+    the PV `<prefix>:PVI`.
 
     Raises
     ------
@@ -235,6 +237,7 @@ async def serve_controller(
         if service is None or not service.prefix:
             raise ValueError("give a prefix: no session launched this process with one")
         prefix = service.prefix
+    prefix = prefix.removesuffix(":")
     faulthandler.dump_traceback_later(TRACEBACK_DELAY)
     controller.set_path([prefix])
     control_system = FastCS(controller, [transport])
@@ -259,7 +262,7 @@ async def serve_controller(
 
 
 async def announce_when_reachable(transport: Transport, prefix: str) -> None:
-    """Call [`ready`][redsun.services.ready] once *transport* is reachable."""
+    """Call [`ready`][redsun.services.ready] once `transport` is reachable."""
     reachable = getattr(transport, "reachable", None)
     if reachable is None:
         await ready_when_reachable(f"{prefix}:PVI")

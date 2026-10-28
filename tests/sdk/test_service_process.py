@@ -35,6 +35,8 @@ PROCESS_STAND_IN = "mock_pkg.service.process_stand_in"
 PROCESS_READY = "process stand-in ready"
 REACHABLE_STAND_IN = "mock_pkg.service.reachable_stand_in"
 REACHABLE_READY = "reachable stand-in ready"
+PVA_CONTROLLER_STAND_IN = "mock_pkg.service.pva_controller_stand_in"
+PVA_CONTROLLER_READY = "pva controller ready"
 
 
 @pytest.fixture
@@ -208,6 +210,29 @@ def test_a_pva_service_is_ready_once_its_pv_answers(
     info = messages(service_log, logging.INFO)
     assert "Service 'reachable' started" in info
     assert "Service 'reachable' stopped with exit code 0" in info
+
+
+def test_a_controller_served_over_pva_is_ready_under_a_prefix_ending_in_a_colon(
+    launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Serve a controller's PVs where a device given the session's prefix looks for them."""
+    monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
+    monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
+    service = Service(
+        "controller",
+        prefix="STAGE:",
+        module=PVA_CONTROLLER_STAND_IN,
+        ready=PVA_CONTROLLER_READY,
+        stop_timeout=5,
+        transport=PV_ACCESS,
+    )
+
+    try:
+        service.start()
+        with Context("pva", conf={"EPICS_PVA_ADDR_LIST": LOOPBACK}) as client:
+            client.get("STAGE:PVI", timeout=2.0)
+    finally:
+        service.stop()
 
 
 @pytest.mark.parametrize(
