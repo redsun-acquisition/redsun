@@ -27,9 +27,9 @@ from ._layout import (
     AttributeDescription,
     ControllerDescription,
     DatatypeDescription,
-    ServiceIndex,
     box_class,
     box_name,
+    index_class,
     index_name,
 )
 
@@ -142,7 +142,7 @@ class BoxTransport(Transport):
         """Start with no boxes."""
         self._nodes: list[tuple[ControllerAPI, ControllerDescription]] = []
         self._boxes: dict[str, SharedBox] = {}
-        self._index: ServiceIndex | None = None
+        self._index: SharedBox | None = None
         self._prefix = ""
         self._run = ""
         self._published = asyncio.Event()
@@ -176,7 +176,7 @@ class BoxTransport(Transport):
                         box_class(node), node["box"], self._initial_values(node_api)
                     )
             self._index = self._publish(
-                ServiceIndex,
+                index_class(),
                 index_name(self._prefix),
                 {"version": 1, "description": description},
             )
@@ -217,15 +217,16 @@ class BoxTransport(Transport):
     def _clean_leftovers(self) -> None:
         """Unlink the boxes and the index a previous run of this service left."""
         name = index_name(self._prefix)
+        index_cls = index_class()
         try:
-            old = ServiceIndex.attach(name)
+            old = index_cls.attach(name)
         except SegmentNotFoundError:
             return
         except (SchemaMismatchError, KindMismatchError):
-            ServiceIndex.unlink(name)
+            index_cls.unlink(name)
             return
         try:
-            for box in self._box_names(json.loads(old.description)):
+            for box in self._box_names(json.loads(old.snapshot()["description"])):
                 with contextlib.suppress(SegmentNotFoundError):
                     SharedBox.unlink(box)
         finally:

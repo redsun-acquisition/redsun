@@ -20,8 +20,8 @@ from sharedbox import SegmentNotFoundError, SharedBox
 
 from redsun.services._layout import (
     ControllerDescription,
-    ServiceIndex,
     box_class,
+    index_class,
     index_name,
 )
 from redsun.services.sharedbox import BoxTransport
@@ -32,7 +32,7 @@ class Service:
 
     def __init__(self, prefix: str) -> None:
         self.prefix = prefix
-        self.index: ServiceIndex
+        self.index: SharedBox
         self.root: ControllerDescription
         self.boxes: dict[str, SharedBox] = {}
 
@@ -40,11 +40,11 @@ class Service:
         async with asyncio.timeout(5):
             while True:
                 try:
-                    self.index = ServiceIndex.attach(index_name(self.prefix))
+                    self.index = index_class().attach(index_name(self.prefix))
                     break
                 except SegmentNotFoundError:
                     await asyncio.sleep(0.01)
-        self.root = json.loads(self.index.description)
+        self.root = json.loads(self.index.snapshot()["description"])
         for description in self.walk(self.root):
             if description["box"] is not None:
                 self.boxes[description["box"]] = box_class(description).attach(
@@ -242,7 +242,7 @@ async def test_boxes_are_closed_when_serving_stops() -> None:
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
     with pytest.raises(SegmentNotFoundError):
-        ServiceIndex.attach(index_name(service.prefix))
+        index_class().attach(index_name(service.prefix))
 
 
 async def test_a_prefix_with_colons_names_the_boxes() -> None:

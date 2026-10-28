@@ -34,8 +34,8 @@ from redsun.log import logger
 from ..services._layout import (
     AttributeDescription,
     ControllerDescription,
-    ServiceIndex,
     box_class,
+    index_class,
     index_name,
     stream_name,
 )
@@ -486,18 +486,21 @@ class BoxDeviceConnector(DeviceConnector):
     async def _attach(self, timeout: float) -> None:
         """Attach the index, retrying until `timeout`, then every box it names."""
         name = index_name(self._prefix)
+        index_cls = index_class()
         try:
             async with asyncio.timeout(timeout):
                 while True:
                     try:
-                        index = ServiceIndex.attach(name)
+                        index = index_cls.attach(name)
                         break
                     except SegmentNotFoundError:
                         await asyncio.sleep(_ATTACH_RETRY)
         except TimeoutError:
             raise TimeoutError(f"no sharedbox service publishes {name!r}") from None
         try:
-            description: ControllerDescription = json.loads(index.description)
+            description: ControllerDescription = json.loads(
+                index.snapshot()["description"]
+            )
         finally:
             index.close()
         if (
