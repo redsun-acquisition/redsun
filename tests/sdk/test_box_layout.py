@@ -48,7 +48,8 @@ def made(unique_name: str) -> Iterator[list[SharedBox]]:
     yield boxes
     for box in boxes:
         box.close()
-        box.unlink()
+    for name in {box.name for box in boxes}:
+        SharedBox.unlink(name)
 
 
 def test_the_same_description_gives_the_same_box_class(
