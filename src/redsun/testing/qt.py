@@ -1,6 +1,6 @@
 """Pytest fixtures for testing Qt components.
 
-A suite loads them with `-p redsun.testing.qt`, after `-p redsun.testing`,
+A suite loads them with `-p redsun.testing.qt`, together with `-p redsun.testing`,
 which provides the `no_automatic_collection` fixture they need. Loading them
 makes a test using `qapp` that leaves the application's stylesheet, style, font
 or palette changed fail, and releases the slots of the widgets freed after each
@@ -22,12 +22,11 @@ from typing import TYPE_CHECKING, cast
 import pytest
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QCoreApplication, Qt
+from qtpy.QtGui import QPalette
 from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    from qtpy.QtGui import QPalette
 
 __all__ = [
     "application_state",
@@ -123,7 +122,7 @@ def keep_application_as_found(
     if after == before:
         return
     app.setStyleSheet(before[0])
-    app.setPalette(before[3] if before[3] is not None else type(app.palette())())
+    app.setPalette(before[3] if before[3] is not None else QPalette())
     names = ("stylesheet", "style", "font", "palette")
     changed = [
         name for name, was, now in zip(names, before, after, strict=True) if was != now
