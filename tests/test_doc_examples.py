@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import pytest
@@ -10,10 +11,11 @@ if TYPE_CHECKING:
 
     from qtpy.QtWidgets import QApplication
 
+BOX_EXAMPLES = ["box_detector"] if find_spec("sharedbox") else []
+
 EXAMPLES = [
     "acquisition",
     "acquisition_files",
-    "box_detector",
     "connect_on_demand",
     "console_frontend",
     "continuous_areadetector",
@@ -24,6 +26,7 @@ EXAMPLES = [
     "napari_style",
     "positioner",
     "positioner_custom",
+    *BOX_EXAMPLES,
 ]
 
 

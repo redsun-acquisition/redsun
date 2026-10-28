@@ -105,7 +105,7 @@ checks that the two agree -->
 <button type="button" data-value="zarr">Zarr<small><code>zarr</code>: derived products, with <code>acquire-zarr</code></small></button>
 <button type="button" data-value="ome-zarr">OME-Zarr<small><code>ome-zarr</code>: derived products beside an OME-Zarr image, with <code>ome-writers</code></small></button>
 <button type="button" data-value="tiled">Tiled<small><code>tiled</code>: a catalog of runs, with <code>tiled</code> and <code>ome-tiled</code></small></button>
-<button type="button" data-value="sharedbox">Sharedbox<small><code>sharedbox</code>: a FastCS controller served over shared memory, with <code>fastcs</code> and <code>sharedbox</code></small></button>
+<button type="button" data-value="sharedbox">Sharedbox<small><code>sharedbox</code>: a FastCS controller served over shared memory, with <code>fastcs</code> and <code>sharedbox</code>; Windows x64 and Linux x86_64</small></button>
 </div>
 </div>
 <div class="install-row" data-role="extra" data-multiple role="group" aria-label="Development">

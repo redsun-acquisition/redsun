@@ -63,7 +63,7 @@ dev = [
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
-    "sharedbox>=0.6.0",
+    "sharedbox>=0.6.0 ; sys_platform != 'darwin'",
 ]
 docs = [
     "markdown-d2>=0.4.2",
@@ -141,7 +141,7 @@ qlementine-pyside = [
 ]
 sharedbox = [
     "fastcs>=0.14.4",
-    "sharedbox>=0.6.0",
+    "sharedbox>=0.6.0 ; sys_platform != 'darwin'",
 ]
 
 [project.optional-dependencies]
