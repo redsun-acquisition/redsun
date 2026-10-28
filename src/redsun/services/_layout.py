@@ -42,9 +42,16 @@ IDENTITY: Final = "redsun.services.sharedbox"
 """Schema identity both sides give every box class, so equal layouts match."""
 
 MAX_FIELDS: Final = 256
-PART = re.compile(r"[A-Za-z0-9_-]+")
-NAME = re.compile(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*")
+"""Most fields sharedbox allows in one box."""
+
 MAX_NAME: Final = 240
+"""Most characters sharedbox allows in a box name."""
+
+PART: Final = re.compile(r"[A-Za-z0-9_-]+")
+"""One part of a box name."""
+
+NAME: Final = re.compile(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*")
+"""A box name: parts joined by colons."""
 
 
 class DatatypeDescription(TypedDict, total=False):
@@ -75,7 +82,9 @@ class ControllerDescription(TypedDict):
     """A controller and its children, as the index box carries them."""
 
     path: list[str]
-    box: str
+    box: str | None
+    """Name of the controller's box, or None for a controller with no attributes or commands."""
+
     attributes: dict[str, AttributeDescription]
     commands: list[str]
     children: dict[str, ControllerDescription]
@@ -150,12 +159,16 @@ def datatype_field(datatype: DatatypeDescription) -> tuple[Any, Any]:
 
 def box_class(controller: ControllerDescription) -> type[SharedBox]:
     """Return the box class of one controller, equal for equal descriptions."""
+    if not controller["attributes"] and not controller["commands"]:
+        raise ValueError(
+            f"controller {'/'.join(controller['path'])!r} has no attributes or commands"
+        )
     annotations: dict[str, Any] = {}
-    namespace_: dict[str, Any] = {"__annotations__": annotations}
+    body: dict[str, Any] = {"__annotations__": annotations}
 
     def add(name: str, annotation: Any, default: Any) -> None:
         annotations[name] = annotation
-        namespace_[name] = default
+        body[name] = default
 
     def add_request(stem: str) -> None:
         add(f"{stem}__request", int, 0)
@@ -191,7 +204,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
     return type(
         "ControllerBox",
         (SharedBox,),
-        namespace_,
+        body,
         identity=IDENTITY,
         kw_only=True,
         max_waiters=len(annotations),
