@@ -14,6 +14,8 @@ Components must not build their own loop or install a backend.
 from __future__ import annotations
 
 import asyncio
+import atexit
+import contextlib
 import inspect
 from concurrent.futures import wait
 from functools import cache
@@ -42,6 +44,9 @@ R = TypeVar("R")
 
 CLOSE_TIMEOUT: Final = 5.0
 """Seconds `CulsansAsyncioBackend.close` waits for the drain to stop."""
+
+STOP_TIMEOUT: Final = 5.0
+"""Seconds `stop_shared_loop` waits for each step of stopping the loop."""
 
 
 class AwaitableEvent:
@@ -80,7 +85,33 @@ def get_shared_loop() -> asyncio.AbstractEventLoop:
     # bluesky's RunEngine looks up the thread of a loop that is already running,
     # and a loop it did not start itself is missing from that registry
     _ensure_event_loop_running.loop_to_thread[loop] = thread  # type: ignore[attr-defined]
+    # a daemon thread still running at exit is never freed, and neither is
+    # anything its pending tasks hold
+    atexit.register(stop_shared_loop, loop, thread)
     return loop
+
+
+def stop_shared_loop(loop: asyncio.AbstractEventLoop, thread: Thread) -> None:
+    """Cancel the tasks left on *loop*, stop it, and close it once *thread* ends.
+
+    Each step waits at most `STOP_TIMEOUT` seconds, so a task that ignores its
+    cancellation delays the exit but does not hold it.
+    """
+    if thread.is_alive():
+        with contextlib.suppress(TimeoutError):
+            asyncio.run_coroutine_threadsafe(cancel_tasks(), loop).result(STOP_TIMEOUT)
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(STOP_TIMEOUT)
+    if not thread.is_alive() and not loop.is_closed():
+        loop.close()
+
+
+async def cancel_tasks() -> None:
+    """Cancel every other task of the running loop and wait until they end."""
+    tasks = asyncio.all_tasks() - {asyncio.current_task()}
+    for task in tasks:
+        task.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class CulsansAsyncioBackend(_AsyncBackend, Loggable):
