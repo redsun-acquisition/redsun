@@ -6,7 +6,7 @@ acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and turn automatic garbage collection off for the
 run, collecting after each test module on the main thread. A test that used
 [`build`][redsun.testing.build] is collected after it too, and fails if a
-session `build` built is still alive.
+session `build` built is still alive, unless the test raised.
 """
 
 from __future__ import annotations
