@@ -381,6 +381,12 @@ keeps its port for as long as the session process runs. PVAccess servers
 share the search port, and the client is told to look at `127.0.0.1` because
 it doesn't search the loopback address otherwise.
 
+Under `sharedbox` the session sets up nothing, because a device finds its
+service's [boxes](glossary.md#box) by name, under the service's prefix, with
+no port or address involved. The service and the session then have to run on
+the same computer. [How to serve a FastCS controller over
+sharedbox](../how-to/serve-over-sharedbox.md) shows both sides.
+
 !!! warning "Another program can take the port first"
 
     A port is free when the session chooses it, but nothing holds it until
@@ -389,10 +395,11 @@ it doesn't search the loopback address otherwise.
     connect. The service keeps its port for the life of the session process,
     so to get a different port, start the session again in a new process.
 
-`redsun` itself depends on `ophyd-async` and on nothing that either protocol
-needs. Each component brings what its own service speaks, such as `caproto`,
-`p4p` or `fastcs`, plus `ophyd-async[ca]` or `ophyd-async[pva]` for the device
-side; see [Write a service](../how-to/write-a-service.md).
+`redsun` itself depends on `ophyd-async` and on nothing that either network
+protocol needs. Each component brings what its own service speaks, such as
+`caproto`, `p4p` or `fastcs`, plus `ophyd-async[ca]` or `ophyd-async[pva]` for
+the device side; see [Write a service](../how-to/write-a-service.md). The
+`sharedbox` transport comes with the `sharedbox` extra of `redsun`.
 
 ## What a launched service receives
 

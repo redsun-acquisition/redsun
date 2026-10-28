@@ -55,6 +55,7 @@ release notes.
 | keep a setting between runs | [Settings](api/session.md#settings) |
 | choose where files go | [`redsun.path_provider`](api/path_provider.md) |
 | launch or attach to a service | [`redsun.services`](api/services.md) |
+| serve a `fastcs` controller over shared memory and build its device | [`redsun.services.sharedbox`](api/services-sharedbox.md), [`redsun.device.sharedbox`](api/device-sharedbox.md) |
 | test a plugin's components and services | [`redsun.testing`](api/testing.md) |
 | log from a component | [`redsun.log`](api/log.md) |
 | catch what a session raises | [`redsun.errors`](api/errors.md) |
@@ -67,6 +68,9 @@ Find a class or a function by the module you import it from.
     - [`redsun.aio`](api/aio.md): run a coroutine on the event loop the
       session shares
     - [`redsun.catalog`](api/catalog.md): the catalog of runs a session keeps
+    - `redsun.device`: devices a session builds from what a service serves
+        - [`redsun.device.sharedbox`](api/device-sharedbox.md): a device
+          filled from the boxes of a `fastcs` controller
     - [`redsun.engine`](api/engine.md): the `RunEngine` that runs the plans of
       a presenter
         - [`redsun.engine.actions`](api/engine.md#actions): plans that run
@@ -91,6 +95,8 @@ Find a class or a function by the module you import it from.
     - [`redsun.registry`](api/registry.md): the values every component may
       ask for
     - [`redsun.services`](api/services.md): the servers devices talk to
+        - [`redsun.services.sharedbox`](api/services-sharedbox.md): a
+          `fastcs` controller served as boxes in shared memory
     - [`redsun.session`](api/session.md): the session, and how components
       are declared
     - [`redsun.testing`](api/testing.md): `pytest` fixtures for testing a

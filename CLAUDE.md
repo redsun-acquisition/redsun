@@ -21,7 +21,10 @@ redsun/
 |   |-- registry/              SessionConfig, PlanEntry, CallbackType, DeviceMapping
 |   |-- engine/                RunEngine wrapper, actions, plan stubs
 |   |-- presenter/             plan spec: plan signatures read into widget descriptions
-|   |-- services/              Service: a process or server devices talk to
+|   |-- services/              Service: a process or server devices talk to;
+|   |                          sharedbox.py, BoxTransport (the sharedbox extra)
+|   |-- device/                ophyd-async connectors for redsun's transports:
+|   |                          sharedbox.py, BoxDeviceConnector
 |   |-- path_provider.py       SessionPathProvider, session_directory
 |   |-- testing.py             pytest fixtures a plugin's tests load, redsun's too
 |   |-- errors.py              the exceptions a session raises
@@ -59,8 +62,10 @@ redsun/
 `-- uv.lock
 ```
 
-- There is no device package: devices, `DeviceMap` included, come from
-  ophyd-async.
+- Devices, `DeviceMap` included, come from ophyd-async. `redsun.device` holds
+  only the ophyd-async connectors for `redsun`'s own transports. Its
+  `__init__.py` imports none of its modules, so `sharedbox` is loaded only by
+  a device that imports `redsun.device.sharedbox`.
 - `redsun.utils` imports nothing from `redsun` at runtime, only under
   `TYPE_CHECKING`: `log.py` imports `redsun.utils._paths`, so a runtime import
   there would be circular.

@@ -54,7 +54,7 @@ from typing import (
 )
 
 from app_model import Action, Application
-from app_model.backends.qt import QModelMainWindow, QModelMenu
+from app_model.backends.qt import QCommandAction, QModelMainWindow, QModelMenu
 from app_model.types import KeyBinding, KeyBindingRule, KeyCode, MenuRule, ToggleRule
 from platformdirs import user_documents_dir
 from psygnal import emit_queued
@@ -567,6 +567,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # QApplication takes the next widget built with it
         self._qt_app = qt_app
         self.on_release(self._forget_application_object)
+        # released after the collector's last collection, so the slots of
+        # the widgets it frees are released too
+        self.on_release(self._release_slots)
         # pyside6 aborts when a collection on a background thread frees a widget
         collector = GarbageCollector(qt_app, self.garbage_interval)
         collector.start()
@@ -1151,7 +1154,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         fit_layout(self.main_window, self._shown_layout)
 
     def _destroy_widgets(self) -> None:
-        """Close and delete the views, then the window that holds them.
+        """Close and delete the views, the window that holds them and the actions of its menus.
 
         Each widget is closed before it is deleted, so its `closeEvent` runs.
 
@@ -1181,10 +1184,27 @@ class QtSession(DesktopSession[QMainWindow], Session):
             self._main_window.deleteLater()
             self._main_window = None
         if self._qt_app is not None:
+            # app_model parents the actions of its menus to the application,
+            # which outlives the session, so they would keep the session's
+            # application, and through its store the session, alive; the
+            # identity check spares the actions of another session
+            for action in self._qt_app.findChildren(QCommandAction):
+                if action._app is self._model:
+                    action.deleteLater()
             # deleteLater only posts the deletion, and a session shut down
             # with no loop running would never reach the pass that carries
             # it out
             self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    def _release_slots(self) -> None:
+        """Deliver the events that release the slots of the widgets deleted at shutdown."""
+        if self._qt_app is not None:
+            # pyqt6 holds each slot of a deleted widget until two passes run:
+            # the first delivers the calls the deletion queued, which post
+            # the deletion of the objects holding the slots, and the second
+            # carries those out
+            self._qt_app.sendPostedEvents()
+            self._qt_app.sendPostedEvents()
 
     # underscored: a hook is declared under its hook point's key, which a
     # public method of that name would collide with

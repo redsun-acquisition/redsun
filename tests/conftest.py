@@ -11,6 +11,7 @@ import os
 import sys
 import time
 from importlib.metadata import EntryPoint
+from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest import mock
@@ -24,6 +25,17 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
 _MOCK_PKG_DIR = Path(__file__).parent / "launchable" / "mock_bundle"
+
+collect_ignore = (
+    []
+    if find_spec("sharedbox")
+    else [
+        "sdk/test_box_layout.py",
+        "sdk/test_box_transport.py",
+        "sdk/test_box_device.py",
+        "test_box_service.py",
+    ]
+)
 
 
 @pytest.fixture

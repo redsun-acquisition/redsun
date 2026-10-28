@@ -40,6 +40,7 @@ nav = [
             "how-to/package-a-plugin.md",
             "how-to/test-a-plugin.md",
             "how-to/connect-a-device-on-demand.md",
+            "how-to/serve-over-sharedbox.md",
         ]},
         { "Write plans" = [
             "how-to/run-a-plan.md",
@@ -141,6 +142,7 @@ nav = [
                 "explanation/decisions/0032-the-qlementine-style-comes-behind-one-extra-per-binding.md",
                 "explanation/decisions/0033-device-trees-one-index-of-every-device.md",
                 "explanation/decisions/0034-a-root-device-takes-the-prefixes-of-several-services.md",
+                "explanation/decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes.md",
         ]},
     ]},
     { "Reference" = [
@@ -157,6 +159,7 @@ nav = [
         { "API" = [
             "reference/api/aio.md",
             "reference/api/catalog.md",
+            "reference/api/device-sharedbox.md",
             "reference/api/engine.md",
             "reference/api/errors.md",
             "reference/api/injection.md",
@@ -167,6 +170,7 @@ nav = [
             "reference/api/qt.md",
             "reference/api/registry.md",
             "reference/api/services.md",
+            "reference/api/services-sharedbox.md",
             "reference/api/session.md",
             "reference/api/testing.md",
             "reference/api/utils.md",

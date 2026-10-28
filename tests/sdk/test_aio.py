@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import gc
 import logging
+import subprocess
 import sys
 import threading
 import traceback
@@ -34,6 +35,23 @@ if TYPE_CHECKING:
     from psygnal._async import QueueItem, SupportedBackend
 
 TIMEOUT = 10.0
+
+LEFT_WAITING = """
+import asyncio, threading
+from redsun.aio import run_coro
+
+started = threading.Event()
+
+async def wait_an_hour():
+    started.set()
+    try:
+        await asyncio.sleep(3600)
+    finally:
+        print("cancelled", flush=True)
+
+run_coro(wait_an_hour(), return_future=True)
+started.wait()
+"""
 
 
 class Awaitable3:
@@ -515,3 +533,16 @@ async def test_cancel_task_cancels_a_waiting_task_of_the_calling_loop() -> None:
 
     with pytest.raises(asyncio.CancelledError):
         await task
+
+
+def test_a_task_left_on_the_shared_loop_is_cancelled_at_exit() -> None:
+    """Cancel a task still waiting on the shared loop when the process exits."""
+    ran = subprocess.run(
+        [sys.executable, "-c", LEFT_WAITING],
+        capture_output=True,
+        text=True,
+        timeout=TIMEOUT,
+        check=True,
+    )
+
+    assert ran.stdout.splitlines() == ["cancelled"]

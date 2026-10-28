@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import faulthandler
 import json
 import logging
 import os
@@ -8,11 +9,16 @@ import signal
 import sys
 import threading
 from dataclasses import dataclass
-from typing import Final
+from functools import partial
+from typing import TYPE_CHECKING, Final
 
 from redsun.log import DEFAULT_LEVEL, logger
 
 from ._transports import LOOPBACK
+
+if TYPE_CHECKING:
+    from fastcs.controllers import Controller
+    from fastcs.transports import Transport
 
 NAME_VARIABLE: Final = "REDSUN_SERVICE_NAME"
 """Variable holding the name a session declares a launched service under."""
@@ -28,6 +34,10 @@ LEVEL_VARIABLE: Final = "REDSUN_LOG_LEVEL"
 
 ATTEMPT_TIMEOUT: Final = 1.0
 """Seconds `ready_when_reachable` waits for each answer, and between failures."""
+
+TRACEBACK_DELAY: Final = 10.0
+"""Seconds `serve_controller` may take to become ready, or to stop once asked, before
+it writes every thread's stack to its output."""
 
 
 @dataclass(frozen=True)
@@ -203,3 +213,67 @@ def interrupt_when_stdin_closes() -> None:
         signal.pthread_kill(main, signal.SIGINT)
     else:
         signal.raise_signal(signal.SIGINT)
+
+
+async def serve_controller(
+    controller: Controller, transport: Transport, prefix: str | None = None
+) -> None:
+    """Serve `controller` over `transport` until the session asks this service to stop.
+
+    `prefix` defaults to the one the session gave this process, and one trailing
+    colon is taken off it, so a device given `STAGE:` finds a controller served
+    as `STAGE`. The service is ready once its transport is reachable: a
+    transport with a `reachable` method is awaited on it, any other is asked for
+    the PV `<prefix>:PVI`.
+
+    Raises
+    ------
+    ValueError
+        If there is no prefix, given or from a session.
+    """
+    from fastcs.control_system import FastCS  # noqa: PLC0415
+
+    if prefix is None:
+        service = identity()
+        if service is None or not service.prefix:
+            raise ValueError("give a prefix: no session launched this process with one")
+        prefix = service.prefix
+    prefix = prefix.removesuffix(":")
+    faulthandler.dump_traceback_later(TRACEBACK_DELAY)
+    controller.set_path([prefix])
+    control_system = FastCS(controller, [transport])
+    serve_task = asyncio.ensure_future(control_system.serve(interactive=False))
+    ready_task = asyncio.ensure_future(announce_when_reachable(transport, prefix))
+    ready_task.add_done_callback(lambda _: faulthandler.cancel_dump_traceback_later())
+    ready_task.add_done_callback(partial(log_failed_announcement, prefix))
+    stop_task = asyncio.ensure_future(wait_for_stop())
+    try:
+        await asyncio.wait({stop_task, serve_task}, return_when=asyncio.FIRST_COMPLETED)
+        if serve_task.done():
+            error = serve_task.exception() if not serve_task.cancelled() else None
+            if error is not None:
+                logger.error("serving %s failed: %s", prefix, error, exc_info=error)
+                raise error
+    finally:
+        faulthandler.dump_traceback_later(TRACEBACK_DELAY)
+        stop_task.cancel()
+        ready_task.cancel()
+        serve_task.cancel()
+        await asyncio.gather(serve_task, ready_task, stop_task, return_exceptions=True)
+        faulthandler.cancel_dump_traceback_later()
+
+
+def log_failed_announcement(prefix: str, task: asyncio.Future[None]) -> None:
+    """Log why the service `prefix` could not announce itself, if it could not."""
+    if not task.cancelled() and (error := task.exception()) is not None:
+        logger.error("%s could not tell it is ready: %s", prefix, error, exc_info=error)
+
+
+async def announce_when_reachable(transport: Transport, prefix: str) -> None:
+    """Call [`ready`][redsun.services.ready] once `transport` is reachable."""
+    reachable = getattr(transport, "reachable", None)
+    if reachable is None:
+        await ready_when_reachable(f"{prefix}:PVI")
+        return
+    await reachable()
+    ready()

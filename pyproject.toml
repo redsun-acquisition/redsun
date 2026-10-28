@@ -63,6 +63,7 @@ dev = [
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
+    "sharedbox>=0.6.0 ; sys_platform != 'darwin'",
 ]
 docs = [
     "markdown-d2>=0.4.2",
@@ -138,6 +139,10 @@ qlementine-pyside = [
     "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "pyside6-qlementine>=1.5.1",
 ]
+sharedbox = [
+    "fastcs>=0.14.4",
+    "sharedbox>=0.6.0 ; sys_platform != 'darwin'",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -195,6 +200,10 @@ qlementine-pyside = [
     "pyside6-essentials>=6.10.2,!=6.11.0,!=6.11.1",
     "pyside6-qlementine>=1.5.1",
 ]
+sharedbox = [
+    "fastcs>=0.14.4",
+    "sharedbox>=0.6.0",
+]
 
 [project.scripts]
 redsun = "redsun._cli:main"
@@ -243,10 +252,16 @@ warn_unreachable = true
 warn_no_return = true
 
 # caproto and fastcs ship no type information, so a class taken from either is
-# Any and subclassing one is an error a stub would fix
+# Any, and subclassing one or decorating with one is an error a stub would fix
 [[tool.mypy.overrides]]
-module = ["docs.tutorials.stage_ioc", "docs.examples.stage_fastcs"]
-disable_error_code = ["misc"]
+module = [
+    "docs.tutorials.stage_ioc",
+    "docs.examples.box_service",
+    "docs.examples.stage_fastcs",
+    "redsun.services.sharedbox",
+    "mock_pkg.box_controller",
+]
+disable_error_code = ["misc", "untyped-decorator"]
 
 [tool.coverage.run]
 source = ["redsun"]

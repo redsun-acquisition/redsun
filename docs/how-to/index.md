@@ -26,6 +26,7 @@ them together.
 - [How to package components as a plugin](package-a-plugin.md)
 - [How to test a plugin](test-a-plugin.md)
 - [How to connect a device on demand](connect-a-device-on-demand.md)
+- [How to serve a FastCS controller over sharedbox](serve-over-sharedbox.md)
 
 ### Write plans
 

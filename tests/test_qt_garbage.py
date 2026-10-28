@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from qtpy.QtCore import QCoreApplication, QEvent, QTimer
+from qtpy.QtWidgets import QPushButton
 
 from redsun.qt import QtSession
 from tests.sdk.helpers import automatic_collection
@@ -32,6 +33,23 @@ class Cycle:
 
     def __init__(self) -> None:
         self.me = self
+
+
+def receiver_class() -> type[Any]:
+    """Return a new class whose method no other class shares, so a weakref shows when it is freed."""
+
+    class Receiver:
+        """An object only a cycle holds, with a button connected to its own method."""
+
+        def __init__(self) -> None:
+            self.me = self
+            self.button = QPushButton()
+            self.button.clicked.connect(self.on_clicked)
+
+        def on_clicked(self) -> None:
+            pass
+
+    return Receiver
 
 
 def test_a_cycle_is_collected_on_the_gui_thread(
@@ -80,6 +98,23 @@ def test_shutdown_frees_the_sessions_cycles_on_the_gui_thread(
         app.shutdown()
 
     assert freed == [threading.main_thread().ident]
+
+
+def test_shutdown_releases_the_slots_of_the_widgets_its_collection_frees(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Release a slot whose receiver the shutdown's collection frees, before the shutdown returns."""
+    with automatic_collection(True):
+        app = build(EmptyApp)
+        receiver = receiver_class()
+        slot = weakref.ref(receiver.on_clicked)
+        receiver()
+        del receiver
+
+        app.shutdown()
+        alive = slot() is not None
+
+    assert not alive
 
 
 def test_shutdown_collects_nothing_when_collection_was_already_off(
