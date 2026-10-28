@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import copy
 import heapq
 import logging
 import os
@@ -193,18 +194,34 @@ class BufferHandler(logging.Handler):
         )
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Retain *record* with the records of its source, and announce it."""
-        service = service_of(record)
+        """Retain *record* with the records of its source, and announce it.
+
+        What is retained is a copy holding the message and the traceback as
+        text, so the objects the record was logged with are not kept alive.
+        """
+        try:
+            kept = copy.copy(record)
+            kept.msg = record.getMessage()
+            kept.args = None
+            if record.exc_info:
+                kept.exc_text = record.exc_text or logging.Formatter().formatException(
+                    record.exc_info
+                )
+                kept.exc_info = None
+        except Exception:  # noqa: BLE001 - reported by handleError
+            self.handleError(record)
+            return
+        service = service_of(kept)
         if service is None:
-            self._records.append(record)
+            self._records.append(kept)
         else:
             records = self._service_records.get(service)
             if records is None:
                 records = self._service_records[service] = deque(
                     maxlen=self._service_capacity
                 )
-            records.append(record)
-        self.sig_record.emit(record)
+            records.append(kept)
+        self.sig_record.emit(kept)
 
     def clear(self) -> None:
         """Drop every retained record."""
