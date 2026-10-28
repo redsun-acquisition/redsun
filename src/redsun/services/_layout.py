@@ -161,7 +161,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
     """Return the box class of one controller, equal for equal descriptions."""
     if not controller["attributes"] and not controller["commands"]:
         raise ValueError(
-            f"controller {'/'.join(controller['path'])!r} has no attributes or commands"
+            f"controller {':'.join(['root', *controller['path']])!r} has no attributes or commands"
         )
     annotations: dict[str, Any] = {}
     body: dict[str, Any] = {"__annotations__": annotations}
@@ -198,7 +198,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
 
     if len(annotations) > MAX_FIELDS:
         raise ValueError(
-            f"controller {'/'.join(controller['path'])!r} has {len(annotations)} fields; "
+            f"controller {':'.join(['root', *controller['path']])!r} has {len(annotations)} fields; "
             f"a box holds at most {MAX_FIELDS}"
         )
     return type(

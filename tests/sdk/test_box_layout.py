@@ -144,7 +144,11 @@ def test_a_controller_without_fields_has_no_box() -> None:
     description["commands"] = []
     description["box"] = None
 
-    with pytest.raises(ValueError, match="ctrl"):
+    with pytest.raises(ValueError, match="'root:ctrl'"):
+        box_class(description)
+
+    description["path"] = []
+    with pytest.raises(ValueError, match="'root'"):
         box_class(description)
 
 
@@ -157,7 +161,7 @@ def test_a_controller_with_too_many_fields_is_refused() -> None:
     }
     description["commands"] = []
 
-    with pytest.raises(ValueError, match=r"ctrl.*300"):
+    with pytest.raises(ValueError, match=r"root:ctrl.*300"):
         box_class(description)
 
 

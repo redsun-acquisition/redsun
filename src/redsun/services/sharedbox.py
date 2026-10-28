@@ -241,7 +241,7 @@ class BoxTransport(Transport):
             return
         try:
             box.update(**self._fields(name, datatype, value))
-        except (ValueError, OverflowError) as exc:
+        except (ValueError, TypeError, OverflowError) as exc:
             raise ValueError(
                 f"attribute {name!r} cannot be written to its box: {exc}"
             ) from exc

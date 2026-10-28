@@ -257,3 +257,14 @@ async def test_a_prefix_with_colons_names_the_boxes() -> None:
     finally:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
+
+
+async def test_a_value_the_box_cannot_hold_names_the_attribute(
+    served: tuple[BoxController, Service],
+) -> None:
+    """Raise an error naming the attribute when its box refuses a value."""
+    controller, service = served
+    with pytest.raises(ValueError, match="'exposure'"):
+        await BoxTransport()._update(
+            service.box_of(), "exposure", controller.exposure.datatype, "text"
+        )
