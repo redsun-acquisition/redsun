@@ -123,6 +123,10 @@ tox = [
 testing = [
     "pytest>=8",
 ]
+testing-qt = [
+    { include-group = "testing" },
+    { include-group = "qt-common" },
+]
 profile = [
     "py-spy>=0.4.2",
     "pyinstrument>=5.1.3",
@@ -204,6 +208,7 @@ sharedbox = [
     "fastcs>=0.14.4",
     "sharedbox>=0.6.0",
 ]
+testing-qt = ["redsun[testing,qt-common]"]
 
 [project.scripts]
 redsun = "redsun._cli:main"

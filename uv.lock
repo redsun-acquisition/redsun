@@ -6056,6 +6056,14 @@ sharedbox = [
 testing = [
     { name = "pytest" },
 ]
+testing-qt = [
+    { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
+    { name = "magicgui" },
+    { name = "pytest" },
+    { name = "qtpy" },
+    { name = "superqt" },
+]
 tiled = [
     { name = "ome-tiled", extra = ["bluesky"] },
     { name = "tiled", extra = ["client", "server"] },
@@ -6170,6 +6178,14 @@ sharedbox = [
 testing = [
     { name = "pytest" },
 ]
+testing-qt = [
+    { name = "app-model" },
+    { name = "fonticon-materialdesignicons7" },
+    { name = "magicgui" },
+    { name = "pytest" },
+    { name = "qtpy" },
+    { name = "superqt" },
+]
 tiled = [
     { name = "ome-tiled", extra = ["bluesky"] },
     { name = "tiled", extra = ["client", "server"] },
@@ -6190,6 +6206,7 @@ requires-dist = [
     { name = "app-model", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.5.1" },
     { name = "app-model", marker = "extra == 'qlementine-pyside'", specifier = ">=0.5.1" },
     { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
+    { name = "app-model", marker = "extra == 'testing-qt'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
     { name = "fastcs", marker = "extra == 'sharedbox'", specifier = ">=0.14.4" },
@@ -6198,12 +6215,14 @@ requires-dist = [
     { name = "fonticon-materialdesignicons7", marker = "extra == 'qlementine-pyqt'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'qlementine-pyside'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'qt-common'", specifier = ">=7.2.96" },
+    { name = "fonticon-materialdesignicons7", marker = "extra == 'testing-qt'", specifier = ">=7.2.96" },
     { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qlementine-pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qt-common'", specifier = ">=0.10.2" },
+    { name = "magicgui", marker = "extra == 'testing-qt'", specifier = ">=0.10.2" },
     { name = "ome-tiled", extras = ["bluesky"], marker = "extra == 'tiled'", specifier = ">=0.2.1" },
     { name = "ome-writers", extras = ["acquire-zarr"], marker = "extra == 'ome-zarr'", specifier = ">=0.3.2" },
     { name = "ophyd-async", specifier = ">=0.21.3" },
@@ -6221,22 +6240,25 @@ requires-dist = [
     { name = "pyside6-essentials", marker = "extra == 'qlementine-pyside'", specifier = ">=6.10.2,!=6.11.0,!=6.11.1" },
     { name = "pyside6-qlementine", marker = "extra == 'qlementine-pyside'", specifier = ">=1.5.1" },
     { name = "pytest", marker = "extra == 'testing'", specifier = ">=8" },
+    { name = "pytest", marker = "extra == 'testing-qt'", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "qtpy", marker = "extra == 'pyqt'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'pyside'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qlementine-pyqt'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qlementine-pyside'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qt-common'", specifier = ">=2.4.3" },
+    { name = "qtpy", marker = "extra == 'testing-qt'", specifier = ">=2.4.3" },
     { name = "sharedbox", marker = "extra == 'sharedbox'", specifier = ">=0.6.0" },
     { name = "superqt", marker = "extra == 'pyqt'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'pyside'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qlementine-pyside'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qt-common'", specifier = ">=0.9.0" },
+    { name = "superqt", marker = "extra == 'testing-qt'", specifier = ">=0.9.0" },
     { name = "tiled", extras = ["client", "server"], marker = "extra == 'tiled'", specifier = ">=0.2.20" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "sharedbox", "testing", "tiled", "zarr"]
+provides-extras = ["ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "sharedbox", "testing", "testing-qt", "tiled", "zarr"]
 
 [package.metadata.requires-dev]
 coverage = [{ name = "coverage", specifier = ">=7.17.0" }]
@@ -6338,6 +6360,14 @@ sharedbox = [
     { name = "sharedbox", marker = "sys_platform != 'darwin'", specifier = ">=0.6.0" },
 ]
 testing = [{ name = "pytest", specifier = ">=8" }]
+testing-qt = [
+    { name = "app-model", specifier = ">=0.5.1" },
+    { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "magicgui", specifier = ">=0.10.2" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "qtpy", specifier = ">=2.4.3" },
+    { name = "superqt", specifier = ">=0.9.0" },
+]
 tiled = [
     { name = "ome-tiled", extras = ["bluesky"], specifier = ">=0.2.1" },
     { name = "tiled", extras = ["client", "server"], specifier = ">=0.2.20" },
