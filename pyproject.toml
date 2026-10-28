@@ -256,6 +256,7 @@ warn_no_return = true
 [[tool.mypy.overrides]]
 module = [
     "docs.tutorials.stage_ioc",
+    "docs.examples.box_service",
     "docs.examples.stage_fastcs",
     "redsun.services.sharedbox",
     "mock_pkg.box_controller",

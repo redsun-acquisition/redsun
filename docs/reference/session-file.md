@@ -83,7 +83,7 @@ its own, `transport`.
 
 | Key | Type | Default | Holds |
 | --- | --- | --- | --- |
-| `transport` | `channel-access` or `pv-access` | `channel-access` | the protocol every service of the session speaks |
+| `transport` | `channel-access`, `pv-access` or `sharedbox` | `channel-access` | the way every service of the session talks to its devices |
 
 An entry:
 

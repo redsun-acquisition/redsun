@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 EXAMPLES = [
     "acquisition",
     "acquisition_files",
+    "box_detector",
     "connect_on_demand",
     "console_frontend",
     "continuous_areadetector",

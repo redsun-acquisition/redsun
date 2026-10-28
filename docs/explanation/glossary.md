@@ -48,6 +48,14 @@ reports what happened as [documents](#document). Nothing is stored unless
 something is listening for those documents. See the
 [documentation of `bluesky`](https://blueskyproject.io/bluesky/main/index.html).
 
+### Box
+
+A box is a named block of shared memory with typed fields, made by
+[`sharedbox`](#sharedbox). Any process on the same computer opens a box by its
+name, reads and writes its fields, and can wait for a field to change. Under
+the `sharedbox` [transport](#transport), a service keeps each controller's
+values in a box of its own.
+
 ### Build
 
 A build is what [`Session.build`][redsun.Session.build] does. It reads the
@@ -418,6 +426,14 @@ available to the others by marking a method with
 [`provides`][redsun.provides]. A component asks for a shared value by its type
 in `setup`, or in its constructor when a provider shares it.
 
+### sharedbox
+
+`sharedbox` is a library that shares typed values between processes on one
+computer through shared memory, as [boxes](#box) and streams. A stream is a
+named queue of items that one process sends and others read. `redsun` uses it
+for the `sharedbox` [transport](#transport). See the
+[`sharedbox` package](https://pypi.org/project/sharedbox/).
+
 ### Signal
 
 A signal is a message that a component sends, through [`psygnal`](#psygnal), to
@@ -490,10 +506,11 @@ window doesn't need it installed.
 
 ### Transport
 
-The transport is the network protocol that every service of a session speaks,
+The transport is the way every service of a session talks to its devices,
 set by the `services.transport` key: `channel-access` for
-[Channel Access](#channel-access), the default, or `pv-access` for
-[PVAccess](#pvaccess). The word comes from `fastcs`, a library for writing
+[Channel Access](#channel-access), the default, `pv-access` for
+[PVAccess](#pvaccess), or `sharedbox` for [boxes](#box) in shared memory on the
+same computer. The word comes from `fastcs`, a library for writing
 services, which [How to write a service](../how-to/write-a-service.md) uses.
 
 ### View
