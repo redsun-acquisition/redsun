@@ -7,9 +7,9 @@ icon: lucide/arrow-right-left
 Release 0.16 removes the two things 0.15 deprecated, changes what a view of
 plan progress receives, moves some axes to another box of the positioner,
 removes two helpers the positioner no longer uses, changes what a session
-does when a service does not start, and stops a held key from running its
-command again and again. This page gives each change with what to
-write instead. The [changelog](../reference/changelog.md) lists everything
+does when a service does not start, stops a held key from running its
+command again and again, and moves the test fixtures for Qt into a plugin of
+their own. This page gives each change with what to write instead. The [changelog](../reference/changelog.md) lists everything
 else the release changed.
 
 ## A view's placement can't come from a property
@@ -184,3 +184,34 @@ class MyView(QWidget):
     @shortcut("Right", title="Step forward", scope="view", repeat=True)
     def step_forward(self) -> None: ...
 ```
+
+## The Qt test fixtures are a plugin of their own
+
+[`keep_application_as_found`][redsun.testing.qt.keep_application_as_found],
+the fixture that fails a test leaving the application changed, moved from
+`redsun.testing` to `redsun.testing.qt`. That module is a second `pytest`
+plugin, installed with the `testing-qt` extra, so a suite that tests no Qt
+components never imports Qt. A suite that tests Qt components changes its
+install line and its `addopts`:
+
+```bash
+# 0.15
+uv add --dev "redsun[testing]" pytest-asyncio
+
+# now
+uv add --dev "redsun[testing-qt]" pytest-asyncio
+```
+
+```toml
+# 0.15
+addopts = "-p redsun.testing"
+
+# now
+addopts = "-p redsun.testing -p redsun.testing.qt"
+```
+
+The extra installs no Qt binding, so the suite keeps the one it installs
+today. `redsun.testing.qt` also defines a `qapp` fixture, and a suite that
+takes `pytest-qt`'s or defines its own can keep it.
+[How to test a plugin](test-a-plugin.md#test-qt-components) says what happens
+when `pytest-qt` is loaded too.

@@ -68,25 +68,49 @@ for your tests:
 [Garbage collection in the tests](contribute.md#garbage-collection-in-the-tests)
 gives the reason.
 
-The fixtures also check the Qt application after every test that asks for
-the `qapp` fixture. If the test left the application's stylesheet, style or
-font changed, it fails. This is how you find a
-[hook provider](install-hooks.md) that doesn't put back in `shutdown` what it
-changed.
-
 !!! warning "A session built in a wider fixture isn't covered"
 
     The folder fixtures run for each test, so they don't cover a session built
     in a fixture scoped to a module or the whole run. Build the session in a
     per-test fixture.
 
-The module defines no `qapp` fixture, and a session with a window needs a
-`QApplication`. Take the `qapp` fixture of `pytest-qt`, or define one.
+## Test Qt components
+
+A session with a window needs a `QApplication`, and only an extra of `redsun`
+installs Qt, so the fixtures for Qt components are a second plugin,
+[`redsun.testing.qt`](../reference/api/testing.md#redsuntestingqt). Install
+it with the `testing-qt` extra and the Qt binding your plugin uses:
+
+```bash
+uv add --dev "redsun[testing-qt,pyqt]" pytest-asyncio
+```
+
+Write `pyside` instead of `pyqt` for `pyside6`. Then load the Qt plugin after
+the core one, because it needs the core one's fixtures:
+
+```toml
+[tool.pytest.ini_options]
+addopts = "-p redsun.testing -p redsun.testing.qt"
+asyncio_mode = "auto"
+```
+
+A test then asks for the [`qapp`][redsun.testing.qt.qapp] fixture to get the
+run's one `QApplication`. After every test that asks for it, the plugin
+checks the application: a test that left its stylesheet, style, font or
+palette changed fails. This is how you find a
+[hook provider](install-hooks.md) that doesn't put back in `shutdown` what it
+changed.
+
+`pytest-qt` defines a `qapp` fixture too, and a suite can load both plugins.
+`pytest` then uses one of the two `qapp` fixtures, and either works: the
+check still runs, and `psygnal` emissions queued from another thread still
+reach the main thread.
 
 ## Build a session
 
 Ask for [`build`][redsun.testing.build]. It builds a session class with the
-configuration you give it, and shuts the session down when the test ends:
+configuration you give it, and shuts the session down when the test ends. The
+session below has a window, so the test asks for `qapp` too:
 
 ```{.python}
 --8<-- "docs/examples/plugin_tests.py:build"
