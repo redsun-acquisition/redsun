@@ -14,71 +14,39 @@ if TYPE_CHECKING:
 pytest_plugins = ["pytester"]
 
 THE_SUITES_QAPP = """
-
 import pytest
-
 from qtpy.QtWidgets import QApplication
 
 
-
-
-
 @pytest.fixture
-
 def qapp():
-
     return QApplication.instance()
-
 """
-
 """A `qapp` fixture handing out the application the outer run holds."""
 
-
 STYLES_THE_APPLICATION = """
-
 def test_styles_the_application(qapp):
-
     qapp.setStyleSheet("QLabel { color: red; }")
 
 
-
-
-
 def test_after(qapp):
-
     assert qapp.styleSheet() == ""
-
 """
-
 """Two tests, the first leaving a stylesheet on the application."""
 
-
 COLOURS_THE_APPLICATION = """
-
 from qtpy.QtGui import QColor, QPalette
 
 
-
-
-
 def test_colours_the_application(qapp):
-
     palette = qapp.palette()
-
     palette.setColor(QPalette.ColorRole.Window, QColor("red"))
-
     qapp.setPalette(palette)
 
 
-
-
-
 def test_after(qapp):
-
     assert qapp.palette().color(QPalette.ColorRole.Window) != QColor("red")
-
 """
-
 """Two tests, the first leaving a palette set by hand on the application."""
 
 ANOTHER_QAPP = """
