@@ -567,6 +567,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # QApplication takes the next widget built with it
         self._qt_app = qt_app
         self.on_release(self._forget_application_object)
+        # released after the collector's last collection, so the slots of
+        # the widgets it frees are released too
+        self.on_release(self._release_slots)
         # pyside6 aborts when a collection on a background thread frees a widget
         collector = GarbageCollector(qt_app, self.garbage_interval)
         collector.start()
@@ -1192,10 +1195,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
             # with no loop running would never reach the pass that carries
             # it out
             self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-            # pyqt6 holds each slot of a deleted widget until two more passes
-            # run: the first delivers the calls the deletion queued, which
-            # post the deletion of the objects holding the slots, and the
-            # second carries those out
+
+    def _release_slots(self) -> None:
+        """Deliver the events that release the slots of the widgets deleted at shutdown."""
+        if self._qt_app is not None:
+            # pyqt6 holds each slot of a deleted widget until two passes run:
+            # the first delivers the calls the deletion queued, which post
+            # the deletion of the objects holding the slots, and the second
+            # carries those out
             self._qt_app.sendPostedEvents()
             self._qt_app.sendPostedEvents()
 

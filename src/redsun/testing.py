@@ -192,9 +192,21 @@ def no_automatic_collection() -> Generator[None, None, None]:
 def collect_after_module(
     no_automatic_collection: None,
 ) -> Generator[None, None, None]:
-    """Collect once after the last test of each module, on the main thread."""
+    """Collect once after the last test of each module, on the main thread.
+
+    When a Qt application exists, the events that release the slots of the
+    widgets the collection freed are delivered too.
+    """
     yield
     gc.collect()
+    # read from sys.modules: only an extra installs Qt, and a run that never
+    # loaded it has no application to deliver to
+    core = sys.modules.get("qtpy.QtCore")
+    app = core.QCoreApplication.instance() if core is not None else None
+    if app is not None:
+        # pyqt6 holds each slot of a deleted widget until two passes run
+        app.sendPostedEvents()
+        app.sendPostedEvents()
 
 
 @pytest.fixture(autouse=True)
