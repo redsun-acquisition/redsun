@@ -39,25 +39,25 @@ if TYPE_CHECKING:
 
 __all__ = ["BoxTransport"]
 
-INT64_MAX = 2**63 - 1
+_INT64_MAX = 2**63 - 1
 
 
-def cut(text: str, capacity: int) -> str:
+def _cut(text: str, capacity: int) -> str:
     """Return `text` cut to at most `capacity` UTF-8 bytes, on a character boundary."""
     return text.encode()[:capacity].decode(errors="ignore")
 
 
-def is_unsigned(datatype: Int) -> bool:
+def _is_unsigned(datatype: Int) -> bool:
     """Whether `datatype` holds values that do not fit a signed 64-bit integer."""
     return (
         datatype.min is not None
         and datatype.min >= 0
         and datatype.max is not None
-        and datatype.max > INT64_MAX
+        and datatype.max > _INT64_MAX
     )
 
 
-def describe_datatype(datatype: Any, where: str) -> DatatypeDescription:
+def _describe_datatype(datatype: Any, where: str) -> DatatypeDescription:
     """Return the description of a FastCS datatype, or raise `ValueError` for a table."""
     match datatype:
         case Table():
@@ -80,7 +80,7 @@ def describe_datatype(datatype: Any, where: str) -> DatatypeDescription:
             description: dict[str, Any] = {
                 "kind": "float" if isinstance(datatype, Float) else "int"
             }
-            if isinstance(datatype, Int) and is_unsigned(datatype):
+            if isinstance(datatype, Int) and _is_unsigned(datatype):
                 description["kind"] = "uint"
             if isinstance(datatype, Float):
                 description["precision"] = datatype.prec
@@ -91,15 +91,15 @@ def describe_datatype(datatype: Any, where: str) -> DatatypeDescription:
     raise ValueError(f"attribute {where!r} has unsupported datatype {datatype!r}")
 
 
-def to_box(datatype: Any, value: Any) -> dict[str, Any]:
+def _to_box(datatype: Any, value: Any) -> dict[str, Any]:
     """Return the box fields (without the attribute name) holding `value`."""
     match datatype:
         case Enum():
             return {"": datatype.index_of(value)}
-        case Int() if is_unsigned(datatype):
+        case Int() if _is_unsigned(datatype):
             return {"": np.array([value], dtype="uint64")}
         case String():
-            return {"": cut(value, datatype.length or STRING_CAPACITY)}
+            return {"": _cut(value, datatype.length or STRING_CAPACITY)}
         case Waveform():
             padded = np.zeros(datatype.shape, dtype=datatype.array_dtype)
             padded[tuple(slice(0, size) for size in value.shape)] = value
@@ -107,12 +107,12 @@ def to_box(datatype: Any, value: Any) -> dict[str, Any]:
     return {"": value}
 
 
-def from_box(datatype: Any, raw: Any, shape: Any = None) -> Any:
+def _from_box(datatype: Any, raw: Any, shape: Any = None) -> Any:
     """Return the FastCS value of a setpoint read from a box, a waveform cut to `shape`."""
     match datatype:
         case Enum():
             return datatype.members[raw]
-        case Int() if is_unsigned(datatype):
+        case Int() if _is_unsigned(datatype):
             return int(raw[0])
         case Waveform():
             return np.array(raw[tuple(slice(0, size) for size in shape)])
@@ -176,7 +176,7 @@ class BoxTransport(Transport):
         attributes = {
             name: {
                 "access": attribute.access_mode,
-                "datatype": describe_datatype(
+                "datatype": _describe_datatype(
                     attribute.datatype, "/".join((*api.path, name))
                 ),
                 "description": attribute.description or "",
@@ -245,7 +245,7 @@ class BoxTransport(Transport):
         """Return the box fields holding the value of the attribute `name`."""
         return {
             f"{name}__{key or 'value'}": field
-            for key, field in to_box(datatype, value).items()
+            for key, field in _to_box(datatype, value).items()
         }
 
     async def serve(self) -> None:
@@ -293,7 +293,7 @@ class BoxTransport(Transport):
     @staticmethod
     async def _put(box: Any, name: str, attribute: Any) -> None:
         """Put the setpoint in the box to the attribute `name`."""
-        setpoint = from_box(
+        setpoint = _from_box(
             attribute.datatype,
             getattr(box, f"{name}__setpoint"),
             getattr(box, f"{name}__setpoint_shape", None),
@@ -322,7 +322,7 @@ class BoxTransport(Transport):
                 # error of the previous request.
                 box.update(
                     **{
-                        f"{stem}__error": cut(error, ERROR_CAPACITY),
+                        f"{stem}__error": _cut(error, ERROR_CAPACITY),
                         f"{stem}__done": number,
                     }
                 )

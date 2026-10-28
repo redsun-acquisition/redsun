@@ -30,7 +30,8 @@ from ophyd_async.core import (
 from sharedbox import BoxClosedError, SegmentNotFoundError
 
 from redsun.log import logger
-from redsun.services._layout import (
+
+from ..services._layout import (
     AttributeDescription,
     ControllerDescription,
     ServiceIndex,
@@ -51,10 +52,10 @@ __all__ = [
     "stream_name",
 ]
 
-ATTACH_RETRY = 0.1
+_ATTACH_RETRY = 0.1
 """Seconds between attempts to attach a service's index."""
 
-DATATYPES: dict[str, type] = {
+_DATATYPES: dict[str, type] = {
     "int": int,
     "uint": int,
     "float": float,
@@ -64,11 +65,14 @@ DATATYPES: dict[str, type] = {
 }
 """Python type of each datatype kind a description names, enums apart."""
 
-SIGNALS = {"r": SignalR, "w": SignalW, "rw": SignalRW}
+_SIGNALS = {"r": SignalR, "w": SignalW, "rw": SignalRW}
 
 
 class BoxPutError(Exception):
     """A service refused a write or a command, or it raised while running it."""
+
+    attribute: str
+    """Name of the attribute or command the service refused."""
 
     def __init__(self, attribute: str, message: str) -> None:
         super().__init__(f"{attribute}: {message}")
@@ -105,7 +109,7 @@ def _box_key(description: ControllerDescription) -> str:
     return ":".join(description["path"])
 
 
-async def request(box: Any, stem: str, name: str, **values: Any) -> None:
+async def _request(box: Any, stem: str, name: str, **values: Any) -> None:
     """Write `values` and a new request number to `box`, then wait for the answer.
 
     Raises
@@ -197,7 +201,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             if self._callback:
                 self._follow_readback()
             return
-        expected = DATATYPES[kind]
+        expected = _DATATYPES[kind]
         if self.datatype is None:
             self.datatype = expected
         elif (get_origin(self.datatype) or self.datatype) is not expected:
@@ -266,7 +270,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             The service refused the value or its put raised.
         """
         async with self._lock:
-            await request(
+            await _request(
                 self._box(),
                 self._attribute,
                 self._attribute,
@@ -389,7 +393,7 @@ class BoxCommandBackend(CommandBackend[[], None]):
             The command raised in the service.
         """
         async with self._lock:
-            await request(self._boxes[self._box_key], self._command, self._command)
+            await _request(self._boxes[self._box_key], self._command, self._command)
 
 
 def _command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:
@@ -481,7 +485,7 @@ class BoxDeviceConnector(DeviceConnector):
                         index = ServiceIndex.attach(name)
                         break
                     except SegmentNotFoundError:
-                        await asyncio.sleep(ATTACH_RETRY)
+                        await asyncio.sleep(_ATTACH_RETRY)
         except TimeoutError:
             raise TimeoutError(f"no sharedbox service publishes {name!r}") from None
         try:
@@ -527,7 +531,9 @@ class BoxDeviceConnector(DeviceConnector):
         box = description["box"]
         for name, attribute in description["attributes"].items():
             assert box is not None
-            backend = self._filler.fill_child_signal(name, SIGNALS[attribute["access"]])
+            backend = self._filler.fill_child_signal(
+                name, _SIGNALS[attribute["access"]]
+            )
             backend._bind(self._boxes, _box_key(description), name, attribute)
         for name in description["commands"]:
             assert box is not None

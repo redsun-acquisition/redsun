@@ -60,6 +60,14 @@ class BoxController(Controller):
         self.runs += 1
 
 
+class IntExposureController(Controller):
+    """Controller whose `exposure` is an integer, unlike the one of `BoxController`."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.exposure = AttrRW(Int())
+
+
 class TableController(Controller):
     """Controller with a table attribute, which the transport refuses."""
 

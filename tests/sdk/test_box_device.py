@@ -9,11 +9,8 @@ from uuid import uuid4
 import numpy as np
 import pytest
 import pytest_asyncio
-from fastcs.attributes import AttrRW
 from fastcs.control_system import FastCS
-from fastcs.controllers import Controller
-from fastcs.datatypes import Int
-from mock_pkg.box_controller import BoxController
+from mock_pkg.box_controller import BoxController, IntExposureController
 from ophyd_async.core import (
     Device,
     DeviceVector,
@@ -303,12 +300,6 @@ async def test_a_device_reconnects_after_the_service_restarts() -> None:
 
 async def test_a_reconnect_refuses_a_service_whose_layout_changed() -> None:
     """Raise when a restarted service serves another datatype than the device was filled from."""
-
-    class Changed(Controller):
-        def __init__(self) -> None:
-            super().__init__()
-            self.exposure = AttrRW(Int())
-
     prefix = f"T{uuid4().hex[:8]}"
     controller = BoxController()
     controller.set_path([prefix])
@@ -319,7 +310,7 @@ async def test_a_reconnect_refuses_a_service_whose_layout_changed() -> None:
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
-    changed = Changed()
+    changed = IntExposureController()
     changed.set_path([prefix])
     fastcs = FastCS(changed, [BoxTransport()], loop=asyncio.get_running_loop())
     task = asyncio.create_task(fastcs.serve(interactive=False))
