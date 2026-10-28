@@ -241,13 +241,20 @@ async def serve_controller(
     serve_task = asyncio.ensure_future(control_system.serve(interactive=False))
     ready_task = asyncio.ensure_future(announce_when_reachable(transport, prefix))
     ready_task.add_done_callback(lambda _: faulthandler.cancel_dump_traceback_later())
+    stop_task = asyncio.ensure_future(wait_for_stop())
     try:
-        await wait_for_stop()
+        await asyncio.wait({stop_task, serve_task}, return_when=asyncio.FIRST_COMPLETED)
+        if serve_task.done():
+            error = serve_task.exception() if not serve_task.cancelled() else None
+            if error is not None:
+                logger.error("serving %s failed: %s", prefix, error, exc_info=error)
+                raise error
     finally:
         faulthandler.dump_traceback_later(TRACEBACK_DELAY)
+        stop_task.cancel()
         ready_task.cancel()
         serve_task.cancel()
-        await asyncio.gather(serve_task, ready_task, return_exceptions=True)
+        await asyncio.gather(serve_task, ready_task, stop_task, return_exceptions=True)
         faulthandler.cancel_dump_traceback_later()
 
 

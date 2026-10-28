@@ -105,7 +105,6 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     def __init__(self, datatype: type[SignalDatatypeT] | None) -> None:
         super().__init__(datatype)
         self.boxes: Mapping[str, Any] = {}
-        self.box_name = ""
         self.box_key = ""
         self.attribute = ""
         self.description: AttributeDescription
@@ -116,17 +115,21 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     def bind(
         self,
         boxes: Mapping[str, Any],
-        box_name: str,
         box_key: str,
         attribute: str,
         description: AttributeDescription,
     ) -> None:
         """Say which attribute of which box this backend reads and writes."""
         self.boxes = boxes
-        self.box_name = box_name
         self.box_key = box_key
         self.attribute = attribute
         self.description = description
+
+    @property
+    def box_name(self) -> str:
+        """Name of the attached box, which changes when a service restarts; the key before it is attached."""
+        box = self.boxes.get(self.box_key)
+        return self.box_key if box is None else str(box.name)
 
     @property
     def box(self) -> Any:
@@ -323,23 +326,20 @@ class BoxCommandBackend(CommandBackend[[], None]):
     def __init__(self) -> None:
         super().__init__(NO_ARG_VOID_SIGNATURE)
         self.boxes: Mapping[str, Any] = {}
-        self.box_name = ""
         self.box_key = ""
         self.command = ""
         self.lock = asyncio.Lock()
 
-    def bind(
-        self, boxes: Mapping[str, Any], box_name: str, box_key: str, command: str
-    ) -> None:
+    def bind(self, boxes: Mapping[str, Any], box_key: str, command: str) -> None:
         """Say which command of which box this backend runs."""
         self.boxes = boxes
-        self.box_name = box_name
         self.box_key = box_key
         self.command = command
 
     def source(self, name: str) -> str:
         """Return the location of the command."""
-        return f"sharedbox://{self.box_name}/{self.command}"
+        box = self.boxes.get(self.box_key)
+        return f"sharedbox://{self.box_key if box is None else box.name}/{self.command}"
 
     async def connect(self, timeout: float) -> None:
         """Do nothing: the box is attached with the device."""
@@ -448,8 +448,10 @@ class BoxDeviceConnector(DeviceConnector):
                         await asyncio.sleep(ATTACH_RETRY)
         except TimeoutError:
             raise TimeoutError(f"no sharedbox service publishes {name!r}") from None
-        description: ControllerDescription = json.loads(index.description)
-        index.close()
+        try:
+            description: ControllerDescription = json.loads(index.description)
+        finally:
+            index.close()
         attached: dict[str, Any] = {}
         try:
             self.attach_boxes(description, attached)
@@ -481,11 +483,11 @@ class BoxDeviceConnector(DeviceConnector):
         for name, attribute in description["attributes"].items():
             assert box is not None
             backend = self.filler.fill_child_signal(name, SIGNALS[attribute["access"]])
-            backend.bind(self.boxes, box, box_key(description), name, attribute)
+            backend.bind(self.boxes, box_key(description), name, attribute)
         for name in description["commands"]:
             assert box is not None
             self.filler.fill_child_command(name, TriggerableCommand).bind(
-                self.boxes, box, box_key(description), name
+                self.boxes, box_key(description), name
             )
         for key, child in description["children"].items():
             if isinstance(device, DeviceVector):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import secrets
 from dataclasses import dataclass
@@ -211,7 +212,8 @@ class BoxTransport(Transport):
             return
         try:
             for box in self._box_names(json.loads(old.description)):
-                SharedBox.unlink(box)
+                with contextlib.suppress(SegmentNotFoundError):
+                    SharedBox.unlink(box)
         finally:
             old.unlink()
             old.close()

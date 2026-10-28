@@ -260,6 +260,7 @@ async def test_a_device_reconnects_after_the_service_restarts() -> None:
 
     observer = asyncio.create_task(observe())
     assert await asyncio.wait_for(seen.get(), 5) == 0.0
+    first_source = device.exposure.source
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
@@ -271,6 +272,8 @@ async def test_a_device_reconnects_after_the_service_restarts() -> None:
         await device.connect(timeout=5, force_reconnect=True)
         await device.exposure.set(1.5)
         assert restarted.exposure.get() == 1.5
+        assert device.exposure.source != first_source
+        assert device.exposure.source.startswith(f"sharedbox://{prefix}:fastcs:")
         await restarted.exposure.update(9.0)
         async with asyncio.timeout(5):
             while await seen.get() != 9.0:
