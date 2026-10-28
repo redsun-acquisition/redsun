@@ -69,8 +69,10 @@ class Service:
             box.close()
 
 
-def serving(controller: Controller) -> tuple[Service, asyncio.Task[None]]:
-    prefix = f"T{uuid4().hex[:8]}"
+def serving(
+    controller: Controller, prefix: str | None = None
+) -> tuple[Service, asyncio.Task[None]]:
+    prefix = prefix or f"T{uuid4().hex[:8]}"
     controller.set_path([prefix])
     fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
     task = asyncio.create_task(fastcs.serve(interactive=False))
@@ -109,7 +111,13 @@ async def test_the_index_describes_the_controller_tree(
     """Describe attributes, commands and the vector children in the index."""
     _, service = served
     root = service.root
-    assert root["path"] == [service.prefix]
+    assert root["path"] == []
+    assert root["box"] == f"{service.prefix}:fastcs:root"
+    assert root["children"]["axes"]["children"]["1"]["path"] == ["axes", "1"]
+    assert (
+        root["children"]["axes"]["children"]["1"]["box"]
+        == f"{service.prefix}:fastcs:root:axes:1"
+    )
     assert root["commands"] == ["run"]
     assert root["attributes"]["exposure"]["access"] == "rw"
     assert root["attributes"]["exposure"]["datatype"] == {
@@ -235,3 +243,17 @@ async def test_boxes_are_closed_when_serving_stops() -> None:
     await asyncio.gather(task, return_exceptions=True)
     with pytest.raises(SegmentNotFoundError):
         ServiceIndex.attach(index_name(service.prefix))
+
+
+async def test_a_prefix_with_colons_names_the_boxes() -> None:
+    """Name boxes under a prefix that holds colons and a trailing colon."""
+    tag = uuid4().hex[:8]
+    service, task = serving(BoxController(), f"T{tag}:DET:")
+    try:
+        await service.attach()
+        assert service.root["box"] == f"T{tag}:DET:fastcs:root"
+        assert f"T{tag}:DET:fastcs:root:axes:0" in service.boxes
+        service.close()
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)

@@ -159,12 +159,12 @@ class BoxTransport(Transport):
 
     def _describe(self, api: ControllerAPI) -> ControllerDescription:
         """Return the description of `api` and its sub-APIs, recording each pair."""
-        path = list(api.path)
+        path = list(api.path[1:])
         attributes = {
             name: {
                 "access": attribute.access_mode,
                 "datatype": describe_datatype(
-                    attribute.datatype, "/".join((*path, name))
+                    attribute.datatype, "/".join((*api.path, name))
                 ),
                 "description": attribute.description or "",
             }
@@ -237,8 +237,14 @@ class BoxTransport(Transport):
 
     async def _update(self, box: Any, name: str, datatype: Any, value: Any) -> None:
         """Write the value of the attribute `name` to its box."""
-        if not box.closed:
+        if box.closed:
+            return
+        try:
             box.update(**self._fields(name, datatype, value))
+        except (ValueError, OverflowError) as exc:
+            raise ValueError(
+                f"attribute {name!r} cannot be written to its box: {exc}"
+            ) from exc
 
     @staticmethod
     async def _put(box: Any, name: str, attribute: Any) -> None:

@@ -14,6 +14,7 @@ from redsun.services._layout import (
     ControllerDescription,
     DatatypeDescription,
     box_class,
+    box_name,
     index_name,
     namespace,
     stream_name,
@@ -158,3 +159,9 @@ def test_a_controller_with_too_many_fields_is_refused() -> None:
 
     with pytest.raises(ValueError, match=r"ctrl.*300"):
         box_class(description)
+
+
+def test_box_names_sit_under_root() -> None:
+    """Name the root box `<prefix>:fastcs:root` and children below it."""
+    assert box_name("A:B:", []) == "A:B:fastcs:root"
+    assert box_name("A", ["axes", "0"]) == "A:fastcs:root:axes:0"
