@@ -17,9 +17,7 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
-from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QCoreApplication
-from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -58,15 +56,6 @@ def wait_until() -> Callable[..., bool]:
         return predicate()
 
     return poll
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    """Return the one `QApplication` of the whole run."""
-    app = QApplication([])
-
-    start_emitting_from_queue()
-    return app
 
 
 @pytest.fixture

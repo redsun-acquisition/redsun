@@ -26,7 +26,8 @@ redsun/
 |   |-- device/                ophyd-async connectors for redsun's transports:
 |   |                          sharedbox.py, BoxDeviceConnector
 |   |-- path_provider.py       SessionPathProvider, session_directory
-|   |-- testing.py             pytest fixtures a plugin's tests load, redsun's too
+|   |-- testing/               pytest plugins a plugin's tests load, redsun's too:
+|   |                          the core, and qt.py for Qt components
 |   |-- errors.py              the exceptions a session raises
 |   |-- _config.py             session file loading, merging and validation
 |   |-- _catalog.py            require_tiled, start_catalog
@@ -35,7 +36,7 @@ redsun/
 |   |   `-- qt/                Qt widgets and the built-in LogView
 |   `-- utils/                 descriptor helpers, session_folder (_paths.py)
 |-- tests/
-|   |-- conftest.py            qt marker, qapp, mock plugin (the rest: redsun.testing)
+|   |-- conftest.py            qt marker, mock plugin (the rest: redsun.testing and .qt)
 |   |-- test_*.py              session tests, one module per subject
 |   |-- configs/               session YAML files the tests load
 |   |-- launchable/            on pytest's and mypy's path:
@@ -204,7 +205,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   file's. One that cannot be built or whose hook raises is logged and skipped
   (`Session.skip_hook`, `call_hooks`); a failed `create_application` provider
   stops the build. What a provider changes on the application it undoes in
-  `shutdown`, which `redsun.testing.keep_application_as_found` checks for
+  `shutdown`, which `redsun.testing.qt.keep_application_as_found` checks for
   tests using `qapp`.
   Rationale: `docs/explanation/decisions/0031-hook-points-take-several-providers.md`.
 - Components conform by shape, never by inheritance: `NamedComponent`,
