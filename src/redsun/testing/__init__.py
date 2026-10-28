@@ -4,11 +4,7 @@ A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and turn automatic garbage collection off for the
-run, collecting after each test module on the main thread. A test using `qapp`
-that leaves the application's stylesheet, style, font or palette changed fails.
-On Windows under Qt's `offscreen` platform, they also point Qt at the system
-fonts, which that platform otherwise lacks.
-The module defines no `qapp`, so it combines with `pytest-qt`.
+run, collecting after each test module on the main thread.
 """
 
 from __future__ import annotations
@@ -16,8 +12,6 @@ from __future__ import annotations
 import gc
 import logging
 import os
-import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
@@ -28,17 +22,15 @@ from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 from redsun.services import Service
 from redsun.session import Session
 
-from .services._transports import CHANNEL_ACCESS, TRANSPORTS
+from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
-
-    from qtpy.QtGui import QPalette
-    from qtpy.QtWidgets import QApplication
+    from pathlib import Path
 
     from redsun.session import Launch
 
-    from ._config import Source
+    from .._config import Source
 
 __all__ = [
     "BuildSession",
@@ -48,7 +40,6 @@ __all__ = [
     "config_home",
     "data_directory",
     "empty_emission_queue",
-    "keep_application_as_found",
     "keep_automatic_collection_off",
     "log_directory",
     "no_automatic_collection",
@@ -158,18 +149,6 @@ def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     return root
 
 
-def pytest_configure(config: pytest.Config) -> None:
-    """Give Qt's `offscreen` platform the system fonts on Windows.
-
-    There it finds no fonts of its own, so once an icon font is loaded every
-    text falls back to it and measures nothing.
-    """
-    offscreen = os.environ.get("QT_QPA_PLATFORM", "").startswith("offscreen")
-    if offscreen and sys.platform == "win32":
-        fonts = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
-        os.environ.setdefault("QT_QPA_FONTDIR", str(fonts))
-
-
 @pytest.fixture(scope="session", autouse=True)
 def no_automatic_collection() -> Generator[None, None, None]:
     """Turn Python's automatic garbage collection off for the whole run.
@@ -192,21 +171,9 @@ def no_automatic_collection() -> Generator[None, None, None]:
 def collect_after_module(
     no_automatic_collection: None,
 ) -> Generator[None, None, None]:
-    """Collect once after the last test of each module, on the main thread.
-
-    When a Qt application exists, the events that release the slots of the
-    widgets the collection freed are delivered too.
-    """
+    """Collect once after the last test of each module, on the main thread."""
     yield
     gc.collect()
-    # read from sys.modules: only an extra installs Qt, and a run that never
-    # loaded it has no application to deliver to
-    core = sys.modules.get("qtpy.QtCore")
-    app = core.QCoreApplication.instance() if core is not None else None
-    if app is not None:
-        # pyqt6 holds each slot of a deleted widget until two passes run
-        app.sendPostedEvents()
-        app.sendPostedEvents()
 
 
 @pytest.fixture(autouse=True)
@@ -233,66 +200,6 @@ def keep_automatic_collection_off(
             "state the test found, since a collection on another thread can "
             "destroy a widget there and abort pyside6"
         )
-
-
-def application_state(app: QApplication) -> tuple[str, str, str, QPalette | None]:
-    """Return *app*'s stylesheet, style name and font, and its palette if one was set by hand.
-
-    A palette nobody set follows the style and the colour scheme, so it is
-    left out.
-    """
-    # only an extra installs Qt, and a test run without it loads this module too
-    from qtpy.QtCore import Qt  # noqa: PLC0415
-
-    style = app.style()
-    by_hand = app.testAttribute(Qt.ApplicationAttribute.AA_SetPalette)
-    return (
-        app.styleSheet(),
-        style.objectName() if style is not None else "",
-        app.font().toString(),
-        app.palette() if by_hand else None,
-    )
-
-
-@pytest.fixture(autouse=True)
-def keep_application_as_found(
-    request: pytest.FixtureRequest,
-) -> Generator[None, None, None]:
-    """Fail a test using `qapp` that left the application's stylesheet, style, font or palette changed.
-
-    A hook provider undoes in `shutdown` what it changed on the application,
-    and a test that changes it by hand puts it back. A test that does not ask
-    for the `qapp` fixture is not checked.
-
-    Raises
-    ------
-    RuntimeError
-        If one of them differs after the test from before it; the
-        stylesheet and the palette are put back first, so they do not style
-        the tests after this one.
-    """
-    if "qapp" not in request.fixturenames:
-        yield
-        return
-    app: QApplication = request.getfixturevalue("qapp")
-    before = application_state(app)
-    yield
-    after = application_state(app)
-    if after == before:
-        return
-    app.setStyleSheet(before[0])
-    # an empty palette, of the palette's own class so that no Qt module is
-    # imported here, gives the application back the one it had unset
-    app.setPalette(before[3] if before[3] is not None else type(app.palette())())
-    names = ("stylesheet", "style", "font", "palette")
-    changed = [
-        name for name, was, now in zip(names, before, after, strict=True) if was != now
-    ]
-    raise RuntimeError(
-        f"this test left the application changed ({', '.join(changed)}); a hook "
-        "provider undoes its work in shutdown, and a test that changes the "
-        "application puts it back"
-    )
 
 
 @pytest.fixture(autouse=True)

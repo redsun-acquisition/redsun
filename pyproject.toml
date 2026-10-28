@@ -411,7 +411,7 @@ testpaths = [
     "tests",
 ]
 pythonpath = [".", "tests/launchable"]
-addopts = "-p no:warnings -p redsun.testing"
+addopts = "-p no:warnings -p redsun.testing -p redsun.testing.qt"
 asyncio_mode = "auto"
 markers = [
     "qt: marks tests that require a Qt display (skipped in headless environments)",
