@@ -9,7 +9,10 @@ from uuid import uuid4
 import numpy as np
 import pytest
 import pytest_asyncio
+from fastcs.attributes import AttrRW
 from fastcs.control_system import FastCS
+from fastcs.controllers import Controller
+from fastcs.datatypes import Int
 from mock_pkg.box_controller import BoxController
 from ophyd_async.core import (
     Device,
@@ -294,6 +297,38 @@ async def test_a_device_reconnects_after_the_service_restarts() -> None:
         observer.cancel()
         task.cancel()
         await asyncio.gather(observer, task, return_exceptions=True)
+        for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+            box.close()
+
+
+async def test_a_reconnect_refuses_a_service_whose_layout_changed() -> None:
+    """Raise when a restarted service serves another datatype than the device was filled from."""
+
+    class Changed(Controller):
+        def __init__(self) -> None:
+            super().__init__()
+            self.exposure = AttrRW(Int())
+
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = BoxController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    device = MyDetector(prefix, name="det")
+    await device.connect(timeout=5)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    changed = Changed()
+    changed.set_path([prefix])
+    fastcs = FastCS(changed, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    try:
+        with pytest.raises(RuntimeError, match="built again"):
+            await device.connect(timeout=5, force_reconnect=True)
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
         for box in device._connector._boxes.values():  # type: ignore[attr-defined]
             box.close()
 

@@ -75,6 +75,31 @@ class BoxPutError(Exception):
         self.attribute = attribute
 
 
+def _first_difference(
+    old: ControllerDescription, new: ControllerDescription, path: str = "root"
+) -> str | None:
+    """Return the path of the first attribute, command or child that differs, or None."""
+    for name in sorted({*old["attributes"], *new["attributes"]}):
+        before = old["attributes"].get(name)
+        after = new["attributes"].get(name)
+        if (before and before["access"], before and before["datatype"]) != (
+            after and after["access"],
+            after and after["datatype"],
+        ):
+            return f"{path}/{name}"
+    for name in sorted({*old["commands"], *new["commands"]}):
+        if (name in old["commands"]) != (name in new["commands"]):
+            return f"{path}/{name}"
+    for key in sorted({*old["children"], *new["children"]}):
+        if key not in old["children"] or key not in new["children"]:
+            return f"{path}/{key}"
+        if difference := _first_difference(
+            old["children"][key], new["children"][key], f"{path}/{key}"
+        ):
+            return difference
+    return None
+
+
 def _box_key(description: ControllerDescription) -> str:
     """Return the key of the box of `description`, the same across runs of a service."""
     return ":".join(description["path"])
@@ -463,6 +488,15 @@ class BoxDeviceConnector(DeviceConnector):
             description: ControllerDescription = json.loads(index.description)
         finally:
             index.close()
+        if (
+            self._is_filled
+            and self._description is not None
+            and (difference := _first_difference(self._description, description))
+        ):
+            raise RuntimeError(
+                f"{difference} differs from what the device was filled from; "
+                f"the device must be built again"
+            )
         attached: dict[str, Any] = {}
         try:
             self._attach_boxes(description, attached)
