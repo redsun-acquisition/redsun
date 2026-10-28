@@ -112,6 +112,7 @@ checks that the two agree -->
 <span class="install-label">Development</span>
 <div class="install-choices">
 <button type="button" data-value="testing">Testing<small><code>testing</code>: tests for a plugin, with <code>pytest</code></small></button>
+<button type="button" data-value="testing-qt">Testing Qt<small><code>testing-qt</code>: tests for a plugin's Qt components, with <code>pytest</code>; pick a window too</small></button>
 <button type="button" data-value="profile">Profiling<small><code>profile</code>: profiling a session, with <code>pyinstrument</code> and <code>py-spy</code></small></button>
 </div>
 </div>
@@ -137,7 +138,7 @@ The guides for the optional parts are
 [writing a derived product](write-a-derived-product.md),
 [keeping a catalog of runs](keep-a-catalog.md),
 [testing a plugin](test-a-plugin.md) and
-[profiling a session](profile-a-session.md). The two development extras belong
+[profiling a session](profile-a-session.md). The development extras belong
 in your project's development dependencies, not in what it needs to run.
 
 For a session with a window, install one of the two Qt extras. `pyqt` and
