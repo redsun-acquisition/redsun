@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import gc
 import re
 import subprocess
 import sys
 import threading
+import weakref
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
 
 import pytest
@@ -314,6 +316,27 @@ class Closing(QWidget):
 
 class ClosingApp(QtSession):
     panel: AsView[Closing]
+
+
+class Held:
+    """An object only a slot holds."""
+
+
+class Connected(QWidget):
+    """A view whose button's slot holds the only reference to an object."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        held = Held()
+        self.held = weakref.ref(held)
+        QPushButton(self).clicked.connect(lambda: held)
+
+
+class ConnectedApp(QtSession):
+    panel: AsView[Connected]
 
 
 class SaveApp(QtSession):
@@ -826,6 +849,31 @@ def test_a_view_is_shut_down_before_its_widget_is_destroyed(
     record: list[str] = []
     build(ClosingApp, {"views": {"panel": {"record": record}}}).shutdown()
     assert record == ["shutdown", "closed"]
+
+
+def test_shutdown_releases_the_slots_of_the_destroyed_widgets(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Free what a destroyed widget's slot held once the session shuts down."""
+    session = build(ConnectedApp)
+    held = session.panel.held
+
+    session.shutdown()
+    gc.collect()
+
+    assert held() is None
+
+
+def test_a_session_is_freed_once_shut_down(qapp: QApplication) -> None:
+    """Leave nothing holding a session after its shutdown, its menu actions included."""
+    session = ConnectedApp().build()
+    freed = weakref.ref(session)
+
+    session.shutdown()
+    del session
+    gc.collect()
+
+    assert freed() is None
 
 
 def test_the_save_action_writes_where_the_dialog_points(
