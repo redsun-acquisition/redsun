@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -112,12 +113,11 @@ async def test_the_index_describes_the_controller_tree(
     _, service = served
     root = service.root
     assert root["path"] == []
-    assert root["box"] == f"{service.prefix}:fastcs:root"
-    assert root["children"]["axes"]["children"]["1"]["path"] == ["axes", "1"]
-    assert (
-        root["children"]["axes"]["children"]["1"]["box"]
-        == f"{service.prefix}:fastcs:root:axes:1"
+    assert re.fullmatch(
+        re.escape(service.prefix) + r":fastcs:[0-9a-f]{6}:root", root["box"] or ""
     )
+    assert root["children"]["axes"]["children"]["1"]["path"] == ["axes", "1"]
+    assert root["children"]["axes"]["children"]["1"]["box"] == f"{root['box']}:axes:1"
     assert root["commands"] == ["run"]
     assert root["attributes"]["exposure"]["access"] == "rw"
     assert root["attributes"]["exposure"]["datatype"] == {
@@ -251,10 +251,34 @@ async def test_a_prefix_with_colons_names_the_boxes() -> None:
     service, task = serving(BoxController(), f"T{tag}:DET:")
     try:
         await service.attach()
-        assert service.root["box"] == f"T{tag}:DET:fastcs:root"
-        assert f"T{tag}:DET:fastcs:root:axes:0" in service.boxes
+        root = service.root["box"] or ""
+        assert re.fullmatch(f"T{tag}:DET:fastcs:[0-9a-f]{{6}}:root", root)
+        assert f"{root}:axes:0" in service.boxes
         service.close()
     finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+async def test_a_restart_names_its_boxes_anew_while_a_client_holds_the_old_ones() -> (
+    None
+):
+    """Publish under a new run name though a handle to the first run's box is open."""
+    prefix = f"T{uuid4().hex[:8]}"
+    first, task = serving(BoxController(), prefix)
+    await first.attach()
+    first.index.close()
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    second, task = serving(BoxController(), prefix)
+    try:
+        await second.attach()
+        assert second.root["box"] != first.root["box"]
+    finally:
+        for box in first.boxes.values():
+            box.close()
+        second.close()
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
 

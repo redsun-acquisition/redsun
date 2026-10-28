@@ -117,9 +117,9 @@ def index_name(prefix: str) -> str:
     return f"{namespace(prefix)}:{RESERVED}:index"
 
 
-def box_name(prefix: str, path: Sequence[str]) -> str:
-    """Return the name of the box of the controller at `path` below the root."""
-    return check_name(":".join((namespace(prefix), RESERVED, "root", *path)))
+def box_name(prefix: str, run: str, path: Sequence[str]) -> str:
+    """Return the name of the box of the controller at `path` below the root, in run `run`."""
+    return check_name(":".join((namespace(prefix), RESERVED, run, "root", *path)))
 
 
 def stream_name(prefix: str, part: str) -> str:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -10,7 +11,13 @@ import numpy as np
 from fastcs.attributes import AttrR, AttrW
 from fastcs.datatypes import Bool, Enum, Float, Int, String, Table, Waveform
 from fastcs.transports import Transport
-from sharedbox import SegmentExistsError, SharedBox
+from sharedbox import (
+    KindMismatchError,
+    SchemaMismatchError,
+    SegmentExistsError,
+    SegmentNotFoundError,
+    SharedBox,
+)
 
 from ._layout import (
     DESCRIPTION_CAPACITY,
@@ -32,6 +39,9 @@ if TYPE_CHECKING:
 __all__ = ["BoxTransport"]
 
 INT64_MAX = 2**63 - 1
+
+ATTACH_RETRY = 0.05
+"""Seconds between attempts to attach the index in `BoxTransport.reachable`."""
 
 
 def cut(text: str, capacity: int) -> str:
@@ -121,6 +131,7 @@ class BoxTransport(Transport):
         self._boxes: dict[str, SharedBox] = {}
         self._index: ServiceIndex | None = None
         self._prefix = ""
+        self._run = ""
 
     def connect(
         self,
@@ -135,6 +146,7 @@ class BoxTransport(Transport):
         api = controller_apis[0]
         self._prefix = api.path[0]
         self._nodes = []
+        self._run = secrets.token_hex(3)
         root = self._describe(api)
         description = json.dumps(root).encode()
         if len(description) > DESCRIPTION_CAPACITY:
@@ -142,6 +154,7 @@ class BoxTransport(Transport):
                 f"the controller description takes {len(description)} bytes; "
                 f"the index holds at most {DESCRIPTION_CAPACITY}"
             )
+        self._clean_leftovers()
         try:
             for node_api, node in self._nodes:
                 if node["box"] is not None:
@@ -173,7 +186,9 @@ class BoxTransport(Transport):
         commands = list(api.command_methods)
         description: ControllerDescription = {
             "path": path,
-            "box": box_name(self._prefix, path) if attributes or commands else None,
+            "box": box_name(self._prefix, self._run, path)
+            if attributes or commands
+            else None,
             "attributes": attributes,  # type: ignore[typeddict-item]
             "commands": commands,
             "children": {},
@@ -183,6 +198,30 @@ class BoxTransport(Transport):
         }
         self._nodes.append((api, description))
         return description
+
+    def _clean_leftovers(self) -> None:
+        """Unlink the boxes and the index a previous run of this service left."""
+        name = index_name(self._prefix)
+        try:
+            old = ServiceIndex.attach(name)
+        except SegmentNotFoundError:
+            return
+        except (SchemaMismatchError, KindMismatchError):
+            ServiceIndex.unlink(name)
+            return
+        try:
+            for box in self._box_names(json.loads(old.description)):
+                SharedBox.unlink(box)
+        finally:
+            old.unlink()
+            old.close()
+
+    def _box_names(self, node: Any) -> list[str]:
+        """Return the box names of the description `node` and its children."""
+        names = [node["box"]] if node["box"] is not None else []
+        for child in node["children"].values():
+            names.extend(self._box_names(child))
+        return names
 
     def _publish(self, cls: type[SharedBox], name: str, values: dict[str, Any]) -> Any:
         """Create the box `name`, replacing one a stopped service left behind."""
@@ -234,6 +273,17 @@ class BoxTransport(Transport):
                 await asyncio.Event().wait()
         finally:
             self._close()
+
+    async def reachable(self) -> None:
+        """Return once the index can be attached."""
+        name = index_name(self._prefix)
+        while True:
+            try:
+                ServiceIndex.attach(name).close()
+            except SegmentNotFoundError:
+                await asyncio.sleep(ATTACH_RETRY)
+            else:
+                return
 
     async def _update(self, box: Any, name: str, datatype: Any, value: Any) -> None:
         """Write the value of the attribute `name` to its box."""

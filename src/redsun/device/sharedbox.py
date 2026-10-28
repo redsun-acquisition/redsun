@@ -75,6 +75,11 @@ class BoxPutError(Exception):
         self.attribute = attribute
 
 
+def box_key(description: ControllerDescription) -> str:
+    """Return the key of the box of `description`, the same across runs of a service."""
+    return ":".join(description["path"])
+
+
 async def request(box: Any, stem: str, name: str, **values: Any) -> None:
     """Write `values` and a new request number to `box`, then wait for the answer.
 
@@ -101,6 +106,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         super().__init__(datatype)
         self.boxes: Mapping[str, Any] = {}
         self.box_name = ""
+        self.box_key = ""
         self.attribute = ""
         self.description: AttributeDescription
         self.lock = asyncio.Lock()
@@ -111,19 +117,21 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self,
         boxes: Mapping[str, Any],
         box_name: str,
+        box_key: str,
         attribute: str,
         description: AttributeDescription,
     ) -> None:
         """Say which attribute of which box this backend reads and writes."""
         self.boxes = boxes
         self.box_name = box_name
+        self.box_key = box_key
         self.attribute = attribute
         self.description = description
 
     @property
     def box(self) -> Any:
         """The attached box of the attribute."""
-        return self.boxes[self.box_name]
+        return self.boxes[self.box_key]
 
     @property
     def names(self) -> list[str]:
@@ -316,13 +324,17 @@ class BoxCommandBackend(CommandBackend[[], None]):
         super().__init__(NO_ARG_VOID_SIGNATURE)
         self.boxes: Mapping[str, Any] = {}
         self.box_name = ""
+        self.box_key = ""
         self.command = ""
         self.lock = asyncio.Lock()
 
-    def bind(self, boxes: Mapping[str, Any], box_name: str, command: str) -> None:
+    def bind(
+        self, boxes: Mapping[str, Any], box_name: str, box_key: str, command: str
+    ) -> None:
         """Say which command of which box this backend runs."""
         self.boxes = boxes
         self.box_name = box_name
+        self.box_key = box_key
         self.command = command
 
     def source(self, name: str) -> str:
@@ -341,7 +353,7 @@ class BoxCommandBackend(CommandBackend[[], None]):
             The command raised in the service.
         """
         async with self.lock:
-            await request(self.boxes[self.box_name], self.command, self.command)
+            await request(self.boxes[self.box_key], self.command, self.command)
 
 
 def command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:
@@ -457,7 +469,7 @@ class BoxDeviceConnector(DeviceConnector):
     ) -> None:
         """Attach the box of `description` and of every child below it."""
         if description["box"] is not None:
-            attached[description["box"]] = box_class(description).attach(
+            attached[box_key(description)] = box_class(description).attach(
                 description["box"]
             )
         for child in description["children"].values():
@@ -469,11 +481,11 @@ class BoxDeviceConnector(DeviceConnector):
         for name, attribute in description["attributes"].items():
             assert box is not None
             backend = self.filler.fill_child_signal(name, SIGNALS[attribute["access"]])
-            backend.bind(self.boxes, box, name, attribute)
+            backend.bind(self.boxes, box, box_key(description), name, attribute)
         for name in description["commands"]:
             assert box is not None
             self.filler.fill_child_command(name, TriggerableCommand).bind(
-                self.boxes, box, name
+                self.boxes, box, box_key(description), name
             )
         for key, child in description["children"].items():
             if isinstance(device, DeviceVector):

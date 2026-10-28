@@ -167,5 +167,5 @@ def test_a_controller_with_too_many_fields_is_refused() -> None:
 
 def test_box_names_sit_under_root() -> None:
     """Name the root box `<prefix>:fastcs:root` and children below it."""
-    assert box_name("A:B:", []) == "A:B:fastcs:root"
-    assert box_name("A", ["axes", "0"]) == "A:fastcs:root:axes:0"
+    assert box_name("A:B:", "1a2b3c", []) == "A:B:fastcs:1a2b3c:root"
+    assert box_name("A", "1a2b3c", ["axes", "0"]) == "A:fastcs:1a2b3c:root:axes:0"
