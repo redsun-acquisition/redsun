@@ -87,6 +87,15 @@ def test_a_queued_emission_arrives(qapp):
 """
 """One test waiting for a value emitted on a worker thread to reach the main thread."""
 
+NO_QAPP = """
+from qtpy.QtWidgets import QApplication
+
+
+def test_no_application_is_made():
+    assert QApplication.instance() is None
+"""
+"""One test not using `qapp`, checking that no application exists."""
+
 NO_QT = """
 import sys
 
@@ -190,6 +199,21 @@ def test_a_queued_emission_arrives_with_another_qapp(
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
     pytester.makeconftest(ANOTHER_QAPP)
     pytester.makepyfile(QUEUED_EMISSION)
+
+    result = pytester.runpytest_subprocess(
+        "-p", "redsun.testing", "-p", "redsun.testing.qt"
+    )
+
+    result.assert_outcomes(passed=1)
+
+
+@pytest.mark.qt
+def test_a_test_without_qapp_leaves_the_application_alone(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Make no application for a test that does not use `qapp`."""
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    pytester.makepyfile(NO_QAPP)
 
     result = pytester.runpytest_subprocess(
         "-p", "redsun.testing", "-p", "redsun.testing.qt"
