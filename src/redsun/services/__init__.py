@@ -15,6 +15,7 @@ from ._process import (
     identity,
     ready,
     ready_when_reachable,
+    serve_controller,
     stop_on_request,
     wait_for_stop,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "identity",
     "ready",
     "ready_when_reachable",
+    "serve_controller",
     "stop_on_request",
     "wait_for_stop",
 ]

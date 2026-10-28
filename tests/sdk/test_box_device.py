@@ -243,6 +243,46 @@ async def test_an_observer_survives_a_reconnect(
     assert seen[-1] == 7.0
 
 
+async def test_a_device_reconnects_after_the_service_restarts() -> None:
+    """Reach a restarted service and keep an observer running across the restart."""
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = BoxController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    device = MyDetector(prefix, name="det")
+    await device.connect(timeout=5)
+    seen: asyncio.Queue[float] = asyncio.Queue()
+
+    async def observe() -> None:
+        async for value in observe_value(device.exposure):
+            seen.put_nowait(value)
+
+    observer = asyncio.create_task(observe())
+    assert await asyncio.wait_for(seen.get(), 5) == 0.0
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    restarted = BoxController()
+    restarted.set_path([prefix])
+    fastcs = FastCS(restarted, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    try:
+        await device.connect(timeout=5, force_reconnect=True)
+        await device.exposure.set(1.5)
+        assert restarted.exposure.get() == 1.5
+        await restarted.exposure.update(9.0)
+        async with asyncio.timeout(5):
+            while await seen.get() != 9.0:
+                pass
+    finally:
+        observer.cancel()
+        task.cancel()
+        await asyncio.gather(observer, task, return_exceptions=True)
+        for box in device._connector.boxes.values():  # type: ignore[attr-defined]
+            box.close()
+
+
 async def test_a_mock_connect_needs_no_service() -> None:
     """Connect a device with mock backends while no service runs."""
     device = MyDetector("NOBODY", name="det")
