@@ -263,8 +263,6 @@ async def test_a_value_the_box_cannot_hold_names_the_attribute(
     served: tuple[BoxController, Service],
 ) -> None:
     """Raise an error naming the attribute when its box refuses a value."""
-    controller, service = served
-    with pytest.raises(ValueError, match="'exposure'"):
-        await BoxTransport()._update(
-            service.box_of(), "exposure", controller.exposure.datatype, "text"
-        )
+    controller, _ = served
+    with pytest.raises(ValueError, match="'limited'"):
+        await controller.limited.update(-(2**70))
