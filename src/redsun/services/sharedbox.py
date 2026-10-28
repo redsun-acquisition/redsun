@@ -41,9 +41,6 @@ __all__ = ["BoxTransport"]
 
 INT64_MAX = 2**63 - 1
 
-ATTACH_RETRY = 0.05
-"""Seconds between attempts to attach the index in `BoxTransport.reachable`."""
-
 
 def cut(text: str, capacity: int) -> str:
     """Return `text` cut to at most `capacity` UTF-8 bytes, on a character boundary."""
@@ -133,6 +130,7 @@ class BoxTransport(Transport):
         self._index: ServiceIndex | None = None
         self._prefix = ""
         self._run = ""
+        self._published = asyncio.Event()
 
     def connect(
         self,
@@ -167,6 +165,7 @@ class BoxTransport(Transport):
                 index_name(self._prefix),
                 {"version": 1, "description": description},
             )
+            self._published.set()
         except BaseException:
             self._close()
             raise
@@ -277,15 +276,8 @@ class BoxTransport(Transport):
             self._close()
 
     async def reachable(self) -> None:
-        """Return once the index can be attached."""
-        name = index_name(self._prefix)
-        while True:
-            try:
-                ServiceIndex.attach(name).close()
-            except SegmentNotFoundError:
-                await asyncio.sleep(ATTACH_RETRY)
-            else:
-                return
+        """Return once the index is published."""
+        await self._published.wait()
 
     async def _update(self, box: Any, name: str, datatype: Any, value: Any) -> None:
         """Write the value of the attribute `name` to its box."""

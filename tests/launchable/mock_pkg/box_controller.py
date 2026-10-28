@@ -43,6 +43,10 @@ class BoxController(Controller):
         self.slow.set_on_put_callback(self.delayed_put)
         self.axes = ControllerVector({0: Axis(), 1: Axis()})
 
+    async def initialise(self) -> None:
+        """Yield once, as a controller reading its attributes from hardware does."""
+        await asyncio.sleep(0)
+
     async def delayed_put(self, attr: AttrW[int], value: int) -> None:
         """Wait `put_delay` seconds, then store the value in `slow_seen`."""
         await asyncio.sleep(self.put_delay)
