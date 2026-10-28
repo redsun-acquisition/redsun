@@ -198,12 +198,16 @@ def test_a_retained_record_keeps_nothing_it_refers_to() -> None:
 
 
 def test_a_retained_record_is_written_with_its_message_and_traceback() -> None:
-    """Write a retained record with its message and its traceback."""
+    """Write a retained record with its message and traceback, leaving the record logged untouched."""
     handler = BufferHandler()
+    record = logged_failure(Held())
 
-    handler.emit(logged_failure(Held()))
+    handler.emit(record)
     text = GlobalFormatter().format(handler.records[0])
 
+    assert record.msg == "failed with %s"
+    assert record.args is not None
+    assert record.exc_info is not None
     assert "failed with <" in text
     assert "in fail_holding" in text
     assert "RuntimeError: failed" in text

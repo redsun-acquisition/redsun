@@ -126,7 +126,7 @@ def app(build):
 def test_uses_the_session(app):
     assert app.name == "from-a-fixture"
 """
-"""A test receiving its session from a fixture, which pytest holds until the test's report."""
+"""A test receiving its session from a fixture, which `pytest` holds until the test's report."""
 
 FAILS_TO_BUILD = """
 from redsun import AsPresenter, Session
@@ -281,7 +281,7 @@ def test_a_test_leaving_collection_on_is_refused(pytester: pytest.Pytester) -> N
 def test_a_session_kept_alive_fails_its_test(
     pytester: pytest.Pytester, disabled: tuple[str, ...]
 ) -> None:
-    """Fail a test whose session is still alive once it is over, with or without pytest's logging plugin."""
+    """Fail a test whose session is still alive once it is over, with or without `pytest`'s logging plugin."""
     pytester.makepyfile(KEEPS_ITS_SESSION)
 
     result = pytester.runpytest_subprocess("-p", "redsun.testing", *disabled)
@@ -300,7 +300,7 @@ def test_a_session_kept_alive_fails_its_test(
 def test_a_session_only_pytest_held_passes(
     pytester: pytest.Pytester, source: str
 ) -> None:
-    """Pass a test whose session only a fixture value or pytest's log capture held."""
+    """Pass a test whose session only a fixture value or `pytest`'s log capture held."""
     pytester.makepyfile(source)
 
     result = pytester.runpytest_subprocess("-p", "redsun.testing")

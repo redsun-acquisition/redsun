@@ -197,7 +197,9 @@ class BufferHandler(logging.Handler):
         """Retain *record* with the records of its source, and announce it.
 
         What is retained is a copy holding the message and the traceback as
-        text, so the objects the record was logged with are not kept alive.
+        text, so the record's arguments and exception are not kept alive. A
+        record whose arguments do not fit its message is reported through
+        `handleError` and not retained.
         """
         try:
             kept = copy.copy(record)

@@ -4,7 +4,9 @@ A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and turn automatic garbage collection off for the
-run, collecting after each test module on the main thread.
+run, collecting after each test module on the main thread. A test that used
+[`build`][redsun.testing.build] is collected after it too, and fails if a
+session `build` built is still alive.
 """
 
 from __future__ import annotations
@@ -98,7 +100,9 @@ def build(request: pytest.FixtureRequest) -> Generator[BuildSession, None, None]
     all of them when more than one session raised.
 
     Once the test is over, a session still alive fails the test with an error
-    at teardown, unless the test itself raised.
+    at teardown, unless the test itself raised. That includes a session the
+    test keeps: one stored on `self` in a test class, whose instance `pytest`
+    keeps until the run ends, or one made outside the test and passed in.
     """
     built: list[Session] = []
 
@@ -157,7 +161,8 @@ def pytest_runtest_teardown(item: pytest.Item) -> Generator[None, None, None]:
         return
     capture = item.config.pluginmanager.get_plugin("logging-plugin")
     if capture is not None:
-        # the logging plugin keeps the teardown phase's records until the next test starts
+        # the logging plugin keeps the teardown phase's records until the next test
+        # starts, and pytest offers no public way to drop them
         capture.caplog_handler.reset()
         capture.report_handler.reset()
     item.funcargs = {}
@@ -166,8 +171,8 @@ def pytest_runtest_teardown(item: pytest.Item) -> Generator[None, None, None]:
     if alive:
         names = ", ".join(f"'{s.name}' ({type(s).__name__})" for s in alive)
         raise RuntimeError(
-            f"still alive after the test: {names}; something outside each "
-            "session still refers to it or to something it built"
+            f"still alive after the test: {names}; each is still referred to by "
+            "something that outlives the test"
         )
 
 

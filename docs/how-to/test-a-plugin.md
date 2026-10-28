@@ -128,14 +128,23 @@ do, because a mocked one has none. Test such a device against its service
 instead.
 
 When the test is over, `build` checks that each session it built has been
-freed. A session still alive fails the test with an error at teardown that
-names it. Something outside the session still refers to it, or to something it
-built, such as a list at module level or a signal connected to an object that
-outlives the test. To find what, build and shut down the session in a short
-script, then call `gc.get_referrers`, which returns the objects referring to its
-argument, on the session and on each referrer in turn, until you reach an
-object your plugin owns. A test that raised is not checked, because its
-traceback keeps its variables, and with them its session.
+freed, unless the test raised, since a traceback keeps the test's variables
+and with them its session. A session still alive fails the test with an error
+at teardown that names it. Something that outlives the test still refers to
+that session, directly or through other objects, as a component does when it
+stores its session in a list at module level.
+
+The holder can be the test itself. `pytest` keeps the instance of a test class
+until the run ends, so a session stored on `self` stays alive with it: delete
+the attribute when the fixture that built the session tears down. A session
+made outside the test and passed to `build` fails too, since whatever made it
+still holds it.
+
+To find any other holder, build and shut down the session in a short script,
+and call `gc.collect()`. Then call `gc.get_referrers`, which returns the
+objects referring to its argument, on the session and on each referrer in
+turn, leaving out the script's own variables, until you reach an object your
+plugin owns.
 
 ## Start a service
 
