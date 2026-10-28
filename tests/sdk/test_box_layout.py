@@ -111,6 +111,7 @@ def check_enum(box: Any) -> None:
 def check_waveform(box: Any) -> None:
     assert box.x__value.shape == (4, 2)
     assert box.x__shape == (0, 0)
+    assert box.x__setpoint_shape == (0, 0)
 
 
 @pytest.mark.parametrize(

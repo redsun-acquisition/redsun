@@ -193,11 +193,10 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
             add_request(name)
         if attribute["datatype"]["kind"] == "waveform":
             ndim = len(attribute["datatype"]["shape"])
-            add(
-                f"{name}__shape",
-                Annotated[tuple[int, ...], Capacity(ndim)],
-                (0,) * ndim,
-            )
+            shape_field = Annotated[tuple[int, ...], Capacity(ndim)]
+            add(f"{name}__shape", shape_field, (0,) * ndim)
+            if "w" in attribute["access"]:
+                add(f"{name}__setpoint_shape", shape_field, (0,) * ndim)
     for command in controller["commands"]:
         if "__" in command:
             raise ValueError(f"command name {command!r} contains '__'")
@@ -214,5 +213,4 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
         body,
         identity=IDENTITY,
         kw_only=True,
-        max_waiters=len(annotations),
     )

@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import AsyncGenerator
 from uuid import uuid4
 
+import numpy as np
 import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
@@ -119,6 +120,17 @@ async def test_set_round_trips(
     await detector.mode.set(type(mode)("RUN"))  # type: ignore[attr-defined]
     assert controller.mode.get().name == "RUN"
     assert (await detector.mode.get_value()).value == "RUN"  # type: ignore[attr-defined]
+
+
+async def test_a_short_waveform_round_trips(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Keep the length of a waveform shorter than the field on both sides."""
+    controller, _ = served
+    sent = np.array([1, 2, 3], dtype=np.int32)
+    await detector.trace.set(sent)  # type: ignore[attr-defined]
+    np.testing.assert_array_equal(controller.trace.get(), sent)
+    np.testing.assert_array_equal(await detector.trace.get_value(), sent)  # type: ignore[attr-defined]
 
 
 async def test_a_refused_set_raises_with_the_service_message(

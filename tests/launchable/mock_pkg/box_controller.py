@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import enum
 
+import numpy as np
 from fastcs.attributes import AttrR, AttrRW, AttrW
 from fastcs.controllers import Controller, ControllerVector
-from fastcs.datatypes import Enum, Float, Int, String, Table
+from fastcs.datatypes import Enum, Float, Int, String, Table, Waveform
 from fastcs.methods import command
 
 
@@ -37,6 +38,7 @@ class BoxController(Controller):
         self.label = AttrR(String(length=8), initial_value="start")
         self.limited = AttrRW(Int(max=10))
         self.mode = AttrRW(Enum(Mode))
+        self.trace = AttrRW(Waveform(np.int32, shape=(10,)))
         self.big = AttrRW(Int(min=0, max=2**64 - 1))
         self.slow_seen = 0
         self.slow = AttrW(Int())

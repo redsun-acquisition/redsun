@@ -107,15 +107,15 @@ def to_box(datatype: Any, value: Any) -> dict[str, Any]:
     return {"": value}
 
 
-def from_box(datatype: Any, raw: Any) -> Any:
-    """Return the FastCS value of a setpoint read from a box."""
+def from_box(datatype: Any, raw: Any, shape: Any = None) -> Any:
+    """Return the FastCS value of a setpoint read from a box, a waveform cut to `shape`."""
     match datatype:
         case Enum():
             return datatype.members[raw]
         case Int() if is_unsigned(datatype):
             return int(raw[0])
         case Waveform():
-            return np.array(raw)
+            return np.array(raw[tuple(slice(0, size) for size in shape)])
     return raw
 
 
@@ -293,7 +293,11 @@ class BoxTransport(Transport):
     @staticmethod
     async def _put(box: Any, name: str, attribute: Any) -> None:
         """Put the setpoint in the box to the attribute `name`."""
-        setpoint = from_box(attribute.datatype, getattr(box, f"{name}__setpoint"))
+        setpoint = from_box(
+            attribute.datatype,
+            getattr(box, f"{name}__setpoint"),
+            getattr(box, f"{name}__setpoint_shape", None),
+        )
         await attribute.put(setpoint, sync_setpoint=True)
 
     @staticmethod

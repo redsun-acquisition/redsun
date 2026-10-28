@@ -110,6 +110,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self._description: AttributeDescription
         self._names: list[str] = []
         self._readback = ""
+        self._readback_shape = ""
         self._lock = asyncio.Lock()
         self._callback: Any = None
         self._follower: asyncio.Task[None] | None = None
@@ -129,6 +130,11 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self._names = description["datatype"].get("names", [])
         field = "value" if "r" in description["access"] else "setpoint"
         self._readback = f"{attribute}__{field}"
+        self._readback_shape = (
+            f"{attribute}__shape"
+            if "r" in description["access"]
+            else f"{attribute}__setpoint_shape"
+        )
 
     def _box_name(self) -> str:
         """Return the name of the attached box, the key before it is attached."""
@@ -209,11 +215,18 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                 return padded
         return value
 
+    def _setpoint_fields(self, value: Any) -> dict[str, Any]:
+        """Return the box fields a write of `value` sets."""
+        fields = {f"{self._attribute}__setpoint": self._to_box(value)}
+        if self._description["datatype"]["kind"] == "waveform":
+            fields[f"{self._attribute}__setpoint_shape"] = tuple(np.shape(value))
+        return fields
+
     def _current(self) -> Reading[Any]:
         """Return the current value as a reading."""
         raw = getattr(self._box(), self._readback)
         if self._description["datatype"]["kind"] == "waveform":
-            shape = getattr(self._box(), f"{self._attribute}__shape")
+            shape = getattr(self._box(), self._readback_shape)
             raw = raw[tuple(slice(0, size) for size in shape)]
         return Reading(
             value=self._from_box(raw), timestamp=time.time(), alarm_severity=0
@@ -232,7 +245,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                 self._box(),
                 self._attribute,
                 self._attribute,
-                **{f"{self._attribute}__setpoint": self._to_box(value)},
+                **self._setpoint_fields(value),
             )
 
     async def get_datakey(self, source: str) -> Any:
@@ -275,7 +288,11 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """Return the last value written."""
         if "w" not in self._description["access"]:
             return await self.get_value()
-        return self._from_box(getattr(self._box(), f"{self._attribute}__setpoint"))  # type: ignore[no-any-return]
+        raw = getattr(self._box(), f"{self._attribute}__setpoint")
+        if self._description["datatype"]["kind"] == "waveform":
+            shape = getattr(self._box(), f"{self._attribute}__setpoint_shape")
+            raw = raw[tuple(slice(0, size) for size in shape)]
+        return self._from_box(raw)  # type: ignore[no-any-return]
 
     def set_callback(self, callback: Any) -> None:
         """Call `callback` with the current reading, then with each new one."""
