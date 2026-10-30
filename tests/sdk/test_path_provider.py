@@ -250,3 +250,58 @@ def test_the_folder_of_a_path_exists_once_the_path_is_asked_for(
 
     assert Path(info.directory_path).is_dir()
     assert info.directory_path.parent.parent == tmp_path / "lab"
+
+
+@pytest.mark.parametrize(
+    ("label", "filename"),
+    [
+        ("", "scan_00000"),
+        ("liver-03", "liver-03_scan_00000"),
+        ("liver 03/a", "liver_03_a_scan_00000"),
+        ("   ", "scan_00000"),
+    ],
+)
+def test_a_label_leads_the_name_of_the_next_plan(
+    tmp_path: Path, label: str, filename: str
+) -> None:
+    """Put a label, cleaned of characters a file name cannot hold, before the plan, and nothing when empty."""
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+
+    provider.set_label(label)
+    provider.set_plan("scan")
+
+    assert provider().filename == filename
+
+
+def test_a_label_changed_during_a_plan_waits_for_the_next(tmp_path: Path) -> None:
+    """Keep the running plan's names when the label changes, and use it from the next plan."""
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+    provider.set_plan("scan")
+
+    provider.set_label("liver")
+    during = provider().filename
+    provider.reset_plan()
+    provider.set_plan("scan")
+
+    assert (during, provider().filename) == ("scan_00000", "liver_scan_00000")
+    assert provider.label == "liver"
+
+
+def test_labelled_files_on_disk_resume_their_counter(tmp_path: Path) -> None:
+    """Resume a labelled plan's counter past its files on disk, apart from the unlabelled one."""
+    day = tmp_path / "s" / "2026-07-20" / "det"
+    day.mkdir(parents=True)
+    (day / "liver_scan_00004.h5").touch()
+    (day / "scan_00001.h5").touch()
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+
+    provider.set_label("liver")
+    provider.set_plan("scan")
+    labelled = provider("det").filename
+    provider.set_label("")
+    provider.set_plan("scan")
+
+    assert (labelled, provider("det").filename) == (
+        "liver_scan_00005",
+        "scan_00002",
+    )
