@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping  # noqa: TC003
+from collections.abc import Mapping  # noqa: TC003
 from functools import cached_property
 from typing import Any, ClassVar
 
@@ -16,17 +16,9 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import (
-    AsDevice,
-    AsPresenter,
-    AsView,
-    Link,
-    PlanEntry,
-    links_between,
-)
-from redsun.presenter import AcquisitionPresenter  # noqa: TC001
+from redsun import AsDevice, AsPresenter, AsStack, PlanEntry  # noqa: TC001
 from redsun.qt import QtSession
-from redsun.view.qt.builtins import AcquisitionView  # noqa: TC001
+from redsun.view.qt.builtins import AcquisitionStack  # noqa: TC001
 
 
 class MyMotor(StandardReadable, StandardMovable[float]):
@@ -63,13 +55,7 @@ class MyApp(QtSession):
 
     motor: AsDevice[MyMotor]
     plans: AsPresenter[MyPlans]
-    acquisition: AsPresenter[AcquisitionPresenter]
-    acquisition_view: AsView[AcquisitionView]
-
-    def wire(self) -> Iterator[Link]:
-        # --8<-- [start:wire]
-        yield from links_between(self.acquisition_view, self.acquisition)
-        # --8<-- [end:wire]
+    acquisition: AsStack[AcquisitionStack]
 
 
 if __name__ == "__main__":

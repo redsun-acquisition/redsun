@@ -3487,6 +3487,8 @@
       
         
       
+        
+      
     
     
     
@@ -4475,6 +4477,33 @@
     
   
   35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0036-a-stack-is-declared-as-one-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  36. A stack is declared as one entry
 
     
   </span>
@@ -6003,6 +6032,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;AsView
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.AsStack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;AsStack
       </span>
     </span>
   </a>
@@ -7982,6 +8022,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;AsView
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.AsStack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;AsStack
       </span>
     </span>
   </a>
@@ -10877,7 +10928,8 @@ and what its <code>setup</code> was going to assign is missing where it is used.
     <div class="doc doc-contents first">
 
         <p>Make the links the class yields, then those the file lists, then its pairs.</p>
-<p>A link made already is not made again.</p>
+<p>Each view of a stack is paired with the stack's presenter last. A link
+made already is not made again.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -10896,7 +10948,7 @@ and what its <code>setup</code> was going to assign is missing where it is used.
             <td>
               <div class="doc-md-description">
                 <p>If <code>wire</code> yields nothing iterable, a link that cannot be made, or
-a pairing that connects nothing.</p>
+a pairing, or a stack's view, that connects nothing.</p>
               </div>
             </td>
           </tr>
@@ -11213,6 +11265,42 @@ own, never by assigning <code>self.main_window</code> in <code>__init__</code>.<
         <p>A component presenting an interface, taking <code>name</code> first.</p>
 <p>Satisfies <code>redsun.AttachableComponent</code>, so it declares the
 <code>redsun.Placement</code> it asks the frontend to attach it at.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="redsun.AsStack" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">AsStack</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#redsun.AsStack" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">AsStack</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">StackMark</span><span class="p">()]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>A class holding a presenter and its views, declared as one entry.</p>
+<p>The class annotates its halves, a presenter and one or more views, each under
+a role:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="redsun.AsStack--__span-0-1"><a id="redsun.AsStack--__codelineno-0-1" name="redsun.AsStack--__codelineno-0-1" href="#redsun.AsStack--__codelineno-0-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStack</span><span class="p">:</span>
+</span><span id="redsun.AsStack--__span-0-2"><a id="redsun.AsStack--__codelineno-0-2" name="redsun.AsStack--__codelineno-0-2" href="#redsun.AsStack--__codelineno-0-2"></a>    <span class="n">presenter</span><span class="p">:</span> <span class="n">AsPresenter</span><span class="p">[</span><span class="n">MyPresenter</span><span class="p">]</span>
+</span><span id="redsun.AsStack--__span-0-3"><a id="redsun.AsStack--__codelineno-0-3" name="redsun.AsStack--__codelineno-0-3" href="#redsun.AsStack--__codelineno-0-3"></a>    <span class="n">view</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">MyView</span><span class="p">]</span>
+</span><span id="redsun.AsStack--__span-0-4"><a id="redsun.AsStack--__codelineno-0-4" name="redsun.AsStack--__codelineno-0-4" href="#redsun.AsStack--__codelineno-0-4"></a>
+</span><span id="redsun.AsStack--__span-0-5"><a id="redsun.AsStack--__codelineno-0-5" name="redsun.AsStack--__codelineno-0-5" href="#redsun.AsStack--__codelineno-0-5"></a>
+</span><span id="redsun.AsStack--__span-0-6"><a id="redsun.AsStack--__codelineno-0-6" name="redsun.AsStack--__codelineno-0-6" href="#redsun.AsStack--__codelineno-0-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">Session</span><span class="p">):</span>
+</span><span id="redsun.AsStack--__span-0-7"><a id="redsun.AsStack--__codelineno-0-7" name="redsun.AsStack--__codelineno-0-7" href="#redsun.AsStack--__codelineno-0-7"></a>    <span class="n">my_stack</span><span class="p">:</span> <span class="n">AsStack</span><span class="p">[</span><span class="n">MyStack</span><span class="p">]</span>
+</span></code></pre></div>
+<p>The presenter takes the stack's name and each view takes <code>&lt;stack&gt;_&lt;role&gt;</code>.
+<code>redsun.Declare</code> takes one mapping of keywords per role.</p>
 
     </div>
 

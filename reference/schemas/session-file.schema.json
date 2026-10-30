@@ -268,6 +268,40 @@
       "title": "RowEntry",
       "type": "object"
     },
+    "StackEntry": {
+      "additionalProperties": true,
+      "description": "A stack's entry: the plugin it comes from, and one mapping of keywords per role.",
+      "properties": {
+        "plugin_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The plugin whose manifest lists the component.",
+          "title": "Plugin Name"
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The component's id in that manifest.",
+          "title": "Plugin Id"
+        }
+      },
+      "title": "StackEntry",
+      "type": "object"
+    },
     "StorageConfig": {
       "additionalProperties": false,
       "description": "Where a session writes, and whether it keeps a catalog of its runs.",
@@ -547,6 +581,22 @@
           "default": {},
           "description": "Views by name.",
           "title": "Views",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stacks": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/StackEntry"
+          },
+          "default": {},
+          "description": "Presenters declared with their views as one entry, by name.",
+          "title": "Stacks",
           "type": "object"
         },
         {

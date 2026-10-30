@@ -3487,6 +3487,8 @@
       
         
       
+        
+      
     
     
     
@@ -4475,6 +4477,33 @@
     
   
   35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0036-a-stack-is-declared-as-one-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  36. A stack is declared as one entry
 
     
   </span>
@@ -6081,6 +6110,12 @@ as <a href="../schemas/plugin-manifest.schema.json"><code>plugin-manifest.schema
 <td>classes that share values with the components, by id</td>
 </tr>
 <tr>
+<td><code>stacks</code></td>
+<td>mapping</td>
+<td>empty</td>
+<td><a href="../../explanation/glossary/#stack">stack</a> classes, each a presenter with its views, by id</td>
+</tr>
+<tr>
 <td><code>services</code></td>
 <td>mapping</td>
 <td>empty</td>
@@ -6103,6 +6138,9 @@ as <a href="../schemas/plugin-manifest.schema.json"><code>plugin-manifest.schema
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">views</span><span class="p">:</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">motor-view</span><span class="p">:</span><span class="w"> </span><span class="s">"my_plugin.views:MotorView"</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nt">stacks</span><span class="p">:</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">motor-stack</span><span class="p">:</span><span class="w"> </span><span class="s">"my_plugin.stacks:MotorStack"</span>
 </span></code></pre></div>
 <h2 id="services">Services<a class="headerlink" href="#services" title="Permanent link">&para;</a></h2>
 <p>An entry of <code>services</code>:</p>

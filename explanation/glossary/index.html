@@ -3487,6 +3487,8 @@
       
         
       
+        
+      
     
     
     
@@ -4475,6 +4477,33 @@
     
   
   35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0036-a-stack-is-declared-as-one-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  36. A stack is declared as one entry
 
     
   </span>
@@ -7883,13 +7912,14 @@ signal</a>, which is a different thing.</p>
 components connect to it. Its name and arguments are public, because other
 components rely on them.</p>
 <h3 id="stack">Stack<a class="headerlink" href="#stack" title="Permanent link">&para;</a></h3>
-<p>A stack is a <a href="#presenter">presenter</a> and a <a href="#view">view</a> written to work
+<p>A stack is a <a href="#presenter">presenter</a> and its <a href="#view">views</a>, written to work
 together: each slot of one names, with <code>slot(signal=...)</code>, the signal of the
-other that reaches it. The session still builds them as two components, and a
-<a href="#pairing">pairing</a> joins them, so either can be replaced by one with the same
-ports. <code>redsun</code> ships three: the positioner (<code>PositionerPresenter</code>,
-<code>PositionerView</code>), the light stack (<code>LightPresenter</code>, <code>LightView</code>) and the
-acquisition stack (<code>AcquisitionPresenter</code>, <code>AcquisitionView</code>).</p>
+other that reaches it. A plugin can publish a stack as one class, which a
+session declares in one entry, with <code>AsStack</code> or under <code>stacks</code> in its file.
+The session still builds the presenter and each view as separate components,
+and a <a href="#pairing">pairing</a> joins them, so either can be replaced by one with
+the same ports. <code>redsun</code> ships three: the positioner (<code>PositionerStack</code>), the
+light stack (<code>LightStack</code>) and the acquisition stack (<code>AcquisitionStack</code>).</p>
 <h3 id="stage">Stage<a class="headerlink" href="#stage" title="Permanent link">&para;</a></h3>
 <p>To stage a device is to get it ready for a <a href="#plan">plan</a>, and to unstage it is
 to undo that once the plan ends. A plan stages each device it uses before the

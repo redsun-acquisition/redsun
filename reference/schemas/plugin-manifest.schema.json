@@ -143,6 +143,15 @@
       "title": "Views",
       "type": "object"
     },
+    "stacks": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Stack classes by id.",
+      "title": "Stacks",
+      "type": "object"
+    },
     "providers": {
       "additionalProperties": {
         "type": "string"

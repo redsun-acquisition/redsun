@@ -3611,6 +3611,8 @@
       
         
       
+        
+      
     
     
     
@@ -4599,6 +4601,33 @@
     
   
   35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0036-a-stack-is-declared-as-one-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  36. A stack is declared as one entry
 
     
   </span>
@@ -6129,8 +6158,9 @@ it, and naming one already wired replaces its slots. <code>pairs</code> adds the
 pairings of every file.</p>
 <p>To stop a later source from changing what kind of session this is,
 <code>schema_version</code>, <code>frontend</code> and <code>services.transport</code> must be the same in every
-source that sets them. A later source also replaces a component's entry whole:
-a later file naming <code>motor_ctrl</code> gives all of its settings.</p>
+source that sets them. A later source also replaces a component's or a
+stack's entry whole: a later file naming <code>motor_ctrl</code> gives all of its
+settings.</p>
 <p>A file that only makes sense layered over another, such as one holding a
 <code>presenters</code> section alone, is fine, because only the merged result is
 checked.</p>

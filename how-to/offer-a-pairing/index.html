@@ -1347,6 +1347,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#publish-them-as-a-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Publish them as a stack
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-session-checks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -3611,6 +3622,8 @@
       
         
       
+        
+      
     
     
     
@@ -4599,6 +4612,33 @@
     
   
   35. A sharedbox transport answers writes in its boxes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0036-a-stack-is-declared-as-one-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  36. A stack is declared as one entry
 
     
   </span>
@@ -5919,6 +5959,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#publish-them-as-a-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Publish them as a stack
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-session-checks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6083,8 +6134,9 @@
 
 <h1 id="how-to-offer-a-pairing">How to offer a pairing<a class="headerlink" href="#how-to-offer-a-pairing" title="Permanent link">&para;</a></h1>
 <p>A presenter and a view written for each other can connect with one line in a
-session file, <code>pairs: - [view, presenter]</code>, instead of one line per link. This
-page is for the author of the two components.
+session file, <code>pairs: - [view, presenter]</code>, instead of one line per link, or
+come as one stack a session declares in one entry. This page is for the
+author of the two components.
 <a href="../../explanation/decisions/0023-pairing-two-components/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 23</a> explains
 the design.</p>
 <h2 id="name-the-signal-on-each-slot">Name the signal on each slot<a class="headerlink" href="#name-the-signal-on-each-slot" title="Permanent link">&para;</a></h2>
@@ -6130,6 +6182,29 @@ returns:</p>
 <p>Each signal of one component reaches each slot of the other naming it, both
 ways. Only <a href="../../explanation/glossary/#psygnal"><code>psygnal</code></a> signals are matched,
 so link a device signal on its own.</p>
+<h2 id="publish-them-as-a-stack">Publish them as a stack<a class="headerlink" href="#publish-them-as-a-stack" title="Permanent link">&para;</a></h2>
+<p>A session can still declare one of the two and forget the other. Publish them
+as a <a href="../../explanation/glossary/#stack">stack</a> instead, and a session declares
+both in one entry. A stack is a class whose annotations name the presenter and
+each view under a role:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsPresenter</span><span class="p">,</span> <span class="n">AsView</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStack</span><span class="p">:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">presenter</span><span class="p">:</span> <span class="n">AsPresenter</span><span class="p">[</span><span class="n">MyController</span><span class="p">]</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">view</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">MyView</span><span class="p">]</span>
+</span></code></pre></div>
+<p>List it under <code>stacks</code> in your plugin's manifest, as
+<a href="../package-a-plugin/">How to package a plugin</a> shows. A session file then
+declares it with one entry, and a session class with <code>AsStack</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">stacks</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">my_ctrl</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-stack</span>
+</span></code></pre></div>
+<p>The session builds the presenter under the stack's name and each view as
+<code>&lt;stack&gt;_&lt;role&gt;</code>, here <code>my_ctrl</code> and <code>my_ctrl_view</code>, and pairs them. A stack
+holds one presenter and at least one view, and nothing else.</p>
 <h2 id="what-the-session-checks">What the session checks<a class="headerlink" href="#what-the-session-checks" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A pairing of two built components that matches nothing raises
