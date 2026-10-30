@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from ophyd_async.core import (
@@ -13,10 +12,9 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsPresenter, AsView, Link, links_between
-from redsun.presenter import LightPresenter  # noqa: TC001
+from redsun import AsDevice, AsStack  # noqa: TC001
 from redsun.qt import QtSession
-from redsun.view.qt.builtins import LightView  # noqa: TC001
+from redsun.view.qt.builtins import LightStack  # noqa: TC001
 
 if TYPE_CHECKING:
     from event_model import DataKey
@@ -58,13 +56,7 @@ class MyApp(QtSession):
 
     laser: AsDevice[MyLaser]
     led: AsDevice[MyLed]
-    lights: AsPresenter[LightPresenter]
-    lights_view: AsView[LightView]
-
-    def wire(self) -> Iterator[Link]:
-        # --8<-- [start:wire]
-        yield from links_between(self.lights_view, self.lights)
-        # --8<-- [end:wire]
+    lights: AsStack[LightStack]
 
 
 if __name__ == "__main__":

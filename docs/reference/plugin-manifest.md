@@ -23,6 +23,7 @@ Every key is optional. A key that is not in this table is refused.
 | `presenters` | mapping | empty | presenter classes, by id |
 | `views` | mapping | empty | view classes, by id |
 | `providers` | mapping | empty | classes that share values with the components, by id |
+| `stacks` | mapping | empty | [stack](../explanation/glossary.md#stack) classes, each a presenter with its views, by id |
 | `services` | mapping | empty | [services](#services) a session can launch, by id |
 | `hooks` | mapping | empty | hook provider classes, by the short name a session file gives them; only `redsun`'s own manifest may have it, and a plugin's manifest with one is left out |
 
@@ -37,6 +38,9 @@ presenters:
 
 views:
   motor-view: "my_plugin.views:MotorView"
+
+stacks:
+  motor-stack: "my_plugin.stacks:MotorStack"
 ```
 
 ## Services

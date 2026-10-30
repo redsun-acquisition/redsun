@@ -143,6 +143,7 @@ nav = [
                 "explanation/decisions/0033-device-trees-one-index-of-every-device.md",
                 "explanation/decisions/0034-a-root-device-takes-the-prefixes-of-several-services.md",
                 "explanation/decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes.md",
+                "explanation/decisions/0036-a-stack-is-declared-as-one-entry.md",
         ]},
     ]},
     { "Reference" = [

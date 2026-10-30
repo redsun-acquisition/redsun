@@ -47,7 +47,14 @@ presenters:
 
 views:
   motor-view: "mylab.views:MyView"
+
+stacks:
+  motor-stack: "mylab.stacks:MyStack"
 ```
+
+A stack names a presenter and its views, so a session declares all of them in
+one entry. [How to offer a pairing](offer-a-pairing.md#publish-them-as-a-stack)
+shows how to write one.
 
 The first line lets an editor with a YAML language server check the file as
 you type. [Plugin manifest](../reference/plugin-manifest.md) lists every key.

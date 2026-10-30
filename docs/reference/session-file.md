@@ -27,6 +27,7 @@ Every key is optional.
 | `devices` | mapping | empty | the [devices](#components), by name |
 | `presenters` | mapping | empty | the [presenters](#components), by name |
 | `views` | mapping | empty | the [views](#components), by name |
+| `stacks` | mapping | empty | the [stacks](#stacks), each a presenter with its views, by name |
 | `layout` | mapping | the layout of the session class | [where the views start](#layout) in the window |
 | `shortcuts` | mapping | empty | [keys](#shortcuts) replacing what the components declare |
 | `providers` | mapping | empty | classes that share values with the components, by name |
@@ -74,6 +75,32 @@ presenters:
     plugin_name: my-plugin
     plugin_id: motor
     step: 2.0
+```
+
+## Stacks
+
+`stacks` maps the name of each [stack](../explanation/glossary.md#stack) to its
+entry. The session builds the stack's presenter under that name and each view
+as `<name>_<role>`, and pairs the presenter with each view.
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `plugin_name` | text | none | the plugin whose manifest lists the stack |
+| `plugin_id` | text | none | the id of the stack in that manifest |
+| a role, such as `presenter` or `view` | mapping | empty | the keys of that half's entry, as under [Components](#components) |
+
+A key that names no role of the stack is refused, and so is a half's name
+that another component already has. A half's keys replace those the stack
+class gives it, and a session class's `Declare` replaces both. An entry for a
+stack the session class declares leaves out `plugin_name` and `plugin_id`.
+
+```yaml
+stacks:
+  positioner:
+    plugin_name: redsun
+    plugin_id: positioner
+    view:
+      repeat_interval: 50
 ```
 
 ## Services

@@ -46,24 +46,39 @@ configuration can't be read, or that doesn't answer within `timeout` seconds
 
 ## Declare the positioner in a session file
 
-Both components are built into `redsun`, under the plugin id `positioner`.
-Declare them and pair them:
+The positioner [stack](../explanation/glossary.md#stack) is built into
+`redsun`, under the plugin id `positioner`, and one entry declares it. The
+keywords of the view go under its role, `view`:
 
 ```yaml
-presenters:
+stacks:
   positioner:
     plugin_name: redsun
     plugin_id: positioner
-views:
-  positioner_view:
-    plugin_name: redsun
-    plugin_id: positioner
-    repeat_interval: 50
-pairs:
-  - [positioner_view, positioner]
+    view:
+      repeat_interval: 50
 ```
 
-The pairing makes the nine links between the two. Written out, they are:
+The session builds the presenter `positioner` and the view `positioner_view`,
+and pairs them, which makes the nine links between the two.
+
+??? example "The same stack declared one by one"
+
+    ```yaml
+    presenters:
+      positioner:
+        plugin_name: redsun
+        plugin_id: positioner
+    views:
+      positioner_view:
+        plugin_name: redsun
+        plugin_id: positioner
+        repeat_interval: 50
+    pairs:
+      - [positioner_view, positioner]
+    ```
+
+Written out, the links are:
 
 ??? example "The same links under `wiring`"
 
@@ -85,11 +100,12 @@ the devices holding them under `include`. A name that holds no axis gets a
 warning:
 
 ```yaml
-presenters:
+stacks:
   positioner:
     plugin_name: redsun
     plugin_id: positioner
-    include: [stage]
+    presenter:
+      include: [stage]
 ```
 
 The view takes these keywords:
@@ -113,10 +129,12 @@ The view takes these keywords:
 
 ## Declare it in Python
 
-The same pairing, from `wire()`:
+In a session class, declare the stack with `AsStack`. The session pairs the
+presenter and the view, and holds them as `self.positioner.presenter` and
+`self.positioner.view`:
 
 ```{.python}
---8<-- "docs/examples/positioner.py:wire"
+--8<-- "docs/examples/positioner.py:session"
 ```
 
 A plan that locks a device disables the controls of that device and of every
