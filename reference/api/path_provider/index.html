@@ -5290,6 +5290,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.path_provider.SessionPathProvider.label" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;label
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.path_provider.SessionPathProvider.session_dir" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5316,6 +5327,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;lock_base_dir
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.path_provider.SessionPathProvider.set_label" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_label
       </span>
     </span>
   </a>
@@ -6115,6 +6137,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.path_provider.SessionPathProvider.label" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;label
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.path_provider.SessionPathProvider.session_dir" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6141,6 +6174,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;lock_base_dir
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.path_provider.SessionPathProvider.set_label" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_label
       </span>
     </span>
   </a>
@@ -6521,8 +6565,9 @@ keyword.</p>
 
         <p>Path provider for one session.</p>
 <p>Paths have the layout:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="redsun.path_provider.SessionPathProvider--__span-0-1"><a id="redsun.path_provider.SessionPathProvider--__codelineno-0-1" name="redsun.path_provider.SessionPathProvider--__codelineno-0-1" href="#redsun.path_provider.SessionPathProvider--__codelineno-0-1"></a>base_dir / session_name / YYYY-MM-DD / datakey / &lt;plan&gt;_&lt;counter&gt;{.ext}
+<div class="language-text highlight"><pre><span></span><code><span id="redsun.path_provider.SessionPathProvider--__span-0-1"><a id="redsun.path_provider.SessionPathProvider--__codelineno-0-1" name="redsun.path_provider.SessionPathProvider--__codelineno-0-1" href="#redsun.path_provider.SessionPathProvider--__codelineno-0-1"></a>base_dir / session_name / YYYY-MM-DD / datakey / &lt;label&gt;_&lt;plan&gt;_&lt;counter&gt;{.ext}
 </span></code></pre></div>
+<p>The label, set with <code>set_label</code>, is left out with its <code>_</code> while empty.</p>
 <p>The data key is the one the caller asks with, so each detector writes into
 a directory of its own and owns its store. A call without one leaves that
 level out.</p>
@@ -6682,6 +6727,30 @@ directory, as <code>session_directory</code> gives it.</p>
 
 
 
+<h3 id="redsun.path_provider.SessionPathProvider.label" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">label</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#redsun.path_provider.SessionPathProvider.label" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">label</span><span class="p">:</span> <span class="nb">str</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Label leading the file names of the next plan; empty for none.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h3 id="redsun.path_provider.SessionPathProvider.session_dir" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">session_dir</span>
 
@@ -6774,6 +6843,29 @@ wiring <code>set_plan</code> and <code>reset_plan</code> cannot tell a plan is r
 <div class="doc doc-object doc-function">
 
 
+<h3 id="redsun.path_provider.SessionPathProvider.set_label" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">set_label</span>
+
+
+<a href="#redsun.path_provider.SessionPathProvider.set_label" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">set_label</span><span class="p">(</span><span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Lead the file names of every later plan with <em>label</em>.</p>
+<p>Each run of characters other than letters, digits, <code>.</code>, <code>-</code> and <code>_</code>
+becomes <code>_</code>, and a label of blanks only is no label. A plan already
+running keeps its names.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="redsun.path_provider.SessionPathProvider.set_plan" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">set_plan</span>
 
@@ -6784,7 +6876,7 @@ wiring <code>set_plan</code> and <code>reset_plan</code> cannot tell a plan is r
 
     <div class="doc doc-contents ">
 
-        <p>Change the active plan name.</p>
+        <p>Change the active plan name, led by the label if there is one.</p>
 
 
     </div>
