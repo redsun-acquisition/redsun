@@ -6495,7 +6495,9 @@
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its <code>tmp_path</code>, drop the <code>psygnal</code>
 emissions it left queued, and turn automatic garbage collection off for the
-run, collecting after each test module on the main thread.</p>
+run, collecting after each test module on the main thread. A test that used
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="./#redsun.testing.build"><code>build</code></a> is collected after it too, and fails if a
+session <code>build</code> built is still alive, unless the test raised.</p>
 
 
 
@@ -6668,7 +6670,9 @@ run, collecting after each test module on the main thread.</p>
 
 
 <a href="#redsun.testing.build" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">build</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">BuildSession</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">build</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">request</span><span class="p">:</span> <span class="n">FixtureRequest</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">BuildSession</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -6680,6 +6684,10 @@ down in reverse order; one the test shut down itself runs nothing again.
 A shutdown that raises does not stop the others: once every session has
 been shut down, the fixture raises that error, or an <code>ExceptionGroup</code> of
 all of them when more than one session raised.</p>
+<p>Once the test is over, a session still alive fails the test with an error
+at teardown, unless the test itself raised. That includes a session the
+test keeps: one stored on <code>self</code> in a test class, whose instance <code>pytest</code>
+keeps until the run ends, or one made outside the test and passed in.</p>
 
 
     </div>
