@@ -450,13 +450,14 @@ components rely on them.
 
 ### Stack
 
-A stack is a [presenter](#presenter) and a [view](#view) written to work
+A stack is a [presenter](#presenter) and its [views](#view), written to work
 together: each slot of one names, with `slot(signal=...)`, the signal of the
-other that reaches it. The session still builds them as two components, and a
-[pairing](#pairing) joins them, so either can be replaced by one with the same
-ports. `redsun` ships three: the positioner (`PositionerPresenter`,
-`PositionerView`), the light stack (`LightPresenter`, `LightView`) and the
-acquisition stack (`AcquisitionPresenter`, `AcquisitionView`).
+other that reaches it. A plugin can publish a stack as one class, which a
+session declares in one entry, with `AsStack` or under `stacks` in its file.
+The session still builds the presenter and each view as separate components,
+and a [pairing](#pairing) joins them, so either can be replaced by one with
+the same ports. `redsun` ships three: the positioner (`PositionerStack`), the
+light stack (`LightStack`) and the acquisition stack (`AcquisitionStack`).
 
 ### Stage
 

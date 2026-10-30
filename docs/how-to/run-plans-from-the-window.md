@@ -27,22 +27,36 @@ widget can show.
 
 ## Declare it in a session file
 
-Both components are built into `redsun`, under the plugin id `acquisition`:
+The acquisition [stack](../explanation/glossary.md#stack) is built into
+`redsun`, under the plugin id `acquisition`, and one entry declares it:
 
 ```yaml
-presenters:
+stacks:
   acquisition:
     plugin_name: redsun
     plugin_id: acquisition
-views:
-  acquisition_view:
-    plugin_name: redsun
-    plugin_id: acquisition
-pairs:
-  - [acquisition_view, acquisition]
 ```
 
-The pairing makes the fourteen links between the two. Written out, they are:
+The session builds the presenter `acquisition` and the view
+`acquisition_view`, and pairs them, which makes the fourteen links between
+the two. Those are the names `wiring`, `shortcuts` and the settings use.
+
+??? example "The same stack declared one by one"
+
+    ```yaml
+    presenters:
+      acquisition:
+        plugin_name: redsun
+        plugin_id: acquisition
+    views:
+      acquisition_view:
+        plugin_name: redsun
+        plugin_id: acquisition
+    pairs:
+      - [acquisition_view, acquisition]
+    ```
+
+Written out, the links are:
 
 ??? example "The same links under `wiring`"
 
@@ -66,7 +80,8 @@ The pairing makes the fourteen links between the two. Written out, they are:
 
 ## Declare it in Python
 
-In a session class, declare both components and pair them in `wire()`:
+In a session class, declare the stack with `AsStack`, and the session pairs
+the presenter and the view:
 
 ```{.python}
 --8<-- "docs/examples/acquisition.py:session"

@@ -44,3 +44,4 @@ never edited; a later one replaces it.
 - [33. Device trees: one index of every device](0033-device-trees-one-index-of-every-device.md)
 - [34. A root device takes the prefixes of several services](0034-a-root-device-takes-the-prefixes-of-several-services.md)
 - [35. A sharedbox transport answers writes in its boxes](0035-a-sharedbox-transport-answers-writes-in-its-boxes.md)
+- [36. A stack is declared as one entry](0036-a-stack-is-declared-as-one-entry.md)

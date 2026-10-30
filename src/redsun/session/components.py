@@ -23,9 +23,9 @@ from typing import Annotated, TypeAlias, TypeVar
 
 from redsun.services import Service
 
-from ._declarations import Hook, Layer, ServiceMark
+from ._declarations import Hook, Layer, ServiceMark, StackMark
 
-__all__ = ["AsDevice", "AsHook", "AsPresenter", "AsService", "AsView"]
+__all__ = ["AsDevice", "AsHook", "AsPresenter", "AsService", "AsStack", "AsView"]
 
 T = TypeVar("T")
 
@@ -63,6 +63,27 @@ CameraIoc: TypeAlias = Annotated[
 class MyApp(Session):
     camera_ioc: CameraIoc
 ```
+"""
+
+
+AsStack: TypeAlias = Annotated[T, StackMark()]
+"""A class holding a presenter and its views, declared as one entry.
+
+The class annotates its halves, a presenter and one or more views, each under
+a role:
+
+```python
+class MyStack:
+    presenter: AsPresenter[MyPresenter]
+    view: AsView[MyView]
+
+
+class MyApp(Session):
+    my_stack: AsStack[MyStack]
+```
+
+The presenter takes the stack's name and each view takes `<stack>_<role>`.
+`redsun.Declare` takes one mapping of keywords per role.
 """
 
 

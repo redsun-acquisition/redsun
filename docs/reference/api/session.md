@@ -107,6 +107,10 @@ are described above, with [`Session`][redsun.Session].
     options:
       show_root_heading: true
 
+::: redsun.AsStack
+    options:
+      show_root_heading: true
+
 ::: redsun.AsService
     options:
       show_root_heading: true

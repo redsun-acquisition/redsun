@@ -8,6 +8,9 @@ presenters:
 views:
   mock-motor-view: mock_bundle.views:MockMotorView
 
+stacks:
+  mock-motor: mock_bundle.stacks:MockMotorStack
+
 providers:
   mock-services: mock_bundle.services:MockServices
 

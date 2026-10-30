@@ -96,3 +96,15 @@ icon: lucide/code
 ::: redsun.view.qt.builtins.PositionerGroup
     options:
       show_root_heading: true
+
+::: redsun.view.qt.builtins.AcquisitionStack
+    options:
+      show_root_heading: true
+
+::: redsun.view.qt.builtins.PositionerStack
+    options:
+      show_root_heading: true
+
+::: redsun.view.qt.builtins.LightStack
+    options:
+      show_root_heading: true

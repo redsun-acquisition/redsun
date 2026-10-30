@@ -69,6 +69,7 @@ __all__ = [
     "DeviceEntry",
     "SessionFile",
     "Source",
+    "StackEntry",
     "StorageConfig",
     "as_sources",
     "label",
@@ -80,7 +81,9 @@ __all__ = [
     "validate_session",
 ]
 
-COMPONENT_SECTIONS: Final = frozenset({"services", "devices", "presenters", "views"})
+COMPONENT_SECTIONS: Final = frozenset(
+    {"services", "devices", "presenters", "views", "stacks"}
+)
 """The configuration sections whose entries are a component's constructor call."""
 
 REPLACED_WHOLE: Final = frozenset({"layout"})
@@ -93,7 +96,7 @@ PLUGIN_KEYS: Final = ("plugin_name", "plugin_id")
 """The keys naming the plugin a component comes from."""
 
 EMPTY_AS_MAPPING: Final = frozenset(
-    {"metadata", "services", "devices", "presenters", "views", "wiring"}
+    {"metadata", "services", "devices", "presenters", "views", "stacks", "wiring"}
 )
 """Sections a file may write empty, read as an empty mapping."""
 
@@ -168,7 +171,7 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
     scalar - is replaced rather than combined.
 
     A component entry is the exception: under `services`, `devices`,
-    `presenters` and `views` the section merges by component name, but a
+    `presenters`, `views` and `stacks` the section merges by component name, but a
     component *named* in *overlay* is taken from it whole. A `layout` section
     is replaced whole: two layout trees have no single obvious merge.
     """
@@ -422,6 +425,22 @@ class ViewEntry(ComponentEntry):
     """Where the view attaches, as a word or mapping the session's frontend reads."""
 
 
+class StackEntry(ComponentEntry):
+    """A stack's entry: the plugin it comes from, and one mapping of keywords per role."""
+
+    @model_validator(mode="after")
+    def roles_are_mappings(self) -> StackEntry:
+        """Refuse a role whose value is not a mapping of keywords."""
+        scalars = [
+            key
+            for key, value in (self.model_extra or {}).items()
+            if not isinstance(value, Mapping)
+        ]
+        if scalars:
+            raise ValueError(f"role {scalars[0]!r} takes a mapping of keywords")
+        return self
+
+
 class RowEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """Views side by side in a layout, as a session file writes them."""
 
@@ -586,6 +605,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     views: dict[str, ViewEntry] = {}
     """Views by name."""
+
+    stacks: dict[str, StackEntry] = {}
+    """Presenters declared with their views as one entry, by name."""
 
     layout: LayoutEntry | None = None
     """The first layout of the window, in place of the one the session class declares."""

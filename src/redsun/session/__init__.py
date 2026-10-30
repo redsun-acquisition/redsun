@@ -11,6 +11,7 @@ from redsun.session.components import (
     AsHook,
     AsPresenter,
     AsService,
+    AsStack,
     AsView,
 )
 
@@ -43,6 +44,7 @@ __all__ = [
     "AsHook",
     "AsPresenter",
     "AsService",
+    "AsStack",
     "AsView",
     "Attach",
     "AttachableComponent",

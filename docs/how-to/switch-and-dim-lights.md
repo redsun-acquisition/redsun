@@ -39,22 +39,35 @@ gets the number field alone.
 
 ## Declare it in a session file
 
-Both components are built into `redsun`, under the plugin id `lights`:
+The light [stack](../explanation/glossary.md#stack) is built into `redsun`,
+under the plugin id `lights`, and one entry declares it:
 
 ```yaml
-presenters:
+stacks:
   lights:
     plugin_name: redsun
     plugin_id: lights
-views:
-  lights_view:
-    plugin_name: redsun
-    plugin_id: lights
-pairs:
-  - [lights_view, lights]
 ```
 
-The pairing makes the seven links between the two. Written out, they are:
+The session builds the presenter `lights` and the view `lights_view`, and
+pairs them, which makes the seven links between the two.
+
+??? example "The same stack declared one by one"
+
+    ```yaml
+    presenters:
+      lights:
+        plugin_name: redsun
+        plugin_id: lights
+    views:
+      lights_view:
+        plugin_name: redsun
+        plugin_id: lights
+    pairs:
+      - [lights_view, lights]
+    ```
+
+Written out, the links are:
 
 ??? example "The same links under `wiring`"
 
@@ -75,7 +88,8 @@ The presenter takes every light of the session, or only those named under
 
 ## Declare it in Python
 
-In a session class, declare both components and pair them in `wire()`:
+In a session class, declare the stack with `AsStack`, and the session pairs
+the presenter and the view:
 
 ```{.python}
 --8<-- "docs/examples/lights.py:session"

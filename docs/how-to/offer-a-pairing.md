@@ -5,8 +5,9 @@ icon: lucide/link
 # How to offer a pairing
 
 A presenter and a view written for each other can connect with one line in a
-session file, `pairs: - [view, presenter]`, instead of one line per link. This
-page is for the author of the two components.
+session file, `pairs: - [view, presenter]`, instead of one line per link, or
+come as one stack a session declares in one entry. This page is for the
+author of the two components.
 [ADR 23](../explanation/decisions/0023-pairing-two-components.md) explains
 the design.
 
@@ -65,6 +66,37 @@ def wire(self) -> Iterator[Link]:
 Each signal of one component reaches each slot of the other naming it, both
 ways. Only [`psygnal`](../explanation/glossary.md#psygnal) signals are matched,
 so link a device signal on its own.
+
+## Publish them as a stack
+
+A session can still declare one of the two and forget the other. Publish them
+as a [stack](../explanation/glossary.md#stack) instead, and a session declares
+both in one entry. A stack is a class whose annotations name the presenter and
+each view under a role:
+
+```python
+from redsun import AsPresenter, AsView
+
+
+class MyStack:
+    presenter: AsPresenter[MyController]
+    view: AsView[MyView]
+```
+
+List it under `stacks` in your plugin's manifest, as
+[How to package a plugin](package-a-plugin.md) shows. A session file then
+declares it with one entry, and a session class with `AsStack`:
+
+```yaml
+stacks:
+  my_ctrl:
+    plugin_name: mylab
+    plugin_id: my-stack
+```
+
+The session builds the presenter under the stack's name and each view as
+`<stack>_<role>`, here `my_ctrl` and `my_ctrl_view`, and pairs them. A stack
+holds one presenter and at least one view, and nothing else.
 
 ## What the session checks
 
