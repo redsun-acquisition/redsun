@@ -93,6 +93,9 @@ A key that names no role of the stack is refused, and so is a half's name
 that another component already has. A half's keys replace those the stack
 class gives it, and a session class's `Declare` replaces both. An entry for a
 stack the session class declares leaves out `plugin_name` and `plugin_id`.
+A later file naming the same stack replaces its entry whole. A stack whose
+plugin can't be found counts as a component that failed to build, and so do
+the halves its entry names.
 
 ```yaml
 stacks:
