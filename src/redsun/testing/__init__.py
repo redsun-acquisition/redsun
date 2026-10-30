@@ -4,7 +4,9 @@ A suite loads them with `-p redsun.testing`, in `addopts` or on the command
 line. Loading them makes every test keep session settings, session logs,
 acquisition data and catalogs under its `tmp_path`, drop the `psygnal`
 emissions it left queued, and turn automatic garbage collection off for the
-run, collecting after each test module on the main thread.
+run, collecting after each test module on the main thread. A test that used
+[`build`][redsun.testing.build] is collected after it too, and fails if a
+session `build` built is still alive, unless the test raised.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ from __future__ import annotations
 import gc
 import logging
 import os
+import weakref
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
@@ -49,6 +52,12 @@ __all__ = [
 ADDRESS_LISTS = ("EPICS_CA_ADDR_LIST", "EPICS_PVA_ADDR_LIST")
 """The environment variables a started service adds its address to."""
 
+BUILT_SESSIONS = pytest.StashKey[list[weakref.ref[Session]]]()
+"""Weak references to the sessions `build` built in a test, checked once the test is over."""
+
+RAISED = pytest.StashKey[bool]()
+"""Set on a test whose setup or call raised; its traceback keeps its frames, so its sessions are not checked."""
+
 SessionT = TypeVar("SessionT", bound=Session)
 
 
@@ -80,7 +89,7 @@ class StartService(Protocol):
 
 
 @pytest.fixture
-def build() -> Generator[BuildSession, None, None]:
+def build(request: pytest.FixtureRequest) -> Generator[BuildSession, None, None]:
     """Return a function building a session, shut down when the test ends.
 
     It takes a session class, made with the configuration given and laid over
@@ -89,6 +98,11 @@ def build() -> Generator[BuildSession, None, None]:
     A shutdown that raises does not stop the others: once every session has
     been shut down, the fixture raises that error, or an `ExceptionGroup` of
     all of them when more than one session raised.
+
+    Once the test is over, a session still alive fails the test with an error
+    at teardown, unless the test itself raised. That includes a session the
+    test keeps: one stored on `self` in a test class, whose instance `pytest`
+    keeps until the run ends, or one made outside the test and passed in.
     """
     built: list[Session] = []
 
@@ -109,10 +123,57 @@ def build() -> Generator[BuildSession, None, None]:
             session.shutdown()
         except Exception as e:  # noqa: BLE001 - raised once every session is shut down
             errors.append(e)
+    request.node.stash[BUILT_SESSIONS] = [weakref.ref(session) for session in built]
+    built.clear()
     if len(errors) == 1:
         raise errors[0]
     if errors:
         raise ExceptionGroup("sessions could not shut down", errors)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo[None]
+) -> Generator[None, pytest.TestReport, pytest.TestReport]:
+    """Note that a test's setup or call raised."""
+    report = yield
+    if call.when != "teardown" and call.excinfo is not None:
+        item.stash[RAISED] = True
+    return report
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True)
+def pytest_runtest_teardown(item: pytest.Item) -> Generator[None, None, None]:
+    """Fail a test whose sessions are still alive once every fixture is torn down.
+
+    Raises
+    ------
+    RuntimeError
+        If a session `build` built is still alive.
+    """
+    yield
+    built = item.stash.get(BUILT_SESSIONS, [])
+    if (
+        not built
+        or item.stash.get(RAISED, False)
+        or not isinstance(item, pytest.Function)
+    ):
+        return
+    capture = item.config.pluginmanager.get_plugin("logging-plugin")
+    if capture is not None:
+        # the logging plugin keeps the teardown phase's records until the next test
+        # starts, and pytest offers no public way to drop them
+        capture.caplog_handler.reset()
+        capture.report_handler.reset()
+    item.funcargs = {}
+    gc.collect()
+    alive = [session for ref in built if (session := ref()) is not None]
+    if alive:
+        names = ", ".join(f"'{s.name}' ({type(s).__name__})" for s in alive)
+        raise RuntimeError(
+            f"still alive after the test: {names}; each is still referred to by "
+            "something that outlives the test"
+        )
 
 
 @pytest.fixture(autouse=True)

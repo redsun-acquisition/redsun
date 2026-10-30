@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+import gc
 import logging
+import sys
+import weakref
 from typing import TYPE_CHECKING
 
 import pytest
 
-from redsun.log import BufferHandler, log_buffer, logger, service_of, set_level
+from redsun.log import (
+    BufferHandler,
+    GlobalFormatter,
+    log_buffer,
+    logger,
+    service_of,
+    set_level,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -32,6 +42,32 @@ def _record(
     if created is not None:
         record.created = created
     return record
+
+
+class Held:
+    """An object a test watches through a weak reference."""
+
+
+def fail_holding(held: Held) -> None:
+    """Raise from a frame whose locals hold *held*."""
+    raise RuntimeError("failed")
+
+
+def logged_failure(held: Held) -> logging.LogRecord:
+    """Return a record of the failure `fail_holding` raises, with *held* among its arguments."""
+    try:
+        fail_holding(held)
+    except RuntimeError:
+        return logging.LogRecord(
+            "redsun",
+            logging.ERROR,
+            __file__,
+            0,
+            "failed with %s",
+            (held,),
+            sys.exc_info(),
+        )
+    raise AssertionError("fail_holding did not raise")
 
 
 def test_records_are_retained_in_order(buffer: BufferHandler) -> None:
@@ -144,3 +180,51 @@ def test_clear_drops_every_record() -> None:
     handler.clear()
 
     assert (handler.records, handler.services) == ((), ())
+
+
+def test_a_retained_record_keeps_nothing_it_refers_to() -> None:
+    """Free a logged argument and the frames of a logged exception while the record stays retained."""
+    handler = BufferHandler()
+    held = Held()
+    freed = weakref.ref(held)
+    record = logged_failure(held)
+
+    handler.emit(record)
+    del held, record
+    gc.collect()
+
+    assert freed() is None
+    assert len(handler.records) == 1
+
+
+def test_a_retained_record_is_written_with_its_message_and_traceback() -> None:
+    """Write a retained record with its message and traceback, leaving the record logged untouched."""
+    handler = BufferHandler()
+    record = logged_failure(Held())
+
+    handler.emit(record)
+    text = GlobalFormatter().format(handler.records[0])
+
+    assert record.msg == "failed with %s"
+    assert record.args is not None
+    assert record.exc_info is not None
+    assert "failed with <" in text
+    assert "in fail_holding" in text
+    assert "RuntimeError: failed" in text
+
+
+def test_a_record_whose_arguments_do_not_fit_is_reported(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Report a record whose arguments do not fit its message, without raising or retaining it."""
+    handler = BufferHandler()
+    announced: list[logging.LogRecord] = []
+    handler.sig_record.connect(announced.append)
+
+    handler.emit(
+        logging.LogRecord("redsun", logging.INFO, __file__, 0, "%d", ("x",), None)
+    )
+
+    assert handler.records == ()
+    assert announced == []
+    assert "Logging error" in capsys.readouterr().err

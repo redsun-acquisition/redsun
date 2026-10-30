@@ -101,6 +101,97 @@ def test_after():
 """
 """Three tests, the second turning automatic collection on and leaving it on."""
 
+KEEPS_ITS_SESSION = """
+from redsun import Session
+
+KEPT = []
+
+
+def test_keeps_its_session(build):
+    KEPT.append(build(Session, {"session": "kept"}))
+"""
+"""A test keeping the session it built in a list at module level."""
+
+FIXTURE_RETURNS_IT = """
+import pytest
+
+from redsun import Session
+
+
+@pytest.fixture
+def app(build):
+    return build(Session, {"session": "from-a-fixture"})
+
+
+def test_uses_the_session(app):
+    assert app.name == "from-a-fixture"
+"""
+"""A test receiving its session from a fixture, which `pytest` holds until the test's report."""
+
+FAILS_TO_BUILD = """
+from redsun import AsPresenter, Session
+
+
+class Broken:
+    def __init__(self, name: str) -> None:
+        raise RuntimeError("this presenter cannot be built")
+
+
+class BrokenApp(Session):
+    ctrl: AsPresenter[Broken]
+
+
+def test_builds_a_broken_presenter(build):
+    session = build(BrokenApp, {"session": "broken"})
+    assert "ctrl" not in session.presenters
+"""
+"""A test whose session logs the exception of a presenter that fails to build."""
+
+LOGS_AT_SHUTDOWN = """
+import logging
+
+from redsun import AsPresenter, Session
+
+
+class Closing:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def shutdown(self) -> None:
+        try:
+            raise RuntimeError("closing failed")
+        except RuntimeError:
+            logging.getLogger("redsun").exception("could not close")
+
+
+class ClosingApp(Session):
+    ctrl: AsPresenter[Closing]
+
+
+def test_shuts_down(build):
+    session = build(ClosingApp, {"session": "closing"})
+    assert "ctrl" in session.presenters
+"""
+"""A test whose presenter logs an exception while the session shuts down."""
+
+RAISES = """
+import pytest
+
+from redsun import Session
+
+
+def test_fails(build):
+    session = build(Session, {"session": "failing"})
+    assert session.name == "another"
+
+
+@pytest.mark.xfail(strict=True)
+def test_fails_as_expected(build):
+    session = build(Session, {"session": "expected-to-fail"})
+    assert session.name == "another"
+"""
+"""A failing test and an expected failure, each keeping its session in its traceback."""
+
 
 def test_a_session_keeps_its_settings_under_tmp_path(
     tmp_path: Path, build: BuildSession
@@ -182,3 +273,46 @@ def test_a_test_leaving_collection_on_is_refused(pytester: pytest.Pytester) -> N
             "ERROR *::test_turns_collection_on*",
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "disabled", [(), ("-p", "no:logging")], ids=["logging", "no-logging"]
+)
+def test_a_session_kept_alive_fails_its_test(
+    pytester: pytest.Pytester, disabled: tuple[str, ...]
+) -> None:
+    """Fail a test whose session is still alive once it is over, with or without `pytest`'s logging plugin."""
+    pytester.makepyfile(KEEPS_ITS_SESSION)
+
+    result = pytester.runpytest_subprocess("-p", "redsun.testing", *disabled)
+
+    result.assert_outcomes(passed=1, errors=1)
+    result.stdout.fnmatch_lines(
+        ["*RuntimeError: still alive after the test: 'kept' (Session); *"]
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [FIXTURE_RETURNS_IT, FAILS_TO_BUILD, LOGS_AT_SHUTDOWN],
+    ids=["fixture", "failed-build", "shutdown-log"],
+)
+def test_a_session_only_pytest_held_passes(
+    pytester: pytest.Pytester, source: str
+) -> None:
+    """Pass a test whose session only a fixture value or `pytest`'s log capture held."""
+    pytester.makepyfile(source)
+
+    result = pytester.runpytest_subprocess("-p", "redsun.testing")
+
+    result.assert_outcomes(passed=1)
+
+
+def test_a_test_that_raised_is_not_checked(pytester: pytest.Pytester) -> None:
+    """Report only its own outcome for a test that raised after building a session."""
+    pytester.makepyfile(RAISES)
+
+    result = pytester.runpytest_subprocess("-p", "redsun.testing")
+
+    result.assert_outcomes(failed=1, xfailed=1)
+    result.stdout.no_fnmatch_line("*still alive after the test*")
