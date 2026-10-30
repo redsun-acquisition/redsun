@@ -5602,6 +5602,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.presenter.AcquisitionPresenter.sig_plan_stopped" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;sig_plan_stopped
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.presenter.AcquisitionPresenter.sig_plan_failed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7554,6 +7565,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;sig_plan_done
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.presenter.AcquisitionPresenter.sig_plan_stopped" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;sig_plan_stopped
       </span>
     </span>
   </a>
@@ -9581,8 +9603,8 @@ write that was refused, or not made because a plan holds the device.</p>
 one whose signature no plan widget can show is left out with a warning.
 A run gets the callbacks its plan lists, then those attached to it. Its
 files are named after the plan while it runs. Its end is reported on
-<code>sig_plan_done</code>, or, when it raises, on <code>sig_plan_failed</code> with the error
-logged.</p>
+<code>sig_plan_done</code> when it finishes, on <code>sig_plan_stopped</code> when it is
+stopped, or on <code>sig_plan_failed</code>, with the error logged, when it raises.</p>
 
 
 
@@ -9646,7 +9668,32 @@ logged.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Plan, once it has finished or been stopped.</p>
+        <p>Plan, once it has finished.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.presenter.AcquisitionPresenter.sig_plan_stopped" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">sig_plan_stopped</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#redsun.presenter.AcquisitionPresenter.sig_plan_stopped" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sig_plan_stopped</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Plan, once it has been stopped.</p>
 
     </div>
 
@@ -10068,7 +10115,7 @@ be turned into the plan's arguments are reported on <code>sig_plan_failed</code>
 
     <div class="doc doc-contents ">
 
-        <p>Stop the running or paused plan, which ends as done.</p>
+        <p>Stop the running or paused plan, which ends as stopped.</p>
 
 
     </div>

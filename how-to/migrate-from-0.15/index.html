@@ -2727,6 +2727,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-stopped-plan-has-a-signal-of-its-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A stopped plan has a signal of its own
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-qt-test-fixtures-are-a-plugin-of-their-own" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6040,6 +6051,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-stopped-plan-has-a-signal-of-its-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A stopped plan has a signal of its own
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-qt-test-fixtures-are-a-plugin-of-their-own" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6180,8 +6202,8 @@
 plan progress receives, moves some axes to another box of the positioner,
 removes two helpers the positioner no longer uses, changes what a session
 does when a service does not start, stops a held key from running its
-command again and again, and moves the test fixtures for Qt into a plugin of
-their own. This page gives each change with what to write instead. The
+command again and again, moves the test fixtures for Qt into a plugin of
+their own, and reports a stopped plan on a signal of its own. This page gives each change with what to write instead. The
 <a href="../../reference/changelog/">changelog</a> lists everything else the release
 changed.</p>
 <h2 id="a-views-placement-cant-come-from-a-property">A view's placement can't come from a property<a class="headerlink" href="#a-views-placement-cant-come-from-a-property" title="Permanent link">&para;</a></h2>
@@ -6321,6 +6343,29 @@ steps an axis, pass <code>repeat=True</code> to <code>@shortcut</code>:</p>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="nd">@shortcut</span><span class="p">(</span><span class="s2">"Right"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Step forward"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"view"</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">step_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
+<h2 id="a-stopped-plan-has-a-signal-of-its-own">A stopped plan has a signal of its own<a class="headerlink" href="#a-stopped-plan-has-a-signal-of-its-own" title="Permanent link">&para;</a></h2>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AcquisitionPresenter&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/presenter/#redsun.presenter.AcquisitionPresenter"><code>AcquisitionPresenter</code></a> now reports a
+plan the user stopped on <code>sig_plan_stopped</code>, and keeps <code>sig_plan_done</code> for a
+plan that runs to its end. The built-in view shows the stop through its new
+slot, <code>set_stopped</code>. A session that pairs the two components gets the new link
+by itself. A session file that writes out the links under <code>wiring</code> adds the
+new one, or the view stays locked after a stop:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 0.15</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">acquisition.sig_plan_done</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acquisition_view.set_done</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># now</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">acquisition.sig_plan_done</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acquisition_view.set_done</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span><span class="nt">acquisition.sig_plan_stopped</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acquisition_view.set_stopped</span>
+</span></code></pre></div>
+<p>A component of your own that connects to <code>sig_plan_done</code> to learn that a run
+is over connects to <code>sig_plan_stopped</code> too.</p>
 <h2 id="the-qt-test-fixtures-are-a-plugin-of-their-own">The Qt test fixtures are a plugin of their own<a class="headerlink" href="#the-qt-test-fixtures-are-a-plugin-of-their-own" title="Permanent link">&para;</a></h2>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;keep_application_as_found&lt;/span&gt;" href="../../reference/api/testing/#redsun.testing.qt.keep_application_as_found"><code>keep_application_as_found</code></a>,
 the fixture that fails a test leaving the application changed, moved from
@@ -6329,17 +6374,17 @@ Qt's <code>offscreen</code> platform the system fonts on Windows. That module is
 plugin, installed with the <code>testing-qt</code> extra, so a suite that tests no Qt
 components never imports Qt. A suite that tests Qt components changes its
 install line and its <code>addopts</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 0.15</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span><span class="s2">"redsun[testing]"</span><span class="w"> </span>pytest-asyncio
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># now</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span><span class="s2">"redsun[testing-qt]"</span><span class="w"> </span>pytest-asyncio
-</span></code></pre></div>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># 0.15</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># 0.15</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span><span class="s2">"redsun[testing]"</span><span class="w"> </span>pytest-asyncio
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># now</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing -p redsun.testing.qt"</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span><span class="s2">"redsun[testing-qt]"</span><span class="w"> </span>pytest-asyncio
+</span></code></pre></div>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># 0.15</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing"</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># now</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">addopts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-p redsun.testing -p redsun.testing.qt"</span>
 </span></code></pre></div>
 <p>The extra installs no Qt binding, so the suite keeps the one it installs
 today. <code>redsun.testing.qt</code> also defines a <code>qapp</code> fixture, and a suite that

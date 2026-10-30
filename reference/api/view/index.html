@@ -6635,6 +6635,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.view.qt.builtins.AcquisitionView.set_stopped" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_stopped
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.view.qt.builtins.AcquisitionView.set_failed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8742,6 +8753,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_done
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redsun.view.qt.builtins.AcquisitionView.set_stopped" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_stopped
       </span>
     </span>
   </a>
@@ -12782,8 +12804,8 @@ the window is open brings it to the front.</p>
         <p>Choose a plan, fill its parameters, and run, pause and stop it.</p>
 <p>One <code>PlanWidget</code> per plan the presenter describes, chosen from a list,
 and the directory runs write under. The view shows a plan running only
-once the presenter reports it started, and shows why a plan failed until
-it runs again. The plan chosen last is kept in the session's settings.
+once the presenter reports it started, and shows that a plan was stopped,
+or why it failed, until it runs again. The plan chosen last is kept in the session's settings.
 <code>Ctrl+R</code> runs the chosen plan and <code>Ctrl+.</code> stops the running one,
 anywhere in the window.</p>
 
@@ -13039,6 +13061,26 @@ anywhere in the window.</p>
     <div class="doc doc-contents ">
 
         <p>Show <em>plan</em> ended, and free the chooser and the root.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.view.qt.builtins.AcquisitionView.set_stopped" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">set_stopped</span>
+
+
+<a href="#redsun.view.qt.builtins.AcquisitionView.set_stopped" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">set_stopped</span><span class="p">(</span><span class="n">plan</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Show <em>plan</em> stopped, until it runs again.</p>
 
 
     </div>
