@@ -117,7 +117,7 @@ engine -> callbacks: "documents" {
 }
 engine -> presenter: "Future done" {style.stroke-dash: 4}
 presenter -> view: "plan ended" {
-  tooltip: The view enables the controls it disabled when the plan started. The built-in AcquisitionPresenter reports a plan that raised on sig_plan_failed instead of sig_plan_done.
+  tooltip: The view enables the controls it disabled when the plan started. The built-in AcquisitionPresenter reports a plan that raised on sig_plan_failed, and a plan the user stopped on sig_plan_stopped, instead of sig_plan_done.
 }
 ```
 

@@ -180,6 +180,7 @@ def record(
 
     presenter.sig_plan_started.connect(note("started"))
     presenter.sig_plan_done.connect(note("done"))
+    presenter.sig_plan_stopped.connect(note("stopped"))
     presenter.sig_plan_failed.connect(note("failed"))
     return seen, ended
 
@@ -240,7 +241,7 @@ def test_a_value_outside_its_limits_is_refused_before_launch(
 def test_a_launch_while_a_plan_runs_is_refused(
     presenter: AcquisitionPresenter, plans: Plans, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Start nothing while another plan runs, and stop the first as done."""
+    """Start nothing while another plan runs, and report the first stopped."""
     seen, ended = record(presenter)
 
     presenter.launch("hold", {})
@@ -249,7 +250,7 @@ def test_a_launch_while_a_plan_runs_is_refused(
     presenter.stop()
 
     assert ended.wait(10)
-    assert seen == [("started", "hold"), ("done", "hold")]
+    assert seen == [("started", "hold"), ("stopped", "hold")]
     assert "not launched" in caplog.text
 
 
@@ -269,7 +270,7 @@ def test_a_stop_right_after_launch_stops_the_plan(
         loop_free.set()
 
     assert ended.wait(10)
-    assert seen == [("started", "hold"), ("done", "hold")]
+    assert seen == [("started", "hold"), ("stopped", "hold")]
 
 
 def test_pause_resume_and_stop_with_no_plan_running_are_ignored(
@@ -292,7 +293,7 @@ def test_a_paused_plan_reports_nothing_until_it_is_stopped(
     plans: Plans,
     wait_until: Callable[..., bool],
 ) -> None:
-    """Report no end on a pause, and a single done once the paused plan is stopped."""
+    """Report no end on a pause, and a single stop once the paused plan is stopped."""
     seen, ended = record(presenter)
     presenter.launch("pausable", {})
     assert plans.running.wait(10)
@@ -304,7 +305,7 @@ def test_a_paused_plan_reports_nothing_until_it_is_stopped(
 
     assert ended.wait(10)
     assert not reported_while_paused
-    assert seen == [("started", "pausable"), ("done", "pausable")]
+    assert seen == [("started", "pausable"), ("stopped", "pausable")]
 
 
 def test_a_plan_no_widget_can_show_is_left_out(
@@ -399,7 +400,7 @@ def test_resuming_before_the_pause_is_reached_withdraws_it(
     plans: Plans,
     wait_until: Callable[..., bool],
 ) -> None:
-    """Withdraw a pause no checkpoint has reached, and report the plan done when stopped."""
+    """Withdraw a pause no checkpoint has reached, and report the plan stopped."""
     seen, ended = record(presenter)
     presenter.launch("hold", {})
     assert plans.running.wait(10)
@@ -413,4 +414,4 @@ def test_resuming_before_the_pause_is_reached_withdraws_it(
 
     assert ended.wait(10)
     assert withdrawn
-    assert seen == [("started", "hold"), ("done", "hold")]
+    assert seen == [("started", "hold"), ("stopped", "hold")]

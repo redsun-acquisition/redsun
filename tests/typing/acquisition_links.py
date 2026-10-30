@@ -25,6 +25,7 @@ class Lab(Session):
         yield self.acquisition_view.sig_base_dir, self.acquisition.set_base_dir
         yield self.acquisition.sig_plan_started, self.acquisition_view.set_started
         yield self.acquisition.sig_plan_done, self.acquisition_view.set_done
+        yield self.acquisition.sig_plan_stopped, self.acquisition_view.set_stopped
         yield self.acquisition.sig_plan_failed, self.acquisition_view.set_failed
         yield self.acquisition.sig_progress, self.acquisition_view.update_progress
         yield self.acquisition.sig_action_changed, self.acquisition_view.update_action
