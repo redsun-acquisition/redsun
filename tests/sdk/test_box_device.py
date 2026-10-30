@@ -37,8 +37,13 @@ class MyDetector(Device):
 class MissingChild(Device):
     absent: SignalR[int]
 
-    def __init__(self, prefix: str, name: str = "") -> None:
-        super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+    def __init__(
+        self, prefix: str, name: str = "", *, declared_only: bool = False
+    ) -> None:
+        super().__init__(
+            name=name,
+            connector=BoxDeviceConnector(prefix, declared_only=declared_only),
+        )
 
 
 class WrongDatatype(Device):
@@ -69,6 +74,30 @@ class Stage(Device):
 
     def __init__(self, prefix: str, name: str = "") -> None:
         super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+
+
+class Position(Device):
+    position: SignalRW[float]
+
+
+class Exposer(Device):
+    exposure: SignalRW[float]
+    run: TriggerableCommand
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(
+            name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+        )
+
+
+class Mover(Device):
+    exposure: SignalRW[float]
+    axes: DeviceVector[Position]
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(
+            name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+        )
 
 
 @pytest_asyncio.fixture
@@ -202,11 +231,12 @@ async def test_describe_carries_units_and_limits(detector: MyDetector) -> None:
     assert choices == ["IDLE", "RUN"]
 
 
+@pytest.mark.parametrize("declared_only", [False, True])
 async def test_a_declared_child_missing_from_the_index_fails_connect(
-    served: tuple[BoxController, str],
+    served: tuple[BoxController, str], declared_only: bool
 ) -> None:
-    """Name the missing child in the error."""
-    device = MissingChild(served[1], name="bad")
+    """Name the missing child in the error, whether undeclared ones are filled or not."""
+    device = MissingChild(served[1], name="bad", declared_only=declared_only)
     with pytest.raises(Exception, match="absent"):
         await device.connect(timeout=5)
 
@@ -236,6 +266,32 @@ async def test_a_declared_signal_missing_from_a_child_fails_connect(
     device = Stage(served[1], name="bad")
     with pytest.raises(Exception, match="speed"):
         await device.connect(timeout=5)
+
+
+async def test_devices_on_one_service_fill_only_what_they_declare(
+    served: tuple[BoxController, str],
+) -> None:
+    """Fill each device with its declared children only, sharing the attributes."""
+    controller, prefix = served
+    exposer = Exposer(prefix, name="exposer")
+    mover = Mover(prefix, name="mover")
+    await exposer.connect(timeout=5)
+    await mover.connect(timeout=5)
+    try:
+        assert sorted(name for name, _ in exposer.children()) == ["exposure", "run"]
+        assert sorted(name for name, _ in mover.children()) == ["axes", "exposure"]
+        assert sorted(mover.axes.keys()) == [0, 1]
+        assert [name for name, _ in mover.axes[1].children()] == ["position"]
+        await exposer.exposure.set(3.5)
+        assert await mover.exposure.get_value() == 3.5
+        await mover.axes[1].position.set(2.0)
+        assert controller.axes[1].position.get() == 2.0
+        await exposer.run.trigger()
+        assert controller.runs == 1
+    finally:
+        for device in (exposer, mover):
+            for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+                box.close()
 
 
 async def test_an_observer_survives_a_reconnect(

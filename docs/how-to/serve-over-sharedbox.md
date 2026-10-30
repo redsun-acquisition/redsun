@@ -88,6 +88,15 @@ sub-devices. A `fastcs` command becomes a `TriggerableCommand`.
 The values of a declared enum must be the names of the members of the `fastcs`
 enum, because the index lists only those names.
 
+One service can also back several devices, each taking a part of it, such as
+a flyer that runs a scan and a detector that records it. Give each of them
+`BoxDeviceConnector(prefix, declared_only=True)`, and its connector fills
+only the signals, commands and children the device declares. A declared
+child follows the same rule, while a declared `DeviceVector` takes every
+entry the service serves. A declared name the service lacks still fails
+`connect`, and two devices that declare the same attribute both read and
+write it.
+
 ## Declare it
 
 Name the transport in the session's configuration, and declare the service

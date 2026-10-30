@@ -25,6 +25,7 @@ class Axis(Controller):
     def __init__(self) -> None:
         super().__init__()
         self.position = AttrRW(Float(prec=3))
+        self.steps = AttrR(Int())
 
 
 class BoxController(Controller):

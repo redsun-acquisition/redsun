@@ -420,12 +420,21 @@ class BoxDeviceConnector(DeviceConnector):
     The top device attaches the index and the boxes of the service and fills
     itself and its children from what the index describes. A child gets its
     part of the description from its parent.
+
+    Parameters
+    ----------
+    declared_only
+        Fill only the signals, commands and children the device declares,
+        and skip the rest of what the service serves. Declared children
+        follow the same rule, and a declared `DeviceVector` takes every
+        entry the service serves.
     """
 
     mock_device_vector_children: ClassVar[list[int]] = [1, 2]
 
-    def __init__(self, prefix: str = "") -> None:
+    def __init__(self, prefix: str = "", *, declared_only: bool = False) -> None:
         self._prefix = prefix
+        self._declared_only = declared_only
         self._description: ControllerDescription | None = None
         self._boxes: dict[str, SharedBox] = {}
         self._is_child = False
@@ -540,18 +549,29 @@ class BoxDeviceConnector(DeviceConnector):
     def _fill(self, device: Device, description: ControllerDescription) -> None:
         """Create the signals, commands and children `description` names."""
         box = description["box"]
+        declared = (
+            {name for name, _ in device.children()}
+            if self._declared_only and not isinstance(device, DeviceVector)
+            else None
+        )
         for name, attribute in description["attributes"].items():
+            if declared is not None and name not in declared:
+                continue
             assert box is not None
             backend = self._filler.fill_child_signal(
                 name, _SIGNALS[attribute["access"]]
             )
             backend._bind(self._boxes, _box_key(description), name, attribute)
         for name in description["commands"]:
+            if declared is not None and name not in declared:
+                continue
             assert box is not None
             self._filler.fill_child_command(name, TriggerableCommand)._bind(
                 self._boxes, _box_key(description), name
             )
         for key, child in description["children"].items():
+            if declared is not None and key not in declared:
+                continue
             if isinstance(device, DeviceVector):
                 connector = self._filler.fill_child_device(
                     device.name, Device, map_key=int(key)
@@ -566,3 +586,4 @@ class BoxDeviceConnector(DeviceConnector):
             connector._description = child
             connector._boxes = self._boxes
             connector._is_child = True
+            connector._declared_only = self._declared_only
