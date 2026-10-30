@@ -1236,15 +1236,15 @@ class Session(BuildableSession):
         for attribute, name in stand_ins.items():
             setattr(self, attribute, NotBuilt(name))
         unbuilt_roles: list[tuple[object, str]] = []
-        for stack in self._stacks.values():
-            held = stack.cls()
-            for half, role in stack.roles.items():
-                built = self._declarations[half].instance
-                if built is None:
-                    unbuilt_roles.append((held, role))
-                setattr(held, role, NotBuilt(half) if built is None else built)
-            setattr(self, stack.attribute, held)
         try:
+            for stack in self._stacks.values():
+                held = stack.cls()
+                for half, role in stack.roles.items():
+                    built = self._declarations[half].instance
+                    setattr(held, role, NotBuilt(half) if built is None else built)
+                    if built is None:
+                        unbuilt_roles.append((held, role))
+                setattr(self, stack.attribute, held)
             links = self.wire()
             if links is None:
                 raise WiringError(

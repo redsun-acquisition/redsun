@@ -14,10 +14,12 @@ from mock_bundle.views import MockMotorView, Somewhere
 from psygnal import Signal
 
 from redsun import (
+    Alias,
     AsDevice,
     AsPresenter,
     AsStack,
     AsView,
+    BuildError,
     ConfigurationError,
     Declare,
     Link,
@@ -118,6 +120,24 @@ class BrokenDuo:
     view: AsView[Hearer]
 
 
+class Marked:
+    presenter: AsPresenter[Talker]
+    view: Annotated[AsView[Hearer], Alias("other")]
+
+
+class Reserved:
+    presenter: AsPresenter[Talker]
+    plugin_id: AsView[Hearer]
+
+
+class Unconstructable:
+    presenter: AsPresenter[Talker]
+    view: AsView[Hearer]
+
+    def __init__(self) -> None:
+        raise RuntimeError("this stack cannot be made")
+
+
 class Plugged(Session):
     """Every component comes from the mock bundle."""
 
@@ -135,6 +155,31 @@ class WithBrokenDuo(Session):
 
     def wire(self) -> Iterator[Link]:
         yield self.duo.presenter.sig_said, self.duo.view.hear
+
+
+class WithAliasedDuo(Session):
+    panel: Annotated[AsStack[Duo], Alias("duo")]
+
+
+class WithUnknownRole(Session):
+    duo: Annotated[AsStack[Duo], Declare(views={})]
+
+
+class WithScalarRole(Session):
+    duo: Annotated[AsStack[Duo], Declare(view=3)]
+
+
+class WithMarked(Session):
+    duo: AsStack[Marked]
+
+
+class WithReserved(Session):
+    duo: AsStack[Reserved]
+
+
+class WithUnconstructable(Session):
+    broken: AsPresenter[BrokenTalker]
+    duo: AsStack[Unconstructable]
 
 
 class Clashing(WithDuo):
@@ -243,26 +288,99 @@ def test_a_role_entry_that_is_not_a_mapping_is_refused() -> None:
         WithDuo({"stacks": {"duo": {"view": 3}}}).build()
 
 
-def test_a_file_stack_that_does_not_resolve_is_left_out(
+def test_a_role_that_names_a_plugin_key_is_refused() -> None:
+    """Raise naming the stack class and the role for a role called plugin_id."""
+    with pytest.raises(TypeError, match=r"Reserved.*'plugin_id'"):
+        WithReserved().build()
+
+
+def test_a_half_with_a_marker_other_than_declare_is_refused() -> None:
+    """Raise naming the stack class and the role for an Alias on a half."""
+    with pytest.raises(TypeError, match=r"Marked.*'view'.*Alias"):
+        WithMarked().build()
+
+
+def test_a_declare_role_that_is_not_a_mapping_is_refused() -> None:
+    """Raise naming the stack and the role for a Declare giving a scalar."""
+    with pytest.raises(TypeError, match=r"role 'view' of stack 'duo'"):
+        WithScalarRole().build()
+
+
+def test_a_declare_naming_a_role_the_stack_does_not_have_is_refused() -> None:
+    """Raise naming the stack and its roles for a Declare with an unknown role."""
+    with pytest.raises(TypeError, match=r"'duo' has no role 'views'.*'presenter'"):
+        WithUnknownRole().build()
+
+
+def test_a_stack_declared_under_alias_is_held_by_its_attribute(
+    build: BuildSession,
+) -> None:
+    """Hold the stack under the annotated attribute and build its halves under the alias."""
+    session = build(WithAliasedDuo)
+
+    assert isinstance(session.panel, Duo)
+    assert session.panel.presenter is session.presenters["duo"]
+    assert session.panel.view is session.views["duo_view"]
+
+
+def test_a_stack_that_cannot_be_made_leaves_no_stand_ins() -> None:
+    """Remove the stand-ins of failed components when a stack's constructor raises."""
+    session = WithUnconstructable()
+
+    with pytest.raises(RuntimeError, match="this stack cannot be made"):
+        session.build()
+
+    assert not hasattr(session, "broken")
+
+
+UNRESOLVED_STACK: dict[str, Any] = {
+    "plugin_name": "mock-bundle",
+    "plugin_id": "nobody",
+    "view": {},
+}
+
+
+def test_a_file_stack_that_does_not_resolve_fails_the_build_of_a_strict_session(
+    mock_plugin: None,
+) -> None:
+    """Raise BuildError naming a file stack whose plugin id is unknown."""
+    config = {**PLUGIN_STACK, "stacks": {"motor": UNRESOLVED_STACK}, "strict": True}
+
+    with pytest.raises(BuildError, match="motor"):
+        Plugged(config).build()
+
+
+def test_links_naming_the_halves_of_an_unresolved_stack_are_skipped(
     mock_plugin: None, caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """Log and leave out a file stack whose plugin id is unknown."""
-    stacks = {"motor": {"plugin_name": "mock-bundle", "plugin_id": "nobody"}}
-    with caplog.at_level(logging.ERROR, logger="redsun"):
-        session = build(Plugged, {**PLUGIN_STACK, "stacks": stacks})
+    """Build without an unresolved stack and warn about the pair that names its halves."""
+    config = {
+        **PLUGIN_STACK,
+        "stacks": {"motor": UNRESOLVED_STACK},
+        "pairs": [["motor", "motor_view"]],
+    }
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(Plugged, config)
 
-    assert "Failed to load stack 'motor'" in caplog.text
+    assert session.is_built
     assert not session.presenters
-    assert not session.views
+    assert "Not pairing" in caplog.text
 
 
-def test_stacks_of_layered_files_merge(mock_plugin: None, build: BuildSession) -> None:
-    """Lay a later file's role entry over an earlier file's stack."""
-    later = {"stacks": {"motor": {"detail": {"title": "later"}}}}
-    session = build(Plugged, [PLUGIN_STACK, later])
+def test_a_later_file_replaces_a_stack_entry_whole(
+    mock_plugin: None, build: BuildSession
+) -> None:
+    """Drop the keywords an earlier file gave a role when a later file lists the stack."""
+    plugin = {"plugin_name": "mock-bundle", "plugin_id": "mock-motor"}
+    earlier = {
+        **PLUGIN_STACK,
+        "stacks": {"motor": {**plugin, "view": {"title": "earlier"}}},
+    }
+    later = {"stacks": {"motor": {**plugin, "detail": {"title": "later"}}}}
+    session = build(Plugged, [earlier, later])
 
+    assert title_of(session, "motor_view") == ""
     assert title_of(session, "motor_detail") == "later"
-    assert "motor_view" in session.views
 
 
 def test_a_stack_pairs_its_presenter_with_each_view(

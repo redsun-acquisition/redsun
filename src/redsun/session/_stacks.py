@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import inspect
-import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from redsun.errors import PluginError
 
@@ -22,14 +22,13 @@ from ._declarations import (
 from ._plugins import resolve
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from .._config import SessionFile, StackEntry
     from ._frontend import Frontend
 
-logger = logging.getLogger("redsun")
-
 __all__ = ["Stack", "read_stacks", "roles_of"]
+
+RESERVED_ROLES: Final = frozenset({"plugin_name", "plugin_id"})
+"""The keys of a stack's entry that name its plugin, so no role can use them."""
 
 
 @dataclass(frozen=True)
@@ -63,10 +62,11 @@ def roles_of(cls: type) -> dict[str, tuple[Layer, type, dict[str, Any]]]:
     Raises
     ------
     TypeError
-        If the class annotates anything but a presenter or a view, does not
-        annotate exactly one presenter and at least one view, or has a
-        constructor that needs an argument, since the session builds it with
-        no arguments.
+        If the class annotates anything but a presenter or a view, marks a
+        half with anything but `Declare`, names a role `plugin_name` or
+        `plugin_id`, does not annotate exactly one presenter and at least one
+        view, or has a constructor that needs an argument, since the session
+        builds it with no arguments.
     """
     roles: dict[str, tuple[Layer, type, dict[str, Any]]] = {}
     for attr, hint in hints(cls).items():
@@ -84,10 +84,20 @@ def roles_of(cls: type) -> dict[str, tuple[Layer, type, dict[str, Any]]]:
                 f"stack {cls.__qualname__} annotates {attr!r} as a {layer}, but "
                 f"{target!r} is not a class"
             )
+        if attr in RESERVED_ROLES:
+            raise TypeError(
+                f"stack {cls.__qualname__} annotates {attr!r}, which is a key of "
+                "the entry in a session file and cannot name a role"
+            )
         declared: dict[str, Any] = {}
         for marker in metadata:
             if isinstance(marker, Declare):
                 declared = marker.kwargs
+            else:
+                raise TypeError(
+                    f"stack {cls.__qualname__} gives role {attr!r} "
+                    f"{type(marker).__name__}, and a half takes only 'Declare'"
+                )
         roles[attr] = (layer, target, declared)
     presenters = [
         role for role, (layer, _, _) in roles.items() if layer is Layer.PRESENTER
@@ -121,7 +131,8 @@ def read_stacks(
     Keywords reach a half from the stack class, then the session file's role
     entry, then the `Declare` of the session class, the last winning. An
     entry no annotation reads is a stack too; one whose plugin does not
-    resolve is logged and left out.
+    resolve is declared as a presenter that cannot be built, so the build
+    records it as failed.
 
     Raises
     ------
@@ -157,12 +168,15 @@ def read_stacks(
         try:
             target = resolve(entry.plugin_name, entry.plugin_id, "stacks")
         except PluginError as e:
-            logger.error("Failed to load stack '%s': %s", cfg_key, e)
+            refuse_stack(cfg_key, entry, str(e), halves, frontend)
             continue
         if target is None:
-            logger.error(
-                "Stack '%s' names no plugin, and the session declares no such stack",
+            refuse_stack(
                 cfg_key,
+                entry,
+                "names no plugin, and the session declares no such stack",
+                halves,
+                frontend,
             )
             continue
         stacks[cfg_key] = make_stack(
@@ -170,6 +184,30 @@ def read_stacks(
         )
     refuse_shadowed(cls, stacks, "stack")
     return stacks, halves
+
+
+def refuse_stack(
+    name: str,
+    entry: StackEntry,
+    reason: str,
+    halves: dict[str, Declaration],
+    frontend: type[Frontend],
+) -> None:
+    """Add refused declarations for a stack whose class is unknown.
+
+    The stack's name stands for its presenter and `<name>_<role>` for each role
+    the entry gives, so the build records the stack as not built and a link
+    naming one of them is skipped like a link naming any component that failed.
+    """
+    error = PluginError(f"stack {name!r}: {reason}; its views are not declared either")
+    halves[name] = Declaration(
+        object, name, Layer.PRESENTER, {}, refusal=error, frontend=frontend
+    )
+    for role in entry.model_extra or {}:
+        half = f"{name}_{role}"
+        halves[half] = Declaration(
+            object, half, Layer.VIEW, {}, refusal=error, frontend=frontend
+        )
 
 
 def make_stack(
@@ -181,7 +219,7 @@ def make_stack(
     halves: dict[str, Declaration],
     frontend: type[Frontend],
 ) -> Stack:
-    """Return the stack *cls* makes as *name*, and add the declarations of its halves to *halves*.
+    """Return the stack *cls* makes as *name*, and add its halves to *halves*.
 
     The presenter takes *name* and each view `<name>_<role>`. *entry* gives
     the keywords of each role from a session file and *inline* those from a
@@ -194,6 +232,11 @@ def make_stack(
         has, or a half shares its name with one already in *halves*.
     """
     roles = roles_of(cls)
+    for role, keywords in inline.items():
+        if not isinstance(keywords, Mapping):
+            raise TypeError(
+                f"role {role!r} of stack {name!r} takes a mapping of keywords"
+            )
     given = dict(entry.model_extra or {}) if entry is not None else {}
     unknown = (given.keys() | inline.keys()) - roles.keys()
     if unknown:
