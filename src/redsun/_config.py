@@ -81,7 +81,9 @@ __all__ = [
     "validate_session",
 ]
 
-COMPONENT_SECTIONS: Final = frozenset({"services", "devices", "presenters", "views"})
+COMPONENT_SECTIONS: Final = frozenset(
+    {"services", "devices", "presenters", "views", "stacks"}
+)
 """The configuration sections whose entries are a component's constructor call."""
 
 REPLACED_WHOLE: Final = frozenset({"layout"})
@@ -169,7 +171,7 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
     scalar - is replaced rather than combined.
 
     A component entry is the exception: under `services`, `devices`,
-    `presenters` and `views` the section merges by component name, but a
+    `presenters`, `views` and `stacks` the section merges by component name, but a
     component *named* in *overlay* is taken from it whole. A `layout` section
     is replaced whole: two layout trees have no single obvious merge.
     """

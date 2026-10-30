@@ -38,7 +38,7 @@ def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type 
     plugin_id
         The entry's `plugin_id`, `None` when it gives none.
     group
-        Manifest section to look in: `devices`, `presenters`, `views` or
+        Manifest section to look in: `devices`, `presenters`, `views`, `stacks` or
         `providers`.
 
     Raises
