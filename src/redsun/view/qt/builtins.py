@@ -6,13 +6,17 @@ from ._light_view import LightView
 from ._log_view import LogView, LogWindowAction
 from ._positioner_group import PositionerGroup
 from ._positioner_view import PositionerView
+from ._stacks import AcquisitionStack, LightStack, PositionerStack
 
 __all__ = [
+    "AcquisitionStack",
     "AcquisitionView",
     "LightGroup",
+    "LightStack",
     "LightView",
     "LogView",
     "LogWindowAction",
     "PositionerGroup",
+    "PositionerStack",
     "PositionerView",
 ]

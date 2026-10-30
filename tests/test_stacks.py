@@ -26,8 +26,11 @@ from redsun import (
     WiringError,
     slot,
 )
+from redsun.qt import QtSession
 
 if TYPE_CHECKING:
+    from qtpy import QtWidgets
+
     from redsun.testing import BuildSession
 
 
@@ -318,3 +321,46 @@ def test_a_stack_half_that_failed_is_skipped_and_stands_in_during_wire(
     assert "Not connecting duo.sig_said" in caplog.text
     assert not hasattr(session.duo, "presenter")
     assert session.duo.view is session.views["duo_view"]
+
+
+@pytest.mark.qt
+@pytest.mark.parametrize("stack", ["acquisition", "lights", "positioner"])
+def test_a_built_in_stack_makes_the_links_of_its_pair(
+    qapp: QtWidgets.QApplication, build: BuildSession, stack: str
+) -> None:
+    """Link a built-in stack exactly as its presenter and view paired by hand."""
+
+    def entry(plugin_id: str) -> dict[str, str]:
+        return {"plugin_name": "redsun", "plugin_id": plugin_id}
+
+    def links(session: Session) -> list[tuple[str, str, str, str]]:
+        return sorted(
+            (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+            for c in session.connections
+        )
+
+    by_hand = build(
+        QtSession.from_config(
+            {
+                "session": f"hand-{stack}",
+                "mock": True,
+                "presenters": {stack: entry(stack)},
+                "views": {f"{stack}_view": entry(stack)},
+                "pairs": [[f"{stack}_view", stack]],
+            }
+        )
+    )
+    expected = links(by_hand)
+    by_hand.shutdown()
+    declared = build(
+        QtSession.from_config(
+            {
+                "session": f"stack-{stack}",
+                "mock": True,
+                "stacks": {stack: entry(stack)},
+            }
+        )
+    )
+
+    assert expected
+    assert links(declared) == expected

@@ -8,6 +8,10 @@ views:
   log-window: "redsun.view.qt.builtins:LogWindowAction"
   logs: "redsun.view.qt.builtins:LogView"
   positioner: "redsun.view.qt.builtins:PositionerView"
+stacks:
+  acquisition: "redsun.view.qt.builtins:AcquisitionStack"
+  lights: "redsun.view.qt.builtins:LightStack"
+  positioner: "redsun.view.qt.builtins:PositionerStack"
 hooks:
   napari: "redsun.qt.styles.napari:NapariStyle"
   qlementine: "redsun.qt.styles.qlementine:QlementineStyle"
