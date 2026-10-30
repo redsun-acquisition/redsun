@@ -42,7 +42,7 @@ pairs:
   - [acquisition_view, acquisition]
 ```
 
-The pairing makes the thirteen links between the two. Written out, they are:
+The pairing makes the fourteen links between the two. Written out, they are:
 
 ??? example "The same links under `wiring`"
 
@@ -54,6 +54,7 @@ The pairing makes the thirteen links between the two. Written out, they are:
       acquisition_view.sig_stop: acquisition.stop
       acquisition_view.sig_action: acquisition.request_action
       acquisition_view.sig_base_dir: acquisition.set_base_dir
+      acquisition_view.sig_label: acquisition.set_label
       acquisition.sig_plan_started: acquisition_view.set_started
       acquisition.sig_plan_done: acquisition_view.set_done
       acquisition.sig_plan_stopped: acquisition_view.set_stopped
@@ -92,10 +93,15 @@ directory, the motor to move and the plan's parameters](images/acquisition.png)
   session file changes them as `acquisition_view.run_plan` and
   `acquisition_view.stop_plan`.
 - When a plan raises, its plan widget shows "failed:" and the error until it
-  runs again, and the session log holds the full traceback.
+  runs again, and the session log holds the full traceback. A plan you stopped
+  shows "stopped" the same way.
 - Each run's files are named after its plan. "Choose root..." sets the
   directory runs write under, and "Browse root" opens it in the system's file
   browser.
+- A label typed in the field below the root, such as a sample name, leads the
+  file names of every later run: `liver-03_walk_00000` instead of
+  `walk_00000`. A run already going keeps its names, so the field is locked
+  while a plan runs. Leave it empty for no label.
 - The session's [`Settings`][redsun.Settings] keep the plan you chose last,
   under the view's name, and the next session offers it again.
 

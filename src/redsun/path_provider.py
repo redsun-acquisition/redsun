@@ -104,8 +104,10 @@ class SessionPathProvider(PathProvider):
     Paths have the layout:
 
     ```
-    base_dir / session_name / YYYY-MM-DD / datakey / <plan>_<counter>{.ext}
+    base_dir / session_name / YYYY-MM-DD / datakey / <label>_<plan>_<counter>{.ext}
     ```
+
+    The label, set with `set_label`, is left out with its `_` while empty.
 
     The data key is the one the caller asks with, so each detector writes into
     a directory of its own and owns its store. A call without one leaves that
@@ -144,6 +146,7 @@ class SessionPathProvider(PathProvider):
         self._base_dir = (base_dir or _base_dir()).expanduser()
         self._base_dir_lock: str | None = None
         self._filenames = PlanFilenameProvider(max_digits=max_digits)
+        self._label = ""
         self._now = now or datetime.now
 
         self._pattern = re.compile(
@@ -156,6 +159,11 @@ class SessionPathProvider(PathProvider):
     def base_dir(self) -> Path:
         """Root the session's files go under."""
         return self._base_dir
+
+    @property
+    def label(self) -> str:
+        """Label leading the file names of the next plan; empty for none."""
+        return self._label
 
     @property
     def session_dir(self) -> Path:
@@ -196,9 +204,19 @@ class SessionPathProvider(PathProvider):
         self._base_dir_lock = reason
 
     @slot
+    def set_label(self, label: str) -> None:
+        """Lead the file names of every later plan with *label*.
+
+        Each run of characters other than letters, digits, `.`, `-` and `_`
+        becomes `_`, and a label of blanks only is no label. A plan already
+        running keeps its names.
+        """
+        self._label = session_folder(label) if label.strip() else ""
+
+    @slot
     def set_plan(self, plan: str) -> None:
-        """Change the active plan name."""
-        self._filenames.set_plan(plan)
+        """Change the active plan name, led by the label if there is one."""
+        self._filenames.set_plan(f"{self._label}_{plan}" if self._label else plan)
 
     @slot
     def reset_plan(self) -> None:
