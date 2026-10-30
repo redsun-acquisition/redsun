@@ -4,7 +4,7 @@ import asyncio
 import enum
 import json
 import time
-from typing import TYPE_CHECKING, ClassVar, cast, get_origin
+from typing import TYPE_CHECKING, Any, ClassVar, cast, get_origin
 
 import numpy as np
 from bluesky.protocols import Reading
@@ -113,7 +113,7 @@ def _box_key(description: ControllerDescription) -> str:
     return ":".join(description["path"])
 
 
-async def _request(box: SharedBox, stem: str, name: str, **values: object) -> None:
+async def _request(box: SharedBox, stem: str, name: str, **values: Any) -> None:
     """Write `values` and a new request number to `box`, then wait for the answer.
 
     Raises
