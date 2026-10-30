@@ -31,8 +31,8 @@ class AcquisitionView(QtW.QWidget, Loggable):
 
     One `PlanWidget` per plan the presenter describes, chosen from a list,
     and the directory runs write under. The view shows a plan running only
-    once the presenter reports it started, and shows why a plan failed until
-    it runs again. The plan chosen last is kept in the session's settings.
+    once the presenter reports it started, and shows that a plan was stopped,
+    or why it failed, until it runs again. The plan chosen last is kept in the session's settings.
     `Ctrl+R` runs the chosen plan and `Ctrl+.` stops the running one,
     anywhere in the window.
     """
@@ -62,7 +62,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
         super().__init__(parent)
         self.name = name
         self.plan_widgets: dict[str, PlanWidget] = {}
-        self._failures: dict[str, QtW.QLabel] = {}
+        self._outcomes: dict[str, QtW.QLabel] = {}
         self._running: str | None = None
         self._settings: Settings | None = None
 
@@ -119,14 +119,14 @@ class AcquisitionView(QtW.QWidget, Loggable):
                 plan_callbacks=acquisition.plan_callbacks.get(plan, ()),
                 available_callbacks=acquisition.callbacks,
             )
-            failure = QtW.QLabel(widget.group_box)
-            failure.setObjectName(f"failure:{plan}")
-            failure.setWordWrap(True)
-            failure.hide()
+            outcome = QtW.QLabel(widget.group_box)
+            outcome.setObjectName(f"outcome:{plan}")
+            outcome.setWordWrap(True)
+            outcome.hide()
             box_layout = widget.group_box.layout()
             if box_layout is not None:
-                box_layout.addWidget(failure)
-            self._failures[plan] = failure
+                box_layout.addWidget(outcome)
+            self._outcomes[plan] = outcome
             self.plan_widgets[plan] = widget
             self._stack.addWidget(widget.group_box)
             self._chooser.addItem(plan)
@@ -149,7 +149,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
             self.logger.debug(f"Ignoring the start of an unknown plan {plan!r}")
             return
         self._running = plan
-        self._failures[plan].hide()
+        self._outcomes[plan].hide()
         self._chooser.setEnabled(False)
         self._choose_root.setEnabled(False)
         widget.toggle(True)
@@ -159,12 +159,15 @@ class AcquisitionView(QtW.QWidget, Loggable):
         """Show *plan* ended, and free the chooser and the root."""
         self._end(plan)
 
+    @slot(signal="sig_plan_stopped")
+    def set_stopped(self, plan: str) -> None:
+        """Show *plan* stopped, until it runs again."""
+        self._show_outcome(plan, "stopped")
+
     @slot(signal="sig_plan_failed")
     def set_failed(self, plan: str, message: str) -> None:
         """Show *plan* ended because of *message*, until it runs again."""
-        if self._end(plan):
-            self._failures[plan].setText(f"failed: {message}")
-            self._failures[plan].show()
+        self._show_outcome(plan, f"failed: {message}")
 
     @slot(signal="sig_progress")
     def update_progress(self, scopes: tuple[PlanProgress, ...]) -> None:
@@ -215,6 +218,11 @@ class AcquisitionView(QtW.QWidget, Loggable):
         widget.toggle(False)
         widget.setEnabled(True)
         return True
+
+    def _show_outcome(self, plan: str, text: str) -> None:
+        if self._end(plan):
+            self._outcomes[plan].setText(text)
+            self._outcomes[plan].show()
 
     def _key(self, setting: str) -> str:
         return f"{self.name}.{setting}"

@@ -42,7 +42,7 @@ pairs:
   - [acquisition_view, acquisition]
 ```
 
-The pairing makes the twelve links between the two. Written out, they are:
+The pairing makes the thirteen links between the two. Written out, they are:
 
 ??? example "The same links under `wiring`"
 
@@ -56,6 +56,7 @@ The pairing makes the twelve links between the two. Written out, they are:
       acquisition_view.sig_base_dir: acquisition.set_base_dir
       acquisition.sig_plan_started: acquisition_view.set_started
       acquisition.sig_plan_done: acquisition_view.set_done
+      acquisition.sig_plan_stopped: acquisition_view.set_stopped
       acquisition.sig_plan_failed: acquisition_view.set_failed
       acquisition.sig_progress: acquisition_view.update_progress
       acquisition.sig_action_changed: acquisition_view.update_action

@@ -93,23 +93,34 @@ def test_running_shows_only_once_the_presenter_has_started(
     assert (before, chooser.isEnabled()) == (True, False)
 
 
-def test_a_failure_stays_shown_until_the_next_run(
-    parent: QtWidgets.QWidget, settings: Settings
+@pytest.mark.parametrize(
+    ("end", "text"),
+    [
+        (lambda view: view.set_failed("rest", "bad target"), "failed: bad target"),
+        (lambda view: view.set_stopped("rest"), "stopped"),
+    ],
+    ids=["failed", "stopped"],
+)
+def test_how_a_plan_ended_stays_shown_until_the_next_run(
+    parent: QtWidgets.QWidget,
+    settings: Settings,
+    end: Callable[[AcquisitionView], None],
+    text: str,
 ) -> None:
-    """Show why a plan failed, free the chooser, and clear the message on its next run."""
+    """Show that a plan failed or was stopped, free the chooser, and clear the message on its next run."""
     view = make_view(settings, parent)
-    failure = child(view, QtWidgets.QLabel, "failure:rest")
+    outcome = child(view, QtWidgets.QLabel, "outcome:rest")
     chooser = child(view, QtWidgets.QComboBox, "plans")
 
     view.set_started("rest")
     locked = not chooser.isEnabled()
-    view.set_failed("rest", "bad target")
-    shown = (failure.isHidden(), failure.text(), chooser.isEnabled())
+    end(view)
+    shown = (outcome.isHidden(), outcome.text(), chooser.isEnabled())
     view.set_started("rest")
 
     assert locked
-    assert shown == (False, "failed: bad target", True)
-    assert failure.isHidden()
+    assert shown == (False, text, True)
+    assert outcome.isHidden()
 
 
 def test_run_waits_for_a_device_to_be_chosen(

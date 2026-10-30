@@ -8,8 +8,8 @@ Release 0.16 removes the two things 0.15 deprecated, changes what a view of
 plan progress receives, moves some axes to another box of the positioner,
 removes two helpers the positioner no longer uses, changes what a session
 does when a service does not start, stops a held key from running its
-command again and again, and moves the test fixtures for Qt into a plugin of
-their own. This page gives each change with what to write instead. The
+command again and again, moves the test fixtures for Qt into a plugin of
+their own, and reports a stopped plan on a signal of its own. This page gives each change with what to write instead. The
 [changelog](../reference/changelog.md) lists everything else the release
 changed.
 
@@ -185,6 +185,29 @@ class MyView(QWidget):
     @shortcut("Right", title="Step forward", scope="view", repeat=True)
     def step_forward(self) -> None: ...
 ```
+
+## A stopped plan has a signal of its own
+
+[`AcquisitionPresenter`][redsun.presenter.AcquisitionPresenter] now reports a
+plan the user stopped on `sig_plan_stopped`, and keeps `sig_plan_done` for a
+plan that runs to its end. The built-in view shows the stop through its new
+slot, `set_stopped`. A session that pairs the two components gets the new link
+by itself. A session file that writes out the links under `wiring` adds the
+new one, or the view stays locked after a stop:
+
+```yaml
+# 0.15
+wiring:
+  acquisition.sig_plan_done: acquisition_view.set_done
+
+# now
+wiring:
+  acquisition.sig_plan_done: acquisition_view.set_done
+  acquisition.sig_plan_stopped: acquisition_view.set_stopped
+```
+
+A component of your own that connects to `sig_plan_done` to learn that a run
+is over connects to `sig_plan_stopped` too.
 
 ## The Qt test fixtures are a plugin of their own
 

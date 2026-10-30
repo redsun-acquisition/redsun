@@ -80,15 +80,18 @@ class AcquisitionPresenter(Loggable):
     one whose signature no plan widget can show is left out with a warning.
     A run gets the callbacks its plan lists, then those attached to it. Its
     files are named after the plan while it runs. Its end is reported on
-    `sig_plan_done`, or, when it raises, on `sig_plan_failed` with the error
-    logged.
+    `sig_plan_done` when it finishes, on `sig_plan_stopped` when it is
+    stopped, or on `sig_plan_failed`, with the error logged, when it raises.
     """
 
     sig_plan_started = Signal(str)
     """Plan, once the engine has started it."""
 
     sig_plan_done = Signal(str)
-    """Plan, once it has finished or been stopped."""
+    """Plan, once it has finished."""
+
+    sig_plan_stopped = Signal(str)
+    """Plan, once it has been stopped."""
 
     sig_plan_failed = Signal(str, str)
     """Plan, and why it failed."""
@@ -127,6 +130,7 @@ class AcquisitionPresenter(Loggable):
         self._futures: set[Future[Any]] = set()
         self._running: str | None = None
         self._error: BaseException | None = None
+        self._stopping = False
         self._closed = False
         self._on_start: Callable[[], None] | None = None
 
@@ -247,13 +251,14 @@ class AcquisitionPresenter(Loggable):
 
     @slot(signal="sig_stop")
     def stop(self) -> None:
-        """Stop the running or paused plan, which ends as done."""
+        """Stop the running or paused plan, which ends as stopped."""
         if self._when_started(self.stop, replace=True):
             return
         if self._engine.state == "idle":
             self.logger.debug("No plan to stop")
             return
         self.logger.info(f"Stopping {self._running!r}")
+        self._stopping = True
         self._track(self._engine.stop())
 
     @slot(signal="sig_action")
@@ -349,14 +354,18 @@ class AcquisitionPresenter(Loggable):
             return
         plan, self._running, self._on_start = self._running, None, None
         failure, self._error = self._error, None
+        stopped, self._stopping = self._stopping, False
         # the other future of a stop has already reported the end
         if plan is None:
             return
         if self._paths is not None:
             self._paths.reset_plan()
-        if failure is None:
-            self.logger.info(f"{plan!r} ended")
-            self.sig_plan_done.emit(plan)
-        else:
+        if failure is not None:
             self.logger.error(f"{plan!r} failed", exc_info=failure)
             self.sig_plan_failed.emit(plan, str(failure) or type(failure).__name__)
+        elif stopped:
+            self.logger.info(f"{plan!r} stopped")
+            self.sig_plan_stopped.emit(plan)
+        else:
+            self.logger.info(f"{plan!r} ended")
+            self.sig_plan_done.emit(plan)
