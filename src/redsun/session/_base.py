@@ -1218,13 +1218,14 @@ class Session(BuildableSession):
     def apply_wiring(self) -> None:
         """Make the links the class yields, then those the file lists, then its pairs.
 
-        A link made already is not made again.
+        Each view of a stack is paired with the stack's presenter last. A link
+        made already is not made again.
 
         Raises
         ------
         WiringError
             If `wire` yields nothing iterable, a link that cannot be made, or
-            a pairing that connects nothing.
+            a pairing, or a stack's view, that connects nothing.
         """
         stand_ins = {
             attribute: name
@@ -1234,6 +1235,15 @@ class Session(BuildableSession):
         }
         for attribute, name in stand_ins.items():
             setattr(self, attribute, NotBuilt(name))
+        unbuilt_roles: list[tuple[object, str]] = []
+        for stack in self._stacks.values():
+            held = stack.cls()
+            for half, role in stack.roles.items():
+                built = self._declarations[half].instance
+                if built is None:
+                    unbuilt_roles.append((held, role))
+                setattr(held, role, NotBuilt(half) if built is None else built)
+            setattr(self, stack.attribute, held)
         try:
             links = self.wire()
             if links is None:
@@ -1246,11 +1256,16 @@ class Session(BuildableSession):
         finally:
             for attribute in stand_ins:
                 delattr(self, attribute)
+            for held, role in unbuilt_roles:
+                delattr(held, role)
         for source, targets in self._configuration().wiring.items():
             for target in [targets] if isinstance(targets, str) else targets:
                 self._wiring.link_paths(source, target)
         for first, second in self._configuration().pairs:
             self._wiring.link_pair(first, second)
+        for stack in self._stacks.values():
+            for view in stack.views.values():
+                self._wiring.link_pair(view, stack.presenter)
         self._warn_unused()
         self._warn_interchangeable()
 

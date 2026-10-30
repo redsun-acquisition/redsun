@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
@@ -19,8 +20,11 @@ from redsun import (
     AsView,
     ConfigurationError,
     Declare,
+    Link,
     Placement,
     Session,
+    WiringError,
+    slot,
 )
 
 if TYPE_CHECKING:
@@ -44,12 +48,33 @@ class Hearer:
     def __init__(self, name: str) -> None:
         self.name = name
 
+    @slot(signal="sig_said")
+    def hear(self, text: str) -> None:
+        self.heard = text
+
+
+class Deaf:
+    """A view with no slot a talker's signal reaches."""
+
+    placement: Placement = Somewhere()
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
 
 class Duo:
     """A talker with its hearer."""
 
     presenter: AsPresenter[Talker]
     view: AsView[Hearer]
+
+
+class BrokenTalker(Talker):
+    """A talker whose constructor raises, so the build skips it."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        raise RuntimeError("this presenter cannot be made")
 
 
 class NoPresenter:
@@ -80,12 +105,33 @@ class TakesArgument:
         self.motor = motor
 
 
+class Unheard:
+    presenter: AsPresenter[Talker]
+    view: AsView[Deaf]
+
+
+class BrokenDuo:
+    presenter: AsPresenter[BrokenTalker]
+    view: AsView[Hearer]
+
+
 class Plugged(Session):
     """Every component comes from the mock bundle."""
 
 
 class WithDuo(Session):
     duo: AsStack[Duo]
+
+
+class WithUnheard(Session):
+    duo: AsStack[Unheard]
+
+
+class WithBrokenDuo(Session):
+    duo: AsStack[BrokenDuo]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.duo.presenter.sig_said, self.duo.view.hear
 
 
 class Clashing(WithDuo):
@@ -214,3 +260,61 @@ def test_stacks_of_layered_files_merge(mock_plugin: None, build: BuildSession) -
 
     assert title_of(session, "motor_detail") == "later"
     assert "motor_view" in session.views
+
+
+def test_a_stack_pairs_its_presenter_with_each_view(
+    mock_plugin: None, build: BuildSession
+) -> None:
+    """Link a file stack's presenter to both of its views."""
+    session = build(Plugged, PLUGIN_STACK)
+
+    assert sorted(
+        (c.publisher, c.publisher_port, c.consumer, c.consumer_port)
+        for c in session.connections
+    ) == [
+        ("motor", "sig_moved", "motor_detail", "refresh"),
+        ("motor", "sig_moved", "motor_view", "refresh"),
+    ]
+
+
+def test_the_session_holds_the_stack_with_its_built_halves(
+    build: BuildSession,
+) -> None:
+    """Hold an instance of the stack class whose roles are the built halves."""
+    session = build(WithDuo)
+
+    assert isinstance(session.duo, Duo)
+    assert session.duo.presenter is session.presenters["duo"]
+    assert session.duo.view is session.views["duo_view"]
+
+
+def test_a_stack_also_listed_under_pairs_links_each_once(
+    build: BuildSession,
+) -> None:
+    """Make each link once when the file also pairs a stack's halves."""
+    session = build(WithDuo, {"pairs": [["duo", "duo_view"]]})
+
+    session.duo.presenter.sig_said.emit("hi")
+
+    assert len(session.connections) == 1
+    assert session.duo.view.heard == "hi"
+
+
+def test_a_stack_whose_view_links_nothing_is_refused() -> None:
+    """Raise when a stack's view shares no link with its presenter."""
+    with pytest.raises(WiringError, match="'duo_view' with 'duo' connects nothing"):
+        WithUnheard().build()
+
+
+def test_a_stack_half_that_failed_is_skipped_and_stands_in_during_wire(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """Build without a failed half, warn about its pairing, and stand it in during wire."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(WithBrokenDuo)
+
+    assert session.is_built
+    assert "Not pairing duo_view with duo" in caplog.text
+    assert "Not connecting duo.sig_said" in caplog.text
+    assert not hasattr(session.duo, "presenter")
+    assert session.duo.view is session.views["duo_view"]
