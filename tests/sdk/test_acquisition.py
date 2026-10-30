@@ -375,6 +375,16 @@ def test_a_refused_base_directory_is_logged(
     assert "base directory" in caplog.text
 
 
+def test_a_label_reaches_the_names_of_later_runs(
+    presenter: AcquisitionPresenter, paths: RecordedPaths
+) -> None:
+    """Hand the label to the path provider, which leads the next plan's file names with it."""
+    presenter.set_label("liver 03")
+    paths.set_plan("scan")
+
+    assert paths().filename == "liver_03_scan_00000"
+
+
 def test_shutdown_aborts_a_running_plan_after_its_cleanup_without_a_report(
     plans: Plans, paths: RecordedPaths
 ) -> None:

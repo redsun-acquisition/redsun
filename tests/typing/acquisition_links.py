@@ -23,6 +23,7 @@ class Lab(Session):
         yield self.acquisition_view.sig_stop, self.acquisition.stop
         yield self.acquisition_view.sig_action, self.acquisition.request_action
         yield self.acquisition_view.sig_base_dir, self.acquisition.set_base_dir
+        yield self.acquisition_view.sig_label, self.acquisition.set_label
         yield self.acquisition.sig_plan_started, self.acquisition_view.set_started
         yield self.acquisition.sig_plan_done, self.acquisition_view.set_done
         yield self.acquisition.sig_plan_stopped, self.acquisition_view.set_stopped

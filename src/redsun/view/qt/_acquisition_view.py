@@ -58,6 +58,9 @@ class AcquisitionView(QtW.QWidget, Loggable):
     sig_base_dir = Signal(object)
     """The directory the user chose for runs to write under."""
 
+    sig_label = Signal(str)
+    """The label the user typed for the file names of later runs."""
+
     def __init__(self, name: str, parent: QtW.QWidget) -> None:
         super().__init__(parent)
         self.name = name
@@ -94,8 +97,14 @@ class AcquisitionView(QtW.QWidget, Loggable):
         buttons = QtW.QHBoxLayout()
         buttons.addWidget(self._choose_root)
         buttons.addWidget(browse)
+        self._label = QtW.QLineEdit(self)
+        self._label.setObjectName("label")
+        self._label.setPlaceholderText("File label, such as a sample name (optional)")
+        self._label.setToolTip("Leads the file names of the next runs")
+        self._label.editingFinished.connect(self._ask_label)
         layout.addWidget(self._base_dir)
         layout.addLayout(buttons)
+        layout.addWidget(self._label)
 
         self._stack = QtW.QStackedWidget(self)
         layout.addWidget(self._stack)
@@ -143,7 +152,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
 
     @slot(signal="sig_plan_started")
     def set_started(self, plan: str) -> None:
-        """Show *plan* running, and lock the chooser and the root until it ends."""
+        """Show *plan* running, and lock the chooser, the root and the label until it ends."""
         widget = self.plan_widgets.get(plan)
         if widget is None:
             self.logger.debug(f"Ignoring the start of an unknown plan {plan!r}")
@@ -152,11 +161,12 @@ class AcquisitionView(QtW.QWidget, Loggable):
         self._outcomes[plan].hide()
         self._chooser.setEnabled(False)
         self._choose_root.setEnabled(False)
+        self._label.setEnabled(False)
         widget.toggle(True)
 
     @slot(signal="sig_plan_done")
     def set_done(self, plan: str) -> None:
-        """Show *plan* ended, and free the chooser and the root."""
+        """Show *plan* ended, and free the chooser, the root and the label."""
         self._end(plan)
 
     @slot(signal="sig_plan_stopped")
@@ -215,6 +225,7 @@ class AcquisitionView(QtW.QWidget, Loggable):
         self._running = None
         self._chooser.setEnabled(True)
         self._choose_root.setEnabled(True)
+        self._label.setEnabled(True)
         widget.toggle(False)
         widget.setEnabled(True)
         return True
@@ -274,6 +285,9 @@ class AcquisitionView(QtW.QWidget, Loggable):
         )
         if chosen:
             self.sig_base_dir.emit(Path(chosen))
+
+    def _ask_label(self) -> None:
+        self.sig_label.emit(self._label.text())
 
     def _browse_base_dir(self) -> None:
         QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(self._base_dir.text()))

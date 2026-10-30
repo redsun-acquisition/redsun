@@ -200,6 +200,25 @@ def test_the_base_directory_is_shown_and_asked_for(
     assert asked == [tmp_path]
 
 
+def test_the_label_typed_is_asked_for_and_locked_while_a_plan_runs(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Ask for the label once its editing finishes, and refuse edits while a plan runs."""
+    view = make_view(settings, parent)
+    asked: list[str] = []
+    view.sig_label.connect(asked.append)
+    label = child(view, QtWidgets.QLineEdit, "label")
+
+    label.setText("liver-03")
+    label.editingFinished.emit()
+    view.set_started("rest")
+    locked = not label.isEnabled()
+    view.set_done("rest")
+
+    assert asked == ["liver-03"]
+    assert (locked, label.isEnabled()) == (True, True)
+
+
 def test_the_run_button_of_a_running_plan_stops_it(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:

@@ -35,10 +35,11 @@ chooses its own paths.
 Each file then goes to
 
 ```text
-<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>
+<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<label>_<plan>_<counter>
 ```
 
-and the folder is created when the device asks for the path. The session
+and the folder is created when the device asks for the path. With no label,
+the name is `<plan>_<counter>`. The session
 also writes its log files under `<base_dir>/logs/<session>`.
 
 ## Choose the folder
@@ -92,6 +93,23 @@ wiring:
 ```
 
 Without these links, every file is named `unknown_<counter>`.
+
+## Lead the names with a label
+
+[`set_label`][redsun.path_provider.SessionPathProvider.set_label] puts a
+label, such as a sample name, before the plan in the names of every plan that
+starts after it. A plan already running keeps its names. Each run of
+characters other than letters, digits, `.`, `-` and `_` becomes `_`, and an
+empty label removes it. Link a signal carrying the label to it:
+
+```yaml
+wiring:
+  ctrl.sig_label: path_provider.set_label
+```
+
+The built-in acquisition view has a field for the label, which reaches the
+provider through the acquisition presenter, as in
+[Run plans from the window](run-plans-from-the-window.md).
 
 To change the width of the counter, five digits by default, set
 `storage.max_digits`.

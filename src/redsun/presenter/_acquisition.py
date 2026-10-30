@@ -280,6 +280,12 @@ class AcquisitionPresenter(Loggable):
         except RuntimeError as error:
             self.logger.warning(f"Keeping the base directory: {error}")
 
+    @slot(signal="sig_label")
+    def set_label(self, label: str) -> None:
+        """Lead the file names of every later run with *label*; empty for none."""
+        if self._paths is not None:
+            self._paths.set_label(label)
+
     def shutdown(self) -> None:
         """Abort a running or paused plan, reporting neither its end nor a failure.
 
