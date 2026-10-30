@@ -846,6 +846,12 @@ class Session(BuildableSession):
                     f"stack {stack.name!r} of {type(self).__qualname__} makes "
                     f"{listed(clash)}, which the session declares already"
                 )
+        clash = sorted(halves.keys() & self._declarations.keys())
+        if clash:
+            raise TypeError(
+                f"a stack of {type(self).__qualname__} makes {listed(clash)}, "
+                "which the session declares already"
+            )
         self._declarations.update(halves)
         self._window_layout = self._declared_layout(config)
         self._shortcut_overrides = self._read_shortcuts(config)

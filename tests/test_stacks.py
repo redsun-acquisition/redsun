@@ -186,6 +186,10 @@ class Clashing(WithDuo):
     duo_view: AsPresenter[Talker]
 
 
+class Occupied(Session):
+    motor: AsPresenter[Talker]
+
+
 class Declared(Session):
     motor: AsStack[MockMotorStack]
 
@@ -211,6 +215,12 @@ PLUGIN_STACK: dict[str, Any] = {
     },
     "devices": {"stage": {"plugin_name": "mock-bundle", "plugin_id": "mock-stage"}},
     "stacks": {"motor": {"plugin_name": "mock-bundle", "plugin_id": "mock-motor"}},
+}
+
+UNRESOLVED_STACK: dict[str, Any] = {
+    "plugin_name": "mock-bundle",
+    "plugin_id": "nobody",
+    "view": {},
 }
 
 
@@ -333,13 +343,6 @@ def test_a_stack_that_cannot_be_made_leaves_no_stand_ins() -> None:
     assert not hasattr(session, "broken")
 
 
-UNRESOLVED_STACK: dict[str, Any] = {
-    "plugin_name": "mock-bundle",
-    "plugin_id": "nobody",
-    "view": {},
-}
-
-
 def test_a_file_stack_that_does_not_resolve_fails_the_build_of_a_strict_session(
     mock_plugin: None,
 ) -> None:
@@ -348,6 +351,12 @@ def test_a_file_stack_that_does_not_resolve_fails_the_build_of_a_strict_session(
 
     with pytest.raises(BuildError, match="motor"):
         Plugged(config).build()
+
+
+def test_an_unresolved_stack_named_like_a_declaration_is_refused() -> None:
+    """Raise naming the declaration an unresolved file stack would replace."""
+    with pytest.raises(TypeError, match="stack of Occupied makes 'motor'"):
+        Occupied({"stacks": {"motor": UNRESOLVED_STACK}}).build()
 
 
 def test_links_naming_the_halves_of_an_unresolved_stack_are_skipped(
