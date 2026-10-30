@@ -58,6 +58,7 @@ __all__ = [
     "Layer",
     "Serves",
     "ServiceMark",
+    "StackMark",
     "accepts_name",
     "check",
     "read",
@@ -151,6 +152,15 @@ class ServiceMark:
 
     A service starts before every component, stops after them, and is never
     injected.
+    """
+
+
+@dataclass(frozen=True)
+class StackMark:
+    """Marks an annotation as a stack, as `redsun.AsStack` does.
+
+    A stack is a presenter and its views declared as one entry; the session
+    reads it into the declarations of its halves.
     """
 
 
@@ -681,6 +691,7 @@ def read(
             attr.startswith("_")
             or is_marked(hint, Hook)
             or is_marked(hint, ServiceMark)
+            or is_marked(hint, StackMark)
         ):
             continue
         target, metadata, kind = split(hint)

@@ -107,6 +107,7 @@ from ._protocols import (
 )
 from ._questions import NoAnswer, answer, shape_of
 from ._shortcuts import Binding, candidates, resolved_shortcuts
+from ._stacks import read_stacks
 from ._tree import index_devices
 from ._wiring import NotBuilt, Wiring
 
@@ -126,6 +127,7 @@ if TYPE_CHECKING:
     from ._declarations import Key
     from ._profile import ProfileKind
     from ._questions import Shape
+    from ._stacks import Stack
 
 __all__ = ["BuildStep", "Session"]
 
@@ -284,6 +286,7 @@ class Session(BuildableSession):
         "_shared_values",
         "_shortcut_overrides",
         "_skipped_hooks",
+        "_stacks",
         "_storage",
         "_store",
         "_transport",
@@ -374,6 +377,7 @@ class Session(BuildableSession):
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
+        self._stacks: dict[str, Stack] = {}
         self._class_counts: Counter[type] = Counter()
         self._services: dict[str, Service] = {}
         self._failed_services: dict[str, BaseException] = {}
@@ -834,6 +838,15 @@ class Session(BuildableSession):
         self._log_hooks()
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
+        self._stacks, halves = read_stacks(type(self), config, self.frontend)
+        for stack in self._stacks.values():
+            clash = sorted(stack.roles.keys() & self._declarations.keys())
+            if clash:
+                raise TypeError(
+                    f"stack {stack.name!r} of {type(self).__qualname__} makes "
+                    f"{listed(clash)}, which the session declares already"
+                )
+        self._declarations.update(halves)
         self._window_layout = self._declared_layout(config)
         self._shortcut_overrides = self._read_shortcuts(config)
         for declaration in self._declarations.values():
@@ -2168,8 +2181,11 @@ class Session(BuildableSession):
         """Return the attributes of the session that hold what *declaration* builds.
 
         Its name, and the attribute it was declared under where the two differ
-        and the session does not answer that attribute itself.
+        and the session does not answer that attribute itself. A half of a
+        stack is held by the stack's attribute alone, so it has none.
         """
+        if any(declaration.name in stack.roles for stack in self._stacks.values()):
+            return ()
         if declaration.attribute == declaration.name or hasattr(
             type(self), declaration.attribute
         ):
