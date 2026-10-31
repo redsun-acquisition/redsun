@@ -6,7 +6,7 @@ import json
 import secrets
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import numpy as np
 from fastcs.attributes import AttrR, AttrW
@@ -259,7 +259,7 @@ class BoxTransport(Transport):
     @staticmethod
     def _fields(
         name: str, datatype: DataType[DType_T], value: DType_T
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         """Return the box fields holding the value of the attribute `name`."""
         return {
             f"{name}__{key or 'value'}": field

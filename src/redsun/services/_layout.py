@@ -152,7 +152,7 @@ def datatype_field(datatype: DatatypeDescription) -> tuple[object, object]:
         case "int":
             return int, 0
         case "uint":
-            return Annotated[np.ndarray, Shape(1), DType("uint64")], np.zeros(
+            return Annotated[np.ndarray, Shape((1,)), DType("uint64")], np.zeros(
                 1, dtype="uint64"
             )
         case "float":
@@ -169,7 +169,7 @@ def datatype_field(datatype: DatatypeDescription) -> tuple[object, object]:
             shape = datatype["shape"]
             dtype = datatype["dtype"]
             return (
-                Annotated[np.ndarray, Shape(*shape), DType(dtype)],
+                Annotated[np.ndarray, Shape(tuple(shape)), DType(dtype)],
                 np.zeros(shape, dtype=dtype),
             )
 
