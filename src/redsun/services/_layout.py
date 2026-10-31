@@ -18,9 +18,9 @@ __all__ = [
     "AttributeDescription",
     "ControllerDescription",
     "DatatypeDescription",
+    "ServiceIndex",
     "box_class",
     "box_name",
-    "index_class",
     "index_name",
     "namespace",
     "stream_name",
@@ -90,21 +90,14 @@ class ControllerDescription(TypedDict):
     children: dict[str, ControllerDescription]
 
 
-def index_class() -> type[SharedBox]:
-    """Return a new class of the index box, the box a service publishes first.
+class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
+    """The index box, the box a service publishes first."""
 
-    The box holds the service's description in its `description` field,
-    versioned by its `version` field.
-    """
+    version: int = 0
+    """Incremented each time the service publishes a new description."""
 
-    # a new class on each call, freed with the boxes made from it: a class
-    # held by the module may still be alive when nanobind checks for leaks
-    # at exit, which it then reports
-    class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
-        version: int = 0
-        description: Annotated[bytes, Capacity(DESCRIPTION_CAPACITY)] = b""
-
-    return ServiceIndex
+    description: Annotated[bytes, Capacity(DESCRIPTION_CAPACITY)] = b""
+    """The service's controllers, as a JSON `ControllerDescription`."""
 
 
 def check_name(name: str) -> str:
