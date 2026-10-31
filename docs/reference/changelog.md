@@ -44,7 +44,7 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 - `redsun.qt.styles.qlementine.QlementineStyle` takes `dark` and `light`, paths to `qlementine` theme files used in place of its built-in themes, and `animations=False` to turn its animations off. A key a theme file gives that `qlementine` does not know, or a value of the wrong kind, is logged. ([#227](https://github.com/redsun-acquisition/redsun/pull/227))
 - `redsun.services.sharedbox.BoxTransport` serves a `fastcs` controller as one box per controller and an index box describing them, and answers each write with the service's error when the put fails. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
 - `redsun.services.serve_controller` runs a `fastcs` controller as a launched service over the transport it is given, under the session's prefix, and reports the service ready once the transport can be reached. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
-- `redsun.device.sharedbox.BoxDeviceConnector` fills an `ophyd-async` device from the index of a `sharedbox` service, with `BoxSignalBackend` and `BoxCommandBackend` behind its signals and commands. A refused write or a failed command raises `redsun.device.sharedbox.BoxPutError`, and `redsun.device.sharedbox.stream_name` names a stream the service makes itself.
+- `redsun.device.sharedbox.BoxDeviceConnector` fills an `ophyd-async` device from the index of a `sharedbox` service, with `BoxSignalBackend` and `BoxCommandBackend` behind its signals and commands. A refused write or a failed command raises `redsun.device.sharedbox.BoxPutError`, and `redsun.device.sharedbox.stream_name` names a stream the service makes itself. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
 
   ```python
   class MyDetector(Device):
@@ -52,12 +52,12 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
       def __init__(self, prefix: str, name: str = "") -> None:
           super().__init__(name=name, connector=BoxDeviceConnector(prefix))
-  ``` ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+  ```
 - `sharedbox` is a new value of `services.transport`: a session reaches its services through `sharedbox` boxes in shared memory on the same computer, with no network server. The `sharedbox` extra installs `sharedbox` and `fastcs` for it. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
 - `redsun.testing.qt` is a `pytest` plugin for testing Qt components, installed with the `testing-qt` extra. It defines a `qapp` fixture. `emit_queued_on_main_thread` delivers on the main thread the `psygnal` emissions queued from other threads, whichever plugin supplies `qapp`. `release_slots_after_module` releases the slots of the widgets freed after each test module, which `pyqt6` otherwise holds until the process exits. `application_state` returns the stylesheet, style, font and hand-set palette that `keep_application_as_found` compares. ([#233](https://github.com/redsun-acquisition/redsun/pull/233))
 - `redsun.presenter.AcquisitionPresenter.sig_plan_stopped` reports a plan stopped with `stop`, and `redsun.view.qt.builtins.AcquisitionView.set_stopped` shows the plan stopped until it runs again. ([#235](https://github.com/redsun-acquisition/redsun/pull/235))
 - `redsun.path_provider.SessionPathProvider.set_label` leads the file names of every later plan with a label, as `<label>_<plan>_<counter>`. `redsun.view.qt.builtins.AcquisitionView` has a field for the label, which reaches the provider through the new `redsun.presenter.AcquisitionPresenter.set_label`. ([#236](https://github.com/redsun-acquisition/redsun/pull/236))
-- `redsun.device.sharedbox.BoxDeviceConnector` takes `declared_only=True` to fill a device with only the signals, commands and children it declares, so several devices can share one service.
+- `redsun.device.sharedbox.BoxDeviceConnector` takes `declared_only=True` to fill a device with only the signals, commands and children it declares, so several devices can share one service. ([#238](https://github.com/redsun-acquisition/redsun/pull/238))
 
   ```python
   class MyCamera(Device):
@@ -67,8 +67,8 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
           super().__init__(
               name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
           )
-  ``` ([#238](https://github.com/redsun-acquisition/redsun/pull/238))
-- `redsun.AsStack` and a `stacks` section in a session file and a plugin manifest declare a presenter and its views as one stack, which the session builds as `<stack>` and `<stack>_<role>` and pairs. `redsun.view.qt.builtins` ships `AcquisitionStack`, `PositionerStack` and `LightStack`, listed in `redsun`'s manifest as `acquisition`, `positioner` and `lights`.
+  ```
+- `redsun.AsStack` and a `stacks` section in a session file and a plugin manifest declare a presenter and its views as one stack, which the session builds as `<stack>` and `<stack>_<role>` and pairs. `redsun.view.qt.builtins` ships `AcquisitionStack`, `PositionerStack` and `LightStack`, listed in `redsun`'s manifest as `acquisition`, `positioner` and `lights`. ([#239](https://github.com/redsun-acquisition/redsun/pull/239))
 
   ```python
   class MyStack:
@@ -79,7 +79,7 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
   class MyApp(QtSession):
       my_ctrl: AsStack[MyStack]
       acquisition: AsStack[AcquisitionStack]
-  ``` ([#239](https://github.com/redsun-acquisition/redsun/pull/239))
+  ```
 - `PlanProgress` is generic over the type of the values it reports, and `PlanProgress.update` returns its last update. `monitor_progress` returns a `PlanProgress[T]` for a `WatchableAsyncStatus[T]`.
 
 ### Changed
