@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import io
 import logging
 import sys
+from functools import partial
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,7 +18,9 @@ from redsun.services._process import (
     LEVEL_VARIABLE,
     NAME_VARIABLE,
     READY_VARIABLE,
+    announce_when_reachable,
     level_from_environment,
+    log_failed_announcement,
 )
 from redsun.services._transports import (
     CHANNEL_ACCESS,
@@ -26,6 +30,7 @@ from redsun.services._transports import (
     ChannelAccess,
     PVAccess,
 )
+from redsun.services.sharedbox import BoxTransport
 from tests.sdk.helpers import messages
 
 if TYPE_CHECKING:
@@ -255,3 +260,23 @@ def test_a_service_reads_the_level_as_a_number_or_a_name(
         monkeypatch.setenv(LEVEL_VARIABLE, value)
 
     assert level_from_environment() == level
+
+
+async def test_a_transport_that_cannot_tell_it_is_reachable_is_logged(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log the error of a transport whose `reachable` raises."""
+    transport = BoxTransport()
+
+    async def refuse() -> None:
+        raise RuntimeError("index lost")
+
+    monkeypatch.setattr(transport, "reachable", refuse)
+    task = asyncio.ensure_future(announce_when_reachable(transport, "SIM"))
+    task.add_done_callback(partial(log_failed_announcement, "SIM"))
+    with contextlib.suppress(RuntimeError):
+        await task
+
+    assert messages(caplog, logging.ERROR) == [
+        "SIM could not tell it is ready: index lost"
+    ]
