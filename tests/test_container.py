@@ -17,7 +17,7 @@ from mock_bundle.presenters import MockLatePresenter, MockRegistrar
 from ophyd_async.core import (
     Device,
 )
-from psygnal import Signal
+from psygnal import Signal, get_async_backend
 
 from redsun import (
     Alias,
@@ -2116,3 +2116,17 @@ def test_a_build_reports_every_step_in_order(build: BuildSession) -> None:
     build(Watched)
 
     assert reported == list(BuildStep)
+
+
+def test_a_session_keeps_the_async_backend_while_another_still_runs(
+    build: BuildSession,
+) -> None:
+    """Clear psygnal's async backend only when the last running session shuts down."""
+    gc.collect()
+    first, second = build(Session()), build(Session())
+
+    first.shutdown()
+    assert get_async_backend() is not None
+
+    second.shutdown()
+    assert get_async_backend() is None
