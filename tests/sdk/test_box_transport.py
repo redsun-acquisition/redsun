@@ -23,6 +23,7 @@ from redsun.services._layout import (
     ServiceIndex,
     box_class,
     index_name,
+    walk,
 )
 from redsun.services.sharedbox import BoxTransport
 
@@ -45,17 +46,11 @@ class Service:
                 except SegmentNotFoundError:
                     await asyncio.sleep(0.01)
         self.root = json.loads(self.index.description)
-        for description in self.walk(self.root):
+        for description in walk(self.root):
             if description["box"] is not None:
                 self.boxes[description["box"]] = box_class(description).attach(
                     description["box"]
                 )
-
-    def walk(self, description: ControllerDescription) -> list[ControllerDescription]:
-        found = [description]
-        for child in description["children"].values():
-            found.extend(self.walk(child))
-        return found
 
     def box_of(self, *path: str) -> Any:
         """Return the attached box of the child controller at `path`."""
