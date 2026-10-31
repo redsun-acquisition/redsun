@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Annotated, Final, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, TypedDict
 
 import numpy as np
 from sharedbox import Capacity, DType, Shape, SharedBox
@@ -23,6 +23,7 @@ __all__ = [
     "box_name",
     "index_name",
     "namespace",
+    "pad",
     "stream_name",
 ]
 
@@ -98,6 +99,29 @@ class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
 
     description: Annotated[bytes, Capacity(DESCRIPTION_CAPACITY)] = b""
     """The service's controllers, as a JSON `ControllerDescription`."""
+
+
+def pad(
+    value: object, shape: Sequence[int], dtype: str | np.dtype[Any]
+) -> np.ndarray[Any, Any]:
+    """Return `value` at the start of a zeroed array of the waveform field's `shape`.
+
+    Raises
+    ------
+    ValueError
+        If `value` has another number of dimensions than `shape`, or is longer
+        than `shape` along one of them.
+    """
+    array = np.asarray(value)
+    if array.ndim != len(shape) or any(
+        size > limit for size, limit in zip(array.shape, shape, strict=True)
+    ):
+        raise ValueError(
+            f"a waveform of shape {array.shape} does not fit the field's {tuple(shape)}"
+        )
+    padded = np.zeros(shape, dtype=dtype)
+    padded[tuple(slice(0, size) for size in array.shape)] = array
+    return padded
 
 
 def check_name(name: str) -> str:

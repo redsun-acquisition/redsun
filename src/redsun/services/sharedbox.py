@@ -31,6 +31,7 @@ from ._layout import (
     box_class,
     box_name,
     index_name,
+    pad,
 )
 
 if TYPE_CHECKING:
@@ -114,9 +115,10 @@ def _to_box(datatype: DataType[DType_T], value: DType_T) -> dict[str, object]:
         case String():
             return {"": _cut(value, datatype.length or STRING_CAPACITY)}
         case Waveform():
-            padded = np.zeros(datatype.shape, dtype=datatype.array_dtype)
-            padded[tuple(slice(0, size) for size in value.shape)] = value
-            return {"": padded, "shape": tuple(value.shape)}
+            return {
+                "": pad(value, datatype.shape, datatype.array_dtype),
+                "shape": tuple(value.shape),
+            }
     return {"": value}
 
 

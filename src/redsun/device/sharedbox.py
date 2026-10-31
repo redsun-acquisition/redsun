@@ -38,6 +38,7 @@ from ..services._layout import (
     ServiceIndex,
     box_class,
     index_name,
+    pad,
     stream_name,
 )
 
@@ -253,9 +254,10 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                 return {setpoint: self._names.index(str(name))}
             case "waveform":
                 array = np.asarray(value)
-                padded = np.zeros(datatype["shape"], dtype=datatype["dtype"])
-                padded[tuple(slice(0, size) for size in array.shape)] = array
-                return {setpoint: padded, f"{setpoint}_shape": array.shape}
+                return {
+                    setpoint: pad(array, datatype["shape"], datatype["dtype"]),
+                    f"{setpoint}_shape": array.shape,
+                }
         return {setpoint: value}
 
     def _current(self) -> Reading[SignalDatatypeT]:
