@@ -287,21 +287,24 @@ def test_a_label_changed_during_a_plan_waits_for_the_next(tmp_path: Path) -> Non
     assert provider.label == "liver"
 
 
-def test_labelled_files_on_disk_resume_their_counter(tmp_path: Path) -> None:
-    """Resume a labelled plan's counter past its files on disk, apart from the unlabelled one."""
+@pytest.mark.parametrize("label", ["liver", "cell1.5"])
+def test_labelled_files_on_disk_resume_their_counter(
+    tmp_path: Path, label: str
+) -> None:
+    """Resume a labelled plan's counter past its files on disk, apart from the unlabelled one, a label holding a dot included."""
     day = tmp_path / "s" / "2026-07-20" / "det"
     day.mkdir(parents=True)
-    (day / "liver_scan_00004.h5").touch()
+    (day / f"{label}_scan_00004.h5").touch()
     (day / "scan_00001.h5").touch()
     provider = SessionPathProvider(base_dir=tmp_path, session="s")
 
-    provider.set_label("liver")
+    provider.set_label(label)
     provider.set_plan("scan")
     labelled = provider("det").filename
     provider.set_label("")
     provider.set_plan("scan")
 
     assert (labelled, provider("det").filename) == (
-        "liver_scan_00005",
+        f"{label}_scan_00005",
         "scan_00002",
     )
