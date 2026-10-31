@@ -6705,7 +6705,8 @@ ready once its process starts.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Protocol the service is reached over: <code>channel-access</code> or <code>pv-access</code>.
+                <p>Protocol the service is reached over: <code>channel-access</code>, <code>pv-access</code>
+or <code>sharedbox</code>.
 The session settles it for every service it holds.</p>
               </div>
             </td>
@@ -6806,6 +6807,7 @@ with a <em>module</em>.</p>
     <div class="doc doc-contents ">
 
         <p>Emitted with the name and exit code when a ready service exits unasked.</p>
+<p>It is emitted on the thread reading the service's output, <code>service-&lt;name&gt;</code>.</p>
 
     </div>
 

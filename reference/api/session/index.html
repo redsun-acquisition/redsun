@@ -10471,10 +10471,11 @@ warning. Yields nothing by default.</p>
 <p>Connections go first, so nothing is delivered to a component that is
 already finalizing. The releases follow: the <code>shutdown</code> method of
 every component that has one, then whatever a toolkit put in place.
-An async <code>shutdown</code> still running after 5 seconds is cancelled and
-logged, and the rest go on. Calling it a second time, or on a session that was never built, runs
-nothing: a release is dropped as it runs. What the build made is
-forgotten, so the session can be built again.</p>
+An async <code>shutdown</code> still running after <code>SHUTDOWN_TIMEOUT</code> seconds is
+cancelled and logged, and the rest go on. Calling it a second time, or
+on a session that was never built, runs nothing: a release is dropped
+as it runs. What the build made is forgotten, so the session can be
+built again.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
