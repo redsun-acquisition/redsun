@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from redsun.errors import PluginError
 
@@ -31,8 +31,14 @@ __all__ = ["Stack", "read_stacks", "roles_of"]
 RESERVED_ROLES: Final = frozenset({"plugin_name", "plugin_id"})
 """The keys of a stack's entry that name its plugin, so no role can use them."""
 
-Role: TypeAlias = tuple[Layer, type, dict[str, Any]]
-"""A half of a stack: its layer, its class and the keywords its `Declare` gives."""
+
+class Role(NamedTuple):
+    """A half of a stack, as its stack class annotates it."""
+
+    layer: Layer
+    cls: type
+    keywords: dict[str, Any]
+    """The keywords its `Declare` gives."""
 
 
 @dataclass(frozen=True)
@@ -115,14 +121,12 @@ def role_of(cls: type, attr: str, hint: Any) -> Role:
                 f"stack {cls.__qualname__} gives role {attr!r} "
                 f"{type(marker).__name__}, and a half takes only 'Declare'"
             )
-    return layer, target, declared_keywords(metadata)
+    return Role(layer, target, declared_keywords(metadata))
 
 
 def refuse_shape(cls: type, roles: Mapping[str, Role]) -> None:
     """Refuse a stack without exactly one presenter and at least one view."""
-    presenters = [
-        role for role, (layer, _, _) in roles.items() if layer is Layer.PRESENTER
-    ]
+    presenters = [role for role, half in roles.items() if half.layer is Layer.PRESENTER]
     if len(presenters) != 1:
         raise TypeError(
             f"stack {cls.__qualname__} annotates {len(presenters)} presenters; "
