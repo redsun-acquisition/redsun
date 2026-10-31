@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import logging
 import sys
+import weakref
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
@@ -200,6 +201,9 @@ CONNECT_TIMEOUT: Final = 10.0
 
 SHUTDOWN_TIMEOUT: Final = 5.0
 """Seconds `shutdown` waits for each coroutine it ends, such as an async `shutdown` method."""
+
+BACKEND_HOLDERS: Final[weakref.WeakSet[Session]] = weakref.WeakSet()
+"""Sessions using `psygnal`'s async backend, which they share."""
 
 
 def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
@@ -1199,7 +1203,13 @@ class Session(BuildableSession):
         watch the build.
         """
         set_async_backend()
-        self.on_release(clear_async_backend)
+        BACKEND_HOLDERS.add(self)
+        self.on_release(self._release_async_backend)
+
+    def _release_async_backend(self) -> None:
+        BACKEND_HOLDERS.discard(self)
+        if not BACKEND_HOLDERS:
+            clear_async_backend()
 
     def open_registry(self) -> None:
         """Open the store the components are built out of, and fill it.
