@@ -17,6 +17,113 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.16.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.16.0) - 31-10-2026
+
+### Breaking
+
+- `redsun.session.BUILD_STEPS` is removed. Code reading it iterates `BuildStep`, which lists the same steps in order. ([#214](https://github.com/redsun-acquisition/redsun/pull/214))
+- A view whose class answers `placement` from a property, and whose declaration gives none, is refused and left out; set `placement` as a class attribute or give it in the declaration. ([#214](https://github.com/redsun-acquisition/redsun/pull/214))
+- `redsun.presenter.PositionerPresenter` groups axes by the device holding them directly. A device whose axes sit below one of its children, such as `stage.motors.x`, shows them in the box of that child, `stage-motors`, so positions saved under `stage` no longer match and `include: [stage]` keeps no box. ([#219](https://github.com/redsun-acquisition/redsun/pull/219))
+- `redsun.utils.devices.find_axes` and `walk_axes` are removed. Code using them walks the device with `walk_devices` of `ophyd-async` and keeps each `Axis` that is not a signal. ([#219](https://github.com/redsun-acquisition/redsun/pull/219))
+- A device declared with `service=` whose `prefix` argument defaults to `None` is built without a prefix when its service does not start, where it was skipped before. ([#221](https://github.com/redsun-acquisition/redsun/pull/221))
+- A session with `strict` set stops when any service does not start, whether or not a device names it. ([#221](https://github.com/redsun-acquisition/redsun/pull/221))
+- A keyboard shortcut declared with `redsun.shortcut` runs its method once per press, however long the key is held, unless it is given `repeat=True`. ([#223](https://github.com/redsun-acquisition/redsun/pull/223))
+- `redsun.testing.keep_application_as_found`, and the setting that gives Qt's `offscreen` platform the system fonts on Windows, move to `redsun.testing.qt`. A suite testing Qt components installs the `testing-qt` extra and loads `-p redsun.testing.qt` as well as `-p redsun.testing`. ([#233](https://github.com/redsun-acquisition/redsun/pull/233))
+- `redsun.presenter.AcquisitionPresenter.sig_plan_done` no longer reports a plan stopped with `stop`, which `sig_plan_stopped` reports instead. A session file writing out the links of the acquisition stack under `wiring` adds `acquisition.sig_plan_stopped: acquisition_view.set_stopped`. ([#235](https://github.com/redsun-acquisition/redsun/pull/235))
+- `PlanProgress.watch` takes a `Watcher` of `ophyd-async`, and a fraction reported alone reaches watchers with `current`, `initial` and `target` left `None`. A followed status that reports no unit gives `unit` as `None` instead of `"unit"`.
+- `redsun.engine.ProgressState` is removed. `RunEngine.sig_progress` carries the open `PlanProgress` scopes, whose `update` holds the last `WatcherUpdate` of `ophyd-async`.
+
+### Added
+
+- `redsun.Session.build` warns when components ask for two protocols with the same members, which the same components satisfy. ([#218](https://github.com/redsun-acquisition/redsun/pull/218))
+- `redsun.utils.devices.DevicePath`, `device_path` and `held_by` give where a device sits in its tree, such as `microscope / xy.x`, and whether a plan holds it or a device above it. `AxisInfo.path`, `LightInfo.path`, `Configuration.paths` and `ParamDescription.labels` carry those paths to views, which title boxes, rows and device choices with them. ([#219](https://github.com/redsun-acquisition/redsun/pull/219))
+- `redsun.Declare(services={...})` and the `services` key of a device's entry give each constructor keyword the prefix of the service it names. A keyword whose service does not start is left out when its default is `None`, and the device is built without that piece. ([#221](https://github.com/redsun-acquisition/redsun/pull/221))
+- `redsun.shortcut` takes `repeat=True` to run its method again at the keyboard's repeat rate while the key is held, and `redsun.Shortcut.repeat` records it. ([#223](https://github.com/redsun-acquisition/redsun/pull/223))
+- `redsun.Frontend.view_coroutines` says whether a key can run a view's coroutine method. It is false by default and in the Qt frontend, which leave such a key out and log it. ([#226](https://github.com/redsun-acquisition/redsun/pull/226))
+- `redsun.shortcut` takes a coroutine method. A presenter's runs on the session's loop without blocking the key press, a press while it still runs is ignored, what it raises is logged, and it is cancelled when the session shuts down, which waits up to 5 seconds for it to stop. ([#226](https://github.com/redsun-acquisition/redsun/pull/226))
+- `redsun.qt.styles.qlementine.QlementineStyle` takes `dark` and `light`, paths to `qlementine` theme files used in place of its built-in themes, and `animations=False` to turn its animations off. A key a theme file gives that `qlementine` does not know, or a value of the wrong kind, is logged. ([#227](https://github.com/redsun-acquisition/redsun/pull/227))
+- `redsun.services.sharedbox.BoxTransport` serves a `fastcs` controller as one box per controller and an index box describing them, and answers each write with the service's error when the put fails. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+- `redsun.services.serve_controller` runs a `fastcs` controller as a launched service over the transport it is given, under the session's prefix, and reports the service ready once the transport can be reached. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+- `redsun.device.sharedbox.BoxDeviceConnector` fills an `ophyd-async` device from the index of a `sharedbox` service, with `BoxSignalBackend` and `BoxCommandBackend` behind its signals and commands. A refused write or a failed command raises `redsun.device.sharedbox.BoxPutError`, and `redsun.device.sharedbox.stream_name` names a stream the service makes itself. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+
+  ```python
+  class MyDetector(Device):
+      exposure: SignalRW[float]
+
+      def __init__(self, prefix: str, name: str = "") -> None:
+          super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+  ```
+- `sharedbox` is a new value of `services.transport`: a session reaches its services through `sharedbox` boxes in shared memory on the same computer, with no network server. The `sharedbox` extra installs `sharedbox` and `fastcs` for it. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+- `redsun.testing.qt` is a `pytest` plugin for testing Qt components, installed with the `testing-qt` extra. It defines a `qapp` fixture. `emit_queued_on_main_thread` delivers on the main thread the `psygnal` emissions queued from other threads, whichever plugin supplies `qapp`. `release_slots_after_module` releases the slots of the widgets freed after each test module, which `pyqt6` otherwise holds until the process exits. `application_state` returns the stylesheet, style, font and hand-set palette that `keep_application_as_found` compares. ([#233](https://github.com/redsun-acquisition/redsun/pull/233))
+- `redsun.presenter.AcquisitionPresenter.sig_plan_stopped` reports a plan stopped with `stop`, and `redsun.view.qt.builtins.AcquisitionView.set_stopped` shows the plan stopped until it runs again. ([#235](https://github.com/redsun-acquisition/redsun/pull/235))
+- `redsun.path_provider.SessionPathProvider.set_label` leads the file names of every later plan with a label, as `<label>_<plan>_<counter>`. `redsun.view.qt.builtins.AcquisitionView` has a field for the label, which reaches the provider through the new `redsun.presenter.AcquisitionPresenter.set_label`. ([#236](https://github.com/redsun-acquisition/redsun/pull/236))
+- `redsun.device.sharedbox.BoxDeviceConnector` takes `declared_only=True` to fill a device with only the signals, commands and children it declares, so several devices can share one service. ([#238](https://github.com/redsun-acquisition/redsun/pull/238))
+
+  ```python
+  class MyCamera(Device):
+      exposure: SignalRW[float]
+
+      def __init__(self, prefix: str, name: str = "") -> None:
+          super().__init__(
+              name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+          )
+  ```
+- `redsun.AsStack` and a `stacks` section in a session file and a plugin manifest declare a presenter and its views as one stack, which the session builds as `<stack>` and `<stack>_<role>` and pairs. `redsun.view.qt.builtins` ships `AcquisitionStack`, `PositionerStack` and `LightStack`, listed in `redsun`'s manifest as `acquisition`, `positioner` and `lights`. ([#239](https://github.com/redsun-acquisition/redsun/pull/239))
+
+  ```python
+  class MyStack:
+      presenter: AsPresenter[MyController]
+      view: AsView[MyView]
+
+
+  class MyApp(QtSession):
+      my_ctrl: AsStack[MyStack]
+      acquisition: AsStack[AcquisitionStack]
+  ```
+- `PlanProgress` is generic over the type of the values it reports, and `PlanProgress.update` returns its last update. `monitor_progress` returns a `PlanProgress[T]` for a `WatchableAsyncStatus[T]`.
+
+### Changed
+
+- The built-in positioner, light stack and Configuration tabs treat a device a plan locks as locking every device below it, and none above it. ([#219](https://github.com/redsun-acquisition/redsun/pull/219))
+- `redsun.DeviceMapping` and `redsun.DevicesOf` hold every device of each declared tree, signals and commands left out, under the names `ophyd-async` gives them, such as `microscope-xy-x`. `DevicesOf` checks each device against its protocol on its own. Two devices with one name, or a device with no name, stop the build with a `BuildError`. ([#219](https://github.com/redsun-acquisition/redsun/pull/219))
+- The build summary lists the devices built without a piece, under `Built without`, and the services that did not start, under `Services not started`. ([#221](https://github.com/redsun-acquisition/redsun/pull/221))
+- `redsun.qt.QtSession` counts the hook providers it skipped in the failures button of its status bar, which reads `2 failed`, and lists each with the hook points it served. ([#224](https://github.com/redsun-acquisition/redsun/pull/224))
+- `redsun.testing.qt.keep_application_as_found` also fails a test that leaves a palette set by hand on the application, and puts the palette back. ([#225](https://github.com/redsun-acquisition/redsun/pull/225))
+- `redsun.Session.shutdown` cancels a component's async `shutdown` still running after 5 seconds, logs it, and goes on with the rest. ([#226](https://github.com/redsun-acquisition/redsun/pull/226))
+- `redsun` requires `annotated-types>=0.8.0`, `platformdirs>=4.13.5` and `pydantic>=2.14.1`. Its Qt extras require `superqt>=0.9.0`, and its `tiled` extra requires `tiled>=0.2.20`. ([#229](https://github.com/redsun-acquisition/redsun/pull/229))
+- `redsun`'s `tiled` extra installs `tiled` and `ome-tiled` on Python 3.14, and requires `ome-tiled>=0.2.1`. ([#230](https://github.com/redsun-acquisition/redsun/pull/230))
+- `redsun.testing.build` fails a test with an error at teardown when a session it built is still alive once the test is over. A test that raised is not checked. ([#234](https://github.com/redsun-acquisition/redsun/pull/234))
+
+### Removed
+
+- `redsun.session.BUILD_STEPS`; use `BuildStep`. ([#214](https://github.com/redsun-acquisition/redsun/pull/214))
+- Reading a view's `placement` from a property of the built view. ([#214](https://github.com/redsun-acquisition/redsun/pull/214))
+- `redsun.utils.devices.find_axes` and `redsun.utils.devices.walk_axes`. ([#219](https://github.com/redsun-acquisition/redsun/pull/219))
+
+### Fixed
+
+- A `redsun.injection.provides` member annotated `X | None` shares its value as `X`. The session now refuses a second component sharing `X`, and no longer logs the value as one no component asks for. ([#217](https://github.com/redsun-acquisition/redsun/pull/217))
+- `redsun.DevicesOf[Axis]` holds the axes built on `ophyd-async`'s `StandardMovable`, whose `set` names its parameter `new_position`. `redsun.utils.devices.Axis.set` takes its value by position only. ([#220](https://github.com/redsun-acquisition/redsun/pull/220))
+- `redsun.Declare(services={...})` refuses to map `name` or `path_provider`, which the session gives the device itself, when the configuration is read, instead of skipping the device at build. ([#222](https://github.com/redsun-acquisition/redsun/pull/222))
+- **Window** -> **Keyboard shortcuts** opens no editor in the second key cell of a command with no key. ([#223](https://github.com/redsun-acquisition/redsun/pull/223))
+- **Window** -> **Keyboard shortcuts** clears the message refusing a key at the next key pressed in a cell and at **Reset to defaults**. ([#223](https://github.com/redsun-acquisition/redsun/pull/223))
+- `redsun.Session.resolve_shortcuts` logs each conflict between keys the first time it settles it, not at every call. ([#223](https://github.com/redsun-acquisition/redsun/pull/223))
+- Escape pressed in a key cell of **Window** -> **Keyboard shortcuts** leaves the key as it was, instead of binding Escape. ([#223](https://github.com/redsun-acquisition/redsun/pull/223))
+- `redsun.ConfigurationError` locates a problem in a hook entry that a session file lists at a hook point by its index, such as `hooks.configure_application[1].kwargs`. ([#224](https://github.com/redsun-acquisition/redsun/pull/224))
+- The step box of `redsun.view.qt.builtins.PositionerGroup` takes its width from the style, so the step still shows beside a wider arrow, such as the `qlementine` style's. ([#225](https://github.com/redsun-acquisition/redsun/pull/225))
+- A task still pending on the shared event loop of `redsun.aio`, such as one started with `redsun.aio.run_coro`, is cancelled when the process exits, and the loop is then stopped and closed. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+- `redsun.qt.QtSession.shutdown` deletes the actions of the session's menus and releases the slots connected to its widgets, under `pyqt6` too, so neither keeps the session and what it built alive until the process exits. ([#232](https://github.com/redsun-acquisition/redsun/pull/232))
+- `redsun.log.BufferHandler` retains each record with its message and traceback as text, and no longer keeps alive the arguments and the exception the record was logged with. ([#234](https://github.com/redsun-acquisition/redsun/pull/234))
+- `redsun.services.sharedbox.BoxTransport` builds its controller boxes with `sharedbox` 0.8.0, and the `sharedbox` extra requires `sharedbox` 0.8.0 or later. ([#240](https://github.com/redsun-acquisition/redsun/pull/240))
+- `redsun.Session.shutdown` forgets the build when a component's `shutdown` raises, after running every other release, and then raises that error. ([#242](https://github.com/redsun-acquisition/redsun/pull/242))
+- `redsun.qt.QtSession.run` delivers the signals queued for the GUI thread every 16 ms, so an idle window leaves the processor idle. ([#242](https://github.com/redsun-acquisition/redsun/pull/242))
+- `redsun.view.qt.builtins.AcquisitionView` sends the label in its field when a plan is launched, so a run started while the field still has focus takes the label typed. ([#242](https://github.com/redsun-acquisition/redsun/pull/242))
+- `redsun.services.serve_controller` keeps the watchdog that logs every thread's stack when stopping takes over 10 seconds, also when the service is stopped before it is ready. ([#242](https://github.com/redsun-acquisition/redsun/pull/242))
+- `redsun.path_provider.SessionPathProvider` resumes the counter of a labelled plan past its files on disk when the label holds a dot, such as `cell1.5`. ([#242](https://github.com/redsun-acquisition/redsun/pull/242))
+- A waveform signal of `redsun.device.sharedbox.BoxDeviceConnector`, and a waveform attribute served by `redsun.services.sharedbox.BoxTransport`, raise `ValueError` for a value with another number of dimensions than the waveform, or longer than it. ([#242](https://github.com/redsun-acquisition/redsun/pull/242))
+- The `scan_id_source` parameter of `redsun.engine.RunEngine` is annotated without `None`, which failed at the first run.
+
+
 ## [0.15.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.15.0) - 23-10-2026
 
 ### Breaking
