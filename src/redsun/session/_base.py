@@ -1037,15 +1037,11 @@ class Session(BuildableSession):
         """
         resolved, problems = self._settle_shortcuts(extra)
         if problems and self._configuration().strict:
-            raise BuildError(
-                "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in problems)
-            )
+            raise BuildError(shortcut_report(problems))
         new = [line for line in problems if line not in self._reported_shortcuts]
         if new:
             self._reported_shortcuts.update(new)
-            logger.warning(
-                "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in new)
-            )
+            logger.warning(shortcut_report(new))
         return resolved
 
     def _settle_shortcuts(
@@ -1426,10 +1422,11 @@ class Session(BuildableSession):
         Connections go first, so nothing is delivered to a component that is
         already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
-        An async `shutdown` still running after 5 seconds is cancelled and
-        logged, and the rest go on. Calling it a second time, or on a session that was never built, runs
-        nothing: a release is dropped as it runs. What the build made is
-        forgotten, so the session can be built again.
+        An async `shutdown` still running after `SHUTDOWN_TIMEOUT` seconds is
+        cancelled and logged, and the rest go on. Calling it a second time, or
+        on a session that was never built, runs nothing: a release is dropped
+        as it runs. What the build made is forgotten, so the session can be
+        built again.
 
         Raises
         ------
@@ -2468,6 +2465,11 @@ def as_protocol(instance: object, protocol: TypeForm[P]) -> P | None:
     # mypy reports a union of a class and a protocol checked against another
     # protocol as unreachable; the protocols passed are classes at runtime
     return cast("P", instance) if isinstance(instance, cast("type", protocol)) else None
+
+
+def shortcut_report(lines: Iterable[str]) -> str:
+    """Return *lines* under a "Keyboard shortcuts:" heading, one indented line each."""
+    return "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in lines)
 
 
 def listed(names: Iterable[str], *, quote: bool = True) -> str:
