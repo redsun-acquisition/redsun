@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast, get_origin
 
 import numpy as np
 from bluesky.protocols import Reading
-from event_model import Limits, LimitsRange
 from ophyd_async.core import (
     NO_ARG_VOID_SIGNATURE,
     CommandBackend,
@@ -50,7 +49,7 @@ if TYPE_CHECKING:
     import inspect
     from collections.abc import Mapping
 
-    from event_model import DataKey
+    from event_model import DataKey, Limits
     from ophyd_async.core import Callback, SignalDatatype
     from sharedbox import FieldWatch, SharedBox
 
@@ -127,15 +126,14 @@ def _attached_name(boxes: Mapping[str, SharedBox], key: str) -> str:
 
 def _limits(datatype: NumberDescription) -> Limits:
     """Return the control and alarm ranges the service gives, each when it sets an end."""
-    limits = Limits()
+    limits: Limits = {}
     if "min" in datatype or "max" in datatype:
-        limits["control"] = LimitsRange(
-            low=datatype.get("min"), high=datatype.get("max")
-        )
+        limits["control"] = {"low": datatype.get("min"), "high": datatype.get("max")}
     if "min_alarm" in datatype or "max_alarm" in datatype:
-        limits["alarm"] = LimitsRange(
-            low=datatype.get("min_alarm"), high=datatype.get("max_alarm")
-        )
+        limits["alarm"] = {
+            "low": datatype.get("min_alarm"),
+            "high": datatype.get("max_alarm"),
+        }
     return limits
 
 
