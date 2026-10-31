@@ -19,7 +19,6 @@ from ophyd_async.core import (
     DeviceVector,
     SignalBackend,
     SignalDatatypeT,
-    SignalMetadata,
     SignalR,
     SignalRW,
     SignalW,
@@ -27,6 +26,7 @@ from ophyd_async.core import (
     TriggerableCommand,
     make_datakey,
 )
+from ophyd_async.core._signal_backend import make_metadata
 from sharedbox import BoxClosedError, SegmentNotFoundError
 
 from redsun.aio import cancel_task
@@ -35,6 +35,7 @@ from redsun.log import logger
 from ..services._layout import (
     AttributeDescription,
     ControllerDescription,
+    NumberDescription,
     ServiceIndex,
     box_class,
     controller_label,
@@ -122,6 +123,20 @@ def _attached_name(boxes: Mapping[str, SharedBox], key: str) -> str:
     """Return the name of the box attached under `key`, or `key` before it is attached."""
     box = boxes.get(key)
     return key if box is None else box.name
+
+
+def _limits(datatype: NumberDescription) -> Limits:
+    """Return the control and alarm ranges the service gives, each when it sets an end."""
+    limits = Limits()
+    if "min" in datatype or "max" in datatype:
+        limits["control"] = LimitsRange(
+            low=datatype.get("min"), high=datatype.get("max")
+        )
+    if "min_alarm" in datatype or "max_alarm" in datatype:
+        limits["alarm"] = LimitsRange(
+            low=datatype.get("min_alarm"), high=datatype.get("max_alarm")
+        )
+    return limits
 
 
 async def _request(box: SharedBox, stem: str, name: str, **values: Any) -> None:
@@ -305,26 +320,16 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     async def get_datakey(self, source: str) -> DataKey:
         """Return the data key, with the units, precision, limits and choices served."""
         datatype = self._description["datatype"]
-        metadata = SignalMetadata()
+        # TODO: ask ophyd-async to export make_metadata from ophyd_async.core
         match datatype["kind"]:
             case "int" | "uint" | "float":
-                if "units" in datatype:
-                    metadata["units"] = datatype["units"]
-                if "precision" in datatype:
-                    metadata["precision"] = datatype["precision"]
-                limits = Limits()
-                if "min" in datatype or "max" in datatype:
-                    limits["control"] = LimitsRange(
-                        low=datatype.get("min"), high=datatype.get("max")
-                    )
-                if "min_alarm" in datatype or "max_alarm" in datatype:
-                    limits["alarm"] = LimitsRange(
-                        low=datatype.get("min_alarm"), high=datatype.get("max_alarm")
-                    )
-                if limits:
+                metadata = make_metadata(
+                    self.datatype, datatype.get("units"), datatype.get("precision")
+                )
+                if limits := _limits(datatype):
                     metadata["limits"] = limits
-            case "enum":
-                metadata["choices"] = self._names
+            case _:
+                metadata = make_metadata(self.datatype)
         return make_datakey(
             self.datatype,  # type: ignore[arg-type]
             self._current()["value"],
