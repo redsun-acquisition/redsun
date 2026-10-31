@@ -1,1 +1,0 @@
-`PlanProgress.watch` takes a `Watcher` of `ophyd-async`, and a fraction reported alone reaches watchers with `current`, `initial` and `target` left `None`. A followed status that reports no unit gives `unit` as `None` instead of `"unit"`.
