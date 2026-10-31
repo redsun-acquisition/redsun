@@ -84,6 +84,7 @@ compute from them.
 
 Move code written for an earlier release to this one.
 
+- [How to migrate from 0.16](migrate-from-0.16.md)
 - [How to migrate from 0.15](migrate-from-0.15.md)
 - [How to migrate from 0.14](migrate-from-0.14.md)
 - [How to migrate from 0.13](migrate-from-0.13.md)
