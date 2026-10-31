@@ -71,9 +71,24 @@ class Stuck:
             raise
 
 
+class Failing:
+    """Presenter whose teardown raises."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def shutdown(self) -> None:
+        raise RuntimeError("the teardown failed")
+
+
 class App(Session):
     laser: AsDevice[Laser]
     ctrl: AsPresenter[Ctrl]
+
+
+class FailingApp(Session):
+    laser: AsDevice[Laser]
+    failing: AsPresenter[Failing]
 
 
 class StuckApp(Session):
@@ -151,3 +166,15 @@ def test_a_teardown_that_does_not_end_is_cancelled_and_logged(
 
     assert shutdowns == ["stuck cancelled", "laser"]
     assert "stuck did not shut down within 0.1 s; cancelled it" in caplog.messages
+
+
+def test_a_shutdown_that_raises_still_forgets_the_build(
+    build: BuildSession, shutdowns: list[str]
+) -> None:
+    """Shut every component down and forget the build when one `shutdown` raises."""
+    app = build(FailingApp, {"devices": {"laser": {"shutdowns": shutdowns}}})
+
+    with pytest.raises(RuntimeError, match="the teardown failed"):
+        app.shutdown()
+
+    assert (shutdowns, dict(app.devices)) == (["laser"], {})

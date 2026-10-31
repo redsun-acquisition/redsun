@@ -1412,10 +1412,22 @@ class Session(BuildableSession):
         logged, and the rest go on. Calling it a second time, or on a session that was never built, runs
         nothing: a release is dropped as it runs. What the build made is
         forgotten, so the session can be built again.
+
+        Raises
+        ------
+        Exception
+            The first error a release raised, once every release has run and
+            the build is forgotten.
         """
         self._is_built = False
         self.disconnect_all()
-        self._releases.close()
+        try:
+            self._releases.close()
+        finally:
+            self._forget_build()
+
+    def _forget_build(self) -> None:
+        """Drop what the build made, so the session can be built again."""
         self._hooks = None
         self._devices.clear()
         self._device_index.clear()
