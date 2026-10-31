@@ -29,6 +29,7 @@ from ophyd_async.core import (
 )
 from sharedbox import BoxClosedError, SegmentNotFoundError
 
+from redsun.aio import cancel_task
 from redsun.log import logger
 
 from ..services._layout import (
@@ -337,13 +338,14 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         if callback:
             self._follow_readback(callback)
         elif self._follower is not None:
-            self._follower.cancel()
+            # ophyd-async unsubscribes on the caller's thread, often the GUI's
+            cancel_task(self._follower)
             self._follower = None
 
     def _follow_readback(self, callback: Callback[Reading[SignalDatatypeT]]) -> None:
         """Call `callback` with the current reading, then follow the box's value."""
         if self._follower is not None:
-            self._follower.cancel()
+            cancel_task(self._follower)
         watch = self._box().watch(self._readback)
         callback(self._current())
         self._follower = asyncio.create_task(self._follow(watch, callback))
