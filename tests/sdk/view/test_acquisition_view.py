@@ -219,6 +219,22 @@ def test_the_label_typed_is_asked_for_and_locked_while_a_plan_runs(
     assert (locked, label.isEnabled()) == (True, True)
 
 
+def test_a_launch_asks_for_the_label_still_being_typed(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Ask for the label typed so far before the launch, with no editing finished."""
+    view = make_view(settings, parent)
+    asked: list[str] = []
+    view.sig_label.connect(asked.append)
+    view.sig_launch.connect(lambda *args: asked.append("launch"))
+    choose(view, "rest")
+
+    child(view, QtWidgets.QLineEdit, "label").setText("cell1.5")
+    run_button(view, "rest").click()
+
+    assert asked == ["cell1.5", "launch"]
+
+
 def test_the_run_button_of_a_running_plan_stops_it(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
