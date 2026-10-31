@@ -60,7 +60,7 @@ ahead of time, so the session has to learn them from the service.
   session's fields always match the service's:
 
   ```python
-  index = index_class().attach("MYAPP:DET:fastcs:index")
+  index = ServiceIndex.attach("MYAPP:DET:fastcs:index")
   description = json.loads(index.description)
   root = box_class(description).attach(description["box"])
   ```

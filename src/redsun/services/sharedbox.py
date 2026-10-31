@@ -27,9 +27,9 @@ from ._layout import (
     AttributeDescription,
     ControllerDescription,
     DatatypeDescription,
+    ServiceIndex,
     box_class,
     box_name,
-    index_class,
     index_name,
 )
 
@@ -176,7 +176,7 @@ class BoxTransport(Transport):
                         box_class(node), node["box"], self._initial_values(node_api)
                     )
             self._index = self._publish(
-                index_class(),
+                ServiceIndex,
                 index_name(self._prefix),
                 {"version": 1, "description": description},
             )
@@ -217,16 +217,15 @@ class BoxTransport(Transport):
     def _clean_leftovers(self) -> None:
         """Unlink the boxes and the index a previous run of this service left."""
         name = index_name(self._prefix)
-        index_cls = index_class()
         try:
-            old = index_cls.attach(name)
+            old = ServiceIndex.attach(name)
         except SegmentNotFoundError:
             return
         except (SchemaMismatchError, KindMismatchError):
-            index_cls.unlink(name)
+            ServiceIndex.unlink(name)
             return
         try:
-            for box in self._box_names(json.loads(old.snapshot()["description"])):
+            for box in self._box_names(json.loads(old.description)):
                 with contextlib.suppress(SegmentNotFoundError):
                     SharedBox.unlink(box)
         finally:
