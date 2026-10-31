@@ -19,7 +19,7 @@ from sharedbox import Capacity, DType, Shape, SharedBox
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from numpy.typing import DTypeLike, NDArray
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 __all__ = [
     "DESCRIPTION_CAPACITY",
@@ -155,7 +155,7 @@ class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
     """The service's controllers, as a JSON `ControllerDescription`."""
 
 
-def pad(value: object, shape: Sequence[int], dtype: DTypeLike) -> NDArray[Any]:
+def pad(value: ArrayLike, shape: Sequence[int], dtype: DTypeLike) -> NDArray[Any]:
     """Return `value` at the start of a zeroed array of the waveform field's `shape`.
 
     Raises

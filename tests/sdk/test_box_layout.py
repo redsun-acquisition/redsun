@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
 import numpy as np
@@ -20,6 +20,9 @@ from redsun.services._layout import (
     pad,
     stream_name,
 )
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
 
 
 def describe(
@@ -182,7 +185,7 @@ def test_a_short_waveform_is_padded_with_zeros() -> None:
 
 
 @pytest.mark.parametrize("value", [[1, 2], [[1, 2, 3, 4]], [[[1]]]])
-def test_a_waveform_that_does_not_fit_its_field_is_refused(value: object) -> None:
+def test_a_waveform_that_does_not_fit_its_field_is_refused(value: ArrayLike) -> None:
     """Refuse a waveform with fewer or more dimensions than its field, or longer than it."""
     with pytest.raises(ValueError, match="does not fit"):
         pad(value, (2, 3), "int32")
