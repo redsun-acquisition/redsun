@@ -150,7 +150,7 @@ class SessionPathProvider(PathProvider):
         self._now = now or datetime.now
 
         self._pattern = re.compile(
-            rf"^(?P<plan>.+)_(?P<count>\d{{{max_digits}}})(?:-.*)?$"
+            rf"^(?P<plan>.+)_(?P<count>\d{{{max_digits}}})(?:[-.].*)?$"
         )
 
         self._scan_existing()
@@ -247,9 +247,9 @@ class SessionPathProvider(PathProvider):
 
     def _bump_from(self, entry: Path, *, datakey_name: str) -> bool:
         """Raise *datakey_name*'s counter past *entry*, and say whether it did."""
-        # everything after the first dot is suffix: scan_00004.ome.zarr is
-        # scan_00004, where Path.stem would keep scan_00004.ome
-        match = self._pattern.match(entry.name.split(".", 1)[0])
+        # the suffix starts at the first dot or dash after the counter, so
+        # scan_00004.ome.zarr is scan 4, and a label may hold dots
+        match = self._pattern.match(entry.name)
         if match is None:
             return False
         self._filenames.bump(

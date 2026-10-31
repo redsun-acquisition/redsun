@@ -1453,7 +1453,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # its window, and that geometry means nothing
         self.on_release(self.save_layout)
         self.app.aboutToQuit.connect(self.shutdown)
-        start_emitting_from_queue()
+        # at 0 ms the timer fires on every pass and the idle loop never sleeps
+        start_emitting_from_queue(16)
         self.show()
         sys.exit(self.app.exec())
 

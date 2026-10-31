@@ -17,6 +17,7 @@ from redsun.services._layout import (
     box_name,
     index_name,
     namespace,
+    pad,
     stream_name,
 )
 
@@ -171,3 +172,17 @@ def test_box_names_sit_under_root() -> None:
     """Name the root box `<prefix>:fastcs:root` and children below it."""
     assert box_name("A:B:", "1a2b3c", []) == "A:B:fastcs:1a2b3c:root"
     assert box_name("A", "1a2b3c", ["axes", "0"]) == "A:fastcs:1a2b3c:root:axes:0"
+
+
+def test_a_short_waveform_is_padded_with_zeros() -> None:
+    """Put a waveform shorter than its field at the start, zeros after it."""
+    padded = pad([[1, 2]], (2, 3), "int32")
+
+    np.testing.assert_array_equal(padded, [[1, 2, 0], [0, 0, 0]])
+
+
+@pytest.mark.parametrize("value", [[1, 2], [[1, 2, 3, 4]], [[[1]]]])
+def test_a_waveform_that_does_not_fit_its_field_is_refused(value: object) -> None:
+    """Refuse a waveform with fewer or more dimensions than its field, or longer than it."""
+    with pytest.raises(ValueError, match="does not fit"):
+        pad(value, (2, 3), "int32")

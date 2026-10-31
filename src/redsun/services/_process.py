@@ -244,7 +244,6 @@ async def serve_controller(
     control_system = FastCS(controller, [transport])
     serve_task = asyncio.ensure_future(control_system.serve(interactive=False))
     ready_task = asyncio.ensure_future(announce_when_reachable(transport, prefix))
-    ready_task.add_done_callback(lambda _: faulthandler.cancel_dump_traceback_later())
     ready_task.add_done_callback(partial(log_failed_announcement, prefix))
     stop_task = asyncio.ensure_future(wait_for_stop())
     try:
@@ -266,6 +265,7 @@ async def serve_controller(
 def log_failed_announcement(prefix: str, task: asyncio.Future[None]) -> None:
     """Log why the service `prefix` could not announce itself, if it could not."""
     if not task.cancelled() and (error := task.exception()) is not None:
+        faulthandler.cancel_dump_traceback_later()
         logger.error("%s could not tell it is ready: %s", prefix, error, exc_info=error)
 
 
@@ -274,6 +274,9 @@ async def announce_when_reachable(transport: Transport, prefix: str) -> None:
     reachable = getattr(transport, "reachable", None)
     if reachable is None:
         await ready_when_reachable(f"{prefix}:PVI")
-        return
-    await reachable()
-    ready()
+    else:
+        await reachable()
+        ready()
+    # here, not in a done callback, which a cancel while stopping also runs,
+    # switching off the stop's own watchdog
+    faulthandler.cancel_dump_traceback_later()

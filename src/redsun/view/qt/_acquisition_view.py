@@ -250,6 +250,8 @@ class AcquisitionView(QtW.QWidget, Loggable):
         self._launch(self._chooser.currentText())
 
     def _launch(self, plan: str) -> None:
+        # the field may still have focus, so its editing has not finished
+        self._ask_label()
         widget = self.plan_widgets[plan]
         self.sig_launch.emit(plan, widget.parameters, tuple(widget.attached_callbacks))
 
