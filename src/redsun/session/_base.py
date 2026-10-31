@@ -838,21 +838,7 @@ class Session(BuildableSession):
         self._log_hooks()
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
-        self._stacks, halves = read_stacks(type(self), config, self.frontend)
-        for stack in self._stacks.values():
-            clash = sorted(stack.roles.keys() & self._declarations.keys())
-            if clash:
-                raise TypeError(
-                    f"stack {stack.name!r} of {type(self).__qualname__} makes "
-                    f"{listed(clash)}, which the session declares already"
-                )
-        clash = sorted(halves.keys() & self._declarations.keys())
-        if clash:
-            raise TypeError(
-                f"a stack of {type(self).__qualname__} makes {listed(clash)}, "
-                "which the session declares already"
-            )
-        self._declarations.update(halves)
+        self._read_stacks(config)
         self._window_layout = self._declared_layout(config)
         self._shortcut_overrides = self._read_shortcuts(config)
         for declaration in self._declarations.values():
@@ -869,6 +855,30 @@ class Session(BuildableSession):
         for hook in distinct(chain.from_iterable(self.hooks.values())):
             if isinstance(hook, HasShutdown):
                 self.on_release(partial(self._shut_down_hook, hook))
+
+    def _read_stacks(self, config: SessionFile) -> None:
+        """Read the stacks and declare their halves beside the other declarations.
+
+        Raises
+        ------
+        TypeError
+            If a half's name is one the session declares already.
+        """
+        self._stacks, halves = read_stacks(type(self), config, self.frontend)
+        for stack in self._stacks.values():
+            clash = sorted(stack.roles.keys() & self._declarations.keys())
+            if clash:
+                raise TypeError(
+                    f"stack {stack.name!r} of {type(self).__qualname__} makes "
+                    f"{listed(clash)}, which the session declares already"
+                )
+        clash = sorted(halves.keys() & self._declarations.keys())
+        if clash:
+            raise TypeError(
+                f"a stack of {type(self).__qualname__} makes {listed(clash)}, "
+                "which the session declares already"
+            )
+        self._declarations.update(halves)
 
     def _log_hooks(self) -> None:
         """Log the hook points a provider is installed at."""
@@ -1027,15 +1037,11 @@ class Session(BuildableSession):
         """
         resolved, problems = self._settle_shortcuts(extra)
         if problems and self._configuration().strict:
-            raise BuildError(
-                "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in problems)
-            )
+            raise BuildError(shortcut_report(problems))
         new = [line for line in problems if line not in self._reported_shortcuts]
         if new:
             self._reported_shortcuts.update(new)
-            logger.warning(
-                "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in new)
-            )
+            logger.warning(shortcut_report(new))
         return resolved
 
     def _settle_shortcuts(
@@ -1243,14 +1249,7 @@ class Session(BuildableSession):
             setattr(self, attribute, NotBuilt(name))
         unbuilt_roles: list[tuple[object, str]] = []
         try:
-            for stack in self._stacks.values():
-                held = stack.cls()
-                for half, role in stack.roles.items():
-                    built = self._declarations[half].instance
-                    setattr(held, role, NotBuilt(half) if built is None else built)
-                    if built is None:
-                        unbuilt_roles.append((held, role))
-                setattr(self, stack.attribute, held)
+            self._hold_stacks(unbuilt_roles)
             links = self.wire()
             if links is None:
                 raise WiringError(
@@ -1274,6 +1273,21 @@ class Session(BuildableSession):
                 self._wiring.link_pair(view, stack.presenter)
         self._warn_unused()
         self._warn_interchangeable()
+
+    def _hold_stacks(self, unbuilt_roles: list[tuple[object, str]]) -> None:
+        """Put an instance of each stack class on the session, holding its halves.
+
+        A half that was not built is held as a stand-in, recorded in
+        *unbuilt_roles* so the caller can remove it after wiring.
+        """
+        for stack in self._stacks.values():
+            held = stack.cls()
+            for half, role in stack.roles.items():
+                built = self._declarations[half].instance
+                setattr(held, role, NotBuilt(half) if built is None else built)
+                if built is None:
+                    unbuilt_roles.append((held, role))
+            setattr(self, stack.attribute, held)
 
     def present(self) -> None:
         """Assemble what was built into whatever shows it.
@@ -1408,10 +1422,11 @@ class Session(BuildableSession):
         Connections go first, so nothing is delivered to a component that is
         already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
-        An async `shutdown` still running after 5 seconds is cancelled and
-        logged, and the rest go on. Calling it a second time, or on a session that was never built, runs
-        nothing: a release is dropped as it runs. What the build made is
-        forgotten, so the session can be built again.
+        An async `shutdown` still running after `SHUTDOWN_TIMEOUT` seconds is
+        cancelled and logged, and the rest go on. Calling it a second time, or
+        on a session that was never built, runs nothing: a release is dropped
+        as it runs. What the build made is forgotten, so the session can be
+        built again.
 
         Raises
         ------
@@ -2450,6 +2465,11 @@ def as_protocol(instance: object, protocol: TypeForm[P]) -> P | None:
     # mypy reports a union of a class and a protocol checked against another
     # protocol as unreachable; the protocols passed are classes at runtime
     return cast("P", instance) if isinstance(instance, cast("type", protocol)) else None
+
+
+def shortcut_report(lines: Iterable[str]) -> str:
+    """Return *lines* under a "Keyboard shortcuts:" heading, one indented line each."""
+    return "Keyboard shortcuts:\n" + "\n".join(f"  {line}" for line in lines)
 
 
 def listed(names: Iterable[str], *, quote: bool = True) -> str:

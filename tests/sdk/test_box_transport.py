@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import logging
 import re
 import sys
 from collections.abc import AsyncGenerator
+from functools import partial
 from typing import Any
 from uuid import uuid4
 
@@ -23,8 +26,11 @@ from redsun.services._layout import (
     ServiceIndex,
     box_class,
     index_name,
+    walk,
 )
+from redsun.services._process import announce_when_reachable, log_failed_announcement
 from redsun.services.sharedbox import BoxTransport
+from tests.sdk.helpers import messages
 
 
 class Service:
@@ -45,17 +51,11 @@ class Service:
                 except SegmentNotFoundError:
                     await asyncio.sleep(0.01)
         self.root = json.loads(self.index.description)
-        for description in self.walk(self.root):
+        for description in walk(self.root):
             if description["box"] is not None:
                 self.boxes[description["box"]] = box_class(description).attach(
                     description["box"]
                 )
-
-    def walk(self, description: ControllerDescription) -> list[ControllerDescription]:
-        found = [description]
-        for child in description["children"].values():
-            found.extend(self.walk(child))
-        return found
 
     def box_of(self, *path: str) -> Any:
         """Return the attached box of the child controller at `path`."""
@@ -290,3 +290,23 @@ async def test_a_value_the_box_cannot_hold_names_the_attribute(
     controller, _ = served
     with pytest.raises(ValueError, match="'limited'"):
         await controller.limited.update(-(2**70))
+
+
+async def test_a_transport_that_cannot_tell_it_is_reachable_is_logged(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log the error of a transport whose `reachable` raises."""
+    transport = BoxTransport()
+
+    async def refuse() -> None:
+        raise RuntimeError("index lost")
+
+    monkeypatch.setattr(transport, "reachable", refuse)
+    task = asyncio.ensure_future(announce_when_reachable(transport, "SIM"))
+    task.add_done_callback(partial(log_failed_announcement, "SIM"))
+    with contextlib.suppress(RuntimeError):
+        await task
+
+    assert messages(caplog, logging.ERROR) == [
+        "SIM could not tell it is ready: index lost"
+    ]

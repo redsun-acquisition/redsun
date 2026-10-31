@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from redsun.errors import PluginError
 
@@ -12,6 +12,7 @@ from ._declarations import (
     Declare,
     Layer,
     StackMark,
+    declared_keywords,
     hints,
     is_marked,
     names_of,
@@ -29,6 +30,15 @@ __all__ = ["Stack", "read_stacks", "roles_of"]
 
 RESERVED_ROLES: Final = frozenset({"plugin_name", "plugin_id"})
 """The keys of a stack's entry that name its plugin, so no role can use them."""
+
+
+class Role(NamedTuple):
+    """A half of a stack, as its stack class annotates it."""
+
+    layer: Layer
+    cls: type
+    keywords: dict[str, Any]
+    """The keywords its `Declare` gives."""
 
 
 @dataclass(frozen=True)
@@ -54,7 +64,7 @@ class Stack:
     """The role of each half, by the half's name."""
 
 
-def roles_of(cls: type) -> dict[str, tuple[Layer, type, dict[str, Any]]]:
+def roles_of(cls: type) -> dict[str, Role]:
     """Read the halves a stack class annotates, by role.
 
     Each is the half's layer, its class and the keywords its `Declare` gives.
@@ -68,40 +78,55 @@ def roles_of(cls: type) -> dict[str, tuple[Layer, type, dict[str, Any]]]:
         view, or has a constructor that needs an argument, since the session
         builds it with no arguments.
     """
-    roles: dict[str, tuple[Layer, type, dict[str, Any]]] = {}
-    for attr, hint in hints(cls).items():
-        if attr.startswith("_"):
-            continue
-        target, metadata, layer = split(hint)
-        if layer not in (Layer.PRESENTER, Layer.VIEW):
+    roles = {
+        attr: role_of(cls, attr, hint)
+        for attr, hint in hints(cls).items()
+        if not attr.startswith("_")
+    }
+    refuse_shape(cls, roles)
+    refuse_required_arguments(cls)
+    return roles
+
+
+def role_of(cls: type, attr: str, hint: Any) -> Role:
+    """Return the layer, the class and the `Declare` keywords of role *attr*.
+
+    Raises
+    ------
+    TypeError
+        If the role is not a presenter or a view, its target is not a class,
+        its name is a key of a stack's entry, or it is marked with anything
+        but `Declare`.
+    """
+    target, metadata, layer = split(hint)
+    if layer is not Layer.PRESENTER and layer is not Layer.VIEW:
+        raise TypeError(
+            f"stack {cls.__qualname__} annotates {attr!r}, and a stack holds "
+            "only presenters and views; declare it with 'AsPresenter' or "
+            "'AsView'"
+        )
+    if not isinstance(target, type):
+        raise TypeError(
+            f"stack {cls.__qualname__} annotates {attr!r} as a {layer}, but "
+            f"{target!r} is not a class"
+        )
+    if attr in RESERVED_ROLES:
+        raise TypeError(
+            f"stack {cls.__qualname__} annotates {attr!r}, which is a key of "
+            "the entry in a session file and cannot name a role"
+        )
+    for marker in metadata:
+        if not isinstance(marker, Declare):
             raise TypeError(
-                f"stack {cls.__qualname__} annotates {attr!r}, and a stack holds "
-                "only presenters and views; declare it with 'AsPresenter' or "
-                "'AsView'"
+                f"stack {cls.__qualname__} gives role {attr!r} "
+                f"{type(marker).__name__}, and a half takes only 'Declare'"
             )
-        if not isinstance(target, type):
-            raise TypeError(
-                f"stack {cls.__qualname__} annotates {attr!r} as a {layer}, but "
-                f"{target!r} is not a class"
-            )
-        if attr in RESERVED_ROLES:
-            raise TypeError(
-                f"stack {cls.__qualname__} annotates {attr!r}, which is a key of "
-                "the entry in a session file and cannot name a role"
-            )
-        declared: dict[str, Any] = {}
-        for marker in metadata:
-            if isinstance(marker, Declare):
-                declared = marker.kwargs
-            else:
-                raise TypeError(
-                    f"stack {cls.__qualname__} gives role {attr!r} "
-                    f"{type(marker).__name__}, and a half takes only 'Declare'"
-                )
-        roles[attr] = (layer, target, declared)
-    presenters = [
-        role for role, (layer, _, _) in roles.items() if layer is Layer.PRESENTER
-    ]
+    return Role(layer, target, declared_keywords(metadata))
+
+
+def refuse_shape(cls: type, roles: Mapping[str, Role]) -> None:
+    """Refuse a stack without exactly one presenter and at least one view."""
+    presenters = [role for role, half in roles.items() if half.layer is Layer.PRESENTER]
     if len(presenters) != 1:
         raise TypeError(
             f"stack {cls.__qualname__} annotates {len(presenters)} presenters; "
@@ -109,6 +134,10 @@ def roles_of(cls: type) -> dict[str, tuple[Layer, type, dict[str, Any]]]:
         )
     if len(presenters) == len(roles):
         raise TypeError(f"stack {cls.__qualname__} annotates no view")
+
+
+def refuse_required_arguments(cls: type) -> None:
+    """Refuse a stack class whose constructor needs an argument."""
     required = [
         p.name
         for p in inspect.signature(cls).parameters.values()
@@ -119,7 +148,6 @@ def roles_of(cls: type) -> dict[str, tuple[Layer, type, dict[str, Any]]]:
             f"stack {cls.__qualname__} takes {', '.join(map(repr, required))} in "
             "its constructor, and the session builds it with no arguments"
         )
-    return roles
 
 
 def read_stacks(
@@ -149,10 +177,7 @@ def read_stacks(
             continue
         target, metadata, _ = split(hint)
         cfg_key, name = names_of(attr, metadata)
-        inline: dict[str, Any] = {}
-        for marker in metadata:
-            if isinstance(marker, Declare):
-                inline = marker.kwargs
+        inline = declared_keywords(metadata)
         if not isinstance(target, type):
             raise TypeError(
                 f"{cls.__qualname__}.{attr} is declared as a stack, but {target!r} "

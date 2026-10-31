@@ -27,11 +27,14 @@ from ._layout import (
     AttributeDescription,
     ControllerDescription,
     DatatypeDescription,
+    NumberDescription,
     ServiceIndex,
     box_class,
     box_name,
     index_name,
     pad,
+    unpad,
+    walk,
 )
 
 if TYPE_CHECKING:
@@ -91,7 +94,7 @@ def _describe_datatype(datatype: DataType[DType_T], where: str) -> DatatypeDescr
                 "shape": list(datatype.shape),
             }
         case Int() | Float():
-            description: DatatypeDescription = {
+            description: NumberDescription = {
                 "kind": "float" if isinstance(datatype, Float) else "int"
             }
             if isinstance(datatype, Int) and _is_unsigned(datatype):
@@ -131,8 +134,7 @@ def _setpoint(box: SharedBox, name: str, datatype: DataType[DType_T]) -> DType_T
         case Int() if _is_unsigned(datatype):
             return int(raw[0])
         case Waveform():
-            shape = getattr(box, f"{name}__setpoint_shape")
-            return np.array(raw[tuple(slice(0, size) for size in shape)])
+            return unpad(raw, getattr(box, f"{name}__setpoint_shape"))
     return raw
 
 
@@ -227,19 +229,13 @@ class BoxTransport(Transport):
             ServiceIndex.unlink(name)
             return
         try:
-            for box in self._box_names(json.loads(old.description)):
-                with contextlib.suppress(SegmentNotFoundError):
-                    SharedBox.unlink(box)
+            for node in walk(json.loads(old.description)):
+                if node["box"] is not None:
+                    with contextlib.suppress(SegmentNotFoundError):
+                        SharedBox.unlink(node["box"])
         finally:
             old.unlink()
             old.close()
-
-    def _box_names(self, node: ControllerDescription) -> list[str]:
-        """Return the box names of the description `node` and its children."""
-        names = [node["box"]] if node["box"] is not None else []
-        for child in node["children"].values():
-            names.extend(self._box_names(child))
-        return names
 
     def _publish(self, cls: type[_BoxT], name: str, values: dict[str, object]) -> _BoxT:
         """Create the box `name`, replacing one a stopped service left behind."""
@@ -272,27 +268,27 @@ class BoxTransport(Transport):
         try:
             async with asyncio.TaskGroup() as group:
                 for api, node in self._nodes:
-                    if node["box"] is None:
-                        continue
-                    box = self._boxes[node["box"]]
-                    for name, attribute in api.attributes.items():
-                        if isinstance(attribute, AttrR):
-                            callback = partial(
-                                self._update, box, name, attribute.datatype
-                            )
-                            attribute.add_on_update_callback(callback)
-                            await callback(attribute.get())
-                        if isinstance(attribute, AttrW):
-                            group.create_task(
-                                self._answer(
-                                    box, name, partial(self._put, box, name, attribute)
-                                )
-                            )
-                    for name, command in api.command_methods.items():
-                        group.create_task(self._answer(box, name, command))
+                    if node["box"] is not None:
+                        await self._serve_box(group, api, self._boxes[node["box"]])
                 await asyncio.Event().wait()
         finally:
             self._close()
+
+    async def _serve_box(
+        self, group: asyncio.TaskGroup, api: ControllerAPI, box: SharedBox
+    ) -> None:
+        """Mirror the attributes of `api` into `box`, and answer its requests in `group`."""
+        for name, attribute in api.attributes.items():
+            if isinstance(attribute, AttrR):
+                callback = partial(self._update, box, name, attribute.datatype)
+                attribute.add_on_update_callback(callback)
+                await callback(attribute.get())
+            if isinstance(attribute, AttrW):
+                group.create_task(
+                    self._answer(box, name, partial(self._put, box, name, attribute))
+                )
+        for name, command in api.command_methods.items():
+            group.create_task(self._answer(box, name, command))
 
     async def reachable(self) -> None:
         """Return once the index is published."""

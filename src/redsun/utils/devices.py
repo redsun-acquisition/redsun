@@ -245,8 +245,7 @@ async def describe_axis(axis: Axis) -> AxisInfo:
 
     The descriptor is the entry of the readback a `StandardMovable` names,
     otherwise of the axis' first hint, or its only entry; an axis that is not
-    readable has none. Units that are not text, and a
-    precision that is not a whole number of at least 0, are left out.
+    readable has none.
 
     Raises
     ------

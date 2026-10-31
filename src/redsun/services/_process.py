@@ -233,12 +233,7 @@ async def serve_controller(
     """
     from fastcs.control_system import FastCS  # noqa: PLC0415
 
-    if prefix is None:
-        service = identity()
-        if service is None or not service.prefix:
-            raise ValueError("give a prefix: no session launched this process with one")
-        prefix = service.prefix
-    prefix = prefix.removesuffix(":")
+    prefix = served_prefix(prefix)
     faulthandler.dump_traceback_later(TRACEBACK_DELAY)
     controller.set_path([prefix])
     control_system = FastCS(controller, [transport])
@@ -260,6 +255,22 @@ async def serve_controller(
         serve_task.cancel()
         await asyncio.gather(serve_task, ready_task, stop_task, return_exceptions=True)
         faulthandler.cancel_dump_traceback_later()
+
+
+def served_prefix(prefix: str | None) -> str:
+    """Return `prefix`, or the session's when it is `None`, less one trailing colon.
+
+    Raises
+    ------
+    ValueError
+        If `prefix` is `None` and no session launched this process with one.
+    """
+    if prefix is None:
+        service = identity()
+        if service is None or not service.prefix:
+            raise ValueError("give a prefix: no session launched this process with one")
+        prefix = service.prefix
+    return prefix.removesuffix(":")
 
 
 def log_failed_announcement(prefix: str, task: asyncio.Future[None]) -> None:

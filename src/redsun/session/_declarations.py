@@ -349,6 +349,32 @@ def take_device_keys(
     declaration.services = (
         {"prefix": service} if service is not None else dict(services or {})
     )
+    check_services(declaration, rest, params, refused=refused)
+    autoconnect = rest.pop("autoconnect", True)
+    if not isinstance(autoconnect, bool):
+        raise TypeError(
+            f"device {declaration.name!r} gives autoconnect={autoconnect!r}; it "
+            "takes true or false"
+        )
+    declaration.autoconnect = autoconnect
+    return rest
+
+
+def check_services(
+    declaration: Declaration,
+    rest: Mapping[str, Any],
+    params: Mapping[str, inspect.Parameter],
+    *,
+    refused: bool,
+) -> None:
+    """Refuse a keyword *declaration*'s `services` cannot map.
+
+    Raises
+    ------
+    TypeError
+        If a keyword is one the session fills itself, is also given in
+        *rest*, or is not one the device's class takes.
+    """
     any_keyword = any(p.kind is p.VAR_KEYWORD for p in params.values())
     for keyword, service_name in declaration.services.items():
         if keyword in SESSION_KEYWORDS:
@@ -366,14 +392,6 @@ def take_device_keys(
                 f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
                 f"no {keyword!r} keyword, which services maps"
             )
-    autoconnect = rest.pop("autoconnect", True)
-    if not isinstance(autoconnect, bool):
-        raise TypeError(
-            f"device {declaration.name!r} gives autoconnect={autoconnect!r}; it "
-            "takes true or false"
-        )
-    declaration.autoconnect = autoconnect
-    return rest
 
 
 def take_view_placement(
@@ -701,10 +719,7 @@ def read(
         refused = refusal(target, kind, f"{cls.__qualname__}.{attr}", frontend)
 
         cfg_key, name = names_of(attr, metadata)
-        inline: dict[str, Any] = {}
-        for marker in metadata:
-            if isinstance(marker, Declare):
-                inline = marker.kwargs
+        inline = declared_keywords(metadata)
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
         given = keywords(section.get(cfg_key))
@@ -821,15 +836,12 @@ def read_hooks(
                 f"{where} is declared as a hook, but {target!r} is not a class"
             )
         served: tuple[str, ...] = (attr,)
-        kwargs: dict[str, Any] = {}
         for marker in metadata:
             if isinstance(marker, Serves):
                 served = marker.moments
-            elif isinstance(marker, Declare):
-                kwargs = marker.kwargs
         if len(set(served)) < len(served):
             raise HookError(f"{where} names a hook point twice in Serves")
-        declaration = HookDeclaration(target, served, kwargs)
+        declaration = HookDeclaration(target, served, declared_keywords(metadata))
         for moment in served:
             if moment not in points:
                 raise HookError(
@@ -997,6 +1009,15 @@ def names_of(attr: str, metadata: Iterable[object]) -> tuple[str, str]:
         elif isinstance(marker, Alias):
             name = marker.name
     return cfg_key, name
+
+
+def declared_keywords(metadata: Iterable[object]) -> dict[str, Any]:
+    """Return the keywords of the last `Declare` in *metadata*, or none."""
+    keywords: dict[str, Any] = {}
+    for marker in metadata:
+        if isinstance(marker, Declare):
+            keywords = marker.kwargs
+    return keywords
 
 
 def marked(cls: type, marker: type) -> Iterator[tuple[str, Any, tuple[Any, ...]]]:

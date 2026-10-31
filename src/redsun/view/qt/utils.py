@@ -480,6 +480,15 @@ def _fraction(update: WatcherUpdate[Any] | None) -> float | None:
     return min(max(fraction, 0.0), 1.0)
 
 
+def _precision(update: WatcherUpdate[Any]) -> int | None:
+    """Return the decimals *update* asks for, or `None` unless a whole number of at least 0."""
+    # typed float by ophyd-async, but only a whole number of decimals can be shown
+    reported: object = update.precision
+    if isinstance(reported, int) and not isinstance(reported, bool) and reported >= 0:
+        return reported
+    return None
+
+
 def _progress_text(update: WatcherUpdate[Any] | None, fraction: float | None) -> str:
     """Return what a progress row says: a count against its end, a percentage, or a count.
 
@@ -489,15 +498,7 @@ def _progress_text(update: WatcherUpdate[Any] | None, fraction: float | None) ->
         return ""
     current = _number(update.current)
     target = _number(update.target)
-    # typed float by ophyd-async, but only a whole number of decimals can be shown
-    reported: object = update.precision
-    precision = (
-        reported
-        if isinstance(reported, int)
-        and not isinstance(reported, bool)
-        and reported >= 0
-        else None
-    )
+    precision = _precision(update)
     unit = update.unit or ""
     # a fraction reported alone is shown as a percentage, one spanned as a count
     if (

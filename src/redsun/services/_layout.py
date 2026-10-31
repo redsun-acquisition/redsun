@@ -1,13 +1,25 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Final,
+    Literal,
+    NamedTuple,
+    Required,
+    TypeAlias,
+    TypedDict,
+)
 
 import numpy as np
 from sharedbox import Capacity, DType, Shape, SharedBox
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
+
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 __all__ = [
     "DESCRIPTION_CAPACITY",
@@ -18,13 +30,18 @@ __all__ = [
     "AttributeDescription",
     "ControllerDescription",
     "DatatypeDescription",
+    "Field",
+    "NumberDescription",
     "ServiceIndex",
     "box_class",
     "box_name",
+    "controller_label",
     "index_name",
     "namespace",
     "pad",
     "stream_name",
+    "unpad",
+    "walk",
 ]
 
 RESERVED: Final = "fastcs"
@@ -55,20 +72,57 @@ NAME: Final = re.compile(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*")
 """A box name: parts joined by colons."""
 
 
-class DatatypeDescription(TypedDict, total=False):
-    """The datatype of an attribute, as the service describes it."""
+class NumberDescription(TypedDict, total=False):
+    """An `int`, `uint` or `float` attribute, as the service describes it."""
 
-    kind: Literal["int", "uint", "float", "bool", "str", "enum", "waveform"]
+    kind: Required[Literal["int", "uint", "float"]]
     units: str
     min: float
     max: float
     min_alarm: float
     max_alarm: float
     precision: int
+
+
+class BoolDescription(TypedDict):
+    """A `bool` attribute, as the service describes it."""
+
+    kind: Literal["bool"]
+
+
+class StrDescription(TypedDict):
+    """A `str` attribute, as the service describes it."""
+
+    kind: Literal["str"]
     capacity: int
+    """Bytes of the field holding the value."""
+
+
+class EnumDescription(TypedDict):
+    """An `enum` attribute, as the service describes it."""
+
+    kind: Literal["enum"]
     names: list[str]
+    """The values of the enum, in the order of their indices."""
+
+
+class WaveformDescription(TypedDict):
+    """A `waveform` attribute, as the service describes it."""
+
+    kind: Literal["waveform"]
     dtype: str
     shape: list[int]
+    """The largest shape the waveform takes."""
+
+
+DatatypeDescription: TypeAlias = (
+    NumberDescription
+    | BoolDescription
+    | StrDescription
+    | EnumDescription
+    | WaveformDescription
+)
+"""The datatype of an attribute, as the service describes it."""
 
 
 class AttributeDescription(TypedDict):
@@ -101,9 +155,7 @@ class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
     """The service's controllers, as a JSON `ControllerDescription`."""
 
 
-def pad(
-    value: object, shape: Sequence[int], dtype: str | np.dtype[Any]
-) -> np.ndarray[Any, Any]:
+def pad(value: ArrayLike, shape: Sequence[int], dtype: DTypeLike) -> NDArray[Any]:
     """Return `value` at the start of a zeroed array of the waveform field's `shape`.
 
     Raises
@@ -122,6 +174,23 @@ def pad(
     padded = np.zeros(shape, dtype=dtype)
     padded[tuple(slice(0, size) for size in array.shape)] = array
     return padded
+
+
+def unpad(raw: NDArray[Any], shape: Sequence[int]) -> NDArray[Any]:
+    """Return the start of the waveform field `raw` that `shape` covers, as a copy."""
+    return np.array(raw[tuple(slice(0, size) for size in shape)])
+
+
+def walk(description: ControllerDescription) -> Iterator[ControllerDescription]:
+    """Yield `description` and every controller below it, parents first."""
+    yield description
+    for child in description["children"].values():
+        yield from walk(child)
+
+
+def controller_label(description: ControllerDescription) -> str:
+    """Return the controller's path from the root, joined by colons, for messages."""
+    return ":".join(["root", *description["path"]])
 
 
 def check_name(name: str) -> str:
@@ -163,29 +232,32 @@ def stream_name(prefix: str, part: str) -> str:
     return check_name(f"{namespace(prefix)}:{part}")
 
 
-def datatype_field(datatype: DatatypeDescription) -> tuple[object, object]:
-    """Return the annotation and the default of a field holding `datatype`."""
+class Field(NamedTuple):
+    """The annotation and the default of a box field."""
+
+    annotation: object
+    default: object
+
+
+def datatype_field(datatype: DatatypeDescription) -> Field:
+    """Return the field holding `datatype`."""
     match datatype["kind"]:
-        case "int":
-            return int, 0
+        case "int" | "enum":
+            return Field(int, 0)
         case "uint":
-            return Annotated[np.ndarray, Shape((1,)), DType("uint64")], np.zeros(
-                1, dtype="uint64"
+            return Field(
+                Annotated[np.ndarray, Shape((1,)), DType("uint64")],
+                np.zeros(1, dtype="uint64"),
             )
         case "float":
-            return float, 0.0
+            return Field(float, 0.0)
         case "bool":
-            return bool, False
+            return Field(bool, False)
         case "str":
-            return Annotated[
-                str, Capacity(datatype.get("capacity", STRING_CAPACITY))
-            ], ""
-        case "enum":
-            return int, 0
+            return Field(Annotated[str, Capacity(datatype["capacity"])], "")
         case "waveform":
-            shape = datatype["shape"]
-            dtype = datatype["dtype"]
-            return (
+            shape, dtype = datatype["shape"], datatype["dtype"]
+            return Field(
                 Annotated[np.ndarray, Shape(tuple(shape)), DType(dtype)],
                 np.zeros(shape, dtype=dtype),
             )
@@ -195,7 +267,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
     """Return the box class of one controller, equal for equal descriptions."""
     if not controller["attributes"] and not controller["commands"]:
         raise ValueError(
-            f"controller {':'.join(['root', *controller['path']])!r} has no attributes or commands"
+            f"controller {controller_label(controller)!r} has no attributes or commands"
         )
     annotations: dict[str, object] = {}
     body: dict[str, object] = {"__annotations__": annotations}
@@ -231,7 +303,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
 
     if len(annotations) > MAX_FIELDS:
         raise ValueError(
-            f"controller {':'.join(['root', *controller['path']])!r} has {len(annotations)} fields; "
+            f"controller {controller_label(controller)!r} has {len(annotations)} fields; "
             f"a box holds at most {MAX_FIELDS}"
         )
     return type(

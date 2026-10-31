@@ -83,7 +83,7 @@ class StartService(Protocol):
         """Start the service *launch* describes, declared under *name*.
 
         *transport* is the one a session file names under
-        `services.transport`: `channel-access` or `pv-access`.
+        `services.transport`: `channel-access`, `pv-access` or `sharedbox`.
         """
         ...
 

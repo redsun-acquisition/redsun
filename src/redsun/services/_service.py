@@ -117,7 +117,8 @@ class Service:
     stop_timeout
         Seconds each step of `stop` waits for the process to exit.
     transport
-        Protocol the service is reached over: `channel-access` or `pv-access`.
+        Protocol the service is reached over: `channel-access`, `pv-access`
+        or `sharedbox`.
         The session settles it for every service it holds.
     address
         Where an attached service answers, added to this process's address
@@ -152,7 +153,10 @@ class Service:
     )
 
     sig_exited = Signal(str, int)
-    """Emitted with the name and exit code when a ready service exits unasked."""
+    """Emitted with the name and exit code when a ready service exits unasked.
+
+    It is emitted on the thread reading the service's output, `service-<name>`.
+    """
 
     def __init__(
         self,

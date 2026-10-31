@@ -154,6 +154,9 @@ Area: TypeAlias = Literal["left", "right", "top", "bottom"]
 
 T = TypeVar("T", bound=QObject)
 
+CoroutineCommand: TypeAlias = "Callable[[], Coroutine[Any, Any, object]]"
+"""The method of a command that runs as a coroutine on the shared loop."""
+
 AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
     "left": QtNamespace.DockWidgetArea.LeftDockWidgetArea,
     "right": QtNamespace.DockWidgetArea.RightDockWidgetArea,
@@ -679,6 +682,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
             QtHook.CONFIGURE_MAIN_VIEW,
             lambda provider: provider.configure_main_view(window),
         )
+        self._add_failures_button(window)
+        self._register_window_actions(views, earlier)
+        self._default_state = window.saveState()
+        self.restore_layout()
+
+    def _add_failures_button(self, window: QModelMainWindow) -> None:
+        """Add a button listing the failed components and hooks to the status bar, if any failed."""
         failures = [
             *self._failed.items(),
             *self._not_set_up.items(),
@@ -690,9 +700,6 @@ class QtSession(DesktopSession[QMainWindow], Session):
         bar = window.statusBar()
         if failures and bar is not None:
             bar.addPermanentWidget(FailuresButton(failures))
-        self._register_window_actions(views, earlier)
-        self._default_state = window.saveState()
-        self.restore_layout()
 
     def _with_placeholders(self) -> dict[str, AttachableComponent]:
         """Return the views in declaration order, a placeholder for each failed one.
@@ -1004,14 +1011,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Run *command*, so a key and a menu entry run it the same way."""
         self.model.commands.execute_command(command).result()
 
-    def _start_coroutine_command(
-        self, command: str, method: Callable[[], Coroutine[Any, Any, object]]
-    ) -> None:
+    def _start_coroutine_command(self, command: str, method: CoroutineCommand) -> None:
         """Start *command*'s coroutine *method* on the shared loop, without waiting."""
         run_coro(self._run_coroutine_command(command, method), return_future=True)
 
     async def _run_coroutine_command(
-        self, command: str, method: Callable[[], Coroutine[Any, Any, object]]
+        self, command: str, method: CoroutineCommand
     ) -> None:
         """Run *method* unless *command* still runs, logging what it raises."""
         if command in self._command_tasks:
