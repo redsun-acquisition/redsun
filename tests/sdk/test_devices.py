@@ -61,7 +61,7 @@ class ThermalAxis(StandardReadable):
         position = await self.position.get_value()
         return {"setpoint": position, "readback": position}
 
-    def subscribe(self, function: Callback[float]) -> None:
+    def subscribe_reading(self, function: Callback[float]) -> None:
         """Follow the position."""
         self.position.subscribe(function)
 

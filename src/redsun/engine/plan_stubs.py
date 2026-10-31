@@ -89,7 +89,7 @@ def describe(
     async def _describe() -> dict[str, Descriptor]:
         return await maybe_await(obj.describe())
 
-    task: list[asyncio.Task[dict[str, Descriptor]]] = yield from bps.wait_for(
+    task: list[asyncio.Future[dict[str, Descriptor]]] = yield from bps.wait_for(
         [_describe]
     )
     return task[0].result()
@@ -106,7 +106,7 @@ def describe_collect(
         return await maybe_await(obj.describe_collect())
 
     task: list[
-        asyncio.Task[dict[str, Descriptor] | dict[str, dict[str, Descriptor]]]
+        asyncio.Future[dict[str, Descriptor] | dict[str, dict[str, Descriptor]]]
     ] = yield from bps.wait_for([_describe_collect])
     return task[0].result()
 
