@@ -234,7 +234,9 @@ class QuietAxis(Device):
         value = await self.position.get_value()
         return {"setpoint": value, "readback": value}
 
-    def subscribe(self, function: Callable[[dict[str, Reading[float]]], None]) -> None:
+    def subscribe_reading(
+        self, function: Callable[[dict[str, Reading[float]]], None]
+    ) -> None:
         """Follow the position."""
         self.position.subscribe_reading(function)
 

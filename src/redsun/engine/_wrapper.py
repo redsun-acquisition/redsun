@@ -20,7 +20,7 @@ from redsun.log import logger
 from ._progress import PlanProgress, depth
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterable, Mapping
+    from collections.abc import Awaitable, Callable, Iterable, Mapping, MutableMapping
     from typing import Literal, TypeAlias
 
     from bluesky.protocols import Status
@@ -33,7 +33,9 @@ if TYPE_CHECKING:
     ]
     MDValidator: TypeAlias = Callable[[dict[str, Any]], None]
     MDNormalizer: TypeAlias = Callable[[dict[str, Any]], dict[str, Any]]
-    MDScanIDSource: TypeAlias = Callable[[dict[str, Any]], int | Awaitable[int]]
+    MDScanIDSource: TypeAlias = Callable[
+        [MutableMapping[str, Any]], int | Awaitable[int]
+    ]
 
 
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]

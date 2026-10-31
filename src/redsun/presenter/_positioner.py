@@ -478,7 +478,7 @@ class PositionerPresenter(Loggable):
                 info = await describe_axis(axis)
                 relay = partial(self._relay, device, name, info.key)
                 unsubscribers.append(partial(axis.clear_sub, relay))
-                axis.subscribe(relay)
+                axis.subscribe_reading(relay)
                 # last in the block, so a timeout during it leaves nothing behind
                 configuration = (
                     await self._configuration.add(

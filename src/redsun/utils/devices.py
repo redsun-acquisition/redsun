@@ -61,7 +61,7 @@ __all__ = [
 
 @runtime_checkable
 class Axis(AsyncLocatable[float], Subscribable[float], Protocol):
-    """Something `set` moves, `locate` reports and `subscribe` follows.
+    """Something `set` moves, `locate` reports and `subscribe_reading` follows.
 
     `set` returns an `ophyd-async` status, which the positioner waits on and
     cancels to stop the move. Checking an object against this protocol at run
