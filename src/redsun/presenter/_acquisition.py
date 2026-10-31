@@ -347,8 +347,8 @@ class AcquisitionPresenter(Loggable):
 
     def _on_future_done(self, future: Future[Any]) -> None:
         error = future.exception()
-        self._futures.discard(future)
         if self._closed:
+            self._futures.discard(future)
             return
         # a pause or a stop also ends the run's future with an interruption
         if error is not None and not isinstance(
@@ -356,16 +356,19 @@ class AcquisitionPresenter(Loggable):
         ):
             self._error = error
         # a paused plan has not ended: resuming makes a new future
-        if self._futures or self._engine.state == "paused":
+        if self._futures - {future} or self._engine.state == "paused":
+            self._futures.discard(future)
             return
         plan, self._running, self._on_start = self._running, None, None
         failure, self._error = self._error, None
         stopped, self._stopping = self._stopping, False
+        if plan is not None and self._paths is not None:
+            self._paths.reset_plan()
+        # only now, so a plan launched meanwhile keeps its name and is not taken as this one
+        self._futures.discard(future)
         # the other future of a stop has already reported the end
         if plan is None:
             return
-        if self._paths is not None:
-            self._paths.reset_plan()
         if failure is not None:
             self.logger.error(f"{plan!r} failed", exc_info=failure)
             self.sig_plan_failed.emit(plan, str(failure) or type(failure).__name__)
