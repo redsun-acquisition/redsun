@@ -28,6 +28,10 @@ class EmptyApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "garbage-session"}
 
 
+class OtherApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "other-garbage-session"}
+
+
 class Cycle:
     """An object that refers to itself, so only the collector frees it."""
 
@@ -82,6 +86,21 @@ def test_shutdown_leaves_automatic_collection_as_it_found_it(
         after = gc.isenabled()
 
     assert after is before
+
+
+def test_a_session_keeps_collection_off_while_another_still_runs(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Turn automatic collection back on only when the last running session shuts down."""
+    with automatic_collection(True):
+        first, second = build(EmptyApp), build(OtherApp)
+
+        first.shutdown()
+        while_second_runs = gc.isenabled()
+        second.shutdown()
+        after_both = gc.isenabled()
+
+    assert (while_second_runs, after_both) == (False, True)
 
 
 def test_shutdown_frees_the_sessions_cycles_on_the_gui_thread(

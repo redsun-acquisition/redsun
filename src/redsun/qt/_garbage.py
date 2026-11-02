@@ -7,10 +7,15 @@
 from __future__ import annotations
 
 import gc
+import weakref
+from typing import Final
 
 from qtpy.QtCore import QObject, QTimer
 
 __all__ = ["GarbageCollector"]
+
+RUNNING: Final[weakref.WeakSet[GarbageCollector]] = weakref.WeakSet()
+"""Collectors started and not stopped yet, which share automatic collection."""
 
 
 class GarbageCollector:
@@ -35,21 +40,29 @@ class GarbageCollector:
 
     def start(self) -> None:
         """Turn automatic collection off and start checking."""
-        self.enabled_before = gc.isenabled()
+        # a collector started while another runs finds automatic collection
+        # off because of it, so it takes the state the first one found
+        self.enabled_before = (
+            next(iter(RUNNING)).enabled_before if RUNNING else gc.isenabled()
+        )
+        RUNNING.add(self)
         gc.disable()
         self.timer.start()
 
     def stop(self) -> None:
         """Stop checking for good, and turn automatic collection back on if it was on.
 
+        Automatic collection stays off while another collector still runs.
         Before turning it on, collect once: this runs on the GUI thread, so
         the cycles left behind are freed there rather than by the next
         automatic collection on another thread. With automatic collection
-        already off when the collector started, nothing is collected.
+        already off when the first running collector started, nothing is
+        collected.
         """
         self.timer.stop()
         self.timer.deleteLater()
-        if self.enabled_before:
+        RUNNING.discard(self)
+        if self.enabled_before and not RUNNING:
             gc.collect()
             gc.enable()
 
