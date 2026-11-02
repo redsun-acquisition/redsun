@@ -7706,7 +7706,8 @@ with <code>--prefix CAM: --simulate</code>. The <a href="../../reference/session
 reference</a> has the table.</p>
 <p><code>ready</code> is text the session waits for in the output of the service. The
 first line containing it marks the service ready, so pick text an error
-message would not contain.</p>
+message would not contain. The session waits 15 seconds for it, so a service
+that takes longer to start gives <code>startup_timeout</code> in seconds.</p>
 <div class="admonition warning">
 <p class="admonition-title">Without <code>ready</code> the session doesn't wait</p>
 <p>The session then connects the devices of a service that may not serve

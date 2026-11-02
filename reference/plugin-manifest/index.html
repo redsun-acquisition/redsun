@@ -6204,6 +6204,12 @@ as <a href="../schemas/plugin-manifest.schema.json"><code>plugin-manifest.schema
 <td>the line the service prints once it serves</td>
 </tr>
 <tr>
+<td><code>startup_timeout</code></td>
+<td>number</td>
+<td><code>15.0</code></td>
+<td>seconds the session waits for the <code>ready</code> line</td>
+</tr>
+<tr>
 <td><code>stop_timeout</code></td>
 <td>number</td>
 <td><code>10.0</code></td>
@@ -6211,7 +6217,7 @@ as <a href="../schemas/plugin-manifest.schema.json"><code>plugin-manifest.schema
 </tr>
 </tbody>
 </table>
-<p>A session file may give any of the four for the same service, and what it
+<p>A session file may give any of the five for the same service, and what it
 gives replaces what the manifest says.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">services</span><span class="p">:</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">stage-ioc</span><span class="p">:</span>

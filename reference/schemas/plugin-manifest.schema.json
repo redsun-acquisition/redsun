@@ -73,6 +73,12 @@
           "description": "Line the service prints once it serves.",
           "title": "Ready"
         },
+        "startup_timeout": {
+          "default": 15.0,
+          "description": "Seconds the session waits for the readiness line.",
+          "title": "Startup Timeout",
+          "type": "number"
+        },
         "stop_timeout": {
           "default": 10.0,
           "description": "Seconds each stop step waits.",
