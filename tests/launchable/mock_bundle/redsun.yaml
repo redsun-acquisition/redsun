@@ -18,5 +18,6 @@ services:
   stand-in:
     module: mock_pkg.service.stand_in
     ready: stand-in ready
+    startup_timeout: 60
     args:
       say: from the manifest

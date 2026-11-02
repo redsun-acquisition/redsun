@@ -259,14 +259,15 @@ session: session
 service: "service process"
 devices: devices
 session -> service: "python -m mylab.iocs.camera"
-service -> session: "prints the ready line,\nwithin 15 s"
+service -> session: "prints the ready line,\nwithin startup_timeout"
 session -> devices: "build, each with its\nservice's prefix"
 devices -> service: "connect()"
 ```
 
-All launched services start at once, each waited for up to
-[`STARTUP_TIMEOUT`][redsun.services.STARTUP_TIMEOUT]; one declared without
-`ready` text counts as ready when its process starts. A service that doesn't
+All launched services start at once, each waited for up to `startup_timeout`
+seconds, [`STARTUP_TIMEOUT`][redsun.services.STARTUP_TIMEOUT] (15) unless the
+declaration gives another; one declared without `ready` text counts as ready
+when its process starts. A service that doesn't
 start is logged, and every device naming it is skipped. Services stop at
 shutdown, after every component and before the log files close, so the files
 record how each ended; a build that raises stops the ones it started.

@@ -125,6 +125,7 @@ An entry:
 | `module` | text | none | the module to run; an entry without one is attached to |
 | `args` | list of text, or mapping | empty | the arguments after the module; a mapping gives `--key value` per option |
 | `ready` | text | none | the line the service prints once it serves |
+| `startup_timeout` | number | `15.0` | seconds the session waits for the `ready` line |
 | `stop_timeout` | number | `10.0` | seconds each step of stopping waits |
 | `address` | text | none | where an attached service answers, added to the address list of the transport |
 

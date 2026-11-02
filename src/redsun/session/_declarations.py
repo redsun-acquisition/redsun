@@ -185,6 +185,9 @@ class Launch:
     args: Sequence[str] | Mapping[str, ArgValue] | None = None
     """Command-line arguments following the module, as a list or as options."""
 
+    startup_timeout: float | None = None
+    """Seconds the session waits for the readiness line."""
+
     stop_timeout: float | None = None
     """Seconds each step of stopping waits for the process to exit."""
 

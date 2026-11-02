@@ -19,7 +19,7 @@ from p4p.client.thread import Context
 
 from redsun import Launch
 from redsun.log import GlobalFormatter
-from redsun.services import STOP_TIMEOUT, Service, _service, _transports
+from redsun.services import STARTUP_TIMEOUT, STOP_TIMEOUT, Service, _transports
 from redsun.services._service import service_record
 from redsun.services._transports import (
     CHANNEL_ACCESS,
@@ -103,6 +103,7 @@ def launch(
 
     def make(
         *options: str,
+        startup_timeout: float = STARTUP_TIMEOUT,
         stop_timeout: float = STOP_TIMEOUT,
         name: str = "stand-in",
         prefix: str = "",
@@ -115,6 +116,7 @@ def launch(
                 args=options,
                 ready=READY,
                 stop_timeout=stop_timeout,
+                startup_timeout=startup_timeout,
             )
         )
         return made[-1]
@@ -183,11 +185,9 @@ def test_a_service_logs_its_output_and_cleans_up_when_stopped(
 def test_a_service_not_ready_in_time_is_stopped_and_reported(
     launch: Callable[..., Service],
     service_log: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Stop a service not ready in time and log the error."""
-    monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 0.5)
-    stand_in = launch("--no-ready")
+    stand_in = launch("--no-ready", startup_timeout=0.5)
 
     with pytest.raises(TimeoutError, match="not ready after 0.5 s"):
         stand_in.start()
@@ -200,11 +200,9 @@ def test_a_service_not_ready_in_time_is_stopped_and_reported(
 def test_a_service_exiting_before_it_is_ready_is_reported_at_once(
     launch: Callable[..., Service],
     service_log: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Raise as soon as a service exits before it is ready, not at the timeout."""
-    monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 10.0)
-    stand_in = launch("--no-ready", "--exit", "3")
+    stand_in = launch("--no-ready", "--exit", "3", startup_timeout=10.0)
     started = time.monotonic()
 
     with pytest.raises(RuntimeError, match="exited with code 3 before it was ready"):
