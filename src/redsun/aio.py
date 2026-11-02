@@ -14,12 +14,11 @@ Components must not build their own loop or install a backend.
 from __future__ import annotations
 
 import asyncio
-import atexit
 import contextlib
 import inspect
+import threading
 from concurrent.futures import wait
 from functools import cache
-from threading import Thread
 from typing import TYPE_CHECKING, Final, TypeVar, overload
 
 import aiologic as aiol
@@ -80,18 +79,19 @@ class AwaitableEvent:
 def get_shared_loop() -> asyncio.AbstractEventLoop:
     """Return the background event loop, starting it on its own thread on first use."""
     loop = asyncio.new_event_loop()
-    thread = Thread(target=loop.run_forever, daemon=True)
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
     thread.start()
     # bluesky's RunEngine looks up the thread of a loop that is already running,
     # and a loop it did not start itself is missing from that registry
     _ensure_event_loop_running.loop_to_thread[loop] = thread  # type: ignore[attr-defined]
-    # a daemon thread still running at exit is never freed, and neither is
-    # anything its pending tasks hold
-    atexit.register(stop_shared_loop, loop, thread)
+    # a daemon thread still running at exit is never freed, nor what its tasks
+    # hold; threading's exit hooks run before any atexit hook, so the tasks end
+    # while the objects they use, which a library may close at exit, are still open
+    threading._register_atexit(stop_shared_loop, loop, thread)  # type: ignore[attr-defined]
     return loop
 
 
-def stop_shared_loop(loop: asyncio.AbstractEventLoop, thread: Thread) -> None:
+def stop_shared_loop(loop: asyncio.AbstractEventLoop, thread: threading.Thread) -> None:
     """Cancel the tasks left on *loop*, stop it, and close it once *thread* ends.
 
     Each step waits at most `STOP_TIMEOUT` seconds, so a task that ignores its

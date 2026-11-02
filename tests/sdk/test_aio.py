@@ -53,6 +53,14 @@ run_coro(wait_an_hour(), return_future=True)
 started.wait()
 """
 
+EXIT_HOOK_AFTER_THE_LOOP = (
+    LEFT_WAITING
+    + """
+import atexit
+atexit.register(print, "exit hook", flush=True)
+"""
+)
+
 
 class Awaitable3:
     """Awaitable that is not a coroutine, standing in for a device status."""
@@ -535,14 +543,23 @@ async def test_cancel_task_cancels_a_waiting_task_of_the_calling_loop() -> None:
         await task
 
 
-def test_a_task_left_on_the_shared_loop_is_cancelled_at_exit() -> None:
-    """Cancel a task still waiting on the shared loop when the process exits."""
+@pytest.mark.parametrize(
+    ("script", "printed"),
+    [
+        (LEFT_WAITING, ["cancelled"]),
+        (EXIT_HOOK_AFTER_THE_LOOP, ["cancelled", "exit hook"]),
+    ],
+)
+def test_a_task_left_on_the_shared_loop_is_cancelled_at_exit(
+    script: str, printed: list[str]
+) -> None:
+    """Cancel a task still waiting on the shared loop at exit, before any atexit hook runs."""
     ran = subprocess.run(
-        [sys.executable, "-c", LEFT_WAITING],
+        [sys.executable, "-c", script],
         capture_output=True,
         text=True,
         timeout=TIMEOUT,
         check=True,
     )
 
-    assert ran.stdout.splitlines() == ["cancelled"]
+    assert ran.stdout.splitlines() == printed
