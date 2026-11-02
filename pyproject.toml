@@ -415,6 +415,7 @@ testpaths = [
 pythonpath = [".", "tests/launchable"]
 addopts = "-p no:warnings -p redsun.testing -p redsun.testing.qt"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "qt: marks tests that require a Qt display (skipped in headless environments)",
     "compose: marks tests that need tests/compose/compose.yaml up (skipped unless REDSUN_COMPOSE is set)",
