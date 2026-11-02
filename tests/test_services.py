@@ -340,7 +340,7 @@ def test_a_marker_where_an_alias_is_used_replaces_the_alias_marker() -> None:
 def test_a_service_from_a_plugin_takes_its_module_and_readiness_line(
     mock_plugin: None,
 ) -> None:
-    """Take the module and readiness line of a plugin service from its manifest."""
+    """Take the module, readiness line and startup timeout of a plugin service from its manifest."""
 
     class App(Session):
         config: ClassVar[dict[str, Any]] = {
@@ -357,9 +357,10 @@ def test_a_service_from_a_plugin_takes_its_module_and_readiness_line(
     app.read_configuration()
 
     ioc = app.services["ioc"]
-    assert (ioc.module, ioc.ready, ioc.prefix, ioc.args) == (
+    assert (ioc.module, ioc.ready, ioc.startup_timeout, ioc.prefix, ioc.args) == (
         STAND_IN,
         READY,
+        60,
         "SIM:",
         ["--say", "from the manifest"],
     )

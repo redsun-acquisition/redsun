@@ -84,9 +84,9 @@ def load_providers(providers: Mapping[str, ComponentEntry]) -> dict[str, type]:
 def service_entry(entry: ComponentEntry) -> dict[str, Any]:
     """Return the keywords a `services` entry gives, its plugin's included.
 
-    An entry naming a plugin takes `module`, `args`, `ready` and
-    `stop_timeout` from the plugin's manifest, under anything the entry
-    itself gives.
+    An entry naming a plugin takes `module`, `args`, `ready`,
+    `startup_timeout` and `stop_timeout` from the plugin's manifest, under
+    anything the entry itself gives.
 
     Raises
     ------

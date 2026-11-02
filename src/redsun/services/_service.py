@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 STARTUP_TIMEOUT: Final = 15.0
-"""Seconds a launched service has to print its readiness line."""
+"""Seconds a launched service has to print its readiness line, unless the service gives its own."""
 
 STOP_TIMEOUT: Final = 10.0
 """Seconds each step of `Service.stop` waits, unless the service gives its own."""
@@ -124,6 +124,8 @@ class Service:
         Where an attached service answers, added to this process's address
         list when it starts. `None` keeps the list as the environment gives
         it.
+    startup_timeout
+        Seconds `start` waits for the readiness line.
 
     Raises
     ------
@@ -148,6 +150,7 @@ class Service:
         "name",
         "prefix",
         "ready",
+        "startup_timeout",
         "stop_timeout",
         "transport",
     )
@@ -168,6 +171,7 @@ class Service:
         stop_timeout: float = STOP_TIMEOUT,
         transport: str = CHANNEL_ACCESS,
         address: str | None = None,
+        startup_timeout: float = STARTUP_TIMEOUT,
     ) -> None:
         if args and module is None:
             raise TypeError(
@@ -190,6 +194,7 @@ class Service:
         self.module = module
         self.args = command_line(args)
         self.ready = ready
+        self.startup_timeout = startup_timeout
         self.stop_timeout = stop_timeout
         self.transport = transport
         self._tail: deque[str] = deque(maxlen=TAIL_LINES)
@@ -229,7 +234,7 @@ class Service:
         Raises
         ------
         TimeoutError
-            If the readiness line does not appear within `STARTUP_TIMEOUT`; the
+            If the readiness line does not appear within `startup_timeout`; the
             process is stopped and its last output logged.
         RuntimeError
             If the process exits before it is ready.
@@ -287,14 +292,14 @@ class Service:
         self._drain.start()
 
         if not self._is_ready:
-            self._settled.wait(STARTUP_TIMEOUT)
+            self._settled.wait(self.startup_timeout)
         if self._is_ready:
             logger.info("Service '%s' started", self.name)
             return
         code = self._process.wait() if self._settled.is_set() else None
         self.stop()
         reason = (
-            f"not ready after {STARTUP_TIMEOUT:g} s"
+            f"not ready after {self.startup_timeout:g} s"
             if code is None
             else f"exited with code {code} before it was ready"
         )

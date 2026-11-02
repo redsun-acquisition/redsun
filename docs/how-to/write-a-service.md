@@ -265,7 +265,8 @@ reference](../reference/session-file.md) has the table.
 
 `ready` is text the session waits for in the output of the service. The
 first line containing it marks the service ready, so pick text an error
-message would not contain.
+message would not contain. The session waits 15 seconds for it, so a service
+that takes longer to start gives `startup_timeout` in seconds.
 
 !!! warning "Without `ready` the session doesn't wait"
 

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Final
 import yaml
 from pydantic import AfterValidator, BaseModel, ValidationError
 
-from redsun.services import STOP_TIMEOUT
+from redsun.services import STARTUP_TIMEOUT, STOP_TIMEOUT
 
 from .services._service import ArgValue
 
@@ -96,6 +96,9 @@ class ServiceEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     ready: str | None = None
     """Line the service prints once it serves."""
+
+    startup_timeout: float = STARTUP_TIMEOUT
+    """Seconds the session waits for the readiness line."""
 
     stop_timeout: float = STOP_TIMEOUT
     """Seconds each stop step waits."""

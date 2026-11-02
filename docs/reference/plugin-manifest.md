@@ -52,9 +52,10 @@ An entry of `services`:
 | `module` | text | required | the module run as `python -m <module>` |
 | `args` | list of text, or mapping | empty | the arguments after the module; a mapping is read as in the [session file](session-file.md) |
 | `ready` | text | none | the line the service prints once it serves |
+| `startup_timeout` | number | `15.0` | seconds the session waits for the `ready` line |
 | `stop_timeout` | number | `10.0` | seconds each step of stopping waits |
 
-A session file may give any of the four for the same service, and what it
+A session file may give any of the five for the same service, and what it
 gives replaces what the manifest says.
 
 ```yaml
