@@ -2651,6 +2651,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-frontend-overrides-make_registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A frontend overrides <code>make_registry</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-n-out-comes-with-the-qt-extras" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>in-n-out</code> comes with the Qt extras
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-value-per-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        One value per type
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-parameter-asks-for-the-exact-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A parameter asks for the exact type
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3537,6 +3581,8 @@
       
         
           
+        
+      
         
       
         
@@ -4626,6 +4672,33 @@
     
   
   36. A stack is declared as one entry
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0037-diwire-is-the-session-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  37. diwire is the session registry
 
     
   </span>
@@ -5934,6 +6007,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-frontend-overrides-make_registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A frontend overrides <code>make_registry</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-n-out-comes-with-the-qt-extras" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>in-n-out</code> comes with the Qt extras
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-value-per-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        One value per type
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-parameter-asks-for-the-exact-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A parameter asks for the exact type
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6063,9 +6180,10 @@
 
 <h1 id="how-to-migrate-from-016">How to migrate from 0.16<a class="headerlink" href="#how-to-migrate-from-016" title="Permanent link">&para;</a></h1>
 <p>Release 0.17 moves to <code>bluesky</code> 1.16, which renames the method a device
-uses to report new readings. This page gives the one change your code may
-need. The <a href="../../reference/changelog/">changelog</a> lists everything else the
-release changed.</p>
+uses to report new readings, and builds sessions out of a registry on
+<code>diwire</code> instead of an <code>in-n-out</code> store. This page gives the changes your
+code may need. The <a href="../../reference/changelog/">changelog</a> lists everything
+else the release changed.</p>
 <h2 id="an-axis-reports-readings-through-subscribe_reading">An axis reports readings through <code>subscribe_reading</code><a class="headerlink" href="#an-axis-reports-readings-through-subscribe_reading" title="Permanent link">&para;</a></h2>
 <p>The positioner follows an <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Axis&lt;/span&gt;" href="../../reference/api/utils/#redsun.utils.devices.Axis"><code>Axis</code></a> by calling its
 <code>subscribe_reading</code> method, the name <code>bluesky</code> 1.16 gives it, instead of
@@ -6083,6 +6201,68 @@ Rename the method:</p>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAxis</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">subscribe_reading</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="p">:</span> <span class="n">Callback</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">subscribe_reading</span><span class="p">(</span><span class="n">function</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="a-frontend-overrides-make_registry">A frontend overrides <code>make_registry</code><a class="headerlink" href="#a-frontend-overrides-make_registry" title="Permanent link">&para;</a></h2>
+<p>A session now builds its components out of a
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Registry&lt;/span&gt;" href="../../reference/api/injection/#redsun.injection.Registry"><code>Registry</code></a>, and the method a frontend overrides
+to share it with an application of its own returns one. Rename the method and
+return the registry the session makes:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># 0.16</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyFrontend</span><span class="p">(</span><span class="n">Session</span><span class="p">):</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">make_store</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Store</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">injection_store</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># now</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyFrontend</span><span class="p">(</span><span class="n">Session</span><span class="p">):</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">make_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Registry</span><span class="p">:</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="n">registry</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">make_registry</span><span class="p">()</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="k">return</span> <span class="n">registry</span>
+</span></code></pre></div>
+<h2 id="in-n-out-comes-with-the-qt-extras"><code>in-n-out</code> comes with the Qt extras<a class="headerlink" href="#in-n-out-comes-with-the-qt-extras" title="Permanent link">&para;</a></h2>
+<p><code>redsun</code> no longer installs <code>in-n-out</code> on its own. The <code>pyqt</code> and <code>pyside</code>
+extras still bring it, because <code>app-model</code> needs it. Code that imports
+<code>in_n_out</code> in a session without either extra adds it to its own
+dependencies:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>add<span class="w"> </span>in-n-out
+</span></code></pre></div>
+<h2 id="one-value-per-type">One value per type<a class="headerlink" href="#one-value-per-type" title="Permanent link">&para;</a></h2>
+<p>A type the session holds a value for can be shared by one owner only. A
+component that shares a value under a type the session already provides,
+such as <code>SessionConfig</code>, or under the class of a component declared once,
+now stops the build with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RegistrationError&lt;/span&gt;" href="../../reference/api/errors/#redsun.errors.RegistrationError"><code>RegistrationError</code></a>, which names both
+owners. Share the value under a type of the component's own:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># 0.16</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyController</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="nd">@provides</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SessionConfig</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># now</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">MyConfig</span> <span class="o">=</span> <span class="n">NewType</span><span class="p">(</span><span class="s2">"MyConfig"</span><span class="p">,</span> <span class="n">SessionConfig</span><span class="p">)</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyController</span><span class="p">:</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="nd">@provides</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MyConfig</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<h2 id="a-parameter-asks-for-the-exact-type">A parameter asks for the exact type<a class="headerlink" href="#a-parameter-asks-for-the-exact-type" title="Permanent link">&para;</a></h2>
+<p>A component receives a value only under the type it was registered with. A
+parameter typed with a subclass of a shared type, or with a union <code>A | B</code>,
+no longer receives the value of the base class or of one member, so a
+required parameter like that stops the build with "which nothing in the
+session provides". Ask for the type the value is shared under. A union with a
+default, such as <code>A | B | None = None</code>, keeps its default.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># 0.16: received the Stage shared by another component</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="n">MyStage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># now</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyView</span><span class="p">:</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="n">Stage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 
 

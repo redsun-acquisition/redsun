@@ -3520,6 +3520,8 @@
       
         
       
+        
+      
     
     
     
@@ -4535,6 +4537,33 @@
     
   
   36. A stack is declared as one entry
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0037-diwire-is-the-session-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  37. diwire is the session registry
 
     
   </span>
@@ -5773,10 +5802,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redsun.Session.make_store" class="md-nav__link">
+  <a href="#redsun.Session.make_registry" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_store
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_registry
       </span>
     </span>
   </a>
@@ -7774,10 +7803,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redsun.Session.make_store" class="md-nav__link">
+  <a href="#redsun.Session.make_registry" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_store
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_registry
       </span>
     </span>
   </a>
@@ -9691,7 +9720,7 @@ built with, by keyword.</p>
 
         <p>What this session remembers about how one user likes to run it.</p>
 <p>Per user and per machine rather than part of the session file, and
-registered in the store, so an action asks for it by type.</p>
+registered in the registry, so an action asks for it by type.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -10165,22 +10194,19 @@ is called.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="redsun.Session.make_store" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">make_store</span>
+<h3 id="redsun.Session.make_registry" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">make_registry</span>
 
 
-<a href="#redsun.Session.make_store" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">make_store</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Store</span>
+<a href="#redsun.Session.make_registry" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">make_registry</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Registry</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return the registry this session builds its components out of.</p>
-<p>Named after the session, and not entered in the process-wide registry
-<code>Store.create</code> keeps.</p>
-<p>A session owning an application of its own overrides this to return
-that application's store, which app-model registers and
-<code>Application.destroy</code> frees.</p>
+        <p>Return the registry this session builds its components out of, one per session.</p>
+<p>A session owning an application of its own overrides this to share
+its registry with that application.</p>
 
 
     </div>
@@ -10814,7 +10840,7 @@ connect to simulated backends, which reach no service.</p>
     <div class="doc doc-contents first">
 
         <p>Construct the devices, which are built from no other component.</p>
-<p>They are built before the store opens, each from its own declaration
+<p>They are built before the registry opens, each from its own declaration
 alone. Each keyword a device maps to a service receives that service's
 prefix. A keyword whose service did not start is left out when its
 default is <code>None</code>, so the device builds without that piece; otherwise
@@ -10864,7 +10890,7 @@ connected has its <code>shutdown</code> registered as a release.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Open the store the components are built out of, and fill it.</p>
+        <p>Open the registry the components are built out of, and fill it.</p>
 <p>The settings and the shared services come first and the questions
 the components ask are answered next, so that everything a
 constructor may reach for is registered before the first one runs.</p>
@@ -10950,7 +10976,7 @@ and what its <code>setup</code> was going to assign is missing where it is used.
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If the registry step has not opened the store yet.</p>
+                <p>If the registry step has not opened the registry yet.</p>
               </div>
             </td>
           </tr>
@@ -13941,7 +13967,7 @@ and reports neither.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Open the store the components are built from, and fill it with the shared values.</p>
+        <p>Open the registry the components are built from, and fill it with the shared values.</p>
 
     </div>
 

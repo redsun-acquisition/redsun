@@ -3520,6 +3520,8 @@
       
         
       
+        
+      
     
     
     
@@ -4547,6 +4549,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0037-diwire-is-the-session-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  37. diwire is the session registry
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -5536,10 +5565,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redsun.qt.QtSession.make_store" class="md-nav__link">
+  <a href="#redsun.qt.QtSession.make_registry" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_store
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_registry
       </span>
     </span>
   </a>
@@ -6861,10 +6890,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redsun.qt.QtSession.make_store" class="md-nav__link">
+  <a href="#redsun.qt.QtSession.make_registry" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_store
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;make_registry
       </span>
     </span>
   </a>
@@ -7948,10 +7977,10 @@ that application's registries can be asked for on it.</p>
 <p>A <code>QApplication</code> has to exist before any widget is constructed, so it
 is made here. The hooks were resolved by the step before this one, so one
 may supply the <code>QApplication</code> itself. The session's own application
-follows, because the components are built out of its store, and the
-<code>actions</code> section is registered on it at once, so a hook dressing the
-window finds every command it may put in a menu. The window comes next,
-since every view is built as its child. The colour scheme is
+follows, because the components are built out of the registry its store
+reads, and the <code>actions</code> section is registered on it at once, so a hook
+dressing the window finds every command it may put in a menu. The window
+comes next, since every view is built as its child. The colour scheme is
 asked for before any widget exists to be painted in the wrong one, and
 a <code>configure_application</code> hook runs last, so one restyling the
 application does so over a scheme already in force. Each of them
@@ -8154,19 +8183,20 @@ or moved then.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="redsun.qt.QtSession.make_store" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">make_store</span>
+<h3 id="redsun.qt.QtSession.make_registry" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">make_registry</span>
 
 
-<a href="#redsun.qt.QtSession.make_store" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">make_store</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Store</span>
+<a href="#redsun.qt.QtSession.make_registry" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">make_registry</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Registry</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return the application's store, which is the session's too.</p>
-<p>Sharing it is what lets a command registered on the application be
-filled from the components this session built.</p>
+        <p>Return the session's registry, shared with the application's store.</p>
+<p>Sharing the registry is what fills a command from the components the
+session built. An application given a store of another kind is left
+as it is.</p>
 
 
     </div>
