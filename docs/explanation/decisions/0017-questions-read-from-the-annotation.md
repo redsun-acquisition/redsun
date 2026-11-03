@@ -7,6 +7,12 @@ Date: 2026-09-19
 Accepted, and applied to `redsun.experimental` only. Builds on
 [15. Collaborators arrive in `setup`](0015-collaborators-arrive-in-setup.md).
 
+Amended by
+[37. diwire is the session registry](0037-diwire-is-the-session-registry.md)
+on 3 November 2026: the session's registry fills the parameters `setup` does
+not ask as questions, and a command can ask a protocol question once the
+build has sealed.
+
 ## Context
 
 A component can ask the session which components can do something, rather

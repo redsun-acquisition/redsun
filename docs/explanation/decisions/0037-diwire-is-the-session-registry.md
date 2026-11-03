@@ -44,9 +44,20 @@ chosen.
   `RegistrationError` naming both owners, and the build stops. A component
   sharing a framework key such as `SessionConfig`, or the class of a
   component declared once, is refused the same way.
+- Every key is registered in the registry step, before any component is
+  built: each component's name, its class when the class is declared once,
+  and the return type of each of its `provides` methods, all read from the
+  declarations. Each factory returns the value the build fills in later, or
+  `None` until then, and a `None` counts as not answered. `diwire` throws
+  away its compiled graph on each registration, so registering components
+  as they were built made it compile once per component: 40 presenters took
+  1.8 s. Registered first, they take 0.12 s and one compile, and each key
+  adds about 1 ms; plain methods and properties add nothing.
 - A lookup matches its key exactly. `X | None` is answered by the value
   registered under `X`, because the build turns every parameter with a
-  default into that form; nothing else falls back to another key.
+  default into that form; nothing else falls back to another key. A union
+  of several types that contains `None`, such as `A | B | None`, is optional:
+  the parameter keeps its default.
 - `app-model` reads the registry through `RegistryStore`, an `in-n-out` `Store`
   whose providers come from the registry, so nothing is registered on
   `in-n-out` itself.
@@ -59,24 +70,23 @@ chosen.
   one step when it starts.
 
 A frontend that shares the session's table with an application of its own
-overrides the method returning it.
+overrides the method returning it, as `QtSession` does for its `app-model`
+application. `RegistryStore` is internal to `redsun.qt`.
 
-Before:
+Before, in `QtSession`:
 
 ```python
-class MyApp(QtSession):
-    def make_store(self) -> Store:
-        return self.model.injection_store
+def make_store(self) -> Store:
+    return self.model.injection_store
 ```
 
-After:
+After, in `QtSession`:
 
 ```python
-class MyApp(QtSession):
-    def make_registry(self) -> Registry:
-        registry = super().make_registry()
-        cast("RegistryStore", self.model.injection_store).registry = registry
-        return registry
+def make_registry(self) -> Registry:
+    registry = super().make_registry()
+    cast("RegistryStore", self.model.injection_store).registry = registry
+    return registry
 ```
 
 A component asking for a subclass of what another component shares now gets
@@ -106,7 +116,11 @@ receives `None`, because nothing is registered under `MyStage`.
 - `BuildableSession.make_store` becomes `make_registry`, which returns a
   `Registry`.
 - A session that registered one key twice, which `in-n-out` allowed, stops
-  building and names both owners.
+  building in the registry step, before any component is built, and names
+  both owners. A component that would have failed to build still clashes.
 - A component asking for a subclass or for a union `A | B` no longer receives
   a value registered under a base class or under one member of the union.
+  With a default, `A | B | None` keeps it.
+- A session builds about three times slower than under `in-n-out`, which
+  compiles nothing: 0.12 s against 0.04 s for 40 presenters.
 - A command can ask a protocol question once the build has sealed.
