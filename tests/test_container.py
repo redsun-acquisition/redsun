@@ -370,7 +370,7 @@ class ConfigSharer:
 
     @provides
     def config(self) -> SessionConfig:
-        return cast("SessionConfig", object())
+        return SessionConfig()
 
 
 class FrameworkKeyApp(Session):
@@ -1565,7 +1565,8 @@ def test_a_defaulted_union_keeps_its_default(
     build: BuildSession, app_class: type[UnionAsked | PairAsked], default: int | None
 ) -> None:
     """Build a component asking for a defaulted union with one member shared, and leave it its default."""
-    reader = cast("Any", build(app_class).presenters["reader"])
+    reader = build(app_class).presenters["reader"]
+    assert isinstance(reader, UnionReader | PairReader)
     assert reader.x == default
 
 

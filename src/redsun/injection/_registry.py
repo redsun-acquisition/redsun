@@ -89,7 +89,7 @@ class Registry:
     def _registered(self, key: object) -> object | None:
         if key_of(key) in self._owners:
             return key
-        inner = optional_arg(key)  # type: ignore[arg-type]
+        inner = optional_arg(key)
         if inner is not None and key_of(inner) in self._owners:
             return inner
         return None

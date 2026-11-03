@@ -753,10 +753,7 @@ class Session(BuildableSession):
         Nothing is answered before the build finishes, while components are
         still being built or wired. `None` when nothing answers.
         """
-        if (
-            not self._is_built
-            or (found := shape_of(cast("TypeForm[Any]", key))) is None
-        ):
+        if not self._is_built or (found := shape_of(key)) is None:
             return None
         shape, protocol = found
         built = {

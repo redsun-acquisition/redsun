@@ -1349,10 +1349,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Return the session's registry, shared with the application's store.
 
         Sharing the registry is what fills a command from the components the
-        session built.
+        session built. An application given a store of another kind is left
+        as it is.
         """
         registry = super().make_registry()
-        cast("RegistryStore", self.model.injection_store).registry = registry
+        if isinstance(store := self.model.injection_store, RegistryStore):
+            store.registry = registry
         return registry
 
     def open_span(self) -> AbstractContextManager[Callable[[str], None]]:

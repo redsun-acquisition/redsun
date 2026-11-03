@@ -61,12 +61,12 @@ def protocol_of(hint: object) -> type | None:
     return origin if is_protocol_class(origin) else None
 
 
-def is_union(hint: TypeForm[Any]) -> bool:
+def is_union(hint: object) -> bool:
     """Return whether *hint* is a union, written as `X | Y` or `Union[X, Y]`."""
     return get_origin(hint) in (Union, UnionType)
 
 
-def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
+def optional_arg(hint: object) -> TypeForm[Any] | None:
     """Return `X` for `X | None`, or `None` for anything else."""
     if not is_union(hint):
         return None
@@ -74,7 +74,7 @@ def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
     return args[0] if len(args) == 1 else None
 
 
-def is_optional(hint: TypeForm[Any]) -> bool:
+def is_optional(hint: object) -> bool:
     """Return whether *hint* is a union with `None` among its members."""
     return is_union(hint) and type(None) in get_args(hint)
 
