@@ -19,6 +19,7 @@ from diwire import (
     DependencyRegistrationPolicy,
     Lifetime,
     MissingPolicy,
+    ResolverContext,
 )
 
 from .._structural import optional_arg
@@ -57,6 +58,10 @@ class Registry:
         self._container = Container(
             missing_policy=MissingPolicy.ERROR,
             dependency_registration_policy=DependencyRegistrationPolicy.IGNORE,
+            # diwire's shared default context keeps the latest container alive
+            # for good, and with it everything its factories refer to
+            resolver_context=ResolverContext(),
+            use_resolver_context=False,
         )
         self._owners: dict[object, str] = {}
 
