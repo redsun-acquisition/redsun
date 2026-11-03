@@ -280,6 +280,7 @@ class Session(BuildableSession):
         "_report",
         "_reported_saved_shortcuts",
         "_reported_shortcuts",
+        "_sealed",
         "_services",
         "_session_config",
         "_settings",
@@ -411,6 +412,7 @@ class Session(BuildableSession):
         # that a presenter and a view offering one type still clash
         self._shared: dict[Key, str] = {}
         self._shared_values: list[tuple[str, object]] = []
+        self._sealed = False
         self._is_built = False
         self._profile = recording
         if recording is not None:
@@ -740,8 +742,29 @@ class Session(BuildableSession):
         return Registry(self._answer_outside_build)
 
     def _answer_outside_build(self, key: object) -> tuple[object] | None:
-        """Answer *key* for a request made after the build, `None` when nothing does."""
-        return None
+        """Answer a protocol question asked from outside the build.
+
+        Nothing is answered before `seal`, while components are still being
+        built. `None` when nothing answers.
+        """
+        if not self._sealed or (found := shape_of(cast("TypeForm[Any]", key))) is None:
+            return None
+        shape, protocol = found
+        built = {
+            d.name: d.instance for d in self._components() if d.instance is not None
+        }
+        try:
+            value, _ = answer(
+                shape,
+                protocol,
+                SESSION,
+                built,
+                self._shared_values,
+                f"a question for {SESSION!r}",
+            )
+        except NoAnswer:
+            return None
+        return (value,)
 
     def _share(
         self, registry: Registry, providers: Mapping[str, ComponentEntry]
@@ -1231,6 +1254,7 @@ class Session(BuildableSession):
             }
         )
         self._baseline = self._serialized()
+        self._sealed = True
 
     def apply_wiring(self) -> None:
         """Make the links the class yields, then those the file lists, then its pairs.
@@ -1462,6 +1486,7 @@ class Session(BuildableSession):
         self._names.clear()
         self._shared.clear()
         self._shared_values.clear()
+        self._sealed = False
         self._registry = None
         logger.info("Session shut down")
 
