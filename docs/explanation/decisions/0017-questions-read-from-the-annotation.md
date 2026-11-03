@@ -7,6 +7,12 @@ Date: 2026-09-19
 Accepted, and applied to `redsun.experimental` only. Builds on
 [15. Collaborators arrive in `setup`](0015-collaborators-arrive-in-setup.md).
 
+Amended by
+[37. diwire is the session registry](0037-diwire-is-the-session-registry.md)
+on 3 November 2026: the session's registry fills the parameters `setup` does
+not ask as questions, and a command can ask a protocol question once the
+build has finished.
+
 ## Context
 
 A component can ask the session which components can do something, rather
@@ -41,7 +47,7 @@ skipped at declaration.
 
 **The session answers a question itself, when `setup` runs.** Every component
 exists by then, so it matches built instances, comparing members and call
-signatures, and hands the answers to `setup` directly; `in-n-out` fills the
+signatures, and hands the answers to `setup` directly; the registry fills the
 other parameters. A single answer may be a component or a value a component
 shares, never the asking component itself, and never one from a later layer.
 Where one answer is asked for, none or several raise, and if only a component
@@ -63,9 +69,8 @@ at declaration.
   members, and may be generic: `Reading[float]` is matched as `Reading`.
 - Asking for exactly one answer and getting none or several fails when `setup`
   runs, after the devices have connected, rather than before anything is built.
-- A command registered on the application is resolved by the store, which
-  holds no protocol, so a command cannot ask a protocol question.
-- `in-n-out` remains the store: the application's commands and the components
-  are filled from the same one.
+- A command registered on the application is filled from the session's
+  registry, and may ask a protocol question once the build has finished
+  (ADR 37).
 - Matching on shape still lets a component answer a question by accident, as
   the markers did.

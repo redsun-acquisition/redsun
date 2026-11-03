@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import in_n_out
 import pytest
 from app_model import Application
 from mock_bundle.menu_callbacks import Executed
@@ -148,3 +149,22 @@ def test_a_section_that_is_not_actions_is_refused(
     with pytest.raises(ActionError, match=message):
         app.build()
     assert Application.get_app("actions-session") is None
+
+
+def test_a_command_asks_a_protocol_question(
+    qapp: QApplication, build: BuildSession, executed: list[str]
+) -> None:
+    """Fill a command parameter typed with a protocol from the component satisfying it."""
+    app = build(
+        session(
+            executed,
+            {
+                "id": "probe.shape",
+                "title": "Shape",
+                "callback": "mock_bundle.menu_callbacks:note_by_shape",
+            },
+        )
+    )
+    app.model.commands.execute_command("probe.shape")
+    assert executed == ["shape"]
+    assert not list(in_n_out.Store.iter_providers(app.model.injection_store, Executed))

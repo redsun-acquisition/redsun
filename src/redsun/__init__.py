@@ -28,6 +28,7 @@ from redsun.errors import (
     ConfigurationInUse,
     HookError,
     PluginError,
+    RegistrationError,
 )
 from redsun.injection import (
     DevicesOf,
@@ -136,6 +137,7 @@ __all__ = [
     "Placement",
     "PlanEntry",
     "PluginError",
+    "RegistrationError",
     "Row",
     "Serializable",
     "Serves",

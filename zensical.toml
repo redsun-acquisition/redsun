@@ -145,6 +145,7 @@ nav = [
                 "explanation/decisions/0034-a-root-device-takes-the-prefixes-of-several-services.md",
                 "explanation/decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes.md",
                 "explanation/decisions/0036-a-stack-is-declared-as-one-entry.md",
+                "explanation/decisions/0037-diwire-is-the-session-registry.md",
         ]},
     ]},
     { "Reference" = [

@@ -30,13 +30,12 @@ from typing import (
 
 import yaml
 from event_model import DocumentRouter
-from in_n_out import Store
 from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
-from redsun.injection import rejected, satisfying
+from redsun.injection import Registry, rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.path_provider import SessionPathProvider
 from redsun.ports import WiringError
@@ -72,8 +71,15 @@ from .._hooks import (
     refuse_unknown_points,
 )
 from .._settings import Settings
-from .._structural import optional_arg, without_none
-from ..injection._provides import constant, register_shared, shared_keys
+from .._structural import is_optional, without_none
+from ..injection._provides import (
+    claim_shared,
+    constant,
+    read_shared,
+    register_shared,
+    shared_keys,
+)
+from ..injection._registry import SESSION
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._declarations import (
     Declaration,
@@ -143,10 +149,6 @@ SAVED_SHORTCUTS: Final = "shortcuts"
 
 logger = logging.getLogger("redsun")
 
-# the injector logs a traceback of a refused component before reraising it,
-# which the session reports itself; without a handler that reaches stderr
-logging.getLogger("in_n_out").addHandler(logging.NullHandler())
-
 
 ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
 """The order the layers are built in, which is the order they may depend in."""
@@ -172,7 +174,7 @@ class BuildStep(StrEnum):
     """Connect every device that connects at start, to a simulated backend under `mock`."""
 
     REGISTRY = "registry"
-    """Open the store the components are built from, and fill it with the shared values."""
+    """Open the registry the components are built from, and fill it with the shared values."""
 
     PRESENTERS = "presenters"
     """Build the presenters."""
@@ -272,6 +274,7 @@ class Session(BuildableSession):
         "_failed_hooks",
         "_failed_services",
         "_file",
+        "_filled",
         "_hooks",
         "_is_built",
         "_merged",
@@ -279,6 +282,7 @@ class Session(BuildableSession):
         "_not_set_up",
         "_path_provider",
         "_profile",
+        "_registry",
         "_releases",
         "_report",
         "_reported_saved_shortcuts",
@@ -292,7 +296,6 @@ class Session(BuildableSession):
         "_skipped_hooks",
         "_stacks",
         "_storage",
-        "_store",
         "_transport",
         "_window_layout",
         "_wiring",
@@ -410,10 +413,11 @@ class Session(BuildableSession):
             self._built_components, self._names, self._failed, self.frontend
         )
         self._settings: Settings | None = None
-        self._store: Store | None = None
+        self._registry: Registry | None = None
         # the component sharing each key, carried across the layer steps so
         # that a presenter and a view offering one type still clash
         self._shared: dict[Key, str] = {}
+        self._filled: dict[object, object] = {}
         self._shared_values: list[tuple[str, object]] = []
         self._is_built = False
         self._profile = recording
@@ -520,7 +524,7 @@ class Session(BuildableSession):
         """What this session remembers about how one user likes to run it.
 
         Per user and per machine rather than part of the session file, and
-        registered in the store, so an action asks for it by type.
+        registered in the registry, so an action asks for it by type.
 
         Raises
         ------
@@ -735,36 +739,56 @@ class Session(BuildableSession):
             raise RuntimeError("Call build() before reading path_provider")
         return self._path_provider
 
-    def make_store(self) -> Store:
-        """Return the registry this session builds its components out of.
+    def make_registry(self) -> Registry:
+        """Return the registry this session builds its components out of, one per session.
 
-        Named after the session, and not entered in the process-wide registry
-        `Store.create` keeps.
-
-        A session owning an application of its own overrides this to return
-        that application's store, which app-model registers and
-        `Application.destroy` frees.
+        A session owning an application of its own overrides this to share
+        its registry with that application.
         """
-        # Store.create would register the name process-wide: a second session
-        # of one name could not start, and an unfinished one would keep the
-        # name. Nothing looks a store up by name.
-        return Store(self.name)
+        return Registry(self._answer_outside_build)
 
-    def _share(self, store: Store, providers: Mapping[str, ComponentEntry]) -> None:
+    def _answer_outside_build(self, key: object) -> tuple[object] | None:
+        """Answer a protocol question asked from outside the build.
+
+        Nothing is answered before the build finishes, while components are
+        still being built or wired. `None` when nothing answers.
+        """
+        if not self._is_built or (found := shape_of(key)) is None:
+            return None
+        shape, protocol = found
+        built = {
+            d.name: d.instance for d in self._components() if d.instance is not None
+        }
+        try:
+            value, _ = answer(
+                shape,
+                protocol,
+                SESSION,
+                built,
+                self._shared_values,
+                "a question from a command",
+            )
+        except NoAnswer:
+            return None
+        return (value,)
+
+    def _share(
+        self, registry: Registry, providers: Mapping[str, ComponentEntry]
+    ) -> None:
         """Build the shared services this session installs, before any component.
 
         A provider owns no name, no layer and no wiring. It exists to put
-        values in the store, through methods marked with
+        values in the registry, through methods marked with
         `redsun.provides`, and its own constructor is filled from
-        the store like anything else.
+        the registry like anything else.
         """
         classes: dict[str, type] = {cls.__name__: cls for cls in self.providers}
         classes.update(load_providers(providers))
         for name, cls in classes.items():
             params = injectable(cls, {}, binds_name=False)
-            refuse_unanswered(store, name, params)
-            instance = store.inject(provider(cls, name))()
-            shared = register_shared(store, instance, cls, name, self._shared)
+            refuse_unanswered(registry, name, params)
+            instance = registry.call(provider(cls, name))
+            shared = register_shared(registry, instance, cls, name, self._shared)
             self._shared_values.extend((name, value) for value in shared)
 
     def build(self) -> Self:
@@ -1212,19 +1236,21 @@ class Session(BuildableSession):
             clear_async_backend()
 
     def open_registry(self) -> None:
-        """Open the store the components are built out of, and fill it.
+        """Open the registry the components are built out of, and fill it.
 
         The settings and the shared services come first and the questions
         the components ask are answered next, so that everything a
         constructor may reach for is registered before the first one runs.
         """
-        store = self.make_store()
-        self._store = store
+        registry = self.make_registry()
+        self._registry = registry
         self._settings = Settings.for_session(self.name)
-        store.register_provider(constant(self._settings), type_hint=Settings)
+        registry.register(Settings, constant(self._settings), owner=SESSION)
         self._device_index = index_devices(self._devices.values())
-        self._register_framework_values(store, lambda: dict(self._device_index))
-        self._share(store, self._configuration().providers)
+        self._register_framework_values(registry, lambda: dict(self._device_index))
+        self._share(registry, self._configuration().providers)
+        for declaration in self._components():
+            self._claim(registry, declaration)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
@@ -1466,7 +1492,9 @@ class Session(BuildableSession):
         self._built_components.clear()
         self._names.clear()
         self._shared.clear()
+        self._filled.clear()
         self._shared_values.clear()
+        self._registry = None
         logger.info("Session shut down")
 
     def serialize(self) -> dict[str, Any]:
@@ -1578,22 +1606,48 @@ class Session(BuildableSession):
         return None
 
     def _register_framework_values(
-        self, store: Store, devices: Callable[[], DeviceMapping]
+        self, registry: Registry, devices: Callable[[], DeviceMapping]
     ) -> None:
-        """Register everything the framework knows on *store*.
+        """Register everything the framework knows on *registry*.
 
         Every component may ask for it by type. The callback catalogue is a
         copy, complete because it is read in `setup`, once every router exists.
         """
-        store.register_provider(lambda: self._session_config, type_hint=SessionConfig)
-        store.register_provider(devices, type_hint=DeviceMapping)
-        store.register_provider(
-            lambda: self._path_provider, type_hint=SessionPathProvider
+        registry.register(SessionConfig, lambda: self._session_config, owner=SESSION)
+        registry.register(DeviceMapping, devices, owner=SESSION)
+        registry.register(
+            SessionPathProvider, lambda: self._path_provider, owner=SESSION
         )
         if self._catalog is not None:
             address = CatalogAddress(self._catalog.uri)
-            store.register_provider(lambda: address, type_hint=CatalogAddress)
-        store.register_provider(self._catalogue, type_hint=CallbackCatalogue)
+            registry.register(CatalogAddress, lambda: address, owner=SESSION)
+        registry.register(CallbackCatalogue, self._catalogue, owner=SESSION)
+
+    def _claim(self, registry: Registry, declaration: Declaration) -> None:
+        """Register every key *declaration* fills, before anything is built.
+
+        Registering them all first lets the registry compile its graph once.
+        A key answers `None` until `_construct` fills it.
+        """
+        registry.register(
+            declaration.key, self._built_reader(declaration.key), owner=declaration.name
+        )
+        shared = claim_shared(declaration.cls, declaration.name, self._shared)
+        if (
+            self._class_counts[declaration.cls] == 1
+            # a component sharing its own class registers it as shared, once
+            and declaration.cls not in shared.values()
+        ):
+            registry.register(
+                declaration.cls,
+                self._built_reader(declaration.cls),
+                owner=declaration.name,
+            )
+        for key in shared.values():
+            registry.register(key, self._built_reader(key), owner=declaration.name)
+
+    def _built_reader(self, key: object) -> Callable[[], object]:
+        return lambda: self._filled.get(key)
 
     def _catalogue(self) -> dict[str, CallbackType]:
         """Return the document routers in declaration order."""
@@ -1694,11 +1748,11 @@ class Session(BuildableSession):
         Raises
         ------
         RuntimeError
-            If the registry step has not opened the store yet.
+            If the registry step has not opened the registry yet.
         TypeError
             If a `setup` asks for something nothing in the session declares.
         """
-        store = self._require_store()
+        registry = self._require_registry()
         components = self._components()
         built = {d.name: d.instance for d in components if d.instance is not None}
         for declaration in components:
@@ -1706,7 +1760,7 @@ class Session(BuildableSession):
                 declaration.cls, HasSetup
             ):
                 continue
-            reason = self._call_setup(declaration, store, built)
+            reason = self._call_setup(declaration, registry, built)
             if reason is not None:
                 self._not_set_up[declaration.name] = reason
                 logger.warning(
@@ -1716,22 +1770,25 @@ class Session(BuildableSession):
                     reason,
                 )
 
-    def _require_store(self) -> Store:
-        """Return the store the registry step opened.
+    def _require_registry(self) -> Registry:
+        """Return the registry the registry step opened.
 
         Raises
         ------
         RuntimeError
             If the registry step has not run yet.
         """
-        if self._store is None:
+        if self._registry is None:
             raise RuntimeError(
                 "The registry step has to run before a component is built or set up"
             )
-        return self._store
+        return self._registry
 
     def _call_setup(
-        self, declaration: Declaration, store: Store, built: Mapping[str, object]
+        self,
+        declaration: Declaration,
+        registry: Registry,
+        built: Mapping[str, object],
     ) -> BaseException | None:
         """Run the `setup` of the component *declaration* built, and return why it could not run, if so.
 
@@ -1747,7 +1804,7 @@ class Session(BuildableSession):
             if (shape := shape_of(hint)) is not None
         }
         reason = self._not_built(
-            store,
+            registry,
             f"{declaration.name}.setup",
             {p: h for p, h in params.items() if p not in questions},
         )
@@ -1761,7 +1818,7 @@ class Session(BuildableSession):
             # `as_protocol` cannot take the generic `HasSetup`, which mypy
             # refuses as a type form; the caller checked the class
             ready = cast("HasSetup[...]", declaration.instance)
-            store.inject(setup_call(ready, declaration.name, answers))()
+            registry.call(setup_call(ready, declaration.name, answers))
         except Exception as e:  # noqa: BLE001 - a setup must not abort the app
             return e
         return None
@@ -1816,11 +1873,12 @@ class Session(BuildableSession):
         return answers
 
     def _construct(self, layer: Layer) -> None:
-        """Build every component of *layer* and register what it shares.
+        """Build every component of *layer* and fill the keys it was registered under.
 
-        A component is registered under its own key, and under its class when
-        no other declaration names that class, so a collaborator may ask for it
-        either way.
+        The registry step registered each component under its own key, under
+        its class when no other declaration names that class, and under every
+        type it shares; building it fills those keys, so a collaborator may ask
+        for it either way.
 
         The order is the order the layer declares them in: a component takes
         nothing another component owns, so nothing has to be built first. One
@@ -1830,9 +1888,9 @@ class Session(BuildableSession):
         Raises
         ------
         RuntimeError
-            If the registry step has not opened the store yet.
+            If the registry step has not opened the registry yet.
         """
-        store = self._require_store()
+        registry = self._require_registry()
         declarations = [d for d in self._components() if d.kind is layer]
         view_arguments = self.view_arguments if layer is Layer.VIEW else {}
         for declaration in declarations:
@@ -1846,47 +1904,58 @@ class Session(BuildableSession):
                 },
             }
             params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
-            reason = self._not_built(store, declaration.name, params)
+            reason = self._not_built(registry, declaration.name, params)
             if reason is not None:
                 self._skip(declaration, reason)
                 continue
             try:
-                instance = store.inject(factory(declaration, self._on_built, passed))()
+                instance = registry.call(factory(declaration, self._on_built, passed))
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
-                self._skip(declaration, unwrapped(e))
+                self._skip(declaration, e)
                 continue
-            store.register_provider(constant(instance), type_hint=declaration.key)
-            if self._class_counts[declaration.cls] == 1:
-                store.register_provider(constant(instance), type_hint=declaration.cls)
-            shared = register_shared(
-                store, instance, declaration.cls, declaration.name, self._shared
-            )
+            keys = shared_keys(declaration.cls)
+            self._filled[declaration.key] = instance
+            if (
+                self._class_counts[declaration.cls] == 1
+                and declaration.cls not in keys.values()
+            ):
+                self._filled[declaration.cls] = instance
+            shared = read_shared(instance, keys)
+            self._filled.update(zip(keys.values(), shared, strict=True))
             self._shared_values.extend((declaration.name, value) for value in shared)
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
 
     def _not_built(
-        self, store: Store, name: str, params: Mapping[str, Any]
+        self, registry: Registry, name: str, params: Mapping[str, Any]
     ) -> TypeError | None:
         """Return why *name* goes without a collaborator, `None` when it has all.
 
         A parameter left unanswered by a component this build already failed
         on is a consequence of that failure, and the reason names the
         components. One nothing ever declared is a mistake in the session and
-        raises.
+        raises. One declared whose value is `None` is left to the call, which
+        refuses it by name.
 
         Raises
         ------
         TypeError
             Naming the parameters and the types nothing answers.
         """
-        missing = unanswered(store, params)
+        missing = unanswered(registry, params)
         if not missing:
             return None
         absent = self._blamed(hint for _, hint in missing)
-        if not absent:
-            raise TypeError(unanswered_message(name, missing))
-        return TypeError(f"{listed(sorted(absent))} was not built")
+        if absent:
+            return TypeError(f"{listed(sorted(absent))} was not built")
+        undeclared = [
+            (pname, hint)
+            for pname, hint in missing
+            if next(registry.providers(hint), None) is None
+        ]
+        if undeclared:
+            raise TypeError(unanswered_message(name, undeclared))
+        return None
 
     def _blamed(self, hints: Iterable[object]) -> set[str]:
         """Return the names of failed components that would have answered *hints*.
@@ -2076,7 +2145,7 @@ class Session(BuildableSession):
     def build_devices(self) -> None:
         """Construct the devices, which are built from no other component.
 
-        They are built before the store opens, each from its own declaration
+        They are built before the registry opens, each from its own declaration
         alone. Each keyword a device maps to a service receives that service's
         prefix. A keyword whose service did not start is left out when its
         default is `None`, so the device builds without that piece; otherwise
@@ -2385,20 +2454,10 @@ class Session(BuildableSession):
         return names
 
 
-def unwrapped(error: Exception) -> BaseException:
-    """Return *error* without the `TypeError` the injector wraps around one.
-
-    The injector reraises a `TypeError` naming what it injected, chained to the
-    one the constructor raised, which is the one that names the problem.
-    """
-    cause = error.__cause__
-    if isinstance(error, TypeError) and isinstance(cause, TypeError):
-        return cause
-    return error
-
-
-def unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, object]]:
-    """Return the parameters of *params* nothing in the store answers.
+def unanswered(
+    registry: Registry, params: Mapping[str, Any]
+) -> list[tuple[str, object]]:
+    """Return the parameters of *params* nothing in the registry answers.
 
     Everything a component may be built from is registered by the time it is
     reached, so a parameter with no provider has none coming.
@@ -2406,8 +2465,14 @@ def unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, objec
     return [
         (pname, hint)
         for pname, hint in params.items()
-        if optional_arg(hint) is None and next(store.iter_providers(hint), None) is None
+        if not is_optional(hint) and not held(registry, hint)
     ]
+
+
+def held(registry: Registry, hint: object) -> bool:
+    """Return whether *registry* has a value for *hint*, not only a key."""
+    provider = next(registry.providers(hint), None)
+    return provider is not None and provider() is not None
 
 
 def unanswered_message(name: str, missing: list[tuple[str, object]]) -> str:
@@ -2423,7 +2488,7 @@ def unanswered_message(name: str, missing: list[tuple[str, object]]) -> str:
     )
 
 
-def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> None:
+def refuse_unanswered(registry: Registry, name: str, params: Mapping[str, Any]) -> None:
     """Refuse *name* asking for something the session does not hold.
 
     Raises
@@ -2431,7 +2496,7 @@ def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> Non
     TypeError
         Naming the parameters and the types nothing answers.
     """
-    missing = unanswered(store, params)
+    missing = unanswered(registry, params)
     if missing:
         raise TypeError(unanswered_message(name, missing))
 

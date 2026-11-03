@@ -17,7 +17,7 @@ redsun/
 |   |-- session/               Session, declarations, build steps, plugin loading
 |   |-- qt/                    QtSession, placements, actions, colour scheme
 |   |-- ports/                 slot, connections, wiring errors
-|   |-- injection/             provides, DevicesOf, shared values
+|   |-- injection/             provides, DevicesOf, shared values, the session Registry
 |   |-- registry/              SessionConfig, PlanEntry, CallbackType, DeviceMapping
 |   |-- engine/                RunEngine wrapper, actions, plan stubs
 |   |-- presenter/             plan spec: plan signatures read into widget descriptions

@@ -7,11 +7,17 @@ from .._structural import without_none
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from in_n_out import Store
-
     from ..session._declarations import Key
+    from ._registry import Registry
 
-__all__ = ["constant", "provides", "register_shared", "shared_keys"]
+__all__ = [
+    "claim_shared",
+    "constant",
+    "provides",
+    "read_shared",
+    "register_shared",
+    "shared_keys",
+]
 
 PROVIDES = "__redsun_provides__"
 
@@ -63,23 +69,19 @@ def shared_keys(cls: type) -> dict[str, Key]:
     return found
 
 
-def register_shared(
-    store: Store, instance: object, cls: type, name: str, seen: dict[Key, str]
-) -> list[object]:
-    """Register what *instance* shares on *store*, under the annotated types.
+def claim_shared(cls: type, name: str, seen: dict[Key, str]) -> dict[str, Key]:
+    """Claim the types *cls* shares for *name*, as member name to type.
 
     *seen* accumulates the types already claimed, so a clash names both
-    components. The value is read once, here, so what a component shares comes
-    from what its constructor made and cannot depend on its own `setup`.
-    Returns the values shared, in the order they were registered.
+    components.
 
     Raises
     ------
     TypeError
-        If two components share one type.
+        If another component claimed a type *cls* shares.
     """
-    values: list[object] = []
-    for method_name, provided in shared_keys(cls).items():
+    keys = shared_keys(cls)
+    for provided in keys.values():
         owner = seen.get(provided)
         if owner is not None:
             raise TypeError(
@@ -88,10 +90,39 @@ def register_shared(
                 "identifies one value; give them distinct types."
             )
         seen[provided] = name
+    return keys
+
+
+def read_shared(instance: object, keys: dict[str, Key]) -> list[object]:
+    """Return the values *instance* shares under *keys*, calling each member once."""
+    values: list[object] = []
+    for method_name in keys:
         member = getattr(instance, method_name)
-        shared = member() if callable(member) else member
-        store.register_provider(constant(shared), type_hint=provided)
-        values.append(shared)
+        values.append(member() if callable(member) else member)
+    return values
+
+
+def register_shared(
+    registry: Registry, instance: object, cls: type, name: str, seen: dict[Key, str]
+) -> list[object]:
+    """Register what *instance* shares on *registry*, under the annotated types.
+
+    The value is read once, here, so what a component shares comes
+    from what its constructor made and cannot depend on its own `setup`.
+    Returns the values shared, in the order they were registered.
+
+    Raises
+    ------
+    TypeError
+        If two components share one type.
+    RegistrationError
+        If the session or a provider registered earlier provides a type
+        *instance* shares.
+    """
+    keys = claim_shared(cls, name, seen)
+    values = read_shared(instance, keys)
+    for provided, shared in zip(keys.values(), values, strict=True):
+        registry.register(provided, constant(shared), owner=name)
     return values
 
 

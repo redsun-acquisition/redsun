@@ -34,7 +34,7 @@ def is_protocol_union(hint: TypeForm[Any]) -> bool:
     return len(options) > 1 and any(protocol_of(option) for option in options)
 
 
-def shape_of(hint: TypeForm[Any]) -> tuple[Shape, type] | None:
+def shape_of(hint: object) -> tuple[Shape, type] | None:
     """Return how many answers *hint* asks for, and about which protocol.
 
     A protocol `P` asks for exactly one object satisfying it, `P | None`

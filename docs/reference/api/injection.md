@@ -27,3 +27,9 @@ icon: lucide/code
 ::: redsun.rejected
     options:
       show_root_heading: true
+
+## The registry
+
+::: redsun.injection.Registry
+    options:
+      show_root_heading: true

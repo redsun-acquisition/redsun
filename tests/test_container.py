@@ -33,6 +33,7 @@ from redsun import (
     FromConfig,
     Frontend,
     Placement,
+    RegistrationError,
     Session,
     SessionConfig,
     provides,
@@ -363,6 +364,63 @@ class TwoOwners(Session):
     second: Annotated[AsPresenter[Duplicated], Alias("second")]
 
 
+class ConfigSharer:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def config(self) -> SessionConfig:
+        return SessionConfig()
+
+
+class FrameworkKeyApp(Session):
+    sharer: AsPresenter[ConfigSharer]
+
+
+class Lamp:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class LampSharer:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def spare(self) -> Lamp:
+        return Lamp("spare")
+
+
+class LampClashApp(Session):
+    lamp: AsPresenter[Lamp]
+    lamp_sharer: AsPresenter[LampSharer]
+
+
+class Spare: ...
+
+
+class NoSpare:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def spare(self) -> Spare | None:
+        return None
+
+
+class SpareTaker:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(self, spare: Spare) -> None:
+        self.spare = spare
+
+
+class NoSpareApp(Session):
+    sharer: AsPresenter[NoSpare]
+    taker: AsPresenter[SpareTaker]
+
+
 class MaybeReadings:
     """Presenter sharing readings it may not have."""
 
@@ -388,6 +446,45 @@ class MaybeReader:
 class OptionalShared(Session):
     sharer: AsPresenter[MaybeReadings]
     reader: AsPresenter[MaybeReader]
+
+
+class UnionReader:
+    """Presenter taking one of two values, or none."""
+
+    def __init__(self, name: str, x: Readings | Descriptions | None = None) -> None:
+        self.name = name
+        self.x = x
+
+
+class UnionAsked(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[UnionReader]
+
+
+class PairReader:
+    """Presenter taking one of two values, with a default."""
+
+    def __init__(self, name: str, x: Readings | int = 0) -> None:
+        self.name = name
+        self.x = x
+
+
+class PairAsked(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[PairReader]
+
+
+class PairNeeder:
+    """Presenter that needs one of two values."""
+
+    def __init__(self, name: str, x: Readings | int) -> None:
+        self.name = name
+        self.x = x
+
+
+class PairNeeded(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[PairNeeder]
 
 
 class OptionalAndPlainOwners(Session):
@@ -1174,6 +1271,25 @@ def test_two_components_sharing_one_type_is_refused() -> None:
         TwoOwners().build()
 
 
+def test_a_component_sharing_a_framework_key_is_refused() -> None:
+    """Refuse a component sharing a type the session provides, naming both owners."""
+    with pytest.raises(RegistrationError, match="'<session>'.*'sharer'"):
+        FrameworkKeyApp().build()
+
+
+def test_a_component_sharing_the_class_of_another_is_refused() -> None:
+    """Refuse a component sharing the class of a component declared once, naming both owners."""
+    with pytest.raises(RegistrationError, match="'lamp'.*'lamp_sharer'"):
+        LampClashApp().build()
+
+
+def test_a_shared_none_leaves_the_asker_not_set_up(build: BuildSession) -> None:
+    """Leave a component not set up when the value its setup asks for is `None`."""
+    app = build(NoSpareApp)
+    assert app.is_built
+    assert not hasattr(app.taker, "spare")
+
+
 def test_sharing_a_type_and_the_same_type_or_none_is_refused() -> None:
     """Refuse two components sharing `X` and `X | None`, which name one value."""
     with pytest.raises(TypeError, match="'maybe' and 'plain' both share"):
@@ -1444,6 +1560,22 @@ def test_a_shared_value_nothing_asks_for_is_reported(
     )
 
 
+@pytest.mark.parametrize(("app_class", "default"), [(UnionAsked, None), (PairAsked, 0)])
+def test_a_defaulted_union_keeps_its_default(
+    build: BuildSession, app_class: type[UnionAsked | PairAsked], default: int | None
+) -> None:
+    """Build a component asking for a defaulted union with one member shared, and leave it its default."""
+    reader = build(app_class).presenters["reader"]
+    assert isinstance(reader, UnionReader | PairReader)
+    assert reader.x == default
+
+
+def test_a_union_is_not_answered_by_one_of_its_members(build: BuildSession) -> None:
+    """Refuse a required `A | B` although `A` is shared."""
+    with pytest.raises(TypeError, match="which nothing in the session provides"):
+        build(PairNeeded)
+
+
 def test_a_value_shared_as_optional_is_not_reported_when_asked_for(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
@@ -1482,7 +1614,7 @@ def test_a_forgotten_layer_is_reported(
         (Readings | None, True),
         (int, False),
         (int | str, False),
-        (int | str | None, False),
+        (int | str | None, True),
     ],
 )
 def test_only_an_optional_parameter_may_go_unanswered(

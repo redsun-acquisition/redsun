@@ -5,7 +5,7 @@ import inspect
 import sys
 from typing import TYPE_CHECKING, Any
 
-from .._structural import is_union
+from .._structural import is_optional
 from ..injection._census import devices_protocol
 
 if TYPE_CHECKING:
@@ -188,7 +188,7 @@ def wanted_from(
         hint = param.annotation
         if devices_protocol(hint) is not None:
             continue
-        if param.default is not param.empty and not is_union(hint):
+        if param.default is not param.empty and not is_optional(hint):
             hint = hint | None
         wanted[pname] = hint
     return wanted
@@ -220,7 +220,7 @@ def defaulted(cls: type, names: Iterable[str]) -> set[str]:
 
 
 def supplied(deps: Mapping[str, Any], optional: set[str]) -> dict[str, Any]:
-    """Return *deps* without the defaulted parameters the store answered with `None`.
+    """Return *deps* without the defaulted parameters the registry answered with `None`.
 
     Each one left out keeps the default its constructor gives it.
     """
@@ -236,13 +236,13 @@ def factory(
     on_built: Callable[[Declaration, Any], None],
     passed: Mapping[str, object],
 ) -> Callable[..., Any]:
-    """Return the callable the store fills and calls for *declaration*.
+    """Return the callable the registry fills and calls for *declaration*.
 
     *on_built* runs the moment the instance exists, which is what makes the
     order components are created in observable: the graph, not the caller,
     decides it.
 
-    Optional parameters stay in the signature: the store fills `X | None`
+    Optional parameters stay in the signature: the registry fills `X | None`
     with `None` when nothing provides `X`. A parameter answered that way is
     left out of the call, so its own default applies. *passed* reaches the
     constructor by keyword, untouched.
@@ -266,9 +266,9 @@ def factory(
 def setup_call(
     instance: HasSetup[...], name: str, answers: Mapping[str, object]
 ) -> Callable[..., Any]:
-    """Return the callable the store fills and calls to set *instance* up.
+    """Return the callable the registry fills and calls to set *instance* up.
 
-    *answers* reach `setup` as they are, and the store is asked for the other
+    *answers* reach `setup` as they are, and the registry is asked for the other
     parameters only.
     """
     params = {
@@ -284,10 +284,10 @@ def setup_call(
 
 
 def provider(cls: type, name: str) -> Callable[..., Any]:
-    """Return the callable the store fills to build the shared service *cls*.
+    """Return the callable the registry fills to build the shared service *cls*.
 
     A provider takes no name of its own, so every annotated parameter of its
-    constructor is the store's to answer, `name` included. A parameter with a
+    constructor is the registry's to answer, `name` included. A parameter with a
     default that nothing provides keeps its default, as a component's does.
     """
     params = injectable(cls, {}, binds_name=False)
