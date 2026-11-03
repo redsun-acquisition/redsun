@@ -15,3 +15,4 @@ The exceptions a session raises. `redsun` re-exports each of them.
         - ConfigurationInUse
         - HookError
         - PluginError
+        - RegistrationError
