@@ -17,6 +17,42 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.17.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.17.0) - 03-11-2026
+
+### Breaking
+
+- `Axis` (`redsun.utils.devices`) requires `subscribe_reading` instead of `subscribe`, and the positioner follows an axis through `subscribe_reading`. ([#246](https://github.com/redsun-acquisition/redsun/pull/246))
+- `redsun` no longer depends on `in-n-out`; the `pyqt` and `pyside` extras install it. ([#253](https://github.com/redsun-acquisition/redsun/pull/253))
+- `Session` (`redsun`) answers a parameter only with a value registered under its exact type: a subclass of a registered type, or a union `A | B`, no longer receives the value of the base class or of one member. A defaulted union containing `None` keeps its default. ([#253](https://github.com/redsun-acquisition/redsun/pull/253))
+- `Session` (`redsun`) stops the build with [`RegistrationError`][redsun.errors.RegistrationError], naming both owners, when a component shares a value under a type the session provides, such as `SessionConfig`, or under the class of a component declared once. ([#253](https://github.com/redsun-acquisition/redsun/pull/253))
+- `BuildableSession` (`redsun`) declares `make_registry`, which returns a [`Registry`][redsun.injection.Registry], instead of `make_store`, which returned an `in-n-out` `Store`. ([#253](https://github.com/redsun-acquisition/redsun/pull/253))
+
+### Added
+
+- `Service` (`redsun.services`), `Launch` (`redsun`) and the `services` entries of a session file and a plugin manifest take `startup_timeout`, the seconds a launched service has to print its readiness line, `STARTUP_TIMEOUT` (15) by default. ([#250](https://github.com/redsun-acquisition/redsun/pull/250))
+
+  ```python
+  Launch("mylab.iocs.camera", ready="Server startup complete.", startup_timeout=60)
+  ```
+- `Registry` (`redsun.injection`) is the table a session builds its components out of, built on `diwire`. ([#253](https://github.com/redsun-acquisition/redsun/pull/253))
+- `QtSession` (`redsun.qt`) fills a parameter of a command typed with a protocol from the built components, once the build has finished. ([#253](https://github.com/redsun-acquisition/redsun/pull/253))
+- `PlanWidget.set_values` (`redsun.view.qt.utils`) shows parameter values in a plan's form, keeping the value of a widget that refuses its new one. ([#254](https://github.com/redsun-acquisition/redsun/pull/254))
+- `AcquisitionView.set_started` (`redsun.view.qt.builtins`) takes the values the plan was launched with, and shows them in its form. ([#254](https://github.com/redsun-acquisition/redsun/pull/254))
+
+### Changed
+
+- `RunEngine` (`redsun.engine`) types `scan_id_source` as a function of a `MutableMapping`, the metadata type of `bluesky` 1.16. ([#246](https://github.com/redsun-acquisition/redsun/pull/246))
+- `redsun` requires `bluesky>=1.16.0`. ([#246](https://github.com/redsun-acquisition/redsun/pull/246))
+- `AcquisitionPresenter.sig_plan_started` (`redsun.presenter`) carries the values the plan was launched with, as `Signal(str, dict)`. ([#254](https://github.com/redsun-acquisition/redsun/pull/254))
+
+### Fixed
+
+- `AcquisitionPresenter` (`redsun.presenter`) no longer names the files of a plan launched as the previous plan ends `unknown`, and reports that plan's end. ([#247](https://github.com/redsun-acquisition/redsun/pull/247))
+- `Session` (`redsun`) no longer clears the async backend of `psygnal` on shutdown while another session in the same process still runs. ([#247](https://github.com/redsun-acquisition/redsun/pull/247))
+- `get_shared_loop` (`redsun.aio`) cancels the tasks left on the shared loop at exit before any `atexit` hook runs, so their cleanup no longer meets closed `sharedbox` boxes. ([#249](https://github.com/redsun-acquisition/redsun/pull/249))
+- `QtSession` (`redsun.qt`) keeps automatic garbage collection off on shutdown while another session in the same process still runs. ([#249](https://github.com/redsun-acquisition/redsun/pull/249))
+- `DescriptorTreeView` (`redsun.view.qt.treeview`) edits an integer setting wider than 32 bits, with a range taken from the setting's limits, else from its `dtype_numpy`, else from the int64 range. ([#256](https://github.com/redsun-acquisition/redsun/pull/256))
+
 ## [0.16.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.16.0) - 31-10-2026
 
 ### Breaking
