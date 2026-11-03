@@ -89,6 +89,51 @@ Services are separate programs, not components the session builds. The
 session starts the ones it launches before anything else and stops them after
 every component.
 
+## How components connect
+
+Drawn as [blocks](components.md#a-component-as-a-block), the components of a
+session are linked through the markers on their edges. This session adds an
+`RoiPresenter`, which asks for the readings `MotorPresenter` shares, and wires
+the view and the presenter both ways:
+
+```python
+class MyApp(QtSession):
+    motor_ctrl: AsPresenter[MotorPresenter]
+    roi_ctrl: AsPresenter[RoiPresenter]
+    motor_widget: AsView[MotorView]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.motor_widget.sig_move, self.motor_ctrl.move
+        yield self.motor_ctrl.sig_moved, self.motor_widget.refresh
+```
+
+```d2 title="The components of MyApp and their links"
+...@diagrams/style
+direction: right
+motor_widget: {
+  sig_move {class: [signal; port-right]}
+  refresh {class: [slot; port-right]}
+}
+motor_ctrl: {
+  move {class: [slot; port-left]}
+  sig_moved {class: [signal; port-left]}
+  readings: MotorReadings {class: [shares; port-right]}
+}
+roi_ctrl: {
+  readings: MotorReadings {class: [asks; port-left]}
+}
+motor_widget.sig_move -- motor_ctrl.move
+motor_widget.refresh -- motor_ctrl.sig_moved
+motor_ctrl.readings -- roi_ctrl.readings
+```
+
+The two kinds of link come from different places. A value is matched by its
+type, so the session links the `MotorReadings` that `roi_ctrl` asks for to
+the one `motor_ctrl` shares, with no line of yours. A signal reaches a slot
+only where you connect them, in `wire` or in the `wiring` section of a
+[session file](glossary.md#session-file), which is why the two links between
+`motor_widget` and `motor_ctrl` each have a line in `wire`.
+
 ## What a build does
 
 [`build`][redsun.Session.build] reads the
