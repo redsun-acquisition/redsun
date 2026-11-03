@@ -71,7 +71,7 @@ from .._hooks import (
     refuse_unknown_points,
 )
 from .._settings import Settings
-from .._structural import optional_arg, without_none
+from .._structural import is_optional, without_none
 from ..injection._provides import (
     claim_shared,
     constant,
@@ -2468,7 +2468,7 @@ def unanswered(
     return [
         (pname, hint)
         for pname, hint in params.items()
-        if optional_arg(hint) is None and not held(registry, hint)
+        if not is_optional(hint) and not held(registry, hint)
     ]
 
 

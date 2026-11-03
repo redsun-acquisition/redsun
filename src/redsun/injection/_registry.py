@@ -1,4 +1,4 @@
-"""The table of what a session provides, built over diwire."""
+"""The table of what a session provides, built over `diwire`."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from diwire import (
     ResolverContext,
 )
 
-from .._structural import optional_arg
+from .._structural import is_optional, optional_arg
 from ..errors import RegistrationError
 
 R = TypeVar("R")
@@ -31,10 +31,11 @@ SESSION: Final = "<session>"
 """Owner recorded for what the session itself provides."""
 
 Ask: TypeAlias = Callable[[object], tuple[object] | None]
+"""Answers a key nobody registered with a one-tuple holding its value, or `None`."""
 
 
 def key_of(key: object) -> object:
-    """Return *key* without the `Annotated` metadata diwire ignores."""
+    """Return *key* without the `Annotated` metadata `diwire` ignores."""
     if get_origin(key) is not Annotated:
         return key
     base, *metadata = get_args(key)
@@ -46,9 +47,10 @@ class Registry:
     """What one session provides, one key to one value.
 
     A registry belongs to one session. A key holds one value, and every lookup
-    matches its key exactly: a subclass or a union is not answered by a value
-    registered under its base class. `ask` answers a key nobody registered, each
-    time a provider for it is called.
+    matches its key exactly: a subclass is not answered by a value registered
+    under its base class, and a union is not answered by a value registered
+    under one of its members, apart from `X | None`, which `X` answers. `ask`
+    answers a key nobody registered, each time a provider for it is called.
     """
 
     __slots__ = ("_ask", "_container", "_owners")
@@ -73,7 +75,7 @@ class Registry:
         Raises
         ------
         RegistrationError
-            If *key* is registered already, metadata diwire ignores aside.
+            If *key* is registered already, metadata `diwire` ignores aside.
         """
         held = key_of(key)
         if held in self._owners:
@@ -109,9 +111,9 @@ class Registry:
     def call(self, fn: Callable[..., R], /, **passed: object) -> R:
         """Call *fn*, filling each parameter not in *passed* from the keys held.
 
-        A parameter written `X | None` receives `None` when `X` is not held,
-        and one with a default keeps it. A `None` from a held key does not
-        answer a required parameter.
+        A parameter with a default keeps it when nothing answers. One written
+        `X | None`, or a union with `None` among its members, receives `None`
+        then. A `None` from a held key does not answer a required parameter.
 
         Raises
         ------
@@ -131,10 +133,14 @@ class Registry:
             value = None if found is None else self._container.resolve(found)
             if value is not None:
                 filled[name] = value
-            elif optional_arg(hint) is not None:
+            elif param.default is not param.empty:
+                continue
+            elif is_optional(hint):
                 filled[name] = None
-            elif param.default is param.empty:
+            else:
                 missing.append(f"'{name}'")
         if missing:
-            raise TypeError(f"cannot fill {', '.join(missing)} of {fn!r}")
+            raise TypeError(
+                f"cannot fill {', '.join(missing)} of {getattr(fn, '__name__', fn)}"
+            )
         return fn(**passed, **filled)

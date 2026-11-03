@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "interchangeable",
+    "is_optional",
     "is_protocol_class",
     "is_union",
     "members",
@@ -71,6 +72,11 @@ def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
         return None
     args = [arg for arg in get_args(hint) if arg is not type(None)]
     return args[0] if len(args) == 1 else None
+
+
+def is_optional(hint: TypeForm[Any]) -> bool:
+    """Return whether *hint* is a union with `None` among its members."""
+    return is_union(hint) and type(None) in get_args(hint)
 
 
 def without_none(hint: TypeForm[Any]) -> TypeForm[Any]:

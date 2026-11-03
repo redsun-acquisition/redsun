@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, NewType, Protocol
+from typing import Annotated, Any, NewType, Protocol
 
 import pytest
 
@@ -63,7 +63,7 @@ def test_a_registry_answers_every_key_it_holds() -> None:
 def test_a_second_value_under_a_key_is_refused_naming_both_owners(
     second: object,
 ) -> None:
-    """Refuse a second registration under one key, metadata diwire ignores included, naming both owners."""
+    """Refuse a second registration under one key, metadata `diwire` ignores included, naming both owners."""
     registry = Registry()
     registry.register(Motor, Motor, owner="stage")
     with pytest.raises(RegistrationError, match="'stage'.*'other'"):
@@ -120,3 +120,25 @@ def test_ask_is_asked_each_time_a_provider_is_called() -> None:
     [provider] = registry.providers(Moves)
     assert (provider(), provider()) == (motor, motor)
     assert asked == [Moves] * 4
+
+
+@pytest.mark.parametrize("hint", [Motor, Motor | None, Motor | Base | None])
+def test_a_default_is_kept_when_nothing_answers(hint: object) -> None:
+    """Keep the default of a parameter nothing answers, whatever its annotation."""
+    registry = Registry()
+
+    def build(*, value: Any = "kept") -> object:
+        return value
+
+    build.__annotations__["value"] = hint
+    assert registry.call(build) == "kept"
+
+
+def test_the_error_names_the_callable_not_its_repr() -> None:
+    """Name the callable in the refusal, without its address."""
+    registry = Registry()
+
+    def build_taker(*, motor: Motor) -> None: ...
+
+    with pytest.raises(TypeError, match=r"^cannot fill 'motor' of build_taker$"):
+        registry.call(build_taker)

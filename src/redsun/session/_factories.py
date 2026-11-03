@@ -5,7 +5,7 @@ import inspect
 import sys
 from typing import TYPE_CHECKING, Any
 
-from .._structural import is_union
+from .._structural import is_optional
 from ..injection._census import devices_protocol
 
 if TYPE_CHECKING:
@@ -188,7 +188,7 @@ def wanted_from(
         hint = param.annotation
         if devices_protocol(hint) is not None:
             continue
-        if param.default is not param.empty and not is_union(hint):
+        if param.default is not param.empty and not is_optional(hint):
             hint = hint | None
         wanted[pname] = hint
     return wanted

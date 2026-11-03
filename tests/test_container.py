@@ -448,6 +448,19 @@ class OptionalShared(Session):
     reader: AsPresenter[MaybeReader]
 
 
+class UnionReader:
+    """Presenter taking one of two values, or none."""
+
+    def __init__(self, name: str, x: Readings | Descriptions | None = None) -> None:
+        self.name = name
+        self.x = x
+
+
+class UnionAsked(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[UnionReader]
+
+
 class OptionalAndPlainOwners(Session):
     plain: AsPresenter[Duplicated]
     maybe: AsPresenter[MaybeReadings]
@@ -1521,6 +1534,14 @@ def test_a_shared_value_nothing_asks_for_is_reported(
     )
 
 
+def test_a_union_with_none_is_optional_and_keeps_its_default(
+    build: BuildSession,
+) -> None:
+    """Build a component asking for `A | B | None`, with `A` shared, and leave it its default."""
+    app = build(UnionAsked)
+    assert app.reader.x is None
+
+
 def test_a_value_shared_as_optional_is_not_reported_when_asked_for(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
@@ -1559,7 +1580,7 @@ def test_a_forgotten_layer_is_reported(
         (Readings | None, True),
         (int, False),
         (int | str, False),
-        (int | str | None, False),
+        (int | str | None, True),
     ],
 )
 def test_only_an_optional_parameter_may_go_unanswered(
