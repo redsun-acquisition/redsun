@@ -768,7 +768,7 @@ class Session(BuildableSession):
                 SESSION,
                 built,
                 self._shared_values,
-                f"a question for {SESSION!r}",
+                "a question from a command",
             )
         except NoAnswer:
             return None

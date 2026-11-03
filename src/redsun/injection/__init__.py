@@ -2,8 +2,10 @@
 
 A component names types, never peers: a constructor parameter is a request the
 session answers, and a method marked with `provides` is an answer other
-components may ask for. `redsun` re-exports what is here alongside
-the rest of the layer, and is the import a component is written against.
+components may ask for. `redsun` re-exports `DevicesOf`, `provides`, `rejected`
+and `satisfying`, which are the imports a component is written against.
+`Registry` is the table the session builds components out of, and is not
+re-exported.
 """
 
 from __future__ import annotations

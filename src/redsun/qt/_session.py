@@ -547,10 +547,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         A `QApplication` has to exist before any widget is constructed, so it
         is made here. The hooks were resolved by the step before this one, so one
         may supply the `QApplication` itself. The session's own application
-        follows, because the components are built out of the registry its store reads, and the
-        `actions` section is registered on it at once, so a hook dressing the
-        window finds every command it may put in a menu. The window comes next,
-        since every view is built as its child. The colour scheme is
+        follows, because the components are built out of the registry its store
+        reads, and the `actions` section is registered on it at once, so a hook
+        dressing the window finds every command it may put in a menu. The window
+        comes next, since every view is built as its child. The colour scheme is
         asked for before any widget exists to be painted in the wrong one, and
         a `configure_application` hook runs last, so one restyling the
         application does so over a scheme already in force. Each of them
@@ -1191,8 +1191,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         if self._qt_app is not None:
             # app_model parents the actions of its menus to the application,
             # which outlives the session, so they would keep the session's
-            # application, and through its store the session's registry, and so the session, alive; the
-            # identity check spares the actions of another session
+            # application, and through its store the session's registry, and so
+            # the session, alive; the identity check spares the actions of
+            # another session
             for action in self._qt_app.findChildren(QCommandAction):
                 if action._app is self._model:
                     action.deleteLater()
