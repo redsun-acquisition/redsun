@@ -93,6 +93,32 @@ def test_running_shows_only_once_the_presenter_has_started(
     assert (before, chooser.isEnabled()) == (True, False)
 
 
+def test_a_started_plan_shows_its_values_in_the_form(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Show the values a plan was launched with, skipping a name the form lacks."""
+    view = make_view(settings, parent)
+    view.plan_widgets["count"].set_values({"detectors": []})
+
+    view.set_started("count", {"detectors": ["det1"], "ghost": 1})
+
+    assert view.plan_widgets["count"].parameters == {"detectors": ["det1"]}
+
+
+@pytest.mark.parametrize("value", [["ghost"], ["det1", "ghost"], 3])
+def test_a_value_the_form_cannot_show_leaves_it_as_it_was(
+    parent: QtWidgets.QWidget, settings: Settings, value: object
+) -> None:
+    """Keep a widget's value when it refuses the new one or names a device it lacks."""
+    view = make_view(settings, parent)
+    widget = view.plan_widgets["count"]
+    widget.set_values({"detectors": ["det1"]})
+
+    view.set_started("count", {"detectors": value})
+
+    assert widget.parameters == {"detectors": ["det1"]}
+
+
 @pytest.mark.parametrize(
     ("end", "text"),
     [

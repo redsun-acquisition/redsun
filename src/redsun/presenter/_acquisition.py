@@ -84,8 +84,8 @@ class AcquisitionPresenter(Loggable):
     stopped, or on `sig_plan_failed`, with the error logged, when it raises.
     """
 
-    sig_plan_started = Signal(str)
-    """Plan, once the engine has started it."""
+    sig_plan_started = Signal(str, dict)
+    """Plan, and the values it was launched with, once the engine has started it."""
 
     sig_plan_done = Signal(str)
     """Plan, once it has finished."""
@@ -129,6 +129,7 @@ class AcquisitionPresenter(Loggable):
         self._paths: SessionPathProvider | None = None
         self._futures: set[Future[Any]] = set()
         self._running: str | None = None
+        self._values: dict[str, Any] = {}
         self._error: BaseException | None = None
         self._stopping = False
         self._closed = False
@@ -223,7 +224,7 @@ class AcquisitionPresenter(Loggable):
             return
         if self._paths is not None:
             self._paths.set_plan(plan)
-        self._running = plan
+        self._running, self._values = plan, values
         self.logger.info(f"Launching {plan!r}")
         self._track(self._engine(entry["plan"](*args, **kwargs), subs))
 
@@ -336,7 +337,7 @@ class AcquisitionPresenter(Loggable):
         # a plan another component runs on the shared engine is not reported
         if plan is None:
             return
-        self.sig_plan_started.emit(plan)
+        self.sig_plan_started.emit(plan, self._values)
         if action is not None:
             # on the engine's thread, which a pause request would block
             threading.Thread(target=action, daemon=True).start()
@@ -360,6 +361,7 @@ class AcquisitionPresenter(Loggable):
             self._futures.discard(future)
             return
         plan, self._running, self._on_start = self._running, None, None
+        self._values = {}
         failure, self._error = self._error, None
         stopped, self._stopping = self._stopping, False
         if plan is not None and self._paths is not None:

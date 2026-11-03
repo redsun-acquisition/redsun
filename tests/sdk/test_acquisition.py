@@ -194,8 +194,20 @@ def test_a_plan_runs_to_its_end_and_names_its_files(
     presenter.launch("rest", {})
 
     assert ended.wait(10)
-    assert seen == [("started", "rest"), ("done", "rest")]
+    assert seen == [("started", "rest", {}), ("done", "rest")]
     assert paths.names == ["rest", None]
+
+
+def test_a_started_plan_reports_the_values_it_was_launched_with(
+    presenter: AcquisitionPresenter,
+) -> None:
+    """Report the launch values with the start, as given."""
+    seen, ended = record(presenter)
+
+    presenter.launch("limited", {"frames": 3})
+
+    assert ended.wait(10)
+    assert seen[0] == ("started", "limited", {"frames": 3})
 
 
 def test_a_plan_that_raises_is_reported_failed(
@@ -207,7 +219,7 @@ def test_a_plan_that_raises_is_reported_failed(
     presenter.launch("broken", {})
 
     assert ended.wait(10)
-    assert seen == [("started", "broken"), ("failed", "broken", "bad target")]
+    assert seen == [("started", "broken", {}), ("failed", "broken", "bad target")]
     assert "'broken' failed" in caplog.text
 
 
@@ -250,7 +262,7 @@ def test_a_launch_while_a_plan_runs_is_refused(
     presenter.stop()
 
     assert ended.wait(10)
-    assert seen == [("started", "hold"), ("stopped", "hold")]
+    assert seen == [("started", "hold", {}), ("stopped", "hold")]
     assert "not launched" in caplog.text
 
 
@@ -270,7 +282,7 @@ def test_a_stop_right_after_launch_stops_the_plan(
         loop_free.set()
 
     assert ended.wait(10)
-    assert seen == [("started", "hold"), ("stopped", "hold")]
+    assert seen == [("started", "hold", {}), ("stopped", "hold")]
 
 
 def test_pause_resume_and_stop_with_no_plan_running_are_ignored(
@@ -285,7 +297,7 @@ def test_pause_resume_and_stop_with_no_plan_running_are_ignored(
     presenter.resume()
     presenter.stop()
 
-    assert seen == [("started", "rest"), ("done", "rest")]
+    assert seen == [("started", "rest", {}), ("done", "rest")]
 
 
 def test_a_paused_plan_reports_nothing_until_it_is_stopped(
@@ -305,7 +317,7 @@ def test_a_paused_plan_reports_nothing_until_it_is_stopped(
 
     assert ended.wait(10)
     assert not reported_while_paused
-    assert seen == [("started", "pausable"), ("stopped", "pausable")]
+    assert seen == [("started", "pausable", {}), ("stopped", "pausable")]
 
 
 def test_a_plan_no_widget_can_show_is_left_out(
@@ -424,4 +436,4 @@ def test_resuming_before_the_pause_is_reached_withdraws_it(
 
     assert ended.wait(10)
     assert withdrawn
-    assert seen == [("started", "hold"), ("stopped", "hold")]
+    assert seen == [("started", "hold", {}), ("stopped", "hold")]
