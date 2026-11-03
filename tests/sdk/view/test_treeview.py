@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from qtpy import QtWidgets
+from qtpy import QtCore, QtWidgets
+from superqt import QLargeIntSpinBox
 
 from redsun.view.qt.treeview import DescriptorTreeView
+from tests.sdk.view.helpers import child, press
 
 if TYPE_CHECKING:
     from event_model import DataKey, Dtype
@@ -26,19 +28,20 @@ def edited_tree(
     )
     sent: list[tuple[str, str, Any]] = []
     view.sig_property_changed.connect(lambda *args: sent.append(args))
-    spinbox = view.findChild(QtWidgets.QSpinBox)
-    assert spinbox is not None
-    field = spinbox.lineEdit()
-    assert field is not None
-    field.setText("100")
-    spinbox.interpretText()
+    enter(child(view, QLargeIntSpinBox), "100")
     return view, sent
 
 
+def enter(spinbox: QtWidgets.QAbstractSpinBox, text: str) -> None:
+    """Replace the text of *spinbox* with *text* and press Enter."""
+    field = spinbox.lineEdit()
+    assert field is not None
+    field.setText(text)
+    press(spinbox, QtCore.Qt.Key.Key_Return)
+
+
 def shown(view: DescriptorTreeView) -> int:
-    spinbox = view.findChild(QtWidgets.QSpinBox)
-    assert spinbox is not None
-    return spinbox.value()
+    return int(child(view, QLargeIntSpinBox).value())
 
 
 def labels(item: QtWidgets.QTreeWidgetItem) -> list[str]:
@@ -50,7 +53,7 @@ def labels(item: QtWidgets.QTreeWidgetItem) -> list[str]:
 @pytest.mark.parametrize(
     ("dtype", "editor", "expected"),
     [
-        ("integer", QtWidgets.QSpinBox, 100),
+        ("integer", QLargeIntSpinBox, 100),
         ("number", QtWidgets.QDoubleSpinBox, 100.0),
     ],
 )
@@ -67,14 +70,56 @@ def test_a_typed_number_is_sent_once_it_is_entered(
     )
     sent: list[tuple[str, str, Any]] = []
     view.sig_property_changed.connect(lambda *args: sent.append(args))
-    spinbox = view.findChild(editor)
-    assert spinbox is not None
+    spinbox = child(view, editor)
     field = spinbox.lineEdit()
     assert field is not None
 
-    for text in ("1", "10", "100"):
+    for text in ("1", "10"):
         field.setText(text)
-    spinbox.interpretText()
+    enter(spinbox, "100")
+
+    assert sent == [("cam", "gain", expected)]
+
+
+@pytest.mark.parametrize(
+    ("descriptor", "expected"),
+    [
+        (
+            {
+                "dtype": "integer",
+                "source": "cam",
+                "shape": [],
+                "limits": {"control": {"low": 0, "high": 2**64 - 1}},
+                "dtype_numpy": "<i8",
+            },
+            2**64 - 1,
+        ),
+        (
+            {"dtype": "integer", "source": "cam", "shape": [], "dtype_numpy": "<u8"},
+            2**64 - 1,
+        ),
+        (
+            {"dtype": "integer", "source": "cam", "shape": [], "dtype_numpy": "<i4"},
+            2**31 - 1,
+        ),
+        (
+            {"dtype": "integer", "source": "cam", "shape": [], "dtype_numpy": "<f8"},
+            2**63 - 1,
+        ),
+        ({"dtype": "integer", "source": "cam", "shape": []}, 2**63 - 1),
+    ],
+)
+def test_an_integer_is_held_up_to_its_widest_bound(
+    qapp: QApplication, descriptor: DataKey, expected: int
+) -> None:
+    """Bound an integer by its limits, else by its numpy type, else by int64."""
+    view = DescriptorTreeView(
+        {"cam-gain": descriptor}, {"cam-gain": {"value": 1, "timestamp": 0.0}}
+    )
+    sent: list[tuple[str, str, Any]] = []
+    view.sig_property_changed.connect(lambda *args: sent.append(args))
+
+    enter(child(view, QLargeIntSpinBox), str(2**64 - 1))
 
     assert sent == [("cam", "gain", expected)]
 

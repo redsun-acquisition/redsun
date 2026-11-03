@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, assert_never
 import numpy as np
 from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
+from superqt import QLargeIntSpinBox
 
 from ._locks import held
 
@@ -35,6 +36,26 @@ def _split_key(key: str) -> tuple[str, str]:
     """
     owner, dash, prop = key.partition("-")
     return (owner, prop) if dash else ("", key)
+
+
+def _integer_range(
+    descriptor: Descriptor, low: float | None, high: float | None
+) -> tuple[int, int]:
+    """Return the lowest and highest value an integer row accepts.
+
+    The control limits *low* and *high* win. A bound they leave open comes
+    from the descriptor's `dtype_numpy` when it names an integer type, else
+    from the int64 range.
+    """
+    name = descriptor.get("dtype_numpy")
+    try:
+        info = np.iinfo(name if isinstance(name, str) else "<i8")
+    except (TypeError, ValueError):
+        info = np.iinfo(np.int64)
+    return (
+        int(low) if low is not None else int(info.min),
+        int(high) if high is not None else int(info.max),
+    )
 
 
 def _make_value_widget(
@@ -81,11 +102,8 @@ def _make_value_widget(
             return _make_label(initial_value, parent, readonly=False)
 
         case "integer":
-            sb = QtWidgets.QSpinBox(parent)
-            sb.setRange(
-                int(low) if low is not None else -(2**31),
-                int(high) if high is not None else 2**31 - 1,
-            )
+            sb = QLargeIntSpinBox(parent)
+            sb.setRange(*_integer_range(descriptor, low, high))
             sb.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
             sb.setFrame(False)
             sb.setButtonSymbols(QtWidgets.QAbstractSpinBox.ButtonSymbols.NoButtons)
@@ -206,7 +224,7 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
         _set_label_text(widget, value)
         return
     with QtCore.QSignalBlocker(widget):
-        if isinstance(widget, QtWidgets.QSpinBox):
+        if isinstance(widget, QLargeIntSpinBox):
             if isinstance(value, (int, float)):
                 widget.setValue(int(value))
         elif isinstance(widget, QtWidgets.QDoubleSpinBox):
