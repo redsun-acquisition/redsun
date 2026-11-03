@@ -11,7 +11,7 @@ Amended by
 [37. diwire is the session registry](0037-diwire-is-the-session-registry.md)
 on 3 November 2026: the session's registry fills the parameters `setup` does
 not ask as questions, and a command can ask a protocol question once the
-build has sealed.
+build has finished.
 
 ## Context
 
@@ -70,7 +70,7 @@ at declaration.
 - Asking for exactly one answer and getting none or several fails when `setup`
   runs, after the devices have connected, rather than before anything is built.
 - A command registered on the application is filled from the session's
-  registry, and may ask a protocol question once the build has sealed
+  registry, and may ask a protocol question once the build has finished
   (ADR 37).
 - Matching on shape still lets a component answer a question by accident, as
   the markers did.

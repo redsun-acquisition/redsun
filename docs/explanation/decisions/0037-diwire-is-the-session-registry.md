@@ -31,9 +31,9 @@ Two dependency injection libraries were weighed for the new table:
 - `wireup` checks its container once, when it is created from a complete
   list, and takes nothing afterwards.
 
-A session registers values as it builds them and carries on when a component
-fails, so it cannot give `wireup` a complete list up front, and `diwire` was
-chosen.
+A session still registers after its first lookup: a provider is built from
+the registry and then adds the values it shares. `wireup` takes nothing once
+its container exists, so `diwire` was chosen.
 
 ## Decision
 
@@ -61,7 +61,7 @@ chosen.
 - `app-model` reads the registry through `RegistryStore`, an `in-n-out` `Store`
   whose providers come from the registry, so nothing is registered on
   `in-n-out` itself.
-- Once the build has sealed, a protocol question from outside the build, such
+- Once the build has finished, a protocol question from outside the build, such
   as a command parameter typed with a protocol, is answered by matching built
   components by shape each time it is asked, as `setup` is answered
   (ADR 17).
@@ -123,4 +123,4 @@ receives `None`, because nothing is registered under `MyStage`.
   With a default, `A | B | None` keeps it.
 - A session builds about three times slower than under `in-n-out`, which
   compiles nothing: 0.12 s against 0.04 s for 40 presenters.
-- A command can ask a protocol question once the build has sealed.
+- A command can ask a protocol question once the build has finished.
