@@ -14,6 +14,7 @@ __all__ = [
     "ConfigurationInUse",
     "HookError",
     "PluginError",
+    "RegistrationError",
 ]
 
 
@@ -65,3 +66,7 @@ class HookError(RuntimeError):
 
 class PluginError(RuntimeError):
     """Raised when a configuration entry names a plugin, group or id that does not resolve."""
+
+
+class RegistrationError(TypeError):
+    """Raised when a key is registered a second time."""

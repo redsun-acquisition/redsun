@@ -28,6 +28,7 @@ dependencies = [
     "annotated-types>=0.8.0",
     "bluesky>=1.16.0",
     "culsans>=0.11.0",
+    "diwire>=1.5.0",
     "in-n-out>=0.2.1",
     "ophyd-async>=0.21.3",
     "platformdirs>=4.13.5",

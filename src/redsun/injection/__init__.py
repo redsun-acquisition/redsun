@@ -10,5 +10,6 @@ from __future__ import annotations
 
 from ._census import DevicesOf, rejected, satisfying
 from ._provides import provides
+from ._registry import Registry
 
-__all__ = ["DevicesOf", "provides", "rejected", "satisfying"]
+__all__ = ["DevicesOf", "Registry", "provides", "rejected", "satisfying"]

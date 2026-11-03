@@ -1571,6 +1571,15 @@ wheels = [
 ]
 
 [[package]]
+name = "diwire"
+version = "1.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/79/25/f443219f3d0e896c6c6031ec058c403bef7ccff7e1b9043977f2234f0b97/diwire-1.5.0.tar.gz", hash = "sha256:404b333eb57a402ba18597c0f759a9d2d599570e99cb665189dfe8ceb42eba14", size = 682536, upload-time = "2026-10-19T09:00:12.889Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/65/e37abe84e380f596963448e586f27d474f4709321db34921d1abea9f3e0e/diwire-1.5.0-py3-none-any.whl", hash = "sha256:18d958b06cf7a59917ec9e0dade8a930563dc13993eb3c880a4304dd82e3a3f3", size = 104678, upload-time = "2026-10-19T09:00:11.681Z" },
+]
+
+[[package]]
 name = "dnspython"
 version = "2.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6053,6 +6062,7 @@ dependencies = [
     { name = "annotated-types" },
     { name = "bluesky" },
     { name = "culsans" },
+    { name = "diwire" },
     { name = "in-n-out" },
     { name = "ophyd-async" },
     { name = "platformdirs" },
@@ -6273,6 +6283,7 @@ requires-dist = [
     { name = "app-model", marker = "extra == 'testing-qt'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.16.0" },
     { name = "culsans", specifier = ">=0.11.0" },
+    { name = "diwire", specifier = ">=1.5.0" },
     { name = "fastcs", marker = "extra == 'sharedbox'", specifier = ">=0.14.4" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'pyqt'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'pyside'", specifier = ">=7.2.96" },
