@@ -16,8 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from contextlib import AbstractContextManager
 
-    from in_n_out import Store
-
+    from redsun.injection import Registry
     from redsun.view import Placement
 
 __all__ = [
@@ -156,7 +155,7 @@ class BuildableSession(Protocol):
 
     @abstractmethod
     def open_registry(self) -> None:
-        """Open the store the components are built out of, and fill it."""
+        """Open the registry the components are built out of, and fill it."""
         ...
 
     @abstractmethod
@@ -195,7 +194,7 @@ class BuildableSession(Protocol):
         ...
 
     @abstractmethod
-    def make_store(self) -> Store:
+    def make_registry(self) -> Registry:
         """Return the registry `open_registry` fills and builds out of."""
         ...
 

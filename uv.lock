@@ -6063,7 +6063,6 @@ dependencies = [
     { name = "bluesky" },
     { name = "culsans" },
     { name = "diwire" },
-    { name = "in-n-out" },
     { name = "ophyd-async" },
     { name = "platformdirs" },
     { name = "psygnal" },
@@ -6083,6 +6082,7 @@ profile = [
 pyqt = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "pyqt6-qt6" },
@@ -6092,6 +6092,7 @@ pyqt = [
 pyside = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyside6-essentials", version = "6.11.2", source = { registry = "https://pypi.org/simple" } },
     { name = "qtpy" },
@@ -6100,6 +6101,7 @@ pyside = [
 qlementine-pyqt = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "pyqt6-qlementine" },
@@ -6110,6 +6112,7 @@ qlementine-pyqt = [
 qlementine-pyside = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyside6-essentials", version = "6.10.2", source = { registry = "https://pypi.org/simple" } },
     { name = "pyside6-qlementine" },
@@ -6119,6 +6122,7 @@ qlementine-pyside = [
 qt-common = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "qtpy" },
     { name = "superqt" },
@@ -6133,6 +6137,7 @@ testing = [
 testing-qt = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pytest" },
     { name = "qtpy" },
@@ -6205,6 +6210,7 @@ pva = [
 pyqt = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "pyqt6-qt6" },
@@ -6214,6 +6220,7 @@ pyqt = [
 pyside = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyside6-essentials", version = "6.11.2", source = { registry = "https://pypi.org/simple" } },
     { name = "qtpy" },
@@ -6222,6 +6229,7 @@ pyside = [
 qlementine-pyqt = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "pyqt6-qlementine" },
@@ -6232,6 +6240,7 @@ qlementine-pyqt = [
 qlementine-pyside = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pyside6-essentials", version = "6.10.2", source = { registry = "https://pypi.org/simple" } },
     { name = "pyside6-qlementine" },
@@ -6241,6 +6250,7 @@ qlementine-pyside = [
 qt-common = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "qtpy" },
     { name = "superqt" },
@@ -6255,6 +6265,7 @@ testing = [
 testing-qt = [
     { name = "app-model" },
     { name = "fonticon-materialdesignicons7" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "pytest" },
     { name = "qtpy" },
@@ -6291,7 +6302,12 @@ requires-dist = [
     { name = "fonticon-materialdesignicons7", marker = "extra == 'qlementine-pyside'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'qt-common'", specifier = ">=7.2.96" },
     { name = "fonticon-materialdesignicons7", marker = "extra == 'testing-qt'", specifier = ">=7.2.96" },
-    { name = "in-n-out", specifier = ">=0.2.1" },
+    { name = "in-n-out", marker = "extra == 'pyqt'", specifier = ">=0.2.1" },
+    { name = "in-n-out", marker = "extra == 'pyside'", specifier = ">=0.2.1" },
+    { name = "in-n-out", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.2.1" },
+    { name = "in-n-out", marker = "extra == 'qlementine-pyside'", specifier = ">=0.2.1" },
+    { name = "in-n-out", marker = "extra == 'qt-common'", specifier = ">=0.2.1" },
+    { name = "in-n-out", marker = "extra == 'testing-qt'", specifier = ">=0.2.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.10.2" },
@@ -6390,6 +6406,7 @@ pva = [
 pyqt = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyqt6", specifier = ">=6.11.0" },
     { name = "pyqt6-qt6", specifier = "!=6.11.0,!=6.11.1" },
@@ -6399,6 +6416,7 @@ pyqt = [
 pyside = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyside6-essentials", specifier = ">=6.10.2,!=6.11.0,!=6.11.1" },
     { name = "qtpy", specifier = ">=2.4.3" },
@@ -6407,6 +6425,7 @@ pyside = [
 qlementine-pyqt = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyqt6", specifier = ">=6.11.0" },
     { name = "pyqt6-qlementine", specifier = ">=1.5.1" },
@@ -6417,6 +6436,7 @@ qlementine-pyqt = [
 qlementine-pyside = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyside6-essentials", specifier = ">=6.10.2,!=6.11.0,!=6.11.1" },
     { name = "pyside6-qlementine", specifier = ">=1.5.1" },
@@ -6426,6 +6446,7 @@ qlementine-pyside = [
 qt-common = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
     { name = "superqt", specifier = ">=0.9.0" },
@@ -6438,6 +6459,7 @@ testing = [{ name = "pytest", specifier = ">=8" }]
 testing-qt = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "fonticon-materialdesignicons7", specifier = ">=7.2.96" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pytest", specifier = ">=8" },
     { name = "qtpy", specifier = ">=2.4.3" },

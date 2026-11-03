@@ -7,9 +7,8 @@ from .._structural import without_none
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from in_n_out import Store
-
     from ..session._declarations import Key
+    from ._registry import Registry
 
 __all__ = ["constant", "provides", "register_shared", "shared_keys"]
 
@@ -64,9 +63,9 @@ def shared_keys(cls: type) -> dict[str, Key]:
 
 
 def register_shared(
-    store: Store, instance: object, cls: type, name: str, seen: dict[Key, str]
+    registry: Registry, instance: object, cls: type, name: str, seen: dict[Key, str]
 ) -> list[object]:
-    """Register what *instance* shares on *store*, under the annotated types.
+    """Register what *instance* shares on *registry*, under the annotated types.
 
     *seen* accumulates the types already claimed, so a clash names both
     components. The value is read once, here, so what a component shares comes
@@ -77,6 +76,8 @@ def register_shared(
     ------
     TypeError
         If two components share one type.
+    RegistrationError
+        If the session or a component provides a type *instance* shares.
     """
     values: list[object] = []
     for method_name, provided in shared_keys(cls).items():
@@ -90,7 +91,7 @@ def register_shared(
         seen[provided] = name
         member = getattr(instance, method_name)
         shared = member() if callable(member) else member
-        store.register_provider(constant(shared), type_hint=provided)
+        registry.register(provided, constant(shared), owner=name)
         values.append(shared)
     return values
 

@@ -33,6 +33,7 @@ from redsun import (
     FromConfig,
     Frontend,
     Placement,
+    RegistrationError,
     Session,
     SessionConfig,
     provides,
@@ -361,6 +362,63 @@ class Duplicated:
 class TwoOwners(Session):
     first: Annotated[AsPresenter[Duplicated], Alias("first")]
     second: Annotated[AsPresenter[Duplicated], Alias("second")]
+
+
+class ConfigSharer:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def config(self) -> SessionConfig:
+        return cast("SessionConfig", object())
+
+
+class FrameworkKeyApp(Session):
+    sharer: AsPresenter[ConfigSharer]
+
+
+class Lamp:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class LampSharer:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def spare(self) -> Lamp:
+        return Lamp("spare")
+
+
+class LampClashApp(Session):
+    lamp: AsPresenter[Lamp]
+    lamp_sharer: AsPresenter[LampSharer]
+
+
+class Spare: ...
+
+
+class NoSpare:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def spare(self) -> Spare | None:
+        return None
+
+
+class SpareTaker:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(self, spare: Spare) -> None:
+        self.spare = spare
+
+
+class NoSpareApp(Session):
+    sharer: AsPresenter[NoSpare]
+    taker: AsPresenter[SpareTaker]
 
 
 class MaybeReadings:
@@ -1172,6 +1230,25 @@ def test_two_components_sharing_one_type_is_refused() -> None:
     """Refuse two components sharing one type, naming both in the error."""
     with pytest.raises(TypeError, match="both share"):
         TwoOwners().build()
+
+
+def test_a_component_sharing_a_framework_key_is_refused() -> None:
+    """Refuse a component sharing a type the session provides, naming both owners."""
+    with pytest.raises(RegistrationError, match="'<session>'.*'sharer'"):
+        FrameworkKeyApp().build()
+
+
+def test_a_component_sharing_the_class_of_another_is_refused() -> None:
+    """Refuse a component sharing the class of a component declared once, naming both owners."""
+    with pytest.raises(RegistrationError, match="'lamp'.*'lamp_sharer'"):
+        LampClashApp().build()
+
+
+def test_a_shared_none_leaves_the_asker_not_set_up(build: BuildSession) -> None:
+    """Leave a component not set up when the value its setup asks for is `None`."""
+    app = build(NoSpareApp)
+    assert app.is_built
+    assert not hasattr(app.taker, "spare")
 
 
 def test_sharing_a_type_and_the_same_type_or_none_is_refused() -> None:
