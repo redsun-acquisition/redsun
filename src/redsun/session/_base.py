@@ -287,7 +287,6 @@ class Session(BuildableSession):
         "_report",
         "_reported_saved_shortcuts",
         "_reported_shortcuts",
-        "_sealed",
         "_services",
         "_session_config",
         "_settings",
@@ -420,7 +419,6 @@ class Session(BuildableSession):
         self._shared: dict[Key, str] = {}
         self._filled: dict[object, object] = {}
         self._shared_values: list[tuple[str, object]] = []
-        self._sealed = False
         self._is_built = False
         self._profile = recording
         if recording is not None:
@@ -752,10 +750,13 @@ class Session(BuildableSession):
     def _answer_outside_build(self, key: object) -> tuple[object] | None:
         """Answer a protocol question asked from outside the build.
 
-        Nothing is answered before `seal`, while components are still being
-        built. `None` when nothing answers.
+        Nothing is answered before the build finishes, while components are
+        still being built or wired. `None` when nothing answers.
         """
-        if not self._sealed or (found := shape_of(cast("TypeForm[Any]", key))) is None:
+        if (
+            not self._is_built
+            or (found := shape_of(cast("TypeForm[Any]", key))) is None
+        ):
             return None
         shape, protocol = found
         built = {
@@ -1264,7 +1265,6 @@ class Session(BuildableSession):
             }
         )
         self._baseline = self._serialized()
-        self._sealed = True
 
     def apply_wiring(self) -> None:
         """Make the links the class yields, then those the file lists, then its pairs.
@@ -1497,7 +1497,6 @@ class Session(BuildableSession):
         self._shared.clear()
         self._filled.clear()
         self._shared_values.clear()
-        self._sealed = False
         self._registry = None
         logger.info("Session shut down")
 
@@ -1877,11 +1876,12 @@ class Session(BuildableSession):
         return answers
 
     def _construct(self, layer: Layer) -> None:
-        """Build every component of *layer* and register what it shares.
+        """Build every component of *layer* and fill the keys it was registered under.
 
-        A component is registered under its own key, and under its class when
-        no other declaration names that class, so a collaborator may ask for it
-        either way.
+        The registry step registered each component under its own key, under
+        its class when no other declaration names that class, and under every
+        type it shares; building it fills those keys, so a collaborator may ask
+        for it either way.
 
         The order is the order the layer declares them in: a component takes
         nothing another component owns, so nothing has to be built first. One

@@ -461,6 +461,32 @@ class UnionAsked(Session):
     reader: AsPresenter[UnionReader]
 
 
+class PairReader:
+    """Presenter taking one of two values, with a default."""
+
+    def __init__(self, name: str, x: Readings | int = 0) -> None:
+        self.name = name
+        self.x = x
+
+
+class PairAsked(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[PairReader]
+
+
+class PairNeeder:
+    """Presenter that needs one of two values."""
+
+    def __init__(self, name: str, x: Readings | int) -> None:
+        self.name = name
+        self.x = x
+
+
+class PairNeeded(Session):
+    sharer: AsPresenter[MaybeReadings]
+    reader: AsPresenter[PairNeeder]
+
+
 class OptionalAndPlainOwners(Session):
     plain: AsPresenter[Duplicated]
     maybe: AsPresenter[MaybeReadings]
@@ -1534,12 +1560,19 @@ def test_a_shared_value_nothing_asks_for_is_reported(
     )
 
 
-def test_a_union_with_none_is_optional_and_keeps_its_default(
-    build: BuildSession,
+@pytest.mark.parametrize(("app_class", "default"), [(UnionAsked, None), (PairAsked, 0)])
+def test_a_defaulted_union_keeps_its_default(
+    build: BuildSession, app_class: type[UnionAsked | PairAsked], default: int | None
 ) -> None:
-    """Build a component asking for `A | B | None`, with `A` shared, and leave it its default."""
-    app = build(UnionAsked)
-    assert app.reader.x is None
+    """Build a component asking for a defaulted union with one member shared, and leave it its default."""
+    reader = cast("Any", build(app_class).presenters["reader"])
+    assert reader.x == default
+
+
+def test_a_union_is_not_answered_by_one_of_its_members(build: BuildSession) -> None:
+    """Refuse a required `A | B` although `A` is shared."""
+    with pytest.raises(TypeError, match="which nothing in the session provides"):
+        build(PairNeeded)
 
 
 def test_a_value_shared_as_optional_is_not_reported_when_asked_for(

@@ -116,7 +116,8 @@ def register_shared(
     TypeError
         If two components share one type.
     RegistrationError
-        If the session or a component provides a type *instance* shares.
+        If the session or a provider registered earlier provides a type
+        *instance* shares.
     """
     keys = claim_shared(cls, name, seen)
     values = read_shared(instance, keys)
