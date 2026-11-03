@@ -26,6 +26,7 @@ from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
 from redsun.view.qt.icons import set_icon
 
+from ._device_sequence_edit import DeviceSequenceEdit
 from ._value_widgets import located, problems_of
 from ._widget_factory import create_param_widget
 
@@ -265,6 +266,29 @@ class PlanWidget:
         # parameters are disabled while a plan runs, and Run is its Stop then
         if self.params_widget.isEnabled():
             self.run_button.setEnabled(not problems)
+
+    def set_values(self, values: Mapping[str, Any]) -> None:
+        """Show *values* in the parameter widgets they name.
+
+        A name with no widget is skipped. A widget that refuses its value, or
+        a device list naming a device it does not offer, keeps the value it
+        had.
+        """
+        widgets = {w.name: w for w in self.container}
+        for name, value in values.items():
+            widget = widgets.get(name)
+            if widget is None:
+                continue
+            before = widget.value
+            try:
+                widget.value = value
+                # a device list drops what it does not offer instead of raising
+                if isinstance(widget, DeviceSequenceEdit) and set(widget.value) != set(
+                    value
+                ):
+                    raise ValueError(value)
+            except (TypeError, ValueError):
+                widget.value = before
 
     @property
     def parameters(self) -> dict[str, Any]:

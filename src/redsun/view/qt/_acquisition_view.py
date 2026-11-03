@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from psygnal import Signal
 from qtpy import QtCore, QtGui
@@ -151,12 +151,17 @@ class AcquisitionView(QtW.QWidget, Loggable):
             self._chooser.setCurrentText(stored)
 
     @slot(signal="sig_plan_started")
-    def set_started(self, plan: str) -> None:
-        """Show *plan* running, and lock the chooser, the root and the label until it ends."""
+    def set_started(self, plan: str, values: dict[str, Any] | None = None) -> None:
+        """Show *plan* running, and lock the chooser, the root and the label until it ends.
+
+        The plan's form shows the *values* it was launched with.
+        """
         widget = self.plan_widgets.get(plan)
         if widget is None:
             self.logger.debug(f"Ignoring the start of an unknown plan {plan!r}")
             return
+        if values:
+            widget.set_values(values)
         self._running = plan
         self._outcomes[plan].hide()
         self._chooser.setEnabled(False)
