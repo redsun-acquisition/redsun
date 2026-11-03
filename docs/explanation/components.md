@@ -8,6 +8,50 @@ A [component](glossary.md#component) is a device, a presenter or a view. This
 page explains what each one is for, and how the session gives a component the
 things it needs.
 
+## A component as a block
+
+Everything a component exchanges with the others crosses its edge, so you can
+draw it as a block with a marker on the edge for each thing it takes in or
+gives out. This presenter asks for the devices, shares the last readings,
+moves a motor when asked and reports where the motor went:
+
+```python
+class MotorPresenter:
+    sig_moved = Signal(str, float)
+
+    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
+        self.name = name
+        self.devices = devices
+        self._readings = MotorReadings()
+
+    @provides
+    def readings(self) -> MotorReadings:
+        return self._readings
+
+    @slot
+    def move(self, motor: str, position: float) -> None: ...
+```
+
+```d2 title="MotorPresenter as a block"
+...@diagrams/style
+direction: right
+motor: MotorPresenter {
+  devices: DeviceMapping {class: [asks; port-left]}
+  move {class: [slot; port-left]}
+  readings: MotorReadings {class: [shares; port-right]}
+  sig_moved {class: [signal; port-right]}
+}
+```
+
+A circle is a value the session passes by its type, so it carries the type's
+name, and a square is a signal or a slot, which carries its own name. A hollow
+marker is something the component takes in: a value its constructor or
+`setup` asks for, or a slot other code calls. A filled marker is something it
+gives out: a value it shares with `provides`, or a signal it emits. The
+sections below explain each kind, and
+[How a session works](session.md#how-components-connect) links the markers of
+several blocks.
+
 ## Where each argument comes from
 
 The session makes each component by calling its constructor and passing every
