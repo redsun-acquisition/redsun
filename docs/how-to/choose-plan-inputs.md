@@ -132,7 +132,7 @@ started from code gets the same protection:
 
 The limits work inside other types too, so `list[Annotated[float, Ge(0)]]`
 limits every item. A `float` with no limit can take any value, and an `int` any
-value a 32-bit integer can hold.
+value a 32-bit integer can hold, or more when its limit is wider.
 
 !!! warning "A default that breaks its own limits drops the plan"
 
@@ -142,6 +142,12 @@ value a 32-bit integer can hold.
 A `magicgui` option dict in the annotation still shapes the input, for example
 `{"widget_type": "Slider"}`. Where it gives a bound that a limit also gives,
 the limit wins.
+
+The `widget_type` can also be a `magicgui` widget class, so a plan can take an
+input you wrote yourself: `Annotated[int, {"widget_type": MyEdit}]`. When the
+input belongs to a type of yours, register it once with
+`magicgui.register_type(MyType, widget_type=MyEdit)`, and every parameter of
+that type gets it, inside a list too.
 
 ## Leave a parameter out
 
