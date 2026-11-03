@@ -72,7 +72,13 @@ from .._hooks import (
 )
 from .._settings import Settings
 from .._structural import optional_arg, without_none
-from ..injection._provides import constant, register_shared, shared_keys
+from ..injection._provides import (
+    claim_shared,
+    constant,
+    read_shared,
+    register_shared,
+    shared_keys,
+)
 from ..injection._registry import SESSION
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._declarations import (
@@ -268,6 +274,7 @@ class Session(BuildableSession):
         "_failed_hooks",
         "_failed_services",
         "_file",
+        "_filled",
         "_hooks",
         "_is_built",
         "_merged",
@@ -411,6 +418,7 @@ class Session(BuildableSession):
         # the component sharing each key, carried across the layer steps so
         # that a presenter and a view offering one type still clash
         self._shared: dict[Key, str] = {}
+        self._filled: dict[object, object] = {}
         self._shared_values: list[tuple[str, object]] = []
         self._sealed = False
         self._is_built = False
@@ -1243,6 +1251,8 @@ class Session(BuildableSession):
         self._device_index = index_devices(self._devices.values())
         self._register_framework_values(registry, lambda: dict(self._device_index))
         self._share(registry, self._configuration().providers)
+        for declaration in self._components():
+            self._claim(registry, declaration)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
@@ -1485,6 +1495,7 @@ class Session(BuildableSession):
         self._built_components.clear()
         self._names.clear()
         self._shared.clear()
+        self._filled.clear()
         self._shared_values.clear()
         self._sealed = False
         self._registry = None
@@ -1615,6 +1626,32 @@ class Session(BuildableSession):
             address = CatalogAddress(self._catalog.uri)
             registry.register(CatalogAddress, lambda: address, owner=SESSION)
         registry.register(CallbackCatalogue, self._catalogue, owner=SESSION)
+
+    def _claim(self, registry: Registry, declaration: Declaration) -> None:
+        """Register every key *declaration* fills, before anything is built.
+
+        Registering them all first lets the registry compile its graph once.
+        A key answers `None` until `_construct` fills it.
+        """
+        registry.register(
+            declaration.key, self._built_reader(declaration.key), owner=declaration.name
+        )
+        shared = claim_shared(declaration.cls, declaration.name, self._shared)
+        if (
+            self._class_counts[declaration.cls] == 1
+            # a component sharing its own class registers it as shared, once
+            and declaration.cls not in shared.values()
+        ):
+            registry.register(
+                declaration.cls,
+                self._built_reader(declaration.cls),
+                owner=declaration.name,
+            )
+        for key in shared.values():
+            registry.register(key, self._built_reader(key), owner=declaration.name)
+
+    def _built_reader(self, key: object) -> Callable[[], object]:
+        return lambda: self._filled.get(key)
 
     def _catalogue(self) -> dict[str, CallbackType]:
         """Return the document routers in declaration order."""
@@ -1879,20 +1916,15 @@ class Session(BuildableSession):
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
                 self._skip(declaration, e)
                 continue
-            registry.register(
-                declaration.key, constant(instance), owner=declaration.name
-            )
+            keys = shared_keys(declaration.cls)
+            self._filled[declaration.key] = instance
             if (
                 self._class_counts[declaration.cls] == 1
-                # a component sharing its own class registers it as shared, once
-                and declaration.cls not in shared_keys(declaration.cls).values()
+                and declaration.cls not in keys.values()
             ):
-                registry.register(
-                    declaration.cls, constant(instance), owner=declaration.name
-                )
-            shared = register_shared(
-                registry, instance, declaration.cls, declaration.name, self._shared
-            )
+                self._filled[declaration.cls] = instance
+            shared = read_shared(instance, keys)
+            self._filled.update(zip(keys.values(), shared, strict=True))
             self._shared_values.extend((declaration.name, value) for value in shared)
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
@@ -1905,7 +1937,8 @@ class Session(BuildableSession):
         A parameter left unanswered by a component this build already failed
         on is a consequence of that failure, and the reason names the
         components. One nothing ever declared is a mistake in the session and
-        raises.
+        raises. One declared whose value is `None` is left to the call, which
+        refuses it by name.
 
         Raises
         ------
@@ -1916,9 +1949,16 @@ class Session(BuildableSession):
         if not missing:
             return None
         absent = self._blamed(hint for _, hint in missing)
-        if not absent:
-            raise TypeError(unanswered_message(name, missing))
-        return TypeError(f"{listed(sorted(absent))} was not built")
+        if absent:
+            return TypeError(f"{listed(sorted(absent))} was not built")
+        undeclared = [
+            (pname, hint)
+            for pname, hint in missing
+            if next(registry.providers(hint), None) is None
+        ]
+        if undeclared:
+            raise TypeError(unanswered_message(name, undeclared))
+        return None
 
     def _blamed(self, hints: Iterable[object]) -> set[str]:
         """Return the names of failed components that would have answered *hints*.
@@ -2428,8 +2468,14 @@ def unanswered(
     return [
         (pname, hint)
         for pname, hint in params.items()
-        if optional_arg(hint) is None and next(registry.providers(hint), None) is None
+        if optional_arg(hint) is None and not held(registry, hint)
     ]
+
+
+def held(registry: Registry, hint: object) -> bool:
+    """Return whether *registry* has a value for *hint*, not only a key."""
+    provider = next(registry.providers(hint), None)
+    return provider is not None and provider() is not None
 
 
 def unanswered_message(name: str, missing: list[tuple[str, object]]) -> str:
