@@ -36,7 +36,6 @@ controls and progress.
 - [How to run a plan from a presenter](run-a-plan.md)
 - [How to choose the inputs of a plan](choose-plan-inputs.md)
 - [How to write a plan that runs until stopped](write-a-continuous-plan.md)
-- [How to follow a plan action from a view](follow-a-plan-action.md)
 - [How to show a plan's progress](show-plan-progress.md)
 
 ### Use the built-in components

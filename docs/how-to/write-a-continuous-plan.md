@@ -158,8 +158,12 @@ button from the state the `ActionManager` reports:
 --8<-- "docs/examples/continuous_plan.py:view-actions"
 ```
 
-[How to follow a plan action from a view](follow-a-plan-action.md) explains the
-three states and why the view calls `release`.
+`ask` and `ask_or_release` are the `action_clicked_callback` and
+`action_toggled_callback` the view gave `create_plan_widget`.
+[Following an action from a view](../explanation/plans.md#following-an-action-from-a-view)
+explains the three states. `release` shows a button as released without
+emitting `toggled`. Unchecking the button would emit it, and the view would
+then ask to end an action that has already ended.
 
 ## Link them
 
@@ -169,6 +173,17 @@ that offers the plan:
 ```{.python}
 --8<-- "docs/examples/continuous_plan.py:session"
 ```
+
+!!! warning "The `wiring` section can't make the links to `actions`"
+
+    A path in `wiring` is `component.port`, and the ports of a component don't
+    include those of an object it holds. Make the links to the `ActionManager`
+    in `wire`.
+
+The session records an `ActionManager` under the name of the component holding
+it, so it lists the two links as `plan_view.sig_action_request -> ctrl.request`
+and `ctrl.sig_changed -> plan_view.on_action_changed`. See
+[Inspect what is connected](wire-components.md#inspect-what-is-connected).
 
 ## The example in full
 

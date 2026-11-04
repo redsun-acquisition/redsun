@@ -44,10 +44,8 @@ screen.
 
 ### Data
 
-Learn about the [catalog](glossary.md#catalog) of runs, and the products
-derived from them.
+Learn how the products derived from a run are stored.
 
-- [How the session catalog works](catalog.md)
 - [How derived products are stored](derived-products.md)
 
 ### Decisions

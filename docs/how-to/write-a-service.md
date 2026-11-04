@@ -41,39 +41,9 @@ service needs, plus the `ophyd-async` extra for the device side:
 A service that `redsun` launches does three things besides serving its
 [process variables](../explanation/glossary.md#process-variable): it prints a
 line when it is ready, stops when the session asks, and listens only on the
-local machine. Step through what the session and the service tell each other:
-
-```d2 title="A launched service, from start to stop"
-...@diagrams/style
-label: "In its first build step, the session starts the service as a process of its own, with python -m and the module the declaration names."
-shape: sequence_diagram
-session: session {
-  class: step
-  tooltip: The session starts every launched service in its first build step, and stops them after every component at shutdown.
-}
-device: device {class: step}
-service: service {
-  class: process
-  tooltip: A process of its own, started as python -m with the module the declaration names.
-}
-session -> service: "start python -m <module> <args>"
-service -> session: "print the ready text" {style.opacity: 0}
-session -> device: "build it with the prefix,\nthen connect it" {style.opacity: 0}
-device -> service: "read and write the process\nvariables under the prefix" {
-  style.opacity: 0
-}
-session -> service: "close standard input,\non every platform" {
-  style.opacity: 0
-}
-service -> service: "clean up and exit" {style.opacity: 0}
-steps: {
-  1: {label: "The session waits until the service prints its ready text."; (service -> session)[0].style.opacity: 1}
-  2: {label: "The session builds the device with the service's prefix, then connects it."; (session -> device)[0].style.opacity: 1}
-  3: {label: "The device reads and writes the process variables under that prefix."; (device -> service)[0].style.opacity: 1}
-  4: {label: "At shutdown, after every component, the session closes the service's standard input. This works the same on every platform."; (session -> service)[1].style.opacity: 1}
-  5: {label: "The service cleans up and exits."; (service -> service)[0].style.opacity: 1}
-}
-```
+local machine.
+[Services](../explanation/services.md#launched-and-attached-services) shows
+how the session starts and stops it.
 
 === "caproto"
 

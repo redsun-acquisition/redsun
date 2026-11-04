@@ -311,7 +311,6 @@ of it from the next state.
 
 - [How to run a plan from a presenter](../how-to/run-a-plan.md)
 - [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
-- [How to follow a plan action from a view](../how-to/follow-a-plan-action.md)
 - [`engine/actions` API](../reference/api/engine.md#actions)
 - [`engine/plan_stubs` API](../reference/api/engine.md#plan-stubs)
 - [`presenter/plan_spec` API](../reference/api/presenter.md#plan-specification)
