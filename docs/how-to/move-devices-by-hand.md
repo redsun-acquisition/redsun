@@ -21,7 +21,7 @@ script, and the whole script is at the end.
 
 The positioner looks for axes in every device of the session and in every
 device below it. An axis is a piece of a device that `set` moves, `locate`
-reports and `subscribe` follows, which means it satisfies `AsyncLocatable` from
+reports and `subscribe_reading` follows, which means it satisfies `AsyncLocatable` from
 `ophyd-async` and `Subscribable` from `bluesky`, and it isn't a signal. The
 search stops at each axis it finds, so the signals of an axis never show up as
 axes.
