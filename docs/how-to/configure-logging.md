@@ -14,39 +14,47 @@ passes each one on to several places. Point at a shape to read more:
 
 ```d2 title="Where a log record goes"
 ...@diagrams/style
-direction: right
-component: "your component\nself.logger" {class: step}
-service: "launched service\nredsun.service.<name>" {
+direction: down
+service: "launched service" {
   class: process
-  tooltip: The session logs each line the service prints under this logger. A line that is a JSON log record keeps its level, time and traceback. Any other line is logged at DEBUG.
+  tooltip: The session logs each line the service prints under the logger redsun.service.NAME. A line that is a JSON log record keeps its level, time and traceback. Any other line is logged at DEBUG.
 }
+component: "your component\nself.logger" {class: step}
+service_file: "service log file" {class: file}
 redsun: "redsun logger\nINFO and above" {
   class: step
   tooltip: The level of this logger decides which records exist. INFO unless you set another.
 }
-console: "console\nsys.stdout" {class: step}
-view: "LogView" {
-  class: step
-  tooltip: A built-in Qt view. It reads a buffer that keeps the latest records, so it shows those of the build too.
-}
-app_file: "session log file" {
-  class: file
-  tooltip: Opened by the session when the build reads the configuration, closed in shutdown. It takes no service records.
-}
-service_file: "service log file" {class: file}
-yours: "handlers you add" {class: step}
-root: "root logger" {
-  class: step
-  tooltip: The redsun logger propagates, so a handler on the root logger receives its records too.
+outputs: "where its records go" {
+  grid-rows: 3
+  grid-columns: 2
+  grid-gap: 24
+  console: "console\nsys.stdout" {class: step; width: 200; height: 70}
+  view: "LogView" {
+    class: step
+    width: 200
+    height: 70
+    tooltip: A built-in Qt view. It reads a buffer that keeps the latest records, so it shows those of the build too.
+  }
+  app_file: "session log file\napplication records" {
+    class: file
+    width: 200
+    height: 70
+    tooltip: Opened by the session when the build reads the configuration, closed in shutdown. It takes no service records.
+  }
+  yours: "handlers you add\nwith add_handler" {class: step; width: 200; height: 70}
+  root: "root logger\nby propagation" {
+    class: step
+    width: 200
+    height: 70
+    tooltip: The redsun logger propagates, so a handler on the root logger receives its records too.
+  }
+  gap: {class: gap; width: 200; height: 70}
 }
 component -> redsun
-redsun -> console
-redsun -> view
-redsun -> app_file: "application\nrecords"
 service -> service_file
 service -> redsun: "propagates"
-redsun -> yours: add_handler
-redsun -> root: "propagates"
+redsun -> outputs
 ```
 
 Each line on the console starts with the time, the level, and the class and
