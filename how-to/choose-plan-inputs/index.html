@@ -6315,7 +6315,7 @@ started from code gets the same protection:</p>
 </table>
 <p>The limits work inside other types too, so <code>list[Annotated[float, Ge(0)]]</code>
 limits every item. A <code>float</code> with no limit can take any value, and an <code>int</code> any
-value a 32-bit integer can hold.</p>
+value a 32-bit integer can hold, or more when its limit is wider.</p>
 <div class="admonition warning">
 <p class="admonition-title">A default that breaks its own limits drops the plan</p>
 <p>The session leaves the plan out when it builds, and the log says which
@@ -6324,6 +6324,11 @@ limit the default breaks. Pick a default inside the limits.</p>
 <p>A <code>magicgui</code> option dict in the annotation still shapes the input, for example
 <code>{"widget_type": "Slider"}</code>. Where it gives a bound that a limit also gives,
 the limit wins.</p>
+<p>The <code>widget_type</code> can also be a <code>magicgui</code> widget class, so a plan can take an
+input you wrote yourself: <code>Annotated[int, {"widget_type": MyEdit}]</code>. When the
+input belongs to a type of yours, register it once with
+<code>magicgui.register_type(MyType, widget_type=MyEdit)</code>, and every parameter of
+that type gets it, inside a list too.</p>
 <h2 id="leave-a-parameter-out">Leave a parameter out<a class="headerlink" href="#leave-a-parameter-out" title="Permanent link">&para;</a></h2>
 <p>The plan widget leaves out a parameter no input can show, such as
 <code>md: dict[str, Any] | None = None</code>, and the plan keeps its default. Without a

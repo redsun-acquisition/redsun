@@ -98,4 +98,15 @@ classes: {
   hidden: {
     style.opacity: 0
   }
+  # ports of a component's block, listed as [<kind>; port-left] or
+  # [<kind>; port-right]: markdown-d2 moves a shape carrying a port class onto
+  # its block's edge, and these two put the name inside the block
+  port-left: {label.near: outside-right-center}
+  port-right: {label.near: outside-left-center}
+  # hollow for what a component takes in, filled for what it gives out; a
+  # filled marker is filled by its stroke, which follows the dark theme
+  asks: {shape: circle; width: 16; height: 16; style.fill: transparent}
+  shares: {shape: circle; width: 8; height: 8; style: {fill: transparent; stroke-width: 8}}
+  slot: {shape: square; width: 16; height: 16; style.fill: transparent}
+  signal: {shape: square; width: 8; height: 8; style: {fill: transparent; stroke-width: 8}}
 }
