@@ -144,6 +144,7 @@ row free but disables Stop and Save on the box until the plan ends. The
 presenter also refuses moves and configuration writes for a locked axis, a
 go-to already waiting included. To stop the device, stop the plan, because the
 engine stops every device the plan moved.
+
 The engine isn't a session component, so you make these links in `wire()`, from
 the presenter that holds the engine:
 
@@ -151,11 +152,9 @@ the presenter that holds the engine:
 --8<-- "docs/examples/positioner.py:wire-locks"
 ```
 
-With the built-in acquisition stack, pairing its presenter with the view,
-`- [acquisition, positioner_view]`, makes the view's link, and pairing it
-with the presenter, `- [acquisition, positioner]`, makes the presenter's.
-[Run plans from the window](run-plans-from-the-window.md#share-the-engine)
-shows how.
+With the built-in acquisition stack, a pairing with each of the two makes
+these links instead; see
+[Share the engine](run-plans-from-the-window.md#share-the-engine).
 
 ## Use the view
 

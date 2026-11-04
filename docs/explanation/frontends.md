@@ -151,41 +151,12 @@ The [Qt binding](glossary.md#qt-binding) is chosen with `QT_API`, read by
 ### Hook points
 
 A [hook](glossary.md#hook) acts at a fixed moment of a Qt session's life
-without changing what the session builds. The five
-[hook points](glossary.md#hook-point) run in this order; point at one to read
-what it receives:
-
-```d2 title="The hook points of a Qt session"
-...@diagrams/style
-grid-rows: 2
-grid-columns: 3
-grid-gap: 60
-create: "create_application\nmake the QApplication\nyourself" {
-  class: step
-  tooltip: Called with the command-line arguments, when no QApplication exists yet. It returns the QApplication.
-}
-configure: "configure_application\nset a style or a font" {
-  class: step
-  tooltip: Called with the QApplication, before any view is made.
-}
-during: "during_build\nshow progress while\nthe build runs" {
-  class: step
-  tooltip: Called with the QApplication. It wraps the build steps, from services to report.
-}
-close: "confirm_close\nanswer whether the\nwindow may close" {
-  class: step
-  tooltip: Called with nothing, when the window is asked to close. It answers in place of the question about unsaved changes.
-}
-shown: "the window is shown\nand the event loop runs" {class: note}
-main: "configure_main_view\nchange the window\nbefore it is shown" {
-  class: step
-  tooltip: Called with the main window, in the presentation step, once the views are in place.
-}
-create -> configure -> during -> main -> shown -> close
-```
-
-[Install hooks](../how-to/install-hooks.md) shows how. A session with no
-frontend calls no hook points, so it refuses a hook declared on it.
+without changing what the session builds. A Qt session has five
+[hook points](glossary.md#hook-point), from making the `QApplication` to
+answering whether the window may close.
+[Install hooks](../how-to/install-hooks.md#pick-a-hook-point) lists them, with
+what each receives and when it runs. A session with no frontend calls no hook
+points, so it refuses a hook declared on it.
 
 ## Choosing the frontend from a file
 

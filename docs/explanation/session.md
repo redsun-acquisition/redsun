@@ -405,8 +405,7 @@ steps: {
 }
 ```
 
-The connections go first, so no signal calls a slot of a component that is
-shutting down. A build that fails halfway runs the same releases, so it never
+A build that fails halfway runs the same releases, so it never
 leaves a service running. You can call `shutdown` twice, and build the session
 again afterwards.
 
@@ -559,15 +558,6 @@ name -> folder
 name -> app
 name -> settings
 ```
-
-## Log files
-
-Each run writes its log to a file under `logs/<session>` in the root folder the
-session's data goes under, and each launched service writes to a file of its
-own beside it. The files follow the root if it moves while the session runs,
-and close last at shutdown.
-[Configure logging](../how-to/configure-logging.md#find-a-sessions-log-file)
-shows the layout.
 
 ## Session protocols
 

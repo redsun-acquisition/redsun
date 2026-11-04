@@ -104,10 +104,8 @@ A component is a [device](#device), a [presenter](#presenter) or a
 
 The configuration is the set of settings a session is built from. It comes
 from one or more session files or Python dictionaries, applied in order, so
-that a later one overrides an earlier one. Three keys say what kind of
-session it is, `schema_version`, `frontend` and `services.transport`, so every
-source that gives one of them must give the same value, or the session stops
-with an error.
+that a later one overrides an earlier one, except for the keys that say what
+kind of session it is; see [Merging the sources](session.md#merging-the-sources).
 
 ### Continuous acquisition
 

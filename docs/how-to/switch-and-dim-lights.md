@@ -132,11 +132,9 @@ yield self.ctrl.engine.sig_locks_changed, self.lights_view.set_locked
 yield self.ctrl.engine.sig_locks_changed, self.lights.set_locked
 ```
 
-With the built-in acquisition stack, pairing its presenter with the view,
-`- [acquisition, lights_view]`, makes the view's link, and pairing it with
-the presenter, `- [acquisition, lights]`, makes the presenter's.
-[Run plans from the window](run-plans-from-the-window.md#share-the-engine)
-shows how.
+With the built-in acquisition stack, a pairing with each of the two makes
+these links instead; see
+[Share the engine](run-plans-from-the-window.md#share-the-engine).
 
 ## Customize it
 

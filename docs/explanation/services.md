@@ -95,11 +95,10 @@ class MyApp(QtSession):
     `read` and `set`, so a child given one of them raises a `NameError` when
     the device is made. Name the stage after what it moves, as `xy` here.
 
-The session then holds every device of the tree, under the name `ophyd-async`
-gives it, such as `microscope-xy`, so the positioner finds the stage's axes
-and a plan can be offered the camera.
-[Asking about devices](questions.md#asking-about-devices) says how components
-see them. A device can also declare its children with annotations, in the
+The session then holds every device of the tree, so the positioner finds the
+stage's axes and a plan can be offered the camera;
+[Asking about devices](questions.md#asking-about-devices) gives their names. A
+device can also declare its children with annotations, in the
 `ophyd-async` style. An `EpicsDevice` creates them when it is made, or while it
 connects when it asks the IOC for its structure (`with_pvi=True`). The session
 reads the tree after connecting, so it finds them either way.

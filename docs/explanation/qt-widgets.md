@@ -59,15 +59,13 @@ steps: {
 }
 ```
 
-Each input starts from its default and returns a value of the annotated type.
-Inputs nest, so a `dict[str, list[float]]` becomes a table whose values are
-lists. While an input holds a value the plan can't take, such as a repeated
-key or no device chosen, Run stays disabled and the first of
-`PlanWidget.problems` shows under the parameters.
-[How to run a plan from a presenter](../how-to/run-a-plan.md),
+Each input starts from its default and returns a value of the annotated type,
+and Run stays disabled while an input holds a value the plan can't take.
+[How to choose the inputs of a plan](../how-to/choose-plan-inputs.md) shows the
+input each annotation gets and why Run may stay disabled, and
+[How to run a plan from a presenter](../how-to/run-a-plan.md) and
 [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
-and [How to choose the inputs of a plan](../how-to/choose-plan-inputs.md)
-show them in use.
+show plan widgets in use.
 
 ### Document callbacks
 

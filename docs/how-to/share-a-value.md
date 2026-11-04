@@ -107,8 +107,8 @@ providers:
 
 ## Mistakes to avoid
 
-- The type is the key. Two components can't share the same type, so give
-  distinct values distinct types.
+- The type is the key, so give distinct values distinct types. See
+  [Limitations](../explanation/limits.md#can-two-components-share-a-type).
 - A `provides` method returning `X | None` doesn't make an optional `X`. See
   [Limitations](../explanation/limits.md#can-a-shared-value-be-optional).
 - Import the type normally, not under `if TYPE_CHECKING:`, since the session

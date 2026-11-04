@@ -152,44 +152,30 @@ self._writer.declare("mask", shape=(512, 512), dtype="uint8", store=store_uri)
 ## Declaring products up front
 
 Both `derive` and `declare` belong in the constructor, before the run starts,
-because the stores can't grow new arrays later. Step through a run to see when
-each part happens:
+because the stores can't grow new arrays later:
 
 ```d2 title="A product over one run"
 ...@diagrams/style
-label: "derive and declare go in the constructor, before the run starts."
 shape: sequence_diagram
 component: "component"
 writer: "Writer"
 store: "the camera's store"
 component -> writer: "derive, in the constructor"
-component -> writer: "documents: start,\ndescriptor, stream_resource" {style.opacity: 0}
-component -> writer: "first append or write" {style.opacity: 0}
-writer -> store: "open the stream:\nsize every array" {style.opacity: 0}
-component -> writer: "append a product declared\nsince: WriterError" {style.opacity: 0}
-component -> writer: "documents: stop" {style.opacity: 0}
-writer -> store: "close the stream,\nwrite the metadata" {style.opacity: 0}
-steps: {
-  1: {
-    label: "The component forwards the run's first documents. The writer learns each product's layout and store, but opens nothing yet."
-    (component -> writer)[1].style.opacity: 1
-  }
-  2: {
-    label: "The first append or write opens the store's stream with every product known by then. acquire-zarr sizes the arrays once, at this moment, and ome-writers allocates every frame of an image."
-    (component -> writer)[2].style.opacity: 1
-    (writer -> store)[0].style.opacity: 1
-    (writer -> store)[0].tooltip: The stream opens with every product of that store known by then. acquire-zarr sizes a store's arrays once, at this moment, and ome-writers allocates every frame of an image.
-  }
-  3: {
-    label: "A product declared after the stream opened can't join it, so append raises WriterError."
-    (component -> writer)[3].style.opacity: 1
-  }
-  4: {
-    label: "At the run's stop document, the writer closes the stream and writes the metadata: the mapping given to write, and one naming the run, the source, the store and the time."
-    (component -> writer)[4].style.opacity: 1
-    (writer -> store)[1].style.opacity: 1
-    (writer -> store)[1].tooltip: The metadata is the mapping given to write, and a redsun mapping naming the run, the source, the store and the time.
-  }
+component -> writer: "documents: start,
+descriptor, stream_resource" {
+  tooltip: The writer learns each product's layout and store, but opens nothing yet.
+}
+component -> writer: "first append or write"
+writer -> store: "open the stream:
+size every array" {
+  tooltip: The stream opens with every product of that store known by then. acquire-zarr sizes a store's arrays once, at this moment, and ome-writers allocates every frame of an image.
+}
+component -> writer: "append a product declared
+since: WriterError"
+component -> writer: "documents: stop"
+writer -> store: "close the stream,
+write the metadata" {
+  tooltip: The metadata is the mapping given to write, and a redsun mapping naming the run, the source, the store and the time.
 }
 ```
 
