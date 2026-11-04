@@ -41,39 +41,9 @@ service needs, plus the `ophyd-async` extra for the device side:
 A service that `redsun` launches does three things besides serving its
 [process variables](../explanation/glossary.md#process-variable): it prints a
 line when it is ready, stops when the session asks, and listens only on the
-local machine. Step through what the session and the service tell each other:
-
-```d2 title="A launched service, from start to stop"
-...@diagrams/style
-label: "In its first build step, the session starts the service as a process of its own, with python -m and the module the declaration names."
-shape: sequence_diagram
-session: session {
-  class: step
-  tooltip: The session starts every launched service in its first build step, and stops them after every component at shutdown.
-}
-device: device {class: step}
-service: service {
-  class: process
-  tooltip: A process of its own, started as python -m with the module the declaration names.
-}
-session -> service: "start python -m <module> <args>"
-service -> session: "print the ready text" {style.opacity: 0}
-session -> device: "build it with the prefix,\nthen connect it" {style.opacity: 0}
-device -> service: "read and write the process\nvariables under the prefix" {
-  style.opacity: 0
-}
-session -> service: "close standard input,\non every platform" {
-  style.opacity: 0
-}
-service -> service: "clean up and exit" {style.opacity: 0}
-steps: {
-  1: {label: "The session waits until the service prints its ready text."; (service -> session)[0].style.opacity: 1}
-  2: {label: "The session builds the device with the service's prefix, then connects it."; (session -> device)[0].style.opacity: 1}
-  3: {label: "The device reads and writes the process variables under that prefix."; (device -> service)[0].style.opacity: 1}
-  4: {label: "At shutdown, after every component, the session closes the service's standard input. This works the same on every platform."; (session -> service)[1].style.opacity: 1}
-  5: {label: "The service cleans up and exits."; (service -> service)[0].style.opacity: 1}
-}
-```
+local machine.
+[Services](../explanation/services.md#launched-and-attached-services) shows
+how the session starts and stops it.
 
 === "caproto"
 
@@ -132,29 +102,26 @@ steps: {
     - If serving fails first, the service raises the error and the session
       logs it.
     - [`configure_logging`][redsun.services.configure_logging] sends the
-      records of `fastcs` to the session at the level the session records
-      at. The session reads every line the service prints, and logs a line
-      that isn't one of these records at `DEBUG`. So don't call
-      `fastcs.logging.configure_logging`, the `fastcs` function of the same
-      name, after the `redsun` one: it replaces the records with coloured
-      text, which the session then logs as `DEBUG` lines.
+      records of `fastcs` to the session; see [Log from it](#log-from-it).
+      Don't call `fastcs.logging.configure_logging`, the `fastcs` function of
+      the same name, after it: that one replaces the records with coloured
+      text, which the session logs as `DEBUG` lines.
     - Run alone, the service listens on every network interface of the
       machine. Launched by a session, it listens on `127.0.0.1` only, since
       the session sets `EPICS_PVAS_INTF_ADDR_LIST`; see
       [Environment variables](../reference/environment.md).
     - `fastcs` takes a prefix of letters, digits, `-` and `_`. `STAGE:` is
       accepted, since the last colon is taken off. `LAB:STAGE:` is refused.
-    - Over PVAccess a prefix has to be the only one of its name on the
-      machine: two sessions serving the same one find each other's records.
 
     `fastcs` prints no line of its own when it starts to serve, so the
     service has to ask.
     [`ready_when_reachable`][redsun.services.ready_when_reachable] keeps asking
     for the record in which `fastcs` lists the attributes of the controller.
     When it gets an answer, it prints the ready text the declaration gives.
-    Any server serving a record of that name can answer, so if another
-    session serves the same prefix, this service counts as ready too early.
-    Give each service a prefix no other service on the machine uses.
+    Any server serving a record of that name can answer, so a service whose
+    prefix another session also serves counts as ready too early, and the two
+    find each other's records. Give each service a prefix no other service on
+    the machine uses.
 
 Since the session asks a service to stop by closing its standard input, a
 service that blocks in a call of its own, as `caproto`'s `run` does, calls
@@ -246,8 +213,7 @@ Declare the service in the session class, beside the device that talks to it:
     --8<-- "docs/examples/device_fastcs.py:declare"
     ```
 
-    The line the session waits for is printed by the service, through
-    `ready_when_reachable`. `config` names the PVAccess
+    `config` names the PVAccess
     [transport](../explanation/glossary.md#transport); see
     [Name the transport](#name-the-transport).
 
@@ -276,9 +242,7 @@ that takes longer to start gives `startup_timeout` in seconds.
 A service that prints no line of its own once it serves calls
 [`ready`][redsun.services.ready], which prints the text the declaration gives,
 so you write the text in one place. A PVAccess service can call
-[`ready_when_reachable`][redsun.services.ready_when_reachable] with one of its
-own process variables instead, and it prints the text once that variable
-answers.
+`ready_when_reachable` instead, as the `fastcs` service above does.
 
 `Launch` declares a service the session starts and stops. `Attach` declares
 one already running elsewhere: the session starts and stops nothing, and its
@@ -455,11 +419,10 @@ output.
 ## Log from it
 
 The service's output is logged under `redsun.service.<name>`, and written to
-a log file of its own. A service calling
-[`configure_logging`][redsun.services.configure_logging] at startup logs at
-the level the session records at, and each record keeps its level instead of
-arriving as a `DEBUG` line; see
-[Log from a service](configure-logging.md#log-from-a-service).
+a log file of its own. Call
+[`configure_logging`][redsun.services.configure_logging] at startup, and each
+record keeps its level instead of arriving as a `DEBUG` line;
+[Log from a service](configure-logging.md#log-from-a-service) has the details.
 
 ## Quiet the type checker for `fastcs`
 

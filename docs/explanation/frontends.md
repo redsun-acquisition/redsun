@@ -19,51 +19,9 @@ toolkit, which a session without a window doesn't install.
 
 A view says where it wants to be shown, and the frontend decides whether it
 can. The core defines only the `Placement` base class; the Qt frontend defines
-docks and menus. Point at a placement to read what it needs:
-
-```d2 title="Where Qt puts a view"
-...@diagrams/style
-vars: {
-  dock: "Holds a QWidget, in a dock against that edge. Docks given the same group on one edge are tabbed together. In a session file: left, right, top, bottom, or {dock: left, group: name}."
-}
-window: "main window" {
-  grid-rows: 5
-  grid-gap: 12
-  menu: "MenuItem(\"File\")\nan entry in the File menu" {
-    class: step
-    tooltip: "Holds a QAction. The menu is made if the window has none of that name. In a session file: {menu: File}."
-  }
-  toolbar: "ToolBarItem(\"Main\")\nan entry in the Main toolbar" {
-    class: step
-    tooltip: "Holds a QAction. The toolbar is made if the window has none of that name. In a session file: {toolbar: Main}."
-  }
-  dock_top: 'Dock("top")' {
-    class: step
-    tooltip: ${dock}
-  }
-  middle: "" {
-    grid-columns: 3
-    grid-gap: 12
-    style.opacity: 0
-    dock_left: 'Dock("left")' {
-      class: step
-      tooltip: ${dock}
-    }
-    central: "Central()\nthe main area" {
-      class: step
-      tooltip: "Holds a QWidget. When several views ask for it, each gets a tab. In a session file: central."
-    }
-    dock_right: 'Dock("right")' {
-      class: step
-      tooltip: ${dock}
-    }
-  }
-  dock_bottom: 'Dock("bottom")' {
-    class: step
-    tooltip: ${dock}
-  }
-}
-```
+docks, the centre, menus and toolbars, and
+[How to place a view](../how-to/place-a-view.md) shows where each one puts a
+view.
 
 In `Frontend.requires`, a frontend lists what each placement must hold: Qt asks
 for a `QWidget` in a dock or in the centre, and a `QAction` in a menu or
@@ -151,41 +109,12 @@ The [Qt binding](glossary.md#qt-binding) is chosen with `QT_API`, read by
 ### Hook points
 
 A [hook](glossary.md#hook) acts at a fixed moment of a Qt session's life
-without changing what the session builds. The five
-[hook points](glossary.md#hook-point) run in this order; point at one to read
-what it receives:
-
-```d2 title="The hook points of a Qt session"
-...@diagrams/style
-grid-rows: 2
-grid-columns: 3
-grid-gap: 60
-create: "create_application\nmake the QApplication\nyourself" {
-  class: step
-  tooltip: Called with the command-line arguments, when no QApplication exists yet. It returns the QApplication.
-}
-configure: "configure_application\nset a style or a font" {
-  class: step
-  tooltip: Called with the QApplication, before any view is made.
-}
-during: "during_build\nshow progress while\nthe build runs" {
-  class: step
-  tooltip: Called with the QApplication. It wraps the build steps, from services to report.
-}
-close: "confirm_close\nanswer whether the\nwindow may close" {
-  class: step
-  tooltip: Called with nothing, when the window is asked to close. It answers in place of the question about unsaved changes.
-}
-shown: "the window is shown\nand the event loop runs" {class: note}
-main: "configure_main_view\nchange the window\nbefore it is shown" {
-  class: step
-  tooltip: Called with the main window, in the presentation step, once the views are in place.
-}
-create -> configure -> during -> main -> shown -> close
-```
-
-[Install hooks](../how-to/install-hooks.md) shows how. A session with no
-frontend calls no hook points, so it refuses a hook declared on it.
+without changing what the session builds. A Qt session has five
+[hook points](glossary.md#hook-point), from making the `QApplication` to
+answering whether the window may close.
+[Install hooks](../how-to/install-hooks.md#pick-a-hook-point) lists them, with
+what each receives and when it runs. A session with no frontend calls no hook
+points, so it refuses a hook declared on it.
 
 ## Choosing the frontend from a file
 

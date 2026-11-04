@@ -46,7 +46,6 @@ nav = [
             "how-to/run-a-plan.md",
             "how-to/choose-plan-inputs.md",
             "how-to/write-a-continuous-plan.md",
-            "how-to/follow-a-plan-action.md",
             "how-to/show-plan-progress.md",
         ]},
         { "Use the built-in components" = [
@@ -104,7 +103,6 @@ nav = [
             "explanation/qt-widgets.md",
         ]},
         { "Data" = [
-            "explanation/catalog.md",
             "explanation/derived-products.md",
         ]},
         { "Decisions" = [

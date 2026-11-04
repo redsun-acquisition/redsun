@@ -17,11 +17,10 @@ presenters:
 ```
 
 `plugin_name` and `plugin_id` say which class to make, and every other key is
-an argument to its constructor. Step through an entry becoming a presenter:
+an argument to its constructor:
 
 ```d2 title="From a session file entry to a component"
 ...@diagrams/style
-label: "A session file names a component by its plugin and its id."
 direction: down
 entry: |yaml
   # session.yaml
@@ -35,37 +34,25 @@ point: |toml
   # pyproject.toml of the mylab package
   [project.entry-points."redsun.plugins"]
   mylab = "redsun.yaml"
-| {class: hidden}
+| {class: step}
 manifest: |yaml
   # redsun.yaml inside the mylab package
   presenters:
     motor: mylab.presenters:MotorPresenter
-| {class: hidden}
+| {class: step}
 make: |python
   from mylab.presenters import MotorPresenter
   motor_ctrl = MotorPresenter(name="motor_ctrl", step=2.0)
-| {class: hidden}
-entry -> point: "plugin_name" {style.opacity: 0}
-point -> manifest: "the manifest it names" {style.opacity: 0}
-manifest -> make: "plugin_id" {style.opacity: 0}
-steps: {
-  1: {
-    label: "plugin_name is the name of an entry point in the redsun.plugins group, which names the manifest inside the installed package."
-    point.class: step
-    (entry -> point)[0].style.opacity: 1
-  }
-  2: {
-    label: "The manifest maps each id to a class, written as module:ClassName."
-    manifest.class: step
-    (point -> manifest)[0].style.opacity: 1
-  }
-  3: {
-    label: "The session imports the class only now, because a session names it, and passes every other key of the entry to the constructor."
-    make.class: current
-    (manifest -> make)[0].style.opacity: 1
-  }
-}
+| {class: step}
+entry -> point: "plugin_name"
+point -> manifest: "the manifest it names"
+manifest -> make: "plugin_id"
 ```
+
+`plugin_name` is the name of an entry point in the `redsun.plugins` group,
+which names the manifest inside the installed package. The manifest maps each
+id to a class, written as `module:ClassName`, and the session imports that
+class only when a session names it.
 
 ## The manifest
 
@@ -114,7 +101,6 @@ class MyApp(QtSession):
 
 ```d2 title="A session built from a class and a file"
 ...@diagrams/style
-label: "The class and the file both contribute to one session."
 direction: right
 app: |python
   class MyApp(QtSession):
@@ -133,30 +119,12 @@ file: |yaml
       plugin_id: logs
 | {class: step}
 session: "the session" {
-  motor_ctrl: {class: hidden; width: 160}
-  logs: {class: hidden; width: 160}
+  motor_ctrl: {class: step; width: 160}
+  logs: {class: step; width: 160}
 }
-app -> session.motor_ctrl: "declares" {style.opacity: 0}
-file -> session.motor_ctrl: "configures" {style.opacity: 0}
-file -> session.logs: "adds" {style.opacity: 0}
-steps: {
-  1: {
-    label: "The class declares motor_ctrl and the class it is made from."
-    session.motor_ctrl.class: step
-    (app -> session.motor_ctrl)[0].style.opacity: 1
-  }
-  2: {
-    label: "The file's entry of the same name configures it, with no plugin_name needed."
-    session.motor_ctrl.class: current
-    (file -> session.motor_ctrl)[0].style.opacity: 1
-  }
-  3: {
-    label: "An entry the class doesn't declare adds a component, naming its plugin with both plugin_name and plugin_id."
-    session.motor_ctrl.class: step
-    session.logs.class: current
-    (file -> session.logs)[0].style.opacity: 1
-  }
-}
+app -> session.motor_ctrl: "declares"
+file -> session.motor_ctrl: "configures"
+file -> session.logs: "adds"
 ```
 
 When a file entry has the same name as a declaration, it configures that

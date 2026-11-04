@@ -160,19 +160,9 @@ asks for one of a later [layer](glossary.md#layer), before anything is built.
 ### Sharing a value
 
 A component offers a [shared value](glossary.md#shared-value) to the others by
-marking a method with [`provides`][redsun.provides], and the method's return
-type is what the others ask for:
-
-```python
-class MotorPresenter:
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self._readings = MotorReadings()
-
-    @provides
-    def readings(self) -> MotorReadings:
-        return self._readings
-```
+marking a method with [`provides`][redsun.provides], as `readings` is marked in
+the [block above](#a-component-as-a-block), and the method's return type is
+what the others ask for:
 
 ```d2 title="How a shared value reaches another component"
 ...@diagrams/style
@@ -186,9 +176,9 @@ call -> value
 value -> roi: "by its type"
 ```
 
-A type names one value, so two components sharing the same type stop the
-build with a `TypeError`. [Share a value](../how-to/share-a-value.md) covers
-optional values too.
+A type names one value, so two components can't share the same type; see
+[Limitations](limits.md#can-two-components-share-a-type).
+[Share a value](../how-to/share-a-value.md) covers optional values too.
 
 ### Using a protocol without importing redsun
 
@@ -272,9 +262,9 @@ device, including one whose first parameter is `prefix`, except one that takes
 
 You can declare the whole setup as one root device, each piece as a device of
 its own, or a mix of both. Either way, the session also holds every device
-below each declared one, so a stage inside a microscope reaches the
-positioner and the plans. [Devices and services](services.md#devices-and-services)
-shows a root device.
+below each declared one, as
+[Asking about devices](questions.md#asking-about-devices) explains, and
+[Devices and services](services.md#devices-and-services) shows a root device.
 
 ### Connecting
 
@@ -308,7 +298,8 @@ A service holding hardware, such as a camera, can let go of it and keep
 running if it offers a command for that as a
 [process variable](glossary.md#process-variable). When the user asks, your
 presenter triggers that command through the service's devices, which stay
-connected; the session has no standby step of its own.
+connected. The session has no step of its own for this yet; see
+[Not supported yet](services.md#not-supported-yet).
 
 ## Presenters
 
@@ -385,21 +376,12 @@ class MyLaser(StandardReadable):
         await self.intensity.set(0)
 ```
 
-```d2 title="The order components shut down in"
-...@diagrams/style
-direction: right
-components: "presenters and views\nnewest first" {class: step}
-devices: "devices" {
-  class: step
-  tooltip: "Every device that connected, and every device declared with autoconnect=False, since a component may have connected it. A device that didn't connect is left out of the session and never shut down, since it would write to hardware that never answered."
-}
-services: "services stop" {class: step}
-components -> devices -> services
-```
-
-The devices go after every presenter and view, which may still use them in
-their own `shutdown`, and before the services stop, so each device can still
-reach its service.
+The session calls the `shutdown` of every presenter and view, newest first,
+then of every device, and then stops the services, so a presenter can still
+use its devices and a device can still reach its service.
+[Shutting down](session.md#shutting-down) shows the whole order. A device that
+didn't connect is left out of the session and never shut down, since it would
+write to hardware that never answered.
 
 ## Dataclasses and pydantic models
 

@@ -23,8 +23,8 @@ The positioner works with any device that `ophyd-async` can move and that
 reports its position as it changes. Your three stages already qualify, so you
 don't change any of them. Since [Writing your first session](first-session.md),
 each one has been a `StandardMovable`, which gives it the `set`, `locate`,
-`stop` and `subscribe` methods the positioner uses. The positioner replaces the
-nudge presenter and view, and nothing else in the session.
+`stop` and `subscribe_reading` methods the positioner uses. The positioner
+replaces the nudge presenter and view, and nothing else in the session.
 
 Open `first_session.py`, and add these imports below the ones it has:
 

@@ -50,11 +50,10 @@ they belong to; no central list names them.
 
 The presenter asks the session for every `HasPlans`, so a session file that
 adds such a component adds its plans too, with no change to the presenter
-([Questions](questions.md)). Step through a plan reaching its widget:
+([Questions](questions.md)). Point at a box to read what it does:
 
-```d2 title="From a plan to its widget"
+```d2 title="Where a session's plans go"
 ...@diagrams/style
-label: "A component offers its plans through plan_map, which returns each one under its name as a PlanEntry."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 80
@@ -62,32 +61,21 @@ component: "component\nplan_map()" {
   class: step
   tooltip: Any component with a plan_map method satisfies HasPlans. It returns each plan under its name, as a PlanEntry.
 }
-presenter: "presenter\nholds the RunEngine" {class: hidden}
-widget: "plan widget\nin a view" {class: hidden}
-spec: "PlanSpec\none per plan" {class: hidden}
-component -> presenter: "plans" {style.opacity: 0}
-presenter -> spec: "create_plan_spec" {style.opacity: 0}
-spec -> widget: "controls" {style.opacity: 0}
-steps: {
-  1: {
-    label: "In setup, the presenter asks the session for every component that satisfies HasPlans, and keeps the plans they offer."
-    presenter.class: step
-    presenter.tooltip: In setup, the presenter asks the session for every component that satisfies HasPlans, and keeps the plans they offer.
-    (component -> presenter)[0].style.opacity: 1
-  }
-  2: {
-    label: "create_plan_spec reads each plan's signature and type hints into a PlanSpec, a description of every parameter."
-    spec.class: step
-    spec.tooltip: create_plan_spec reads the plan's signature and type hints into a description of each parameter.
-    (presenter -> spec)[0].style.opacity: 1
-  }
-  3: {
-    label: "A view builds a plan widget from each PlanSpec: one control per parameter, and a list of devices for each device parameter."
-    widget.class: step
-    widget.tooltip: The view builds one control per parameter, and a list of devices for each device parameter.
-    (spec -> widget)[0].style.opacity: 1
-  }
+presenter: "presenter\nholds the RunEngine" {
+  class: step
+  tooltip: In setup, the presenter asks the session for every component that satisfies HasPlans, and keeps the plans they offer.
 }
+widget: "plan widget\nin a view" {
+  class: step
+  tooltip: The view builds one control per parameter, and a list of devices for each device parameter.
+}
+spec: "PlanSpec\none per plan" {
+  class: step
+  tooltip: create_plan_spec reads the plan's signature and type hints into a description of each parameter.
+}
+component -> presenter: "plans"
+presenter -> spec: "create_plan_spec"
+spec -> widget: "controls"
 ```
 
 The view in [How to run a plan from a presenter](../how-to/run-a-plan.md)
@@ -213,11 +201,10 @@ declares it (name, description, button labels; a frozen dataclass with no
 state), and an `ActionManager`, owned by the component offering the plans,
 keeps each action's state for the plans to wait on. A plan names an action as
 a parameter default, such as `snap: PlanAction = SNAP`, and `create_plan_spec`
-makes its button. Step through a live view that records a frame on request:
+makes its button. Here a live view records a frame on request:
 
 ```d2 title="A continuous plan with one action"
 ...@diagrams/style
-label: "The view launches the plan. The plan waits for its action, and the ActionManager offers it to the view."
 shape: sequence_diagram
 view: "view"
 plan: "plan\non the engine's thread"
@@ -225,33 +212,15 @@ actions: "ActionManager"
 view -> plan: "toggle on: launch"
 plan -> actions: "wait(SNAP)"
 actions -> view: "snap offered"
-view -> actions: "request('snap')" {style.opacity: 0}
-actions -> plan: "wait returns 'snap'" {style.opacity: 0}
-actions -> view: "snap running" {style.opacity: 0}
-plan -> plan: "record a frame" {style.opacity: 0}
-plan -> actions: "done('snap'), then wait again" {style.opacity: 0}
-view -> plan: "toggle off: stop" {style.opacity: 0}
-steps: {
-  1: {
-    label: "The user presses the button: the view sends the request, and the presenter passes it to the ActionManager of the component that offers the plan."
-    (view -> actions)[0].style.opacity: 1
-    (view -> actions)[0].tooltip: The view emits the request, and the presenter running the plan passes it to the ActionManager of the component that offers the plan.
-  }
-  2: {
-    label: "wait returns 'snap' to the plan, and the view learns that snap is running."
-    (actions -> plan)[0].style.opacity: 1
-    (actions -> view)[1].style.opacity: 1
-  }
-  3: {
-    label: "The plan records a frame, calls done('snap'), and waits again."
-    (plan -> plan)[0].style.opacity: 1
-    (plan -> actions)[1].style.opacity: 1
-  }
-  4: {
-    label: "The user toggles the plan off: the presenter stops the RunEngine, which closes the run with the exit status success."
-    (view -> plan)[1].style.opacity: 1
-    (view -> plan)[1].tooltip: The presenter stops the RunEngine, which closes the run with the exit status success.
-  }
+view -> actions: "request('snap')" {
+  tooltip: The view emits the request, and the presenter running the plan passes it to the ActionManager of the component that offers the plan.
+}
+actions -> plan: "wait returns 'snap'"
+actions -> view: "snap running"
+plan -> plan: "record a frame"
+plan -> actions: "done('snap'), then wait again"
+view -> plan: "toggle off: stop" {
+  tooltip: The presenter stops the RunEngine, which closes the run with the exit status success.
 }
 ```
 
@@ -311,7 +280,6 @@ of it from the next state.
 
 - [How to run a plan from a presenter](../how-to/run-a-plan.md)
 - [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
-- [How to follow a plan action from a view](../how-to/follow-a-plan-action.md)
 - [`engine/actions` API](../reference/api/engine.md#actions)
 - [`engine/plan_stubs` API](../reference/api/engine.md#plan-stubs)
 - [`presenter/plan_spec` API](../reference/api/presenter.md#plan-specification)

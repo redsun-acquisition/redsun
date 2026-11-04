@@ -21,8 +21,9 @@ script, and the whole script is at the end.
 
 The positioner looks for axes in every device of the session and in every
 device below it. An axis is a piece of a device that `set` moves, `locate`
-reports and `subscribe` follows, which means it satisfies `AsyncLocatable` from
-`ophyd-async` and `Subscribable` from `bluesky`, and it isn't a signal. The
+reports and `subscribe_reading` follows, which means it satisfies
+`AsyncLocatable` from `ophyd-async` and `Subscribable` from `bluesky`, and it
+isn't a signal. The
 search stops at each axis it finds, so the signals of an axis never show up as
 axes.
 
@@ -144,6 +145,7 @@ row free but disables Stop and Save on the box until the plan ends. The
 presenter also refuses moves and configuration writes for a locked axis, a
 go-to already waiting included. To stop the device, stop the plan, because the
 engine stops every device the plan moved.
+
 The engine isn't a session component, so you make these links in `wire()`, from
 the presenter that holds the engine:
 
@@ -151,11 +153,9 @@ the presenter that holds the engine:
 --8<-- "docs/examples/positioner.py:wire-locks"
 ```
 
-With the built-in acquisition stack, pairing its presenter with the view,
-`- [acquisition, positioner_view]`, makes the view's link, and pairing it
-with the presenter, `- [acquisition, positioner]`, makes the presenter's.
-[Run plans from the window](run-plans-from-the-window.md#share-the-engine)
-shows how.
+With the built-in acquisition stack, pair the acquisition presenter with the
+view and with the presenter instead, as
+[Share the engine](run-plans-from-the-window.md#share-the-engine) shows.
 
 ## Use the view
 

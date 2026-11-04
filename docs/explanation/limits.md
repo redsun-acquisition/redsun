@@ -119,23 +119,6 @@ because each registers an application under its own name.
 
 ## What happens when a service crashes?
 
-The session logs it and emits a signal, but nothing restarts the service, so
-it stays down:
-
-```d2 title="A launched service that stops on its own"
-...@diagrams/style
-direction: right
-exit: "the service\nexits" {class: failed}
-log: "ERROR in the log:\nexit code and\nlast lines of output" {class: step}
-signal: "sig_exited\nname and code" {
-  class: step
-  tooltip: Emitted from the thread that reads the service's output.
-}
-down: "the service\nstays down" {
-  class: step
-  tooltip: Reads and writes on its devices raise TimeoutError after ten seconds, until the service is back.
-}
-exit -> log -> signal -> down
-```
-
-See [Services](services.md#unexpected-exits).
+The session logs it and emits `sig_exited`, but nothing restarts the
+service, so it stays down and reads and writes on its devices time out.
+[Unexpected exits](services.md#unexpected-exits) steps through what happens.

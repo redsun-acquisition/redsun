@@ -7,46 +7,7 @@ icon: lucide/play
 Running a [plan](../explanation/glossary.md#plan) takes three components: one
 offers the plan, a presenter runs it on a
 [`RunEngine`](../explanation/glossary.md#runengine), and a view shows its
-[plan widget](../explanation/glossary.md#plan-widget). Step through what the
-three components of this guide do, from the build to the end of a plan:
-
-```d2 title="From setup to a finished plan"
-...@diagrams/style
-label: "In setup, plan_ctrl asks ctrl for its plans with plan_map."
-shape: sequence_diagram
-plan_view: "plan_view\nPlanView" {class: step}
-plan_ctrl: "plan_ctrl\nPlanPresenter" {
-  class: step
-  tooltip: Owns the RunEngine.
-}
-ctrl: "ctrl\nMyController" {
-  class: step
-  tooltip: Offers its plans through plan_map.
-}
-motor: "motor\nMyMotor" {class: step}
-plan_ctrl -> ctrl: "setup: plan_map()"
-plan_view -> ctrl: "setup: plan_map(),\nthen a plan widget each" {
-  style.opacity: 0
-}
-plan_view -> plan_ctrl: "Run pressed: the view disables\nitself, sig_run(plan, values)" {
-  style.opacity: 0
-}
-plan_ctrl -> motor: "the RunEngine runs the\nplan, which moves the motor" {
-  style.opacity: 0
-}
-plan_ctrl -> plan_view: "sig_finished, whether the\nplan succeeded or failed" {
-  style.opacity: 0
-}
-plan_view -> plan_view: "enable the view" {style.opacity: 0}
-steps: {
-  1: {label: "plan_view asks ctrl for its plans too, and builds a plan widget for each."; (plan_view -> ctrl)[0].style.opacity: 1}
-  2: {label: "When the user presses Run, plan_view disables itself and emits sig_run with the plan's name and the values of its inputs."; (plan_view -> plan_ctrl)[0].style.opacity: 1}
-  3: {label: "plan_ctrl runs the plan on its RunEngine, and the plan moves the motor."; (plan_ctrl -> motor)[0].style.opacity: 1}
-  4: {label: "When the plan ends, whether it succeeded or failed, plan_ctrl emits sig_finished."; (plan_ctrl -> plan_view)[0].style.opacity: 1}
-  5: {label: "plan_view enables itself again, ready for the next run."; (plan_view -> plan_view)[0].style.opacity: 1}
-}
-```
-
+[plan widget](../explanation/glossary.md#plan-widget).
 [How presenters run plans](../explanation/plans.md) explains how the three
 components work together.
 

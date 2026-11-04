@@ -20,54 +20,26 @@ your view adds to its layout:
 
 ```d2 title="A plan widget, its view and the presenter"
 ...@diagrams/style
-label: "A plan widget runs nothing itself. Step through what happens when the user presses Run."
 direction: down
 widget: "plan widget" {class: step}
 view: {class: step}
-presenter: {class: step}
-widget -> view: "calls back" {class: hidden}
-view -> presenter: "plan name and\nPlanWidget.parameters" {class: hidden}
-presenter -> view: "started, paused,\nended" {class: hidden}
-view -> widget: "toggle, pause" {class: hidden}
-steps: {
-  1: {
-    label: "The plan widget calls the view back."
-    widget.class: current
-    (widget -> view)[0].style.opacity: 1
-  }
-  2: {
-    label: "The view sends the plan's name and PlanWidget.parameters to the presenter, which runs the plan."
-    widget.class: step
-    presenter: {
-      class: current
-      tooltip: The presenter runs the plan.
-    }
-    (view -> presenter)[0].style.opacity: 1
-  }
-  3: {
-    label: "The presenter reports back that the plan started, paused or ended."
-    presenter.class: step
-    view.class: current
-    (presenter -> view)[0].style.opacity: 1
-  }
-  4: {
-    label: "The view follows it on the widget, with toggle and pause."
-    view.class: step
-    widget.class: current
-    (view -> widget)[0].style.opacity: 1
-  }
+presenter: {
+  class: step
+  tooltip: The presenter runs the plan.
 }
+widget -> view: "calls back"
+view -> presenter: "plan name and\nPlanWidget.parameters"
+presenter -> view: "started, paused,\nended"
+view -> widget: "toggle, pause"
 ```
 
-Each input starts from its default and returns a value of the annotated type.
-Inputs nest, so a `dict[str, list[float]]` becomes a table whose values are
-lists. While an input holds a value the plan can't take, such as a repeated
-key or no device chosen, Run stays disabled and the first of
-`PlanWidget.problems` shows under the parameters.
-[How to run a plan from a presenter](../how-to/run-a-plan.md),
+Each input starts from its default and returns a value of the annotated type,
+and Run stays disabled while an input holds a value the plan can't take.
+[How to choose the inputs of a plan](../how-to/choose-plan-inputs.md) shows the
+input each annotation gets and how to read why Run is disabled, and
+[How to run a plan from a presenter](../how-to/run-a-plan.md) and
 [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
-and [How to choose the inputs of a plan](../how-to/choose-plan-inputs.md)
-show them in use.
+show plan widgets in use.
 
 ### Document callbacks
 

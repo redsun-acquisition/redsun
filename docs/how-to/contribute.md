@@ -113,10 +113,8 @@ Run every check once:
 uv run tox
 ```
 
-This runs every check CI runs: lint, type checks against both
-[Qt bindings](../explanation/glossary.md#qt-binding), the tests and the docs
-build. Each check gets its own environment built from `uv.lock`, so your
-result matches CI's. [Running the tests](#running-the-tests) explains each environment.
+This runs every check CI runs, and [Everything at once](#everything-at-once)
+lists them.
 
 ## Running the tests
 
@@ -201,18 +199,10 @@ fixtures doing this are
 [`no_automatic_collection`][redsun.testing.no_automatic_collection] and
 [`collect_after_module`][redsun.testing.collect_after_module].
 
-What it means for a test you write:
-
-- When your test checks that an object in a reference cycle was freed, call
-  `gc.collect()` in the test first. An object in no cycle is still freed the
-  moment nothing refers to it.
-- When your test turns automatic collection on or off, restore the state you
-  found before the test ends, not a fixed one. A test that leaves it on fails
-  with a message that says so
-  ([`keep_automatic_collection_off`][redsun.testing.keep_automatic_collection_off]).
-- A widget your test leaves in a reference cycle stays until the end of the
-  file. Close what you open, so a later test that looks at the application's
-  windows doesn't find yours.
+[How to test a plugin](test-a-plugin.md#load-them) lists what this means for a
+test you write, and `redsun`'s own tests follow the same rules. Close the
+widgets your test opens too, so a later test that looks at the application's
+windows doesn't find yours.
 
 ### Tests that need a container
 
@@ -334,9 +324,10 @@ From the project root:
 uv run tox -e docs
 ```
 
-This builds the site, then runs `scripts/check_xrefs.py`, which reports every
-cross-reference that resolves to nothing. `zensical build` alone passes with
-such references, so prefer the `tox` environment, which also installs what the
+This builds the site, then runs `scripts/check_xrefs.py`, which checks that
+every cross-reference found its target, every included script was read, and
+every link to a part of a page reaches it. `zensical build` alone passes
+without them, so prefer the `tox` environment, which also installs what the
 docs need from `uv.lock`.
 
 Zensical is in the `docs` dependency group, which `dev` doesn't include, so a
@@ -559,14 +550,8 @@ The tutorial scripts are type checked with the rest of the code, by
 
 ### Checking your changes
 
-```bash
-uv run tox -e docs
-```
-
-This builds the site, then checks that every cross-reference found its
-target, every included script was read, and every link to a part of a page
-reaches it. The build alone doesn't fail on any of these, which is why the
-check runs after it. See [Building the docs](#building-the-docs).
+Build and check the site with `uv run tox -e docs`, as
+[Building the docs](#building-the-docs) describes.
 
 ## Recording a design decision
 

@@ -70,7 +70,7 @@ answers the same methods as every motor in `ophyd-async`:
 
 - `set` moves it, and finishes when the move does;
 - `locate` says where it was sent and where it is;
-- `stop` stops it, and `subscribe` follows its position.
+- `stop` stops it, and `subscribe_reading` follows its position.
 
 Code that calls those methods, rather than an attribute called `position`,
 works with this stage and with any real motor you put in its place. That

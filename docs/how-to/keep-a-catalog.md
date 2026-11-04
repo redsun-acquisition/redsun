@@ -28,7 +28,13 @@ storage:
 ```
 
 The catalog lives in `<base_dir>/<session>/catalog`, beside the session's
-files. Without the extra, the session refuses to build.
+files. The session starts its server in the first build step and stops it at
+shutdown, after every component and service. Without the extra, the session
+refuses to build.
+
+A catalog holds only the runs of its own session, so to ask a question
+across sessions you open each catalog. Everything a session produced then lives under
+one directory, which you can archive or delete as a unit.
 
 The catalog reads files from `<base_dir>/<session>`. List any other directory a
 service writes to:
@@ -106,5 +112,13 @@ image = client[run_uid]["primary"]["det"].read()
 You can put a [derived product](../explanation/glossary.md#derived-product)
 into the catalog with `client[run_uid].write_array(...)`, or into the
 acquisition's store ([Write a derived product](write-a-derived-product.md)).
-For what a client can do to a registered file, see [The session
-catalog](../explanation/catalog.md).
+
+!!! warning "A client can overwrite a registered file"
+
+    Registering a file doesn't protect it: `tiled`'s `write`, `write_block`
+    and `patch` reach a registered file like any other, and
+    `management=external` forbids nothing. `write_block` is the hardest to
+    notice, since it replaces one chunk and the file still reads correctly.
+    `redsun` calls none of these, but a component holding a client can, so
+    have it write into nodes it creates, as `client[run_uid].write_array(...)`
+    does, and leave registered ones alone.
