@@ -1453,8 +1453,6 @@
       
         
       
-        
-      
     
     
     
@@ -1577,35 +1575,6 @@
     
   
   How to write a plan that runs until stopped
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../follow-a-plan-action/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6M5.1 8l-2.9-.8M6 12l-1.9 2M7.2 2.2 8 5.1M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to follow a plan action from a view
 
     
   </span>
@@ -3457,8 +3426,6 @@
       
         
       
-        
-      
     
     
     
@@ -3502,35 +3469,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../explanation/catalog/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How the session catalog works
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -6192,7 +6130,12 @@ components, because <code>redsun</code> writes no acquisition data itself
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">catalog</span><span class="p">:</span>
 </span></code></pre></div>
 <p>The catalog lives in <code>&lt;base_dir&gt;/&lt;session&gt;/catalog</code>, beside the session's
-files. Without the extra, the session refuses to build.</p>
+files. The session starts its server in the first build step and stops it at
+shutdown, after every component and service. Without the extra, the session
+refuses to build.</p>
+<p>A catalog holds only the runs of its own session, so to ask a question
+across sessions you open each catalog. Everything a session produced then lives under
+one directory, which you can archive or delete as a unit.</p>
 <p>The catalog reads files from <code>&lt;base_dir&gt;/&lt;session&gt;</code>. List any other directory a
 service writes to:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">storage</span><span class="p">:</span>
@@ -6258,9 +6201,17 @@ consolidator for <code>TiledWriter</code>.</p>
 </span></code></pre></div>
 <p>You can put a <a href="../../explanation/glossary/#derived-product">derived product</a>
 into the catalog with <code>client[run_uid].write_array(...)</code>, or into the
-acquisition's store (<a href="../write-a-derived-product/">Write a derived product</a>).
-For what a client can do to a registered file, see <a href="../../explanation/catalog/">The session
-catalog</a>.</p>
+acquisition's store (<a href="../write-a-derived-product/">Write a derived product</a>).</p>
+<div class="admonition warning">
+<p class="admonition-title">A client can overwrite a registered file</p>
+<p>Registering a file doesn't protect it: <code>tiled</code>'s <code>write</code>, <code>write_block</code>
+and <code>patch</code> reach a registered file like any other, and
+<code>management=external</code> forbids nothing. <code>write_block</code> is the hardest to
+notice, since it replaces one chunk and the file still reads correctly.
+<code>redsun</code> calls none of these, but a component holding a client can, so
+have it write into nodes it creates, as <code>client[run_uid].write_array(...)</code>
+does, and leave registered ones alone.</p>
+</div>
 
 
 

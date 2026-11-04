@@ -1442,8 +1442,6 @@
       
         
       
-        
-      
     
     
     
@@ -1563,35 +1561,6 @@
     
   
   How to write a plan that runs until stopped
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../how-to/follow-a-plan-action/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6M5.1 8l-2.9-.8M6 12l-1.9 2M7.2 2.2 8 5.1M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to follow a plan action from a view
 
     
   </span>
@@ -3322,8 +3291,6 @@
       
         
       
-        
-      
     
     
     
@@ -3367,35 +3334,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../catalog/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How the session catalog works
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -7719,10 +7657,8 @@ what came after it. The term comes from <a href="#bluesky"><code>bluesky</code><
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <p>The configuration is the set of settings a session is built from. It comes
 from one or more session files or Python dictionaries, applied in order, so
-that a later one overrides an earlier one. Three keys say what kind of
-session it is, <code>schema_version</code>, <code>frontend</code> and <code>services.transport</code>, so every
-source that gives one of them must give the same value, or the session stops
-with an error.</p>
+that a later one overrides an earlier one, except for the keys that say what
+kind of session it is; see <a href="../session/#merging-the-sources">Merging the sources</a>.</p>
 <h3 id="continuous-acquisition">Continuous acquisition<a class="headerlink" href="#continuous-acquisition" title="Permanent link">&para;</a></h3>
 <p>In continuous acquisition, a camera takes frames one after another until
 something stops it, rather than one frame each time a <a href="#plan">plan</a> asks.

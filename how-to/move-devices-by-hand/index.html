@@ -1453,8 +1453,6 @@
       
         
       
-        
-      
     
     
     
@@ -1577,35 +1575,6 @@
     
   
   How to write a plan that runs until stopped
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../follow-a-plan-action/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6M5.1 8l-2.9-.8M6 12l-1.9 2M7.2 2.2 8 5.1M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to follow a plan action from a view
 
     
   </span>
@@ -3529,8 +3498,6 @@
       
         
       
-        
-      
     
     
     
@@ -3574,35 +3541,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../explanation/catalog/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How the session catalog works
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -6334,8 +6272,9 @@ script, and the whole script is at the end.</p>
 <h2 id="how-the-positioner-finds-axes">How the positioner finds axes<a class="headerlink" href="#how-the-positioner-finds-axes" title="Permanent link">&para;</a></h2>
 <p>The positioner looks for axes in every device of the session and in every
 device below it. An axis is a piece of a device that <code>set</code> moves, <code>locate</code>
-reports and <code>subscribe</code> follows, which means it satisfies <code>AsyncLocatable</code> from
-<code>ophyd-async</code> and <code>Subscribable</code> from <code>bluesky</code>, and it isn't a signal. The
+reports and <code>subscribe_reading</code> follows, which means it satisfies
+<code>AsyncLocatable</code> from <code>ophyd-async</code> and <code>Subscribable</code> from <code>bluesky</code>, and it
+isn't a signal. The
 search stops at each axis it finds, so the signals of an axis never show up as
 axes.</p>
 <p>The view groups the axes by the device that holds them. That device gets a
@@ -6466,17 +6405,15 @@ stage disables both of its rows, while locking only its <code>x</code> axis leav
 row free but disables Stop and Save on the box until the plan ends. The
 presenter also refuses moves and configuration writes for a locked axis, a
 go-to already waiting included. To stop the device, stop the plan, because the
-engine stops every device the plan moved.
-The engine isn't a session component, so you make these links in <code>wire()</code>, from
+engine stops every device the plan moved.</p>
+<p>The engine isn't a session component, so you make these links in <code>wire()</code>, from
 the presenter that holds the engine:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">sig_locks_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">set_locked</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">sig_locks_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">positioner</span><span class="o">.</span><span class="n">presenter</span><span class="o">.</span><span class="n">set_locked</span>
 </span></code></pre></div>
-<p>With the built-in acquisition stack, pairing its presenter with the view,
-<code>- [acquisition, positioner_view]</code>, makes the view's link, and pairing it
-with the presenter, <code>- [acquisition, positioner]</code>, makes the presenter's.
-<a href="../run-plans-from-the-window/#share-the-engine">Run plans from the window</a>
-shows how.</p>
+<p>With the built-in acquisition stack, pair the acquisition presenter with the
+view and with the presenter instead, as
+<a href="../run-plans-from-the-window/#share-the-engine">Share the engine</a> shows.</p>
 <h2 id="use-the-view">Use the view<a class="headerlink" href="#use-the-view" title="Permanent link">&para;</a></h2>
 <p><img alt="The positioner view of the example session: a group for the stage, with a
 row for each of its axes x and y" src="../images/positioner.png" /></p>

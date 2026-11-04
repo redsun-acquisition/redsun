@@ -1584,8 +1584,6 @@
       
         
       
-        
-      
     
     
     
@@ -1705,35 +1703,6 @@
     
   
   How to write a plan that runs until stopped
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../how-to/follow-a-plan-action/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6M5.1 8l-2.9-.8M6 12l-1.9 2M7.2 2.2 8 5.1M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to follow a plan action from a view
 
     
   </span>
@@ -3464,8 +3433,6 @@
       
         
       
-        
-      
     
     
     
@@ -3509,35 +3476,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../explanation/catalog/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How the session catalog works
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -6206,8 +6144,8 @@ with <code>first_session.py</code>, <code>stage_ioc.py</code> and <code>session.
 reports its position as it changes. Your three stages already qualify, so you
 don't change any of them. Since <a href="../first-session/">Writing your first session</a>,
 each one has been a <code>StandardMovable</code>, which gives it the <code>set</code>, <code>locate</code>,
-<code>stop</code> and <code>subscribe</code> methods the positioner uses. The positioner replaces the
-nudge presenter and view, and nothing else in the session.</p>
+<code>stop</code> and <code>subscribe_reading</code> methods the positioner uses. The positioner
+replaces the nudge presenter and view, and nothing else in the session.</p>
 <p>Open <code>first_session.py</code>, and add these imports below the ones it has:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">PositionerPresenter</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.builtins</span><span class="w"> </span><span class="kn">import</span> <span class="n">PositionerView</span>

@@ -19,7 +19,7 @@
         <link rel="prev" href="../choose-plan-inputs/">
       
       
-        <link rel="next" href="../follow-a-plan-action/">
+        <link rel="next" href="../show-plan-progress/">
       
       
         
@@ -1455,8 +1455,6 @@
       
         
       
-        
-      
     
     
     
@@ -1712,35 +1710,6 @@
   
 </nav>
       
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../follow-a-plan-action/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6M5.1 8l-2.9-.8M6 12l-1.9 2M7.2 2.2 8 5.1M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to follow a plan action from a view
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -3479,8 +3448,6 @@
       
         
       
-        
-      
     
     
     
@@ -3524,35 +3491,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../explanation/catalog/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How the session catalog works
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -6191,8 +6129,6 @@
       
         
       
-        
-      
     
     
     
@@ -7539,8 +7475,12 @@ button from the state the <code>ActionManager</code> reports:</p>
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>        <span class="k">case</span> <span class="n">ActionState</span><span class="o">.</span><span class="n">RUNNING</span><span class="p">:</span>
 </span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>            <span class="n">button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">button</span><span class="o">.</span><span class="n">isCheckable</span><span class="p">())</span>
 </span></code></pre></div>
-<p><a href="../follow-a-plan-action/">How to follow a plan action from a view</a> explains the
-three states and why the view calls <code>release</code>.</p>
+<p><code>ask</code> and <code>ask_or_release</code> are the <code>action_clicked_callback</code> and
+<code>action_toggled_callback</code> the view gave <code>create_plan_widget</code>.
+<a href="../../explanation/plans/#following-an-action-from-a-view">Following an action from a view</a>
+explains the three states. <code>release</code> shows a button as released without
+emitting <code>toggled</code>. Unchecking the button would emit it, and the view would
+then ask to end an action that has already ended.</p>
 <h2 id="link-them">Link them<a class="headerlink" href="#link-them" title="Permanent link">&para;</a></h2>
 <p>Link the view to the presenter, and to the <code>ActionManager</code> of the component
 that offers the plan:</p>
@@ -7563,6 +7503,16 @@ that offers the plan:</p>
 </span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
 </span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    <span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">The <code>wiring</code> section can't make the links to <code>actions</code></p>
+<p>A path in <code>wiring</code> is <code>component.port</code>, and the ports of a component don't
+include those of an object it holds. Make the links to the <code>ActionManager</code>
+in <code>wire</code>.</p>
+</div>
+<p>The session records an <code>ActionManager</code> under the name of the component holding
+it, so it lists the two links as <code>plan_view.sig_action_request -&gt; ctrl.request</code>
+and <code>ctrl.sig_changed -&gt; plan_view.on_action_changed</code>. See
+<a href="../wire-components/#inspect-what-is-connected">Inspect what is connected</a>.</p>
 <h2 id="the-example-in-full">The example in full<a class="headerlink" href="#the-example-in-full" title="Permanent link">&para;</a></h2>
 <details class="example">
 <summary>The whole script</summary>
@@ -7918,13 +7868,13 @@ that offers the plan:</p>
         
         
           
-          <a href="../follow-a-plan-action/" class="md-footer__link md-footer__link--next" aria-label="Next: How to follow a plan action from a view">
+          <a href="../show-plan-progress/" class="md-footer__link md-footer__link--next" aria-label="Next: How to show a plan&#x27;s progress">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How to follow a plan action from a view
+                How to show a plan's progress
               </div>
             </div>
             <div class="md-footer__button md-icon">

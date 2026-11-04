@@ -1442,8 +1442,6 @@
       
         
       
-        
-      
     
     
     
@@ -1563,35 +1561,6 @@
     
   
   How to write a plan that runs until stopped
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../how-to/follow-a-plan-action/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6M5.1 8l-2.9-.8M6 12l-1.9 2M7.2 2.2 8 5.1M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to follow a plan action from a view
 
     
   </span>
@@ -3578,8 +3547,6 @@
       
         
       
-        
-      
     
     
     
@@ -3626,35 +3593,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../catalog/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How the session catalog works
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -7145,17 +7083,9 @@ mistake it is:</p>
 asks for one of a later <a href="../glossary/#layer">layer</a>, before anything is built.</p>
 <h3 id="sharing-a-value">Sharing a value<a class="headerlink" href="#sharing-a-value" title="Permanent link">&para;</a></h3>
 <p>A component offers a <a href="../glossary/#shared-value">shared value</a> to the others by
-marking a method with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;provides&lt;/span&gt;" href="../../reference/api/injection/#redsun.provides"><code>provides</code></a>, and the method's return
-type is what the others ask for:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MotorPresenter</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_readings</span> <span class="o">=</span> <span class="n">MotorReadings</span><span class="p">()</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="nd">@provides</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">readings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MotorReadings</span><span class="p">:</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readings</span>
-</span></code></pre></div>
+marking a method with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;provides&lt;/span&gt;" href="../../reference/api/injection/#redsun.provides"><code>provides</code></a>, as <code>readings</code> is marked in
+the <a href="#a-component-as-a-block">block above</a>, and the method's return type is
+what the others ask for:</p>
 <figure class="markdown-d2" data-transition="morph" aria-label="How a shared value reaches another component"><figcaption>How a shared value reaches another component</figcaption><div class="markdown-d2-board" data-step="1" data-name=""><div class="markdown-d2-light"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" width="1440" height="291" viewBox="0 0 1440 291"><svg class="d2-1150441290 d2-svg" width="1440" height="291" viewBox="-101 -102 1440 291"><rect x="-101" y="-102" width="1440" height="291" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
 .d2-1150441290 .text-bold {
 	font-family: "d2-1150441290-font-bold";
@@ -7247,9 +7177,9 @@ type is what the others ask for:</p>
 <rect x="251" y="31" width="72" height="21" fill="black"></rect>
 <rect x="861" y="31" width="71" height="21" fill="black"></rect>
 </mask></svg></svg></div></div></figure>
-<p>A type names one value, so two components sharing the same type stop the
-build with a <code>TypeError</code>. <a href="../../how-to/share-a-value/">Share a value</a> covers
-optional values too.</p>
+<p>A type names one value, so two components can't share the same type; see
+<a href="../limits/#can-two-components-share-a-type">Limitations</a>.
+<a href="../../how-to/share-a-value/">Share a value</a> covers optional values too.</p>
 <h3 id="using-a-protocol-without-importing-redsun">Using a protocol without importing redsun<a class="headerlink" href="#using-a-protocol-without-importing-redsun" title="Permanent link">&para;</a></h3>
 <p>The session checks a component only by its members' names and signatures,
 never by where a <a href="../glossary/#protocol">protocol</a> came from. So a
@@ -7882,9 +7812,9 @@ device, including one whose first parameter is <code>prefix</code>, except one t
 <code>name</code> only by position (after a <code>/</code>), which is left out.</p>
 <p>You can declare the whole setup as one root device, each piece as a device of
 its own, or a mix of both. Either way, the session also holds every device
-below each declared one, so a stage inside a microscope reaches the
-positioner and the plans. <a href="../services/#devices-and-services">Devices and services</a>
-shows a root device.</p>
+below each declared one, as
+<a href="../questions/#asking-about-devices">Asking about devices</a> explains, and
+<a href="../services/#devices-and-services">Devices and services</a> shows a root device.</p>
 <h3 id="connecting">Connecting<a class="headerlink" href="#connecting" title="Permanent link">&para;</a></h3>
 <p>A device declared with <a href="../glossary/#autoconnect"><code>autoconnect=False</code></a> stays
 unconnected for your code to connect when it chooses, so the build can't leave
@@ -7910,7 +7840,8 @@ why the device writes the data and not <code>redsun</code>.</p>
 running if it offers a command for that as a
 <a href="../glossary/#process-variable">process variable</a>. When the user asks, your
 presenter triggers that command through the service's devices, which stay
-connected; the session has no standby step of its own.</p>
+connected. The session has no step of its own for this yet; see
+<a href="../services/#not-supported-yet">Not supported yet</a>.</p>
 <h2 id="presenters">Presenters<a class="headerlink" href="#presenters" title="Permanent link">&para;</a></h2>
 <p>A <a href="../glossary/#presenter">presenter</a> holds the session's application logic. It
 may run <a href="../glossary/#bluesky"><code>bluesky</code></a> <a href="../plans/">plans</a>, react to the
@@ -7932,18 +7863,18 @@ shows how to set one.</p>
 <p>Components talk to each other through <a href="../glossary/#signal">signals</a> and
 <a href="../glossary/#slot">slots</a>. They never call each other directly, unless one
 received the other in <code>setup</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">psygnal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Signal</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">slot</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MotorPresenter</span><span class="p">:</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">sig_moved</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">MotorView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="nd">@slot</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">motor</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">psygnal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Signal</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">slot</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MotorPresenter</span><span class="p">:</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">sig_moved</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">MotorView</span><span class="p">(</span><span class="n">QWidget</span><span class="p">):</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="nd">@slot</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">motor</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <figure class="markdown-d2" data-transition="morph" aria-label="A signal connected to a slot"><figcaption>A signal connected to a slot</figcaption><div class="markdown-d2-board" data-step="1" data-name=""><div class="markdown-d2-light"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" width="441" height="503" viewBox="0 0 441 503"><svg class="d2-3271742773 d2-svg" width="441" height="503" viewBox="-101 -101 441 503"><rect x="-101" y="-101" width="441" height="503" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
 .d2-3271742773 .appendix-icon {
@@ -8061,115 +7992,29 @@ signals that reach their slots, and the session connects them with one
 <p>If a component needs to clean up, give it a <code>shutdown</code> method, plain or
 <code>async</code>, and the session calls it when the session shuts down. A device can
 define one too, to leave its hardware in a safe state:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyLaser</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyLaser</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </span></code></pre></div>
-<figure class="markdown-d2" data-transition="morph" aria-label="The order components shut down in"><figcaption>The order components shut down in</figcaption><div class="markdown-d2-board" data-step="1" data-name=""><div class="markdown-d2-light"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" width="831" height="293" viewBox="0 0 831 293"><svg class="d2-1394370758 d2-svg" width="831" height="293" viewBox="-101 -110 831 293"><rect x="-101" y="-110" width="831" height="293" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
-.d2-1394370758 .appendix-icon {
-	filter: drop-shadow(0px 0px 32px rgba(31, 36, 58, 0.1));
-}
-.d2-1394370758 .text-bold {
-	font-family: "d2-1394370758-font-bold";
-}
-@font-face {
-	font-family: d2-1394370758-font-bold;
-	src: url("data:application/font-woff;base64,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");
-}]]></style><style type="text/css"><![CDATA[.d2-1394370758 .shape {
-  shape-rendering: geometricPrecision;
-  stroke-linejoin: round;
-}
-.d2-1394370758 .connection {
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.d2-1394370758 .blend {
-  mix-blend-mode: multiply;
-  opacity: 0.5;
-}
-
-		.d2-1394370758 .fill-N1{fill:#0A0F25;}
-		.d2-1394370758 .fill-N7{fill:#FFFFFF;}
-		.d2-1394370758 .fill-B1{fill:#C62828;}
-		.d2-1394370758 .fill-B6{fill:#FFF5F5;}
-		.d2-1394370758 .stroke-B1{stroke:#C62828;}
-		.d2-1394370758 .stroke-B2{stroke:#C62828;}.d2-1394370758 .appendix text.text{fill:#0A0F25}.d2-1394370758 .md{--color-fg-default:#0A0F25;--color-fg-muted:#676C7E;--color-fg-subtle:#9499AB;--color-canvas-default:#FFFFFF;--color-canvas-subtle:#EEF1F8;--color-border-default:#C62828;--color-border-muted:#C62828;--color-neutral-muted:#EEF1F8;--color-accent-fg:#C62828;--color-accent-emphasis:#C62828;--color-attention-subtle:#676C7E;--color-danger-fg:red;}.d2-1394370758 .light-code{display: block}.d2-1394370758 .dark-code{display: none}]]></style><g class="Y29tcG9uZW50cw== step"><g class="shape" ><rect x="0" y="0" width="194" height="82" rx="6" stroke="#C62828" fill="#FFF5F5" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="97" y="38.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px"><tspan x="97" dy="0">presenters and views</tspan><tspan x="97" dy="18.5">newest first</tspan></text></g><g class="ZGV2aWNlcw== step"><g class="shape" ><rect x="294" y="8" width="98" height="66" rx="6" stroke="#C62828" fill="#FFF5F5" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="343" y="46.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">devices</text><title>Every device that connected, and every device declared with autoconnect=False, since a component may have connected it. A device that didn&#39;t connect is left out of the session and never shut down, since it would write to hardware that never answered.</title></g><g class="c2VydmljZXM= step"><g class="shape" ><rect x="492" y="8" width="137" height="66" rx="6" stroke="#C62828" fill="#FFF5F5" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="560.5" y="46.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">services stop</text></g><g class="KGNvbXBvbmVudHMgLSZndDsgZGV2aWNlcylbMF0="><marker id="mk-d2-1394370758-3488378134-21" markerWidth="10" markerHeight="12" refX="7" refY="6" viewBox="0 0 10 12" orient="auto" markerUnits="userSpaceOnUse"> <polygon points="0,0 10,6 0,12" fill="#C62828" class="connection fill-B1" stroke-width="2" /> </marker><path d="M 196 41 C 234 41 254 41 290 41" stroke="#C62828" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-1394370758-3488378134-21)" mask="url(#d2-1394370758-21)" /></g><g class="KGRldmljZXMgLSZndDsgc2VydmljZXMpWzBd"><path d="M 394 41 C 432 41 452 41 488 41" stroke="#C62828" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-1394370758-3488378134-21)" mask="url(#d2-1394370758-21)" /></g><g transform="translate(376 -8)" class="appendix-icon"><title>Every device that connected, and every device declared with autoconnect=False, since a component may have connected it. A device that didn&#39;t connect is left out of the session and never shut down, since it would write to hardware that never answered.</title><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_3427_35082111-d2-1394370758-MRSXM2LDMVZQ-21)">
-<path d="M16 31.1109C24.3456 31.1109 31.1111 24.3454 31.1111 15.9998C31.1111 7.65415 24.3456 0.888672 16 0.888672C7.65436 0.888672 0.888885 7.65415 0.888885 15.9998C0.888885 24.3454 7.65436 31.1109 16 31.1109Z" fill="white" stroke="#DEE1EB"/>
-<path d="M16 26C21.5228 26 26 21.5228 26 16C26 10.4772 21.5228 6 16 6C10.4772 6 6 10.4772 6 16C6 21.5228 10.4772 26 16 26Z" stroke="#2E3346" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M16 19.998V15.998" stroke="#2E3346" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M16 12H16.0098" stroke="#2E3346" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
-<defs>
-<clipPath id="clip0_3427_35082111-d2-1394370758-MRSXM2LDMVZQ-21">
-<rect width="32" height="32" fill="white"/>
-</clipPath>
-</defs>
-</svg>
-</g><mask id="d2-1394370758-21" maskUnits="userSpaceOnUse" x="-101" y="-110" width="831" height="293">
-<rect x="-101" y="-110" width="831" height="293" fill="white"></rect>
-
-</mask></svg></svg></div><div class="markdown-d2-dark"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" width="831" height="293" viewBox="0 0 831 293"><svg class="d2-1528591710 d2-svg" width="831" height="293" viewBox="-101 -110 831 293"><rect x="-101" y="-110" width="831" height="293" rx="0" fill="#14171F" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
-.d2-1528591710 .appendix-icon {
-	filter: drop-shadow(0px 0px 32px rgba(31, 36, 58, 0.1));
-}
-.d2-1528591710 .text-bold {
-	font-family: "d2-1528591710-font-bold";
-}
-@font-face {
-	font-family: d2-1528591710-font-bold;
-	src: url("data:application/font-woff;base64,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");
-}]]></style><style type="text/css"><![CDATA[.d2-1528591710 .shape {
-  shape-rendering: geometricPrecision;
-  stroke-linejoin: round;
-}
-.d2-1528591710 .connection {
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.d2-1528591710 .blend {
-  mix-blend-mode: multiply;
-  opacity: 0.5;
-}
-
-		.d2-1528591710 .fill-N1{fill:#E2E4E9;}
-		.d2-1528591710 .fill-N7{fill:#14171F;}
-		.d2-1528591710 .fill-B1{fill:#EF5552;}
-		.d2-1528591710 .fill-B6{fill:#1D2029;}
-		.d2-1528591710 .stroke-B1{stroke:#EF5552;}
-		.d2-1528591710 .stroke-B2{stroke:#EF5552;}.d2-1528591710 .appendix text.text{fill:#E2E4E9}.d2-1528591710 .md{--color-fg-default:#E2E4E9;--color-fg-muted:#BAC2DE;--color-fg-subtle:#A6ADC8;--color-canvas-default:#14171F;--color-canvas-subtle:#313244;--color-border-default:#EF5552;--color-border-muted:#EF5552;--color-neutral-muted:#313244;--color-accent-fg:#EF5552;--color-accent-emphasis:#EF5552;--color-attention-subtle:#BAC2DE;--color-danger-fg:red;}.d2-1528591710 .light-code{display: none}.d2-1528591710 .dark-code{display: block}]]></style><g class="Y29tcG9uZW50cw== step"><g class="shape" ><rect x="0" y="0" width="194" height="82" rx="6" stroke="#EF5552" fill="#1D2029" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="97" y="38.5" fill="#E2E4E9" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px"><tspan x="97" dy="0">presenters and views</tspan><tspan x="97" dy="18.5">newest first</tspan></text></g><g class="ZGV2aWNlcw== step"><g class="shape" ><rect x="294" y="8" width="98" height="66" rx="6" stroke="#EF5552" fill="#1D2029" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="343" y="46.5" fill="#E2E4E9" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">devices</text><title>Every device that connected, and every device declared with autoconnect=False, since a component may have connected it. A device that didn&#39;t connect is left out of the session and never shut down, since it would write to hardware that never answered.</title></g><g class="c2VydmljZXM= step"><g class="shape" ><rect x="492" y="8" width="137" height="66" rx="6" stroke="#EF5552" fill="#1D2029" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="560.5" y="46.5" fill="#E2E4E9" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">services stop</text></g><g class="KGNvbXBvbmVudHMgLSZndDsgZGV2aWNlcylbMF0="><marker id="mk-d2-1528591710-3488378134-22" markerWidth="10" markerHeight="12" refX="7" refY="6" viewBox="0 0 10 12" orient="auto" markerUnits="userSpaceOnUse"> <polygon points="0,0 10,6 0,12" fill="#EF5552" class="connection fill-B1" stroke-width="2" /> </marker><path d="M 196 41 C 234 41 254 41 290 41" stroke="#EF5552" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-1528591710-3488378134-22)" mask="url(#d2-1528591710-22)" /></g><g class="KGRldmljZXMgLSZndDsgc2VydmljZXMpWzBd"><path d="M 394 41 C 432 41 452 41 488 41" stroke="#EF5552" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-1528591710-3488378134-22)" mask="url(#d2-1528591710-22)" /></g><g transform="translate(376 -8)" class="appendix-icon"><title>Every device that connected, and every device declared with autoconnect=False, since a component may have connected it. A device that didn&#39;t connect is left out of the session and never shut down, since it would write to hardware that never answered.</title><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_3427_35082111-d2-1528591710-MRSXM2LDMVZQ-22)">
-<path d="M16 31.1109C24.3456 31.1109 31.1111 24.3454 31.1111 15.9998C31.1111 7.65415 24.3456 0.888672 16 0.888672C7.65436 0.888672 0.888885 7.65415 0.888885 15.9998C0.888885 24.3454 7.65436 31.1109 16 31.1109Z" fill="white" stroke="#DEE1EB"/>
-<path d="M16 26C21.5228 26 26 21.5228 26 16C26 10.4772 21.5228 6 16 6C10.4772 6 6 10.4772 6 16C6 21.5228 10.4772 26 16 26Z" stroke="#2E3346" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M16 19.998V15.998" stroke="#2E3346" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M16 12H16.0098" stroke="#2E3346" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
-<defs>
-<clipPath id="clip0_3427_35082111-d2-1528591710-MRSXM2LDMVZQ-22">
-<rect width="32" height="32" fill="white"/>
-</clipPath>
-</defs>
-</svg>
-</g><mask id="d2-1528591710-22" maskUnits="userSpaceOnUse" x="-101" y="-110" width="831" height="293">
-<rect x="-101" y="-110" width="831" height="293" fill="white"></rect>
-
-</mask></svg></svg></div></div></figure>
-<p>The devices go after every presenter and view, which may still use them in
-their own <code>shutdown</code>, and before the services stop, so each device can still
-reach its service.</p>
+<p>The session calls the <code>shutdown</code> of every presenter and view, newest first,
+then of every device, and then stops the services, so a presenter can still
+use its devices and a device can still reach its service.
+<a href="../session/#shutting-down">Shutting down</a> shows the whole order. A device that
+didn't connect is left out of the session and never shut down, since it would
+write to hardware that never answered.</p>
 <h2 id="dataclasses-and-pydantic-models">Dataclasses and pydantic models<a class="headerlink" href="#dataclasses-and-pydantic-models" title="Permanent link">&para;</a></h2>
 <p>A presenter can be a dataclass or a <code>pydantic</code> model, because the session
 passes every argument by keyword, and <code>name</code> may be anywhere in the signature:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nd">@dataclass</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">DataclassController</span><span class="p">:</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelController</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="n">step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="n">sig_moved</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Signal</span><span class="p">]</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">DataclassController</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelController</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="n">sig_moved</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Signal</span><span class="p">]</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
 </span></code></pre></div>
 <p>On a <code>pydantic</code> model, a signal must be a <code>ClassVar</code>, since <code>pydantic</code> refuses
 a class attribute without an annotation. A value that <code>setup</code> assigns
@@ -8188,9 +8033,9 @@ dataclass.</p>
 <h2 id="two-components-of-the-same-class">Two components of the same class<a class="headerlink" href="#two-components-of-the-same-class" title="Permanent link">&para;</a></h2>
 <p>Two stages, or two copies of one plot, are normal, and each declaration makes
 its own component:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">stage_x</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyStage</span><span class="p">]</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">stage_y</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyStage</span><span class="p">]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">stage_x</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyStage</span><span class="p">]</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">stage_y</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyStage</span><span class="p">]</span>
 </span></code></pre></div>
 <p>Your code reaches each one by its name, as <code>self.stage_x</code>. A component that
 needs every stage, however many there are, asks the session by what they can
