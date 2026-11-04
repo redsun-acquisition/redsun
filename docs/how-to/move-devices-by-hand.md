@@ -21,8 +21,9 @@ script, and the whole script is at the end.
 
 The positioner looks for axes in every device of the session and in every
 device below it. An axis is a piece of a device that `set` moves, `locate`
-reports and `subscribe_reading` follows, which means it satisfies `AsyncLocatable` from
-`ophyd-async` and `Subscribable` from `bluesky`, and it isn't a signal. The
+reports and `subscribe_reading` follows, which means it satisfies
+`AsyncLocatable` from `ophyd-async` and `Subscribable` from `bluesky`, and it
+isn't a signal. The
 search stops at each axis it finds, so the signals of an axis never show up as
 axes.
 
@@ -152,9 +153,9 @@ the presenter that holds the engine:
 --8<-- "docs/examples/positioner.py:wire-locks"
 ```
 
-With the built-in acquisition stack, a pairing with each of the two makes
-these links instead; see
-[Share the engine](run-plans-from-the-window.md#share-the-engine).
+With the built-in acquisition stack, pair the acquisition presenter with the
+view and with the presenter instead, as
+[Share the engine](run-plans-from-the-window.md#share-the-engine) shows.
 
 ## Use the view
 

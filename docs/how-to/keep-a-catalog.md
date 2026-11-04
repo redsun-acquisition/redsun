@@ -32,8 +32,8 @@ files. The session starts its server in the first build step and stops it at
 shutdown, after every component and service. Without the extra, the session
 refuses to build.
 
-A catalog holds only the runs of its own session, so a question across
-sessions opens each catalog. Everything a session produced then lives under
+A catalog holds only the runs of its own session, so to ask a question
+across sessions you open each catalog. Everything a session produced then lives under
 one directory, which you can archive or delete as a unit.
 
 The catalog reads files from `<base_dir>/<session>`. List any other directory a

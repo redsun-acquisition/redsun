@@ -99,7 +99,8 @@ Without these links, every file is named `unknown_<counter>`.
 [`set_label`][redsun.path_provider.SessionPathProvider.set_label] puts a
 label, such as a sample name, before the plan in the names of every plan that
 starts after it. A plan already running keeps its names. The label is
-cleaned like the session name, and an empty label removes it. Link a signal carrying the label to it:
+cleaned like the session name, and an empty label removes it. Link a signal
+carrying the label to it:
 
 ```yaml
 wiring:

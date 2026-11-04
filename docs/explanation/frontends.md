@@ -19,51 +19,9 @@ toolkit, which a session without a window doesn't install.
 
 A view says where it wants to be shown, and the frontend decides whether it
 can. The core defines only the `Placement` base class; the Qt frontend defines
-docks and menus. Point at a placement to read what it needs:
-
-```d2 title="Where Qt puts a view"
-...@diagrams/style
-vars: {
-  dock: "Holds a QWidget, in a dock against that edge. Docks given the same group on one edge are tabbed together. In a session file: left, right, top, bottom, or {dock: left, group: name}."
-}
-window: "main window" {
-  grid-rows: 5
-  grid-gap: 12
-  menu: "MenuItem(\"File\")\nan entry in the File menu" {
-    class: step
-    tooltip: "Holds a QAction. The menu is made if the window has none of that name. In a session file: {menu: File}."
-  }
-  toolbar: "ToolBarItem(\"Main\")\nan entry in the Main toolbar" {
-    class: step
-    tooltip: "Holds a QAction. The toolbar is made if the window has none of that name. In a session file: {toolbar: Main}."
-  }
-  dock_top: 'Dock("top")' {
-    class: step
-    tooltip: ${dock}
-  }
-  middle: "" {
-    grid-columns: 3
-    grid-gap: 12
-    style.opacity: 0
-    dock_left: 'Dock("left")' {
-      class: step
-      tooltip: ${dock}
-    }
-    central: "Central()\nthe main area" {
-      class: step
-      tooltip: "Holds a QWidget. When several views ask for it, each gets a tab. In a session file: central."
-    }
-    dock_right: 'Dock("right")' {
-      class: step
-      tooltip: ${dock}
-    }
-  }
-  dock_bottom: 'Dock("bottom")' {
-    class: step
-    tooltip: ${dock}
-  }
-}
-```
+docks, the centre, menus and toolbars, and
+[How to place a view](../how-to/place-a-view.md) shows where each one puts a
+view.
 
 In `Frontend.requires`, a frontend lists what each placement must hold: Qt asks
 for a `QWidget` in a dock or in the centre, and a `QAction` in a menu or

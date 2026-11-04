@@ -10,63 +10,43 @@ choose how much of that you see, where it goes, and how to log from your own
 code.
 
 All of these messages go through one Python logger, named `redsun`, which
-passes each one on to several places. Step through where a record can go,
-and point at a shape to read more:
+passes each one on to several places. Point at a shape to read more:
 
 ```d2 title="Where a log record goes"
 ...@diagrams/style
-label: "Your components log through the redsun logger, which keeps INFO and above unless you set another level, and prints to the console."
 direction: right
 component: "your component\nself.logger" {class: step}
-service: "launched service\nredsun.service.<name>" {class: hidden}
+service: "launched service\nredsun.service.<name>" {
+  class: process
+  tooltip: The session logs each line the service prints under this logger. A line that is a JSON log record keeps its level, time and traceback. Any other line is logged at DEBUG.
+}
 redsun: "redsun logger\nINFO and above" {
   class: step
   tooltip: The level of this logger decides which records exist. INFO unless you set another.
 }
 console: "console\nsys.stdout" {class: step}
-view: "LogView" {class: hidden}
-app_file: "session log file" {class: hidden}
-service_file: "service log file" {class: hidden}
-yours: "handlers you add" {class: hidden}
-root: "root logger" {class: hidden}
+view: "LogView" {
+  class: step
+  tooltip: A built-in Qt view. It reads a buffer that keeps the latest records, so it shows those of the build too.
+}
+app_file: "session log file" {
+  class: file
+  tooltip: Opened by the session when the build reads the configuration, closed in shutdown. It takes no service records.
+}
+service_file: "service log file" {class: file}
+yours: "handlers you add" {class: step}
+root: "root logger" {
+  class: step
+  tooltip: The redsun logger propagates, so a handler on the root logger receives its records too.
+}
 component -> redsun
 redsun -> console
-redsun -> view {style.opacity: 0}
-redsun -> app_file: "application\nrecords" {style.opacity: 0}
-service -> service_file {style.opacity: 0}
-service -> redsun: "propagates" {style.opacity: 0}
-redsun -> yours: add_handler {style.opacity: 0}
-redsun -> root: "propagates" {style.opacity: 0}
-steps: {
-  1: {
-    label: "LogView, a built-in Qt view, shows the latest records, those of the build included."
-    view.class: step
-    view.tooltip: A built-in Qt view. It reads a buffer that keeps the latest records, so it shows those of the build too.
-    (redsun -> view)[0].style.opacity: 1
-  }
-  2: {
-    label: "The session log file takes the application's records, from the moment the build reads the configuration until shutdown."
-    app_file.class: file
-    app_file.tooltip: Opened by the session when the build reads the configuration, closed in shutdown. It takes no service records.
-    (redsun -> app_file)[0].style.opacity: 1
-  }
-  3: {
-    label: "A launched service writes its own log file. The session logs each line the service prints under redsun.service.<name>, which passes it on to the redsun logger."
-    service.class: process
-    service_file.class: file
-    service.tooltip: The session logs each line the service prints under this logger. A line that is a JSON log record keeps its level, time and traceback. Any other line is logged at DEBUG.
-    (service -> service_file)[0].style.opacity: 1
-    (service -> redsun)[0].style.opacity: 1
-  }
-  4: {
-    label: "Handlers you add with add_handler receive the records too, and so does the root logger, because the redsun logger propagates."
-    yours.class: step
-    root.class: step
-    root.tooltip: The redsun logger propagates, so a handler on the root logger receives its records too.
-    (redsun -> yours)[0].style.opacity: 1
-    (redsun -> root)[0].style.opacity: 1
-  }
-}
+redsun -> view
+redsun -> app_file: "application\nrecords"
+service -> service_file
+service -> redsun: "propagates"
+redsun -> yours: add_handler
+redsun -> root: "propagates"
 ```
 
 Each line on the console starts with the time, the level, and the class and

@@ -57,23 +57,19 @@ adds such a component adds its plans too, with no change to the presenter
 grid-rows: 2
 grid-columns: 2
 grid-gap: 80
-component: "component
-plan_map()" {
+component: "component\nplan_map()" {
   class: step
   tooltip: Any component with a plan_map method satisfies HasPlans. It returns each plan under its name, as a PlanEntry.
 }
-presenter: "presenter
-holds the RunEngine" {
+presenter: "presenter\nholds the RunEngine" {
   class: step
   tooltip: In setup, the presenter asks the session for every component that satisfies HasPlans, and keeps the plans they offer.
 }
-widget: "plan widget
-in a view" {
+widget: "plan widget\nin a view" {
   class: step
   tooltip: The view builds one control per parameter, and a list of devices for each device parameter.
 }
-spec: "PlanSpec
-one per plan" {
+spec: "PlanSpec\none per plan" {
   class: step
   tooltip: create_plan_spec reads the plan's signature and type hints into a description of each parameter.
 }
@@ -211,8 +207,7 @@ makes its button. Here a live view records a frame on request:
 ...@diagrams/style
 shape: sequence_diagram
 view: "view"
-plan: "plan
-on the engine's thread"
+plan: "plan\non the engine's thread"
 actions: "ActionManager"
 view -> plan: "toggle on: launch"
 plan -> actions: "wait(SNAP)"

@@ -53,45 +53,34 @@ annotation carries the question.
 ## How a component matches
 
 A component matches when it has every member the protocol lists and each
-method accepts every call the protocol allows. Step through who answers and
-who comes close:
+method accepts every call the protocol allows. Point at a component to read
+why it answers or not:
 
 ```d2 title="Which components answer Mapping[str, Resettable]"
 ...@diagrams/style
-label: "SessionPresenter.setup asks for every component with a reset() it can call."
 direction: right
-plot: "plot\nno reset" {class: step; width: 190; height: 70}
-loose: "loose\nreset(hard)" {class: step; width: 190; height: 70}
-detector: "detector\nreset(force=False)" {class: step; width: 190; height: 70}
-motor: "motor\nreset()" {class: step; width: 190; height: 70}
-asker: "SessionPresenter.setup\nresettable:\nMapping[str, Resettable]" {class: step; width: 240}
-plot -> asker: {style.opacity: 0}
-loose -> asker: {style.opacity: 0}
-detector -> asker: {style.opacity: 0}
-motor -> asker: {style.opacity: 0}
-steps: {
-  1: {
-    label: "motor and detector answer. detector's reset takes an extra parameter, but it has a default, so reset() still works."
-    motor.class: current
-    detector: {
-      class: current
-      tooltip: "An extra parameter with a default still matches, because reset() can still be called."
-    }
-    (motor -> asker)[0].style.opacity: 1
-    (detector -> asker)[0].style.opacity: 1
-  }
-  2: {
-    label: "loose's reset needs a hard argument, so reset() fails on it and Session.rejected lists it with that reason. plot has no reset at all, so Session.rejected leaves it out."
-    loose: {
-      class: failed
-      tooltip: "A renamed parameter, or an extra one without a default, doesn't match. Session.rejected lists it with the reason."
-    }
-    plot: {
-      class: done
-      tooltip: "It has none of the protocol's members, so Session.rejected leaves it out too."
-    }
-  }
+plot: "plot\nno reset" {
+  class: done
+  width: 190
+  height: 70
+  tooltip: "It has none of the protocol's members, so Session.rejected leaves it out."
 }
+loose: "loose\nreset(hard)" {
+  class: failed
+  width: 190
+  height: 70
+  tooltip: "reset() fails on it, since hard has no default. A renamed parameter, or an extra one without a default, doesn't match, and Session.rejected lists it with the reason."
+}
+detector: "detector\nreset(force=False)" {
+  class: current
+  width: 190
+  height: 70
+  tooltip: "An extra parameter with a default still matches, because reset() can still be called."
+}
+motor: "motor\nreset()" {class: current; width: 190; height: 70}
+asker: "SessionPresenter.setup\nresettable:\nMapping[str, Resettable]" {class: step; width: 240}
+detector -> asker
+motor -> asker
 ```
 
 This is [structural subtyping](glossary.md#structural-subtyping): no

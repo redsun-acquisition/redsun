@@ -183,44 +183,27 @@ A device reaches its hardware in two steps, and each step connects on its own:
 
 ```d2 title="The two connection levels"
 ...@diagrams/style
-label: "A device reaches its hardware in two levels, and each one connects on its own."
 grid-columns: 2
 horizontal-gap: 160
 app: "session process" {
   view: {class: step}
   presenter: {class: step}
-  device: {class: step}
+  device: {
+    class: step
+    tooltip: The build calls connect() on every device declared with autoconnect, all at once. A device that doesn't connect is left out, like one that fails to build.
+  }
   view -> presenter -> device
 }
 svc: "service process\nor container" {
-  class: hidden
-  ioc: "service" {class: [process; hidden]}
-  hw: "hardware" {class: [hardware; hidden]}
-  ioc -> hw: "2. open / close" {class: hidden}
-}
-app.device -> svc.ioc: "1. connect()" {class: hidden}
-steps: {
-  1: {
-    label: "Level 1: the build calls connect() on every device declared with autoconnect, all at once. A device that hasn't connected after 10 seconds is left out."
-    svc.class: step
-    svc.ioc.class: process
-    app.device: {
-      class: current
-      tooltip: The build calls connect() on every device declared with autoconnect, all at once. A device that hasn't connected after 10 seconds is left out, like one that fails to build.
-    }
-    (app.device -> svc.ioc)[0].style.opacity: 1
+  class: step
+  ioc: "service" {
+    class: process
+    tooltip: The service opens the hardware its process variables name, such as a serial port or a camera, on the machine it runs on.
   }
-  2: {
-    label: "Level 2: the service opens the hardware its process variables name, such as a serial port or a camera, on the machine it runs on."
-    app.device.class: step
-    svc.hw.class: hardware
-    svc.ioc: {
-      class: [process; current]
-      tooltip: The service opens a serial port or a camera. Which one it opens is set through its process variables.
-    }
-    svc.(ioc -> hw)[0].style.opacity: 1
-  }
+  hw: "hardware" {class: hardware}
+  ioc -> hw: "2. open / close"
 }
+app.device -> svc.ioc: "1. connect()"
 ```
 
 A [mocked session](glossary.md#mocked-session) connects each device to a

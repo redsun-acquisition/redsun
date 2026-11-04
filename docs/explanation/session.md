@@ -476,7 +476,6 @@ source replaces whole:
 
 ```d2 title="Two files merged"
 ...@diagrams/style
-label: "common.yaml, the first source, gives motor_ctrl a step and a speed."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 60
@@ -493,32 +492,18 @@ simulation: |yaml
   presenters:
     motor_ctrl:
       step: 0.5
-| {class: hidden}
-check: "checked before\nanything is built" {class: hidden}
+| {class: step}
+check: "checked before\nanything is built" {class: current}
 merged: |yaml
   # merged
   session: my-lab
   presenters:
     motor_ctrl:
       step: 0.5
-| {class: hidden}
-steps: {
-  1: {
-    label: "simulation.yaml is read after it and names motor_ctrl again."
-    simulation.class: step
-    common -> simulation: then
-  }
-  2: {
-    label: "A component's entry is replaced whole, so motor_ctrl keeps the later step and loses speed."
-    merged.class: step
-    simulation -> merged: "motor_ctrl replaced\nwhole: speed is gone"
-  }
-  3: {
-    label: "The merged result is checked once, before anything is built."
-    check.class: current
-    merged -> check
-  }
-}
+| {class: step}
+common -> simulation: then
+simulation -> merged: "motor_ctrl replaced\nwhole: speed is gone"
+merged -> check
 ```
 
 `schema_version`, `frontend` and `services.transport` say what kind of session

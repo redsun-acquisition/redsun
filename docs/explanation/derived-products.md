@@ -14,12 +14,13 @@ step.
 
 ## What a writer receives
 
-A `Writer` takes two kinds of input, from two directions. Step through to see
-them reach it:
+A `Writer` takes two kinds of input, from two directions: the run's documents,
+which tell it where the frames went and what shape they have, and the product
+itself, which the documents can't carry because the component computes it
+after the frames arrive:
 
 ```d2 title="What reaches a writer"
 ...@diagrams/style
-label: "The camera and its service write the frames. The writer gets the documents and the product from a component."
 grid-rows: 2
 grid-columns: 2
 grid-gap: 120
@@ -27,40 +28,22 @@ run: "the run" {
   class: step
   tooltip: The RunEngine emits the run's documents while the camera and its service write the frames.
 }
-component: "component\na document callback" {class: hidden}
+component: "component\na document callback" {
+  class: step
+  tooltip: The component receives the run's documents like any callback, and computes its product from the frames as they arrive.
+}
 store: "the camera's store" {
   class: file
   tooltip: The device and its service chose the format and the place, and wrote the frames there.
 }
-writer: "Writer" {class: hidden}
-run -> store: "frames"
-run -> component: "documents" {style.opacity: 0}
-component -> writer: "documents" {style.opacity: 0}
-writer -> store: "the product" {style.opacity: 0}
-steps: {
-  1: {
-    label: "The component receives the run's documents like any document callback, and computes its product from the frames as they arrive."
-    component.class: step
-    component.tooltip: The component receives the run's documents like any callback, and computes its product from the frames as they arrive.
-    (run -> component)[0].style.opacity: 1
-  }
-  2: {
-    label: "It forwards each document to the writer, which learns where the frames went and what shape they have."
-    writer.class: step
-    writer.tooltip: The documents tell the writer where the frames went and what shape they have, which is everything it needs to lay out the product.
-    (component -> writer)[0].style.opacity: 1
-  }
-  3: {
-    label: "The documents can't carry the product, so the component hands the data over too, with write, or with append frame by frame."
-    (component -> writer)[0].label: "documents,\nthen the product"
-    component.tooltip: The documents can't carry the product, because the component computes it after the frames arrive. So the component hands the data over itself, with write, or with append frame by frame.
-  }
-  4: {
-    label: "The writer puts the product next to the frames, in the store the device chose."
-    (writer -> store)[0].style.opacity: 1
-    writer.tooltip: The writer puts the product next to the frames, in the store the device chose.
-  }
+writer: "Writer" {
+  class: step
+  tooltip: The writer puts the product next to the frames, in the store the device chose.
 }
+run -> store: "frames"
+run -> component: "documents"
+component -> writer: "documents,\nthen the product"
+writer -> store: "the product"
 ```
 
 Here is a component that keeps the median of a camera's frames, cut down to the
@@ -107,7 +90,6 @@ frame in the camera's store, and two documents of the run fill in the rest:
 
 ```d2 title="What derive takes from the run"
 ...@diagrams/style
-label: "derive names only the product and its source. Two documents of the run fill in the rest."
 direction: right
 product: "camera_median\nderive(source=\"camera\")" {class: step}
 descriptor: "descriptor\nnaming camera" {
@@ -118,28 +100,18 @@ resource: "stream_resource\nnaming camera" {
   class: file
   tooltip: The document the device emits when it opens the file its frames go to.
 }
-layout: "the frame's\nshape and dtype" {class: hidden}
-store: "the store's\nURI and format" {class: hidden}
-descriptor -> layout {style.opacity: 0}
-resource -> store {style.opacity: 0}
-layout -> product {style.opacity: 0}
-store -> product {style.opacity: 0}
-steps: {
-  1: {
-    label: "The descriptor gives the shape and dtype of the camera's key. derive drops its leading frames-per-event dimension, so the product is laid out like one frame."
-    layout.class: step
-    layout.tooltip: A key the camera streams leads its shape with the frames per event, which derive drops.
-    (descriptor -> layout)[0].style.opacity: 1
-    (layout -> product)[0].style.opacity: 1
-  }
-  2: {
-    label: "The stream_resource gives the store's URI and format. The writer knows plain Zarr and OME-Zarr, and skips the product for any other format, logging it once."
-    store.class: step
-    store.tooltip: The format is the document's mimetype. The writer knows plain Zarr and OME-Zarr, and skips the product for a run whose store has another, logging it once.
-    (resource -> store)[0].style.opacity: 1
-    (store -> product)[0].style.opacity: 1
-  }
+layout: "the frame's\nshape and dtype" {
+  class: step
+  tooltip: A key the camera streams leads its shape with the frames per event, which derive drops, so the product is laid out like one frame.
 }
+store: "the store's\nURI and format" {
+  class: step
+  tooltip: The format is the document's mimetype. The writer knows plain Zarr and OME-Zarr, and skips the product for a run whose store has another, logging it once.
+}
+descriptor -> layout
+resource -> store
+layout -> product
+store -> product
 ```
 
 For a product the run says nothing about, `declare` gives the shape, the type
@@ -161,20 +133,16 @@ component: "component"
 writer: "Writer"
 store: "the camera's store"
 component -> writer: "derive, in the constructor"
-component -> writer: "documents: start,
-descriptor, stream_resource" {
+component -> writer: "documents: start,\ndescriptor, stream_resource" {
   tooltip: The writer learns each product's layout and store, but opens nothing yet.
 }
 component -> writer: "first append or write"
-writer -> store: "open the stream:
-size every array" {
+writer -> store: "open the stream:\nsize every array" {
   tooltip: The stream opens with every product of that store known by then. acquire-zarr sizes a store's arrays once, at this moment, and ome-writers allocates every frame of an image.
 }
-component -> writer: "append a product declared
-since: WriterError"
+component -> writer: "append a product declared\nsince: WriterError"
 component -> writer: "documents: stop"
-writer -> store: "close the stream,
-write the metadata" {
+writer -> store: "close the stream,\nwrite the metadata" {
   tooltip: The metadata is the mapping given to write, and a redsun mapping naming the run, the source, the store and the time.
 }
 ```
