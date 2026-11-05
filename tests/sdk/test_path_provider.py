@@ -112,6 +112,29 @@ def test_reset_plan_returns_an_unwritten_filename(tmp_path: Path) -> None:
     assert provider("det").filename == "scan_00001"
 
 
+def test_reset_plan_reads_the_folder_of_an_earlier_day_once(tmp_path: Path) -> None:
+    """Carry the numbering past midnight, reading a past day's folder once."""
+    clock = {"now": datetime(2026, 7, 20, 23, 0)}
+    provider = SessionPathProvider(
+        base_dir=tmp_path, session="s", now=lambda: clock["now"]
+    )
+    provider.set_plan("scan")
+    info = provider("det")
+    Path(info.directory_path, f"{info.filename}.zarr").mkdir()
+    clock["now"] = datetime(2026, 7, 21, 0, 30)
+    provider.reset_plan()
+    # nothing writes into a past day's folder, so a later file there is unseen
+    Path(info.directory_path, "scan_00009.zarr").mkdir()
+
+    provider.set_plan("scan")
+    info = provider("det")
+    Path(info.directory_path, f"{info.filename}.zarr").mkdir()
+    provider.reset_plan()
+
+    provider.set_plan("scan")
+    assert provider("det").filename == "scan_00002"
+
+
 @pytest.mark.parametrize(
     "stored", ["scan_00004", "scan_00004.zarr", "scan_00004.ome.zarr"]
 )
