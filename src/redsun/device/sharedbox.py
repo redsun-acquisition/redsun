@@ -4,7 +4,7 @@ import asyncio
 import enum
 import json
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, NoReturn, cast, get_origin
+from typing import TYPE_CHECKING, Any, ClassVar, cast, get_origin
 
 import numpy as np
 from bluesky.protocols import Reading
@@ -232,22 +232,22 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                     self._attribute, {name.upper(): name for name in self._names}
                 )
             declared = self.datatype
-            if not (
+            if (
                 isinstance(declared, type)
                 and issubclass(declared, enum.Enum)
                 and {member.value for member in declared} == set(self._names)
             ):
-                self._mismatch(f"enum of {self._names}")
-            self._enum = declared
-            return
-        expected = _DATATYPES[kind]
-        if self.datatype is None:
-            self.datatype = expected
-        elif (get_origin(self.datatype) or self.datatype) is not expected:
-            self._mismatch(expected.__name__)
-
-    def _mismatch(self, served: str) -> NoReturn:
-        """Raise the error of a declared datatype the service does not serve."""
+                self._enum = declared
+                return
+            served = f"enum of {self._names}"
+        else:
+            expected = _DATATYPES[kind]
+            if self.datatype is None:
+                self.datatype = expected
+                return
+            if (get_origin(self.datatype) or self.datatype) is expected:
+                return
+            served = expected.__name__
         raise TypeError(
             f"{self._box_name()}: {self._attribute} is declared as {self.datatype} "
             f"but the service serves {served}"
