@@ -17,7 +17,7 @@ at the right priority in `WIDGET_FACTORY_MAP`.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 from magicgui import widgets as mgw
 from magicgui.types import Undefined
@@ -105,12 +105,10 @@ def make_value_widget(p: ParamDescription) -> mgw.Widget:
 
     Raises TypeError or ValueError if no widget exists for it.
     """
-    return cast(
-        "mgw.Widget",
-        create_value_widget(
-            p.annotated, p.default if p.has_default else Undefined, name=p.name
-        ),
+    widget: mgw.Widget = create_value_widget(
+        p.annotated, p.default if p.has_default else Undefined, name=p.name
     )
+    return widget
 
 
 WIDGET_FACTORY_MAP: list[tuple[WidgetPredicate, WidgetFactory]] = [

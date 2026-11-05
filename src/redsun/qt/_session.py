@@ -49,7 +49,6 @@ from typing import (
     NoReturn,
     TypeVar,
     assert_never,
-    cast,
     get_args,
 )
 
@@ -113,6 +112,8 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import TracebackType
     from typing import TypeAlias
+
+    from typing_extensions import TypeIs
 
     from .._config import Source
     from .._settings import JsonValue
@@ -316,14 +317,14 @@ class Qt(Frontend):
         match value:
             case "central":
                 return Central()
-            case str(edge) if edge in EDGE_NAMES:
-                return Dock(cast("Area", edge))
+            case str(edge) if is_area(edge):
+                return Dock(edge)
             case {"dock": str(edge), "group": str(group), **rest} if (
-                not rest and edge in EDGE_NAMES
+                not rest and is_area(edge)
             ):
-                return Dock(cast("Area", edge), group=group)
-            case {"dock": str(edge), **rest} if not rest and edge in EDGE_NAMES:
-                return Dock(cast("Area", edge))
+                return Dock(edge, group=group)
+            case {"dock": str(edge), **rest} if not rest and is_area(edge):
+                return Dock(edge)
             case {"menu": str(menu), **rest} if not rest:
                 return MenuItem(menu)
             case {"toolbar": str(toolbar), **rest} if not rest:
@@ -607,7 +608,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
         creators = self.hooks[QtHook.CREATE_APPLICATION]
         if QApplication.instance() is not None or not creators:
             return application()
-        creator = cast("CreatesApplication[QApplication]", creators[0])
+        creator = creators[0]
+        # the session checked every provider against its hook point when it
+        # built it, so this only narrows the type
+        if not isinstance(creator, CreatesApplication):  # pragma: no cover
+            raise HookError(
+                f"hook provider {type(creator).__name__!r} has no create_application"
+            )
         qt_app = creator.create_application(sys.argv)
         if not isinstance(qt_app, QApplication):
             raise HookError(
@@ -1227,9 +1234,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         Cancel.
         """
         confirmers = self.hooks[QtHook.CONFIRM_CLOSE]
-        if confirmers:
+        if confirmers and isinstance(confirmers[0], ConfirmsClose):
             try:
-                return cast("ConfirmsClose", confirmers[0]).confirm_close()
+                return confirmers[0].confirm_close()
             except Exception as e:  # noqa: BLE001 - reported by skip_hook
                 # the session's own rule answers, now and at every later close
                 self.skip_hook(confirmers[0], QtHook.CONFIRM_CLOSE, e)
@@ -1527,7 +1534,8 @@ def dock_toggle(session: str, dock: QDockWidget) -> Action[[], None]:
 
 def application() -> QApplication:
     """Return the running application, or start the one this session needs."""
-    return cast("QApplication", QApplication.instance() or QApplication(sys.argv))
+    running = QApplication.instance()
+    return running if isinstance(running, QApplication) else QApplication(sys.argv)
 
 
 def attach(
@@ -1622,10 +1630,12 @@ def place_regions(
     for region, node in layout.regions.items():
         if region == "center":
             window.setCentralWidget(central_widget(node, widgets))
-            continue
-        made = {name: make_dock(window, name, widgets[name]) for name in names_in(node)}
-        add_docks(window, region, node, made)
-        docks.update(made)
+        elif is_area(region):
+            made = {
+                name: make_dock(window, name, widgets[name]) for name in names_in(node)
+            }
+            add_docks(window, region, node, made)
+            docks.update(made)
     return docks
 
 
@@ -1634,11 +1644,15 @@ def place_regions(
 def named(name: str, view: object, required: type[T]) -> T:
     """Return *view* as *required*, named after *name* so it can be found again.
 
-    `Qt.check_placement` has confirmed the type by the time this is called.
+    Raises
+    ------
+    TypeError
+        If *view* is not a *required*.
     """
-    widget = cast("T", view)
-    widget.setObjectName(name)
-    return widget
+    if not isinstance(view, required):
+        raise TypeError(f"view {name!r} is not a {required.__name__}")
+    view.setObjectName(name)
+    return view
 
 
 def make_dock(window: QMainWindow, name: str, widget: QWidget) -> QDockWidget:
@@ -1651,11 +1665,16 @@ def make_dock(window: QMainWindow, name: str, widget: QWidget) -> QDockWidget:
     return dock
 
 
+def is_area(name: str) -> TypeIs[Area]:
+    """Whether *name* is a word for an edge of the window."""
+    return name in EDGE_NAMES
+
+
 def add_docks(
-    window: QMainWindow, region: str, node: Node, docks: Mapping[str, QDockWidget]
+    window: QMainWindow, region: Area, node: Node, docks: Mapping[str, QDockWidget]
 ) -> None:
     """Put *docks* against the edge *region* names, arranged as *node*."""
-    area = AREAS[cast("Area", region)]
+    area = AREAS[region]
     first = docks[next(names_in(node))]
     window.addDockWidget(area, first)
     spread(window, area, Qt.regions[region], node, first, docks)

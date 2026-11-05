@@ -8,7 +8,7 @@ import weakref
 from collections.abc import Mapping
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType, cast
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
 
 import pydantic
 import pytest
@@ -1158,7 +1158,14 @@ def declaring(target: object, layer: Layer) -> type[Session]:
     )
 
 
-def asking(hint: object) -> type:
+class Asking:
+    """The base of the presenter classes `asking` makes."""
+
+    value: object
+    """What the session passed for `value`."""
+
+
+def asking(hint: object) -> type[Asking]:
     """Return a presenter class whose constructor asks for a `value` of type *hint*."""
 
     def __init__(self: Any, name: str, *, value: Any) -> None:
@@ -1166,7 +1173,7 @@ def asking(hint: object) -> type:
         self.value = value
 
     __init__.__annotations__["value"] = hint
-    return type("Asking", (), {"__init__": __init__})
+    return type("Asking", (Asking,), {"__init__": __init__})
 
 
 def test_build_resolves_every_declaration(app: App) -> None:
@@ -1624,7 +1631,8 @@ def test_only_an_optional_parameter_may_go_unanswered(
     session = declaring(asking(hint), Layer.PRESENTER)
 
     if optional:
-        presenter = cast("Any", build(session).presenters["thing"])
+        presenter = build(session).presenters["thing"]
+        assert isinstance(presenter, Asking)
         assert presenter.value is None
     else:
         with pytest.raises(TypeError, match="which nothing in the session provides"):
@@ -2135,7 +2143,7 @@ def test_a_link_whose_first_item_is_not_a_signal_is_fatal() -> None:
         recorder: AsPresenter[Dependency]
 
         def wire(self) -> Iterator[Link]:
-            yield cast("Link", ("not-a-signal", lambda: None))
+            yield ("not-a-signal", lambda: None)  # type: ignore[misc]
 
     with pytest.raises(WiringError, match="is not a signal"):
         Miswired().build()

@@ -321,6 +321,7 @@ class PlanWidget:
         group = self.progress_group
         if group is None:
             return
+        # Qt returns the base class; the group was given a grid when it was made
         layout = cast("QtW.QGridLayout", group.layout())
         current = {scope.name for scope in scopes}
         for name in [name for name in self._progress_rows if name not in current]:
@@ -406,6 +407,7 @@ def _build_param_widgets(
             continue
         if p.kind is ParamKind.VAR_KEYWORD:
             continue
+        # a ValuedContainerWidget holds a value too, though it is no ValueWidget
         w = cast("mgw_bases.ValueWidget[Any]", create_param_widget(p))
         # device_proto is set by plan_spec for all PDevice-backed params
         if p.device_proto is not None:

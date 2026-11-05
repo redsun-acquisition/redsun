@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -230,7 +230,7 @@ def test_a_condition_is_asked_of_its_component() -> None:
 def test_a_condition_that_cannot_be_called_is_refused() -> None:
     """Refuse a condition that is not a function."""
     with pytest.raises(ValueError, match="condition"):
-        shortcut("Left", title="Back", when=cast("Any", "ready"))
+        shortcut("Left", title="Back", when="ready")  # type: ignore[arg-type]
 
 
 def test_the_holder_of_a_key_is_another_command_in_the_same_place() -> None:

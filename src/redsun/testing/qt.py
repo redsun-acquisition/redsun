@@ -17,7 +17,7 @@ import gc
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 from psygnal.qt import start_emitting_from_queue
@@ -52,7 +52,8 @@ def pytest_configure(config: pytest.Config) -> None:
 @pytest.fixture(scope="session")
 def qapp() -> QApplication:
     """Return the one `QApplication` of the whole run."""
-    return cast("QApplication", QApplication.instance() or QApplication([]))
+    running = QApplication.instance()
+    return running if isinstance(running, QApplication) else QApplication([])
 
 
 @pytest.fixture(autouse=True)

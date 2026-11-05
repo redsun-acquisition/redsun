@@ -8,7 +8,7 @@ import subprocess
 import sys
 import threading
 import weakref
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
 import yaml
@@ -1050,7 +1050,8 @@ def test_a_hook_answers_the_close_in_place_of_the_prompt(
     shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
     assert session.main_window.close()
-    hook = cast("AlwaysCloses", session.hooks[QtHook.CONFIRM_CLOSE][0])
+    (hook,) = session.hooks[QtHook.CONFIRM_CLOSE]
+    assert isinstance(hook, AlwaysCloses)
     assert hook.asked == 1
     assert shown == []
 

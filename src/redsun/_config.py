@@ -656,6 +656,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
         try:
             session = handler(data)
         except ValidationError as e:
+            # pydantic types what errors() returns apart from what it accepts back
             problems.extend(cast("list[InitErrorDetails]", e.errors()))
             raise ValidationError.from_exception_data(cls.__name__, problems) from None
         if problems:
