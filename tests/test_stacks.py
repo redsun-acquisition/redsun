@@ -478,7 +478,6 @@ def test_a_built_in_stack_makes_the_links_of_its_pair(
         )
     )
     expected = links(by_hand)
-    by_hand.shutdown()
     declared = build(
         QtSession.from_config(
             {
