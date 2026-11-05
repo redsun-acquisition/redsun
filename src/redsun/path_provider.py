@@ -36,6 +36,8 @@ PATH_PROVIDER_PORT: Final = "path_provider"
 
 _RESET_PLAN: Final = "unknown"
 
+_DATE_FORMAT: Final = "%Y-%m-%d"
+
 
 def _base_dir() -> Path:
     return Path(user_data_dir("redsun", appauthor=False))
@@ -148,6 +150,10 @@ class SessionPathProvider(PathProvider):
         self._filenames = PlanFilenameProvider(max_digits=max_digits)
         self._label = ""
         self._now = now or datetime.now
+        # counters found in the folders of earlier days, which receive no
+        # more files, so each is read once
+        self._earlier: dict[tuple[str, str], int] = {}
+        self._read_dates: set[str] = set()
 
         self._pattern = re.compile(
             rf"^(?P<plan>.+)_(?P<count>\d{{{max_digits}}})(?:[-.].*)?$"
@@ -195,7 +201,8 @@ class SessionPathProvider(PathProvider):
                 "it between runs."
             )
         self._base_dir = Path(base_dir).expanduser()
-        self._filenames.reset({})
+        self._earlier.clear()
+        self._read_dates.clear()
         self._scan_existing()
         self.sig_base_dir_changed.emit(self._base_dir)
 
@@ -226,36 +233,58 @@ class SessionPathProvider(PathProvider):
         pool, so the next plan continues from what is on disk.
         """
         self._filenames.set_plan(_RESET_PLAN)
-        self._filenames.reset({})
         self._scan_existing()
 
     def _scan_existing(self) -> None:
-        """Set each `(plan, datakey)` counter one past the highest number on disk."""
-        directory = self.session_dir
-        if not directory.exists():
-            return
-        for date_dir in directory.iterdir():
-            if not date_dir.is_dir():
-                continue
-            for entry in date_dir.iterdir():
-                # a store can be a directory, as a Zarr one is, so an entry
-                # counts as a data key's only when its name does not parse
-                if self._bump_from(entry, datakey_name="") or not entry.is_dir():
-                    continue
-                for nested in entry.iterdir():
-                    self._bump_from(nested, datakey_name=entry.name)
+        """Set each `(plan, datakey)` counter one past the highest number on disk.
 
-    def _bump_from(self, entry: Path, *, datakey_name: str) -> bool:
-        """Raise *datakey_name*'s counter past *entry*, and say whether it did."""
+        The folder of a day before today is read only by the first scan that
+        finds it; later scans reuse its counters.
+        """
+        today = self._now().strftime(_DATE_FORMAT)
+        current: list[tuple[str, str, int]] = []
+        directory = self.session_dir
+        for date_dir in directory.iterdir() if directory.exists() else ():
+            if not date_dir.is_dir() or date_dir.name in self._read_dates:
+                continue
+            found = self._counters_in(date_dir)
+            if date_dir.name >= today:
+                current += found
+                continue
+            self._read_dates.add(date_dir.name)
+            for plan, datakey_name, next_count in found:
+                key = (plan, datakey_name)
+                self._earlier[key] = max(self._earlier.get(key, 0), next_count)
+        self._filenames.reset(self._earlier)
+        for plan, datakey_name, next_count in current:
+            self._filenames.bump(plan, datakey_name, next_count)
+
+    def _counters_in(self, date_dir: Path) -> list[tuple[str, str, int]]:
+        """Return the plan, data key and next count of each file in *date_dir*."""
+        found = []
+        for entry in date_dir.iterdir():
+            # a store can be a directory, as a Zarr one is, so an entry
+            # counts as a data key's only when its name does not parse
+            if (counted := self._counter_of(entry, "")) is not None:
+                found.append(counted)
+            elif entry.is_dir():
+                found += [
+                    counted
+                    for nested in entry.iterdir()
+                    if (counted := self._counter_of(nested, entry.name)) is not None
+                ]
+        return found
+
+    def _counter_of(
+        self, entry: Path, datakey_name: str
+    ) -> tuple[str, str, int] | None:
+        """Return the plan, data key and next count *entry*'s name gives, if any."""
         # the suffix starts at the first dot or dash after the counter, so
         # scan_00004.ome.zarr is scan 4, and a label may hold dots
         match = self._pattern.match(entry.name)
         if match is None:
-            return False
-        self._filenames.bump(
-            match.group("plan"), datakey_name, int(match.group("count")) + 1
-        )
-        return True
+            return None
+        return match.group("plan"), datakey_name, int(match.group("count")) + 1
 
     def __call__(self, datakey_name: str | None = None) -> PathInfo:
         """Return the `PathInfo` of the next file for *datakey_name*.
@@ -264,7 +293,7 @@ class SessionPathProvider(PathProvider):
         counter for the active plan. The folder of the path is created if it
         does not exist.
         """
-        directory = self.session_dir / self._now().strftime("%Y-%m-%d")
+        directory = self.session_dir / self._now().strftime(_DATE_FORMAT)
         if datakey_name:
             directory = directory / datakey_name
         directory.mkdir(parents=True, exist_ok=True)
