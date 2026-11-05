@@ -166,6 +166,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self._attribute = ""
         self._description: AttributeDescription
         self._names: list[str] = []
+        self._enum: type[enum.Enum]
         self._readback = ""
         self._readback_shape = ""
         self._lock = asyncio.Lock()
@@ -230,21 +231,23 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                 self.datatype = StrictEnum(  # type: ignore[call-arg, assignment]
                     self._attribute, {name.upper(): name for name in self._names}
                 )
-            elif not (
-                isinstance(self.datatype, type)
-                and issubclass(self.datatype, enum.Enum)
-                and {member.value for member in self.datatype} == set(self._names)
+            declared = self.datatype
+            if (
+                isinstance(declared, type)
+                and issubclass(declared, enum.Enum)
+                and {member.value for member in declared} == set(self._names)
             ):
-                self._mismatch(f"enum of {self._names}")
-            return
-        expected = _DATATYPES[kind]
-        if self.datatype is None:
-            self.datatype = expected
-        elif (get_origin(self.datatype) or self.datatype) is not expected:
-            self._mismatch(expected.__name__)
-
-    def _mismatch(self, served: str) -> None:
-        """Raise the error of a declared datatype the service does not serve."""
+                self._enum = declared
+                return
+            served = f"enum of {self._names}"
+        else:
+            expected = _DATATYPES[kind]
+            if self.datatype is None:
+                self.datatype = expected
+                return
+            if (get_origin(self.datatype) or self.datatype) is expected:
+                return
+            served = expected.__name__
         raise TypeError(
             f"{self._box_name()}: {self._attribute} is declared as {self.datatype} "
             f"but the service serves {served}"
@@ -262,7 +265,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             case "uint":
                 value = int(raw[0])
             case "enum":
-                value = cast("type[enum.Enum]", self.datatype)(self._names[raw])
+                value = self._enum(self._names[raw])
             case "waveform":
                 value = unpad(raw, getattr(box, shape_field))
         # sharedbox builds the box class at runtime, so no checker sees the

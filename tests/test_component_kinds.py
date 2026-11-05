@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, NewType, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NewType
 
 import pydantic
 import pytest
@@ -196,8 +196,10 @@ def test_every_kind_of_class_takes_part_in_the_whole_session(
 ) -> None:
     """Configure, set up, share from, wire and save a presenter of every class kind."""
     session = build(app, CONFIG)
-    ctrl = cast("Behaviour | SlottedCtrl", session.presenters["ctrl"])
-    listener = cast("Listener", session.presenters["listener"])
+    ctrl = session.presenters["ctrl"]
+    listener = session.presenters["listener"]
+    assert isinstance(ctrl, (Behaviour, SlottedCtrl))
+    assert isinstance(listener, Listener)
 
     assert ctrl.gain == 7.5
     assert dict(ctrl.devices) == {"motor": session.devices["motor"]}

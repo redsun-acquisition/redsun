@@ -470,6 +470,7 @@ class Session(BuildableSession):
         session = base_for(cls, config.get("frontend"))(
             config, log_level=log_level, profile=profile, profile_dir=profile_dir
         )
+        # base_for returns cls, or a frontend's subclass when cls is Session itself
         return cast("Self", session)
 
     @property

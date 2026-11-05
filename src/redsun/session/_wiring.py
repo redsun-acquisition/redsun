@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from ophyd_async.core import SignalR
 from psygnal import SignalInstance
@@ -141,11 +141,8 @@ class Wiring:
                 f"{name} is not connectable; mark it with the 'slot' decorator"
             )
         consumer = getattr(slot, "__self__", None)
-        return (
-            declaration.thread
-            or cast("SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None))
-            or self.frontend.thread_of(consumer)
-        )
+        marked: SlotThread | None = getattr(type(consumer), SLOT_THREAD_ATTR, None)
+        return declaration.thread or marked or self.frontend.thread_of(consumer)
 
     def link(self, signal: object, slot: SlotCallable) -> None:
         """Make one link, unless it is made already or an end of it failed to build.
