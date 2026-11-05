@@ -6,7 +6,7 @@ import logging
 import re
 import sys
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
 from mock_bundle.hooks import MockBoth, MockBranding, MockStyle
@@ -304,8 +304,8 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
     """Run a hook at the hook point named by its attribute."""
     app = build(StyledApp)
     (provider,) = app.hooks[QtHook.CONFIGURE_APPLICATION]
-    installed = cast("MockStyle", provider)
-    assert installed.seen == [qapp]
+    assert isinstance(provider, MockStyle)
+    assert provider.seen == [qapp]
 
 
 def test_the_installed_hook_points_are_logged_one_per_line(
@@ -341,8 +341,8 @@ def test_a_provider_may_inherit_the_protocol_of_its_point(
 
     app = build(App)
     (provider,) = app.hooks[QtHook.CONFIGURE_APPLICATION]
-    installed = cast("Heir", provider)
-    assert installed.seen == [qapp]
+    assert isinstance(provider, Heir)
+    assert provider.seen == [qapp]
 
 
 def test_declare_carries_the_providers_arguments(
@@ -356,8 +356,8 @@ def test_declare_carries_the_providers_arguments(
 
     app = build(App)
     (provider,) = app.hooks[QtHook.CONFIGURE_APPLICATION]
-    installed = cast("MockStyle", provider)
-    assert installed.style == "dark"
+    assert isinstance(provider, MockStyle)
+    assert provider.style == "dark"
 
 
 def test_one_annotation_serves_several_points(
@@ -465,7 +465,7 @@ def test_a_points_providers_run_in_order_the_class_first(
     order = ["base", "subclass first", "subclass second", "file first", "file second"]
     assert app.main_window.property("notes") == order
     installed = app.hooks[QtHook.CONFIGURE_MAIN_VIEW]
-    assert [cast("Signs", provider).note for provider in installed] == order
+    assert [p.note for p in installed if isinstance(p, Signs)] == order
 
 
 def test_a_session_maps_every_point_it_calls(
@@ -895,13 +895,16 @@ def test_create_application_is_consulted_only_with_none_running(
     founding = {"provider": f"{__name__}:Founder", "kwargs": {"app": qapp}}
     config = {"hooks": {"create_application": founding}}
     first = build(StyledApp, config)
-    unused = cast("Founder", first.hooks[QtHook.CREATE_APPLICATION][0])
+    (unused,) = first.hooks[QtHook.CREATE_APPLICATION]
+    assert isinstance(unused, Founder)
     first.shutdown()
 
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
     second = build(StyledApp, config)
-    founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION][0])
-    styler = cast("MockStyle", second.hooks[QtHook.CONFIGURE_APPLICATION][0])
+    (founder,) = second.hooks[QtHook.CREATE_APPLICATION]
+    (styler,) = second.hooks[QtHook.CONFIGURE_APPLICATION]
+    assert isinstance(founder, Founder)
+    assert isinstance(styler, MockStyle)
 
     assert unused.seen == []
     assert founder.seen == [sys.argv]

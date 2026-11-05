@@ -8,7 +8,6 @@ from typing import (
     Any,
     Literal,
     TypeVar,
-    cast,
     overload,
 )
 
@@ -309,5 +308,6 @@ def owner_of(signal: SignalInstance) -> object | None:
     """
     instance: object | None = signal.instance
     if isinstance(instance, SignalGroup):
-        return cast("object | None", instance.instance)
+        owner: object | None = instance.instance
+        return owner
     return instance
