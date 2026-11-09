@@ -51,6 +51,7 @@ release notes.
 | connect a signal to a slot | [`redsun.ports`](api/ports.md) |
 | describe a plan and build its controls | [`redsun.presenter`](api/presenter.md), [Qt widgets](api/view.md#qt-widgets) |
 | run a plan, or one that runs until stopped | [`redsun.engine`](api/engine.md) |
+| run heavy work off the main thread | [`redsun.compute`](api/compute.md) |
 | place a view in the window | [Placements](api/qt.md#placements) |
 | keep a setting between runs | [Settings](api/session.md#settings) |
 | choose where files go | [`redsun.path_provider`](api/path_provider.md) |
@@ -68,6 +69,8 @@ Find a class or a function by the module you import it from.
     - [`redsun.aio`](api/aio.md): run a coroutine on the event loop the
       session shares
     - [`redsun.catalog`](api/catalog.md): the catalog of runs a session keeps
+    - [`redsun.compute`](api/compute.md): the threads a component runs heavy
+      work on, and how the session sizes them
     - `redsun.device`: devices a session builds from what a service serves
         - [`redsun.device.sharedbox`](api/device-sharedbox.md): a device
           filled from the boxes of a `fastcs` controller

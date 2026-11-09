@@ -16,6 +16,7 @@ BOX_EXAMPLES = ["box_detector"] if find_spec("sharedbox") else []
 EXAMPLES = [
     "acquisition",
     "acquisition_files",
+    "background_median",
     "connect_on_demand",
     "console_frontend",
     "continuous_areadetector",

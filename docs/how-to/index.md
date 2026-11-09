@@ -66,6 +66,7 @@ Run a session, follow what it does and keep its settings.
 - [How to find out why a component is missing](find-a-missing-component.md)
 - [How to configure logging](configure-logging.md)
 - [How to profile a session](profile-a-session.md)
+- [How to run background processing](run-background-processing.md)
 - [How to change a device setting while a plan runs](change-a-setting-while-a-plan-runs.md)
 - [How to save a session](save-a-session.md)
 

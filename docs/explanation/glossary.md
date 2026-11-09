@@ -178,6 +178,14 @@ offers values by name, and a program that can reach it reads them and, where
 the server allows, sets them. See
 [epics-controls.org](https://epics-controls.org/).
 
+### Executor
+
+An executor is a component's share of the threads a session keeps for heavy
+computation. The component asks for one in its constructor, by annotating a
+parameter with [`ThreadExecutor`][redsun.compute.ThreadExecutor], and sends
+functions to it with `submit`, which returns a future. The session decides how
+many threads the pool behind it has, and stops the pool when it shuts down.
+
 ### Frontend
 
 A frontend is what shows a session on screen, such as the Qt one that

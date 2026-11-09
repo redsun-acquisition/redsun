@@ -32,6 +32,7 @@ Every key is optional.
 | `shortcuts` | mapping | empty | [keys](#shortcuts) replacing what the components declare |
 | `providers` | mapping | empty | classes that share values with the components, by name |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
+| `compute` | mapping, or a preset name | the defaults below | [how background computation spends the cores](#compute) |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
 | `pairs` | list | empty | [components linked to each other](#pairs), two names each |
 | `hooks` | mapping | empty | the [hook providers](#hooks), by hook point |
@@ -169,6 +170,30 @@ storage:
   catalog:
     readable: [/data/camera]
 ```
+
+## Compute
+
+`compute` sets how many cores the [executors](../explanation/glossary.md#executor)
+of the components share, and how. A bare preset name, `compute: latency`, is
+the same as `compute: {preset: latency}`. The session class's `compute`
+attribute takes the same keys, and the file overrides it key by key.
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `preset` | `latency`, `balanced` or `throughput` | `balanced` | how the cores split between pool threads and the native threads of each |
+| `cores` | whole number, at least 1 | every core left after `reserve` | the most cores computation may use |
+| `reserve` | list of core numbers | one core | the physical cores kept for the rest of the application; the session keeps as many cores as the list holds |
+| `switch_interval_ms` | number above 0 | Python's own | how often Python lets another thread run, in milliseconds |
+
+```yaml
+compute:
+  preset: throughput
+  cores: 8
+  reserve: [0, 1]
+```
+
+[Background computation](../explanation/background-computation.md#the-budget)
+says how a preset splits the cores.
 
 ## Wiring
 

@@ -32,6 +32,7 @@ Learn about the [services](glossary.md#service) a session reaches hardware
 through, and the [plans](glossary.md#plan) it runs.
 
 - [How a session runs and talks to services](services.md)
+- [How a session runs heavy computation](background-computation.md)
 - [How presenters run plans](plans.md)
 
 ### Frontends

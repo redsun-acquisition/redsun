@@ -67,6 +67,7 @@ nav = [
             "how-to/find-a-missing-component.md",
             "how-to/configure-logging.md",
             "how-to/profile-a-session.md",
+            "how-to/run-background-processing.md",
             "how-to/change-a-setting-while-a-plan-runs.md",
             "how-to/save-a-session.md",
         ]},
@@ -96,6 +97,7 @@ nav = [
         ]},
         { "Hardware and plans" = [
             "explanation/services.md",
+            "explanation/background-computation.md",
             "explanation/plans.md",
         ]},
         { "Frontends" = [
@@ -144,6 +146,7 @@ nav = [
                 "explanation/decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes.md",
                 "explanation/decisions/0036-a-stack-is-declared-as-one-entry.md",
                 "explanation/decisions/0037-diwire-is-the-session-registry.md",
+                "explanation/decisions/0038-the-session-owns-background-computation.md",
         ]},
     ]},
     { "Reference" = [
@@ -160,6 +163,7 @@ nav = [
         { "API" = [
             "reference/api/aio.md",
             "reference/api/catalog.md",
+            "reference/api/compute.md",
             "reference/api/device-sharedbox.md",
             "reference/api/engine.md",
             "reference/api/errors.md",
