@@ -34,6 +34,7 @@ from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
+from redsun.compute import Preset, budget, physical_cores
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
 from redsun.injection import Registry, rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
@@ -56,6 +57,7 @@ from .._config import (
     frontends,
     label,
     load,
+    merged_compute,
     validate_session,
 )
 from .._hooks import (
@@ -126,6 +128,7 @@ if TYPE_CHECKING:
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
+    from redsun.compute import Budget
     from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
     from redsun.view import Placement, WindowLayout
@@ -266,6 +269,7 @@ class Session(BuildableSession):
         "_callbacks",
         "_catalog",
         "_class_counts",
+        "_compute_budget",
         "_config",
         "_declarations",
         "_device_index",
@@ -326,6 +330,13 @@ class Session(BuildableSession):
 
     Empty here: every hook point belongs to a toolkit, so a toolkit session
     such as `redsun.qt.QtSession` names its own.
+    """
+
+    compute: ClassVar[Preset | Mapping[str, Any] | None] = None
+    """How this session spends its cores on background computation.
+
+    A preset name, or a mapping with the keys of the session file's `compute`
+    section. The file's section overrides it key by key.
     """
 
     frontend: ClassVar[type[Frontend]] = Frontend
@@ -402,6 +413,7 @@ class Session(BuildableSession):
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
         self._storage: StorageConfig | None = None
+        self._compute_budget: Budget | None = None
         self._path_provider: SessionPathProvider | None = None
         self._catalog: SimpleTiledServer | None = None
         self._callbacks: dict[str, CallbackType] = {}
@@ -728,6 +740,19 @@ class Session(BuildableSession):
         return self._storage
 
     @property
+    def compute_budget(self) -> Budget:
+        """The cores background computation may use and how they are split.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`.
+        """
+        if self._compute_budget is None:
+            raise RuntimeError("Call build() before reading compute_budget")
+        return self._compute_budget
+
+    @property
     def path_provider(self) -> SessionPathProvider:
         """The session's path provider, shared by every device taking one.
 
@@ -880,6 +905,7 @@ class Session(BuildableSession):
         self._check_layers(components)
         self._read_services(config)
         self._open_storage(config)
+        self._open_compute(config)
         # registered after the logs, so a provider's teardown is still logged
         for hook in distinct(chain.from_iterable(self.hooks.values())):
             if isinstance(hook, HasShutdown):
@@ -953,6 +979,14 @@ class Session(BuildableSession):
         )
         self._wiring.path_provider = self._path_provider
         self._open_logs(self._path_provider)
+
+    def _open_compute(self, config: SessionFile) -> None:
+        """Work out the compute budget from the class's `compute` and the file's section."""
+        compute = merged_compute(type(self).compute, config.compute)
+        reserve = 1 if compute.reserve is None else len(compute.reserve)
+        self._compute_budget = budget(
+            compute.preset, physical_cores(), compute.cores, reserve
+        )
 
     def window_layout(self) -> WindowLayout | None:
         """Return the layout this session's window starts with, or `None` to place each view where it asks.

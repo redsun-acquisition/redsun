@@ -33,6 +33,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from redsun.compute import Preset
 from redsun.errors import ConfigurationError
 from redsun.services._transports import TRANSPORT_KEY, TRANSPORTS, transport_of
 from redsun.view import Column, Row, Tabs, WindowLayout
@@ -353,6 +354,32 @@ class StorageConfig(
     """The session's catalog, needing the `tiled` extra; `None` for none."""
 
 
+class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """How a session spends its cores on background computation."""
+
+    preset: Preset = "balanced"
+    """How the cores split between worker threads and each worker's native threads."""
+
+    cores: int | None = None
+    """Most cores computation may use; `None` for every core left after the reserve."""
+
+    reserve: list[int] | None = None
+    """Physical cores kept for the rest of the application, one number each; `None` keeps one."""
+
+    switch_interval_ms: float | None = None
+    """Interpreter thread switch interval in milliseconds; `None` leaves it as it is."""
+
+
+def merged_compute(
+    declared: Preset | Mapping[str, Any] | None, section: ComputeConfig | None
+) -> ComputeConfig:
+    """Return the compute settings of a session class, overridden key by key by its file's section."""
+    merged = {"preset": declared} if isinstance(declared, str) else dict(declared or {})
+    if section is not None:
+        merged |= section.model_dump(exclude_unset=True)
+    return ComputeConfig.model_validate(merged)
+
+
 def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> SessionFile:
     """Return *data*, the merged content of *sources*, as a session file.
 
@@ -618,6 +645,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""
 
+    compute: ComputeConfig | None = None
+    """How background computation spends the cores; a bare word names the preset."""
+
     wiring: dict[str, str | list[str]] = {}
     """The slots each signal reaches, both written as `component.port`."""
 
@@ -662,6 +692,12 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
         if problems:
             raise ValidationError.from_exception_data(cls.__name__, problems)
         return session
+
+    @field_validator("compute", mode="before")
+    @classmethod
+    def preset_word(cls, value: object) -> object:
+        """Read a bare word as the preset."""
+        return {"preset": value} if isinstance(value, str) else value
 
     @field_validator("transport")
     @classmethod
