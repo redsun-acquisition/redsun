@@ -43,9 +43,11 @@ def start_draining(drainer: object) -> None:
 
 
 def stop_draining(drainer: object) -> None:
-    """Drop the results that finish from now on for the deliveries made while *drainer* drained.
+    """Stop queueing results for `drainer`.
 
-    What is queued already stays queued, for *drainer* to empty next.
+    A result of a delivery made while `drainer` was draining, finishing from
+    now on, is dropped. What is queued already stays queued, for `drainer` to
+    empty next.
     """
     with LOCK:
         DRAINERS.pop(drainer, None)
