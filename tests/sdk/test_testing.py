@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import threading
 from typing import TYPE_CHECKING
 
 import pytest
@@ -13,6 +14,7 @@ from tests.sdk.helpers import automatic_collection
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from redsun.compute import ThreadExecutor
     from redsun.testing import BuildSession
 
 pytest_plugins = ["pytester"]
@@ -53,6 +55,7 @@ def test_two_sessions(build):
 
 COLLECTION_IS_OFF = """
 import gc
+import threading
 
 
 def test_collection_is_off():
@@ -86,6 +89,7 @@ def test_the_cycle_was_freed():
 
 TURNS_COLLECTION_ON = """
 import gc
+import threading
 
 
 def test_before():
@@ -316,3 +320,11 @@ def test_a_test_that_raised_is_not_checked(pytester: pytest.Pytester) -> None:
 
     result.assert_outcomes(failed=1, xfailed=1)
     result.stdout.no_fnmatch_line("*still alive after the test*")
+
+
+def test_inline_threads_runs_in_place(inline_threads: ThreadExecutor) -> None:
+    """Run a call before submit returns."""
+    future = inline_threads.submit(threading.get_ident)
+
+    assert future.done()
+    assert future.result() == threading.get_ident()

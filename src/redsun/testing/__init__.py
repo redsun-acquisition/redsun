@@ -15,12 +15,14 @@ import gc
 import logging
 import os
 import weakref
+from concurrent.futures import Executor, Future
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
 from psygnal._queue import QueuedCallback
 
 from redsun.aio import run_coro
+from redsun.compute import ThreadExecutor
 from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 from redsun.services import Service
 from redsun.session import Session
@@ -28,7 +30,7 @@ from redsun.session import Session
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Callable, Generator, Sequence
     from pathlib import Path
 
     from redsun.session import Launch
@@ -43,6 +45,7 @@ __all__ = [
     "config_home",
     "data_directory",
     "empty_emission_queue",
+    "inline_threads",
     "keep_automatic_collection_off",
     "log_directory",
     "no_automatic_collection",
@@ -59,6 +62,22 @@ RAISED = pytest.StashKey[bool]()
 """Set on a test whose setup or call raised; its traceback keeps its frames, so its sessions are not checked."""
 
 SessionT = TypeVar("SessionT", bound=Session)
+R = TypeVar("R")
+
+
+class InlineExecutor(Executor):
+    """Run each submitted call in the calling thread and return a finished future."""
+
+    def submit(
+        self, fn: Callable[..., R], /, *args: object, **kwargs: object
+    ) -> Future[R]:
+        """Run `fn(*args, **kwargs)` now and return its finished future."""
+        future: Future[R] = Future()
+        try:
+            future.set_result(fn(*args, **kwargs))
+        except BaseException as e:  # noqa: BLE001 - kept in the future, as a pool does
+            future.set_exception(e)
+        return future
 
 
 class BuildSession(Protocol):
@@ -306,3 +325,13 @@ def start_service(
         service.stop()
     for transport in {service.transport for service in started}:
         run_coro(TRANSPORTS[transport].release())
+
+
+@pytest.fixture
+def inline_threads() -> ThreadExecutor:
+    """Return a thread executor that runs each call in the calling thread.
+
+    A component given it computes synchronously, so a test needs no waiting
+    for a background call to finish.
+    """
+    return ThreadExecutor._from_pool(InlineExecutor(), 1, "inline")
