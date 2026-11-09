@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from redsun import Session
 from redsun._config import SessionFile
 from redsun.compute import Budget
+from redsun.errors import ConfigurationError
 
 if TYPE_CHECKING:
     from redsun.testing import BuildSession
@@ -84,3 +85,11 @@ def test_a_value_out_of_range_is_refused(section: dict[str, object]) -> None:
     """Refuse a switch interval of zero, no cores and a negative reserved core."""
     with pytest.raises(ValidationError, match=next(iter(section))):
         SessionFile.model_validate({"compute": section})
+
+
+@pytest.mark.parametrize("declared", ["fast", 5, {"cores": 0}])
+def test_a_bad_class_value_is_refused(build: BuildSession, declared: object) -> None:
+    """Refuse an unknown preset, a non-mapping or a bad setting declared by the class."""
+    bad_app = type("BadApp", (Session,), {"compute": declared})
+    with pytest.raises(ConfigurationError, match=r"BadApp\.compute"):
+        build(bad_app)

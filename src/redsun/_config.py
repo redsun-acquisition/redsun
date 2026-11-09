@@ -371,13 +371,35 @@ class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
 
 def merged_compute(
-    declared: Preset | Mapping[str, Any] | None, section: ComputeConfig | None
+    declared: object, section: ComputeConfig | None, where: str
 ) -> ComputeConfig:
-    """Return the compute settings of a session class, overridden key by key by its file's section."""
-    merged = {"preset": declared} if isinstance(declared, str) else dict(declared or {})
+    """Return the compute settings of a session class, overridden key by key by its file's section.
+
+    Raises
+    ------
+    ConfigurationError
+        If the class declares anything but a preset or valid settings,
+        naming *where* it was declared.
+    """
+    match declared:
+        case None:
+            merged: dict[str, Any] = {}
+        case str():
+            merged = {"preset": declared}
+        case Mapping():
+            merged = dict(declared)
+        case _:
+            raise ConfigurationError(
+                [where], [f"compute: a preset or a mapping, not {declared!r}"]
+            )
     if section is not None:
         merged |= section.model_dump(exclude_unset=True)
-    return ComputeConfig.model_validate(merged)
+    try:
+        return ComputeConfig.model_validate(merged)
+    except ValidationError as e:
+        raise ConfigurationError(
+            [where], [f"compute.{line}" for line in problem_lines(e)]
+        ) from e
 
 
 def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> SessionFile:

@@ -1000,7 +1000,9 @@ class Session(BuildableSession):
 
     def _open_compute(self, config: SessionFile) -> None:
         """Work out the compute budget from the class's `compute` and the file's section."""
-        compute = merged_compute(type(self).compute, config.compute)
+        compute = merged_compute(
+            type(self).compute, config.compute, f"{type(self).__qualname__}.compute"
+        )
         reserve = 1 if compute.reserve is None else len(compute.reserve)
         self._compute = compute
         self._compute_budget = budget(
