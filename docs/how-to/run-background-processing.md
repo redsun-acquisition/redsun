@@ -81,8 +81,8 @@ call the method.
 
     The function receives the list itself, not a copy. If `event` went on
     appending to that list while the median runs, the median would read a
-    list that changes under it. `start` gives each run a new list, so the
-    list sent at `stop` is never touched again.
+    list that changes under it. Start a new list for each run, as `start`
+    does here, so the list sent at `stop` is never touched again.
 
 ## Await the result in an `async` slot
 
@@ -105,11 +105,11 @@ Set `compute` on the session class to pick a preset:
 --8<-- "docs/examples/background_median.py:session"
 ```
 
-| Preset | Pool threads | Native threads per call |
+| Preset | Pool threads | Native threads per pool thread |
 | --- | --- | --- |
 | `latency` | 1 | every core of the budget |
-| `balanced` | a quarter of the cores, at least 2 | the cores divided by the pool threads |
-| `throughput` | one per core | 1 |
+| `balanced` | a quarter of the budget's cores, at least 2 | the budget's cores divided by the pool threads |
+| `throughput` | one per core of the budget | 1 |
 
 Pick `latency` when one computation at a time should finish as fast as
 possible, `throughput` when many independent ones run together, and keep the

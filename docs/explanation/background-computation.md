@@ -5,8 +5,8 @@ icon: lucide/cpu
 # Background computation
 
 A session keeps one pool of threads for heavy computation and gives every
-component that asks an [executor](glossary.md#executor), its own share of that
-pool. The session sizes that pool from the machine's cores, limits the
+component that asks for one an [executor](glossary.md#executor): its own share
+of that pool. The session sizes that pool from the machine's cores, limits the
 threads of the libraries the work calls, and hands each result back on the
 thread its component lives on. [How to run background processing](../how-to/run-background-processing.md)
 shows the code a component needs.
@@ -143,7 +143,7 @@ number, which is how they show up in a profiler.
 
 ## What comes next
 
-Three kinds of executor are planned on top of this one. A process executor
+Three additions are planned on top of this executor. A process executor
 will run code that holds the GIL in worker processes. Pinning will tie a
 component's work to cores chosen in the session file. A CUDA executor will run
 work on an NVIDIA GPU, one stream per device. None of them is in `redsun` yet.
