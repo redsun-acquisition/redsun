@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import weakref
 from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, final
 
@@ -36,7 +35,6 @@ class ThreadExecutor:
         )
         self._native_threads = native_threads
         self._owner: str | None = None
-        weakref.finalize(self, self._pool.shutdown, wait=False)
 
     @classmethod
     def _from_pool(

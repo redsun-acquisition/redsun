@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from concurrent.futures import Future
 
+    from ..ports._wiring import SlotThread
+
 R = TypeVar("R")
 
 logger = logging.getLogger("redsun")
@@ -29,19 +31,20 @@ def deliver(future: Future[R], callback: Callable[[R], object]) -> None:
     queue until that thread calls `psygnal.emit_queued`; a callback without
     one is queued for the main thread. With no frontend draining the queue,
     the callback runs on the thread that finished the future. A failed
-    future is logged and the callback is not called.
+    future is logged and a cancelled one is not; neither calls the callback.
     """
-    declared = getattr(marker_of(callback), "thread", None)
+    declared: SlotThread = getattr(marker_of(callback), "thread", None) or "main"
     thread = threading.current_thread() if declared == "current" else declared
+    name = getattr(callback, "__qualname__", callback)
 
     def done(finished: Future[R]) -> None:
+        if finished.cancelled():
+            logger.debug("%s: its computation was cancelled", name)
+            return
         try:
             result = finished.result()
-        except BaseException:
-            logger.exception(
-                "%s: its computation failed",
-                getattr(callback, "__qualname__", callback),
-            )
+        except Exception:
+            logger.exception("%s: its computation failed", name)
             return
         try:
             if DRAINERS:
@@ -51,8 +54,6 @@ def deliver(future: Future[R], callback: Callable[[R], object]) -> None:
             else:
                 callback(result)
         except Exception:
-            logger.exception(
-                "%s: the callback failed", getattr(callback, "__qualname__", callback)
-            )
+            logger.exception("%s: the callback failed", name)
 
     future.add_done_callback(done)
