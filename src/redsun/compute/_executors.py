@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from concurrent.futures import Executor, ThreadPoolExecutor
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, final
+from functools import partial
+from typing import TYPE_CHECKING, Final, ParamSpec, TypeVar, final
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -12,6 +15,20 @@ if TYPE_CHECKING:
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+QUEUE_WAIT_WARNING: Final = 1.0
+"""Seconds a call of a session's executor may wait for a worker before it is logged."""
+
+
+def timed(owner: str, queued: float, call: partial[R]) -> R:
+    """Run *call*, logging under *owner* when it waited too long since *queued*."""
+    waited = time.perf_counter() - queued
+    if waited > QUEUE_WAIT_WARNING:
+        name = getattr(call.func, "__qualname__", call.func)
+        logging.getLogger(f"redsun.compute.{owner}").warning(
+            "%s waited %.2f s for a worker", name, waited
+        )
+    return call()
 
 
 @final
@@ -60,7 +77,10 @@ class ThreadExecutor:
         self, fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs
     ) -> Future[R]:
         """Schedule `fn(*args, **kwargs)` and return its future."""
-        return self._pool.submit(fn, *args, **kwargs)
+        if self._owner is None:
+            return self._pool.submit(fn, *args, **kwargs)
+        call = partial(fn, *args, **kwargs)
+        return self._pool.submit(timed, self._owner, time.perf_counter(), call)
 
     async def run(self, fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs) -> R:
         """Run `fn(*args, **kwargs)` on the pool and await its result."""

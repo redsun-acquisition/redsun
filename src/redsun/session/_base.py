@@ -21,6 +21,7 @@ from typing import (
     ClassVar,
     Final,
     Literal,
+    NoReturn,
     Self,
     TypeAlias,
     TypeVar,
@@ -34,7 +35,7 @@ from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
-from redsun.compute import Preset, budget, physical_cores
+from redsun.compute import Preset, ThreadExecutor, budget, physical_cores
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
 from redsun.injection import Registry, rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
@@ -50,6 +51,7 @@ from .. import _structural
 from .._catalog import require_tiled, start_catalog
 from .._config import (
     ComponentEntry,
+    ComputeConfig,
     SessionFile,
     Source,
     StorageConfig,
@@ -74,6 +76,7 @@ from .._hooks import (
 )
 from .._settings import Settings
 from .._structural import is_optional, without_none
+from ..compute._limits import Limits
 from ..injection._provides import (
     claim_shared,
     constant,
@@ -95,6 +98,8 @@ from ._declarations import (
 from ._factories import (
     constructor,
     device_questions,
+    executor_of,
+    executor_params,
     factory,
     get_setup_params,
     injectable,
@@ -269,6 +274,7 @@ class Session(BuildableSession):
         "_callbacks",
         "_catalog",
         "_class_counts",
+        "_compute",
         "_compute_budget",
         "_config",
         "_declarations",
@@ -281,10 +287,12 @@ class Session(BuildableSession):
         "_filled",
         "_hooks",
         "_is_built",
+        "_limits",
         "_merged",
         "_names",
         "_not_set_up",
         "_path_provider",
+        "_pool",
         "_profile",
         "_registry",
         "_releases",
@@ -413,7 +421,10 @@ class Session(BuildableSession):
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
         self._storage: StorageConfig | None = None
+        self._compute = ComputeConfig()
         self._compute_budget: Budget | None = None
+        self._limits = Limits()
+        self._pool: ThreadPoolExecutor | None = None
         self._path_provider: SessionPathProvider | None = None
         self._catalog: SimpleTiledServer | None = None
         self._callbacks: dict[str, CallbackType] = {}
@@ -807,10 +818,17 @@ class Session(BuildableSession):
         values in the registry, through methods marked with
         `redsun.provides`, and its own constructor is filled from
         the registry like anything else.
+
+        Raises
+        ------
+        TypeError
+            If a provider's constructor asks for an executor.
         """
         classes: dict[str, type] = {cls.__name__: cls for cls in self.providers}
         classes.update(load_providers(providers))
         for name, cls in classes.items():
+            for pname, executor in executor_params(cls, {}).items():
+                refuse_executor(name, executor, pname)
             params = injectable(cls, {}, binds_name=False)
             refuse_unanswered(registry, name, params)
             instance = registry.call(provider(cls, name))
@@ -984,6 +1002,7 @@ class Session(BuildableSession):
         """Work out the compute budget from the class's `compute` and the file's section."""
         compute = merged_compute(type(self).compute, config.compute)
         reserve = 1 if compute.reserve is None else len(compute.reserve)
+        self._compute = compute
         self._compute_budget = budget(
             compute.preset, physical_cores(), compute.cores, reserve
         )
@@ -1276,6 +1295,8 @@ class Session(BuildableSession):
         The settings and the shared services come first and the questions
         the components ask are answered next, so that everything a
         constructor may reach for is registered before the first one runs.
+        The compute section's thread switch interval takes effect here, and
+        `shutdown` puts back the one it replaced.
         """
         registry = self.make_registry()
         self._registry = registry
@@ -1286,6 +1307,12 @@ class Session(BuildableSession):
         self._share(registry, self._configuration().providers)
         for declaration in self._components():
             self._claim(registry, declaration)
+        self._limits = Limits()
+        self.on_release(self._limits.restore)
+        interval_ms = self._compute.switch_interval_ms
+        if interval_ms is not None:
+            self.on_release(partial(sys.setswitchinterval, sys.getswitchinterval()))
+            sys.setswitchinterval(interval_ms / 1000)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
@@ -1369,7 +1396,7 @@ class Session(BuildableSession):
         """
 
     def log_summary(self) -> None:
-        """Log what the build made, counted against what was declared.
+        """Log the compute budget, then what the build made, counted against what was declared.
 
         Raises
         ------
@@ -1384,6 +1411,13 @@ class Session(BuildableSession):
             "services": list(self._failed_services.items()),
             "hooks": [(failure.name, failure.reason) for failure in self._failed_hooks],
         }
+        logger.info(
+            "compute: %s, %d cores, %d threads x %d native",
+            self._compute.preset,
+            self.compute_budget.cores,
+            self.compute_budget.threads,
+            self.compute_budget.native_threads,
+        )
         if not any(missing.values()):
             logger.info(summary)
             return
@@ -1530,6 +1564,7 @@ class Session(BuildableSession):
         self._filled.clear()
         self._shared_values.clear()
         self._registry = None
+        self._pool = None
         logger.info("Session shut down")
 
     def serialize(self) -> dict[str, Any]:
@@ -1780,12 +1815,16 @@ class Session(BuildableSession):
         component keeps its place, its wiring and what its constructor made,
         and what its `setup` was going to assign is missing where it is used.
 
+        Once every `setup` has run, the native thread pools loaded so far are
+        limited to the budget's native threads, until `shutdown`.
+
         Raises
         ------
         RuntimeError
             If the registry step has not opened the registry yet.
         TypeError
-            If a `setup` asks for something nothing in the session declares.
+            If a `setup` asks for something nothing in the session declares,
+            or for an executor.
         """
         registry = self._require_registry()
         components = self._components()
@@ -1804,6 +1843,7 @@ class Session(BuildableSession):
                     declaration.name,
                     reason,
                 )
+        self._limits.apply(self.compute_budget.native_threads)
 
     def _require_registry(self) -> Registry:
         """Return the registry the registry step opened.
@@ -1833,6 +1873,10 @@ class Session(BuildableSession):
             If the `setup` asks for something nothing in the session declares.
         """
         params = get_setup_params(declaration.cls)
+        for pname, hint in params.items():
+            executor = executor_of(hint)
+            if executor is not None:
+                refuse_executor(f"{declaration.name}.setup", executor, pname)
         questions = {
             pname: shape
             for pname, hint in params.items()
@@ -1937,6 +1981,12 @@ class Session(BuildableSession):
                         declaration.cls, declaration.cfg_kwargs
                     ).items()
                 },
+                **{
+                    pname: self._executor(declaration.name)
+                    for pname in executor_params(
+                        declaration.cls, declaration.cfg_kwargs
+                    )
+                },
             }
             params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
             reason = self._not_built(registry, declaration.name, params)
@@ -1960,6 +2010,26 @@ class Session(BuildableSession):
             self._shared_values.extend((declaration.name, value) for value in shared)
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
+
+    def _executor(self, owner: str) -> ThreadExecutor:
+        """Return an executor of *owner*'s own over the session's pool.
+
+        The pool is made for the first component asking. It stops before the
+        services, cancelling the calls still queued, and each of its threads
+        applies the native limits again as it starts, for a library imported
+        since the setup step.
+        """
+        budget = self.compute_budget
+        if self._pool is None:
+            self._pool = ThreadPoolExecutor(
+                budget.threads,
+                thread_name_prefix="redsun-compute",
+                initializer=partial(self._limits.apply, budget.native_threads),
+            )
+            self.on_release(
+                partial(self._pool.shutdown, wait=False, cancel_futures=True)
+            )
+        return ThreadExecutor._from_pool(self._pool, budget.native_threads, owner)
 
     def _not_built(
         self, registry: Registry, name: str, params: Mapping[str, Any]
@@ -2508,6 +2578,20 @@ def held(registry: Registry, hint: object) -> bool:
     """Return whether *registry* has a value for *hint*, not only a key."""
     provider = next(registry.providers(hint), None)
     return provider is not None and provider() is not None
+
+
+def refuse_executor(where: str, executor: type, pname: str) -> NoReturn:
+    """Refuse an executor asked for anywhere but a component's constructor.
+
+    Raises
+    ------
+    TypeError
+        Always, naming *where* and the parameter.
+    """
+    raise TypeError(
+        f"{where} asks for {executor.__name__} in {pname!r}; "
+        "an executor arrives in the constructor"
+    )
 
 
 def unanswered_message(name: str, missing: list[tuple[str, object]]) -> str:

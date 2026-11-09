@@ -88,6 +88,7 @@ from .._hooks import (
     Many,
     WrapsBuild,
 )
+from ..compute._deliver import DRAINERS
 from ..session._base import SHUTDOWN_TIMEOUT, Session
 from ..session._declarations import Layer
 from ..session._factories import resolved
@@ -565,6 +566,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
             returns anything but a `QApplication`.
         """
         super().start_runtime()
+        DRAINERS.add(self)
+        self.on_release(partial(DRAINERS.discard, self))
         self._refuse_failed_creator()
         qt_app = self._make_application()
         # the session holds it: nothing else does, and a collected

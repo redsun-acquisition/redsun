@@ -5,7 +5,9 @@ import inspect
 import sys
 from typing import TYPE_CHECKING, Any
 
-from .._structural import is_optional
+from redsun.compute import EXECUTORS
+
+from .._structural import is_optional, without_none
 from ..injection._census import devices_protocol
 
 if TYPE_CHECKING:
@@ -19,6 +21,8 @@ if TYPE_CHECKING:
 __all__ = [
     "constructor",
     "defaulted",
+    "executor_of",
+    "executor_params",
     "factory",
     "get_setup_params",
     "injectable",
@@ -206,6 +210,25 @@ def device_questions(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, type
         protocol = devices_protocol(param.annotation)
         if protocol is not None:
             found[pname] = protocol
+    return found
+
+
+def executor_of(hint: TypeForm[Any]) -> type | None:
+    """Return the executor class *hint* names, alone or with `None`."""
+    found = without_none(hint)
+    return next((cls for cls in EXECUTORS if found is cls), None)
+
+
+def executor_params(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, type]:
+    """Return the constructor parameters of *cls* asking for an executor, by class.
+
+    A parameter the configuration fills is left out.
+    """
+    found: dict[str, type] = {}
+    for pname, param in constructor(cls).parameters.items():
+        executor = None if pname in cfg_kwargs else executor_of(param.annotation)
+        if executor is not None:
+            found[pname] = executor
     return found
 
 
