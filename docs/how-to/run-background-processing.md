@@ -74,7 +74,10 @@ When the median is ready, `deliver` calls `_publish` with it on the main
 thread, the thread the window runs on, so `_publish` can emit a signal that a
 widget is connected to. A method marked with
 [`@slot(thread=...)`](wire-components.md) receives it on the thread it names
-instead. If the computation raises, `deliver` logs the exception and doesn't
+instead, and `"current"` names the thread the session was built on, as it
+does for a wired slot. The Qt session empties only the main thread's queue,
+so a `threading.Thread` you name has to call `psygnal.emit_queued` itself.
+If the computation raises, `deliver` logs the exception and doesn't
 call the method.
 
 !!! warning "A list you keep filling after `submit`"

@@ -117,7 +117,10 @@ the thread it lives on, the main thread for anything that touches a widget.
 callback with `psygnal`, the library `redsun` connects signals with, and the
 Qt session takes calls queued for the main thread from that queue as its event
 loop runs. A callback marked with `@slot(thread=...)` goes to the thread it
-names; any other callback goes to the main thread.
+names, with `"current"` naming the thread the session was built on, as it does
+for a wired slot; any other callback goes to the main thread. The Qt session
+empties the main thread's queue only, so another thread named there has to
+call `psygnal.emit_queued` itself.
 
 When no Qt session is running, as in a test, nothing takes calls from the
 queue, so `deliver` calls the callback at once on the thread that finished the
@@ -130,7 +133,9 @@ only, because shutting down cancels every call still waiting.
 The session stops its pool before it stops its services, so no computation
 still waiting can ask a service that has gone. Calls that have not started are
 cancelled. A call already running is left to finish, and the session doesn't
-wait for it.
+wait for it, though the process exits only once that call has finished. When
+a Qt session shuts down, a result finishing after it is dropped and logged at
+debug level, because the widgets it was meant for have gone.
 
 ## Calls that wait
 
