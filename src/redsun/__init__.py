@@ -22,6 +22,7 @@ class MyApp(QtSession):
 
 from importlib.metadata import PackageNotFoundError, version
 
+from redsun.compute import ThreadExecutor, deliver
 from redsun.errors import (
     BuildError,
     ConfigurationError,
@@ -146,10 +147,12 @@ __all__ = [
     "Settings",
     "Shortcut",
     "Tabs",
+    "ThreadExecutor",
     "WindowLayout",
     "WiringError",
     "WrapsBuild",
     "__version__",
+    "deliver",
     "links_between",
     "provides",
     "rejected",
