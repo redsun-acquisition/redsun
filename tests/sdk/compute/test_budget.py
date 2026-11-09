@@ -13,6 +13,7 @@ from redsun.compute import Budget, Preset, budget, physical_cores, split
         ("latency", 12, 1, 12),
         ("balanced", 12, 3, 4),
         ("balanced", 4, 2, 2),
+        ("balanced", 32, 8, 4),
         ("throughput", 12, 12, 1),
         ("balanced", 1, 2, 1),
     ],

@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from math import isqrt
 from pathlib import Path
 from typing import Literal
 
@@ -15,6 +14,12 @@ Preset = Literal["latency", "balanced", "throughput"]
 RELATION_PROCESSOR_CORE = 0
 
 logger = logging.getLogger("redsun")
+
+
+class Header(ctypes.Structure):
+    """Start of each record `GetLogicalProcessorInformationEx` returns."""
+
+    _fields_ = [("Relationship", ctypes.c_int), ("Size", wt.DWORD)]
 
 
 @dataclass(frozen=True)
@@ -31,30 +36,28 @@ class Budget:
     """Threads each worker's native libraries may use."""
 
 
-def _windows_cores() -> int:
+def windows_cores() -> int:
     """Count physical cores across all processor groups."""
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-
-    class Header(ctypes.Structure):
-        _fields_ = [("Relationship", ctypes.c_int), ("Size", wt.DWORD)]
-
-    size = wt.DWORD(0)
-    kernel32.GetLogicalProcessorInformationEx(
-        RELATION_PROCESSOR_CORE, None, ctypes.byref(size)
-    )
-    buffer = ctypes.create_string_buffer(size.value)
-    if not kernel32.GetLogicalProcessorInformationEx(
-        RELATION_PROCESSOR_CORE, buffer, ctypes.byref(size)
-    ):
-        raise ctypes.WinError(ctypes.get_last_error())
-    count, offset = 0, 0
-    while offset < size.value:
-        count += 1
-        offset += Header.from_buffer(buffer, offset).Size
-    return count
+    if sys.platform == "win32":
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        size = wt.DWORD(0)
+        kernel32.GetLogicalProcessorInformationEx(
+            RELATION_PROCESSOR_CORE, None, ctypes.byref(size)
+        )
+        buffer = ctypes.create_string_buffer(size.value)
+        if not kernel32.GetLogicalProcessorInformationEx(
+            RELATION_PROCESSOR_CORE, buffer, ctypes.byref(size)
+        ):
+            raise ctypes.WinError(ctypes.get_last_error())
+        count, offset = 0, 0
+        while offset < size.value:
+            count += 1
+            offset += Header.from_buffer(buffer, offset).Size
+        return count
+    raise OSError("not Windows")
 
 
-def _linux_cores() -> int:
+def linux_cores() -> int:
     """Count distinct (package, core) pairs under sysfs."""
     pairs = set()
     for topology in Path("/sys/devices/system/cpu").glob("cpu[0-9]*/topology"):
@@ -71,9 +74,9 @@ def physical_cores() -> int:
     logical = os.cpu_count() or 1
     try:
         if sys.platform == "win32":
-            found = _windows_cores()
+            found = windows_cores()
         elif sys.platform.startswith("linux"):
-            found = _linux_cores()
+            found = linux_cores()
         else:
             raise OSError(f"no topology reader for {sys.platform}")
     except (OSError, ValueError) as exc:
@@ -88,7 +91,7 @@ def split(preset: Preset, cores: int) -> Budget:
         case "latency":
             threads = 1
         case "balanced":
-            threads = max(2, isqrt(cores))
+            threads = max(2, cores // 4)
         case "throughput":
             threads = cores
     return Budget(cores, threads, max(1, cores // threads))
