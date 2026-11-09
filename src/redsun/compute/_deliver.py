@@ -43,7 +43,7 @@ def deliver(future: Future[R], callback: Callable[[R], object]) -> None:
             return
         try:
             result = finished.result()
-        except Exception:
+        except BaseException:
             logger.exception("%s: its computation failed", name)
             return
         try:
