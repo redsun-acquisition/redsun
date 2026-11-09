@@ -8,12 +8,18 @@ import threading
 from typing import TYPE_CHECKING, Annotated, ClassVar
 
 import pytest
+from psygnal import emit_queued
 from threadpoolctl import threadpool_info
 
 from redsun import AsPresenter, Declare, Session
-from redsun.compute import ThreadExecutor
+from redsun.compute import ThreadExecutor, deliver
+from redsun.qt import QtSession
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from qtpy.QtWidgets import QApplication
+
     from redsun.testing import BuildSession
 
 
@@ -64,6 +70,10 @@ class LatencyAppWithoutExecutors(Session):
         "preset": "latency",
         "switch_interval_ms": 1.0,
     }
+
+
+class QtSummingApp(QtSession):
+    summing: Annotated[AsPresenter[Summing], Declare()]
 
 
 class SetupAsksApp(Session):
@@ -158,3 +168,36 @@ def test_the_summary_names_the_budget(
     with caplog.at_level(logging.INFO, logger="redsun"):
         build(SummingApp)
     assert "compute: balanced, 7 cores, 2 threads x 3 native" in caplog.text
+
+
+@pytest.mark.qt
+def test_a_qt_session_delivers_on_the_main_thread_until_it_shuts_down(
+    qapp: QApplication, build: BuildSession, wait_until: Callable[..., bool]
+) -> None:
+    """Call a delivered result on the main thread, and drop one finishing after shutdown."""
+    session = build(QtSummingApp)
+    pool = session.summing.pool
+    ran_on: list[threading.Thread] = []
+
+    def record(value: object) -> None:
+        ran_on.append(threading.current_thread())
+
+    deliver(pool.submit(pow, 2, 3), record)
+    assert wait_until(lambda: ran_on)
+    assert ran_on == [threading.main_thread()]
+
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+
+    def wait_for_release() -> bool:
+        started.set()
+        return release.wait(5)
+
+    late = pool.submit(wait_for_release)
+    deliver(late, record)
+    late.add_done_callback(lambda _: finished.set())
+    assert started.wait(5)
+    session.shutdown()
+    release.set()
+    assert finished.wait(5)
+    emit_queued()
+    assert ran_on == [threading.main_thread()]
