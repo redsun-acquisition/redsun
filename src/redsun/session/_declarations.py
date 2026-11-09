@@ -30,7 +30,7 @@ from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
-from ._factories import constructor, resolved
+from ._factories import constructor, executor_params, resolved
 from ._frontend import Frontend
 from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
@@ -249,7 +249,8 @@ class Declaration:
     ------
     TypeError
         If a device's keywords name its services ambiguously, or give an
-        `autoconnect` that is not a bool.
+        `autoconnect` that is not a bool, or a presenter's or view's
+        keywords fill a parameter the session gives an executor.
     """
 
     __slots__ = (
@@ -298,6 +299,8 @@ class Declaration:
                 cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
             except (TypeError, ValueError) as error:
                 refusal = error
+        if kind is not Layer.DEVICE and refusal is None and cfg_kwargs:
+            refuse_reserved(self, cfg_kwargs, executor_params(cls, {}))
         self.cfg_kwargs = cfg_kwargs
         self.key: Key = NewType(name, cls)
         self.instance: Device | NamedComponent | None = None
@@ -335,13 +338,15 @@ def take_device_keys(
         bool.
     """
     params = inspect.signature(declaration.cls).parameters
-    for key in ("service", "services", "autoconnect", "path_provider"):
-        if key in kwargs and key in params:
-            raise TypeError(
-                f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
-                f"a {key!r} keyword of its own, which a device declaration "
-                "reserves for the session"
-            )
+    refuse_reserved(
+        declaration,
+        kwargs,
+        [
+            k
+            for k in ("service", "services", "autoconnect", "path_provider")
+            if k in params
+        ],
+    )
     rest = dict(kwargs)
     service = rest.pop("service", None)
     services = rest.pop("services", None)
@@ -394,6 +399,25 @@ def check_services(
             raise TypeError(
                 f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
                 f"no {keyword!r} keyword, which services maps"
+            )
+
+
+def refuse_reserved(
+    declaration: Declaration, kwargs: Mapping[str, Any], reserved: Iterable[str]
+) -> None:
+    """Refuse *kwargs* giving a keyword of *declaration*'s class that the session fills.
+
+    Raises
+    ------
+    TypeError
+        Naming the first keyword of *reserved* that *kwargs* gives.
+    """
+    for key in reserved:
+        if key in kwargs:
+            raise TypeError(
+                f"{declaration.cls.__name__} ({declaration.kind} "
+                f"{declaration.name!r}) takes a {key!r} keyword of its own, "
+                f"which a {declaration.kind} declaration reserves for the session"
             )
 
 

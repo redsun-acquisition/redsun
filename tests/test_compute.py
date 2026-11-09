@@ -59,6 +59,13 @@ class LatencyAppWithSumming(Session):
     summing: Annotated[AsPresenter[Summing], Declare()]
 
 
+class LatencyAppWithoutExecutors(Session):
+    compute: ClassVar[dict[str, object]] = {
+        "preset": "latency",
+        "switch_interval_ms": 1.0,
+    }
+
+
 class SetupAsksApp(Session):
     asking: Annotated[AsPresenter[SetupAsks], Declare()]
 
@@ -113,6 +120,21 @@ def test_shutdown_cancels_queued_calls_and_restores_limits(
     assert queued.cancelled()
     assert threadpool_info() == before
     assert sys.getswitchinterval() == interval
+
+
+def test_a_session_without_executors_leaves_the_limits(build: BuildSession) -> None:
+    """Leave native limits and the switch interval alone when no component takes an executor."""
+    before = threadpool_info()
+    interval = sys.getswitchinterval()
+    build(LatencyAppWithoutExecutors)
+    assert threadpool_info() == before
+    assert sys.getswitchinterval() == interval
+
+
+def test_a_configured_executor_is_refused(build: BuildSession) -> None:
+    """Refuse a session file filling a parameter the session gives an executor."""
+    with pytest.raises(TypeError, match="'pool' keyword.*reserves for the session"):
+        build(SummingApp, {"presenters": {"summing": {"pool": 2}}})
 
 
 def test_a_long_wait_in_the_queue_is_logged(

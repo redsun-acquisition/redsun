@@ -1295,8 +1295,6 @@ class Session(BuildableSession):
         The settings and the shared services come first and the questions
         the components ask are answered next, so that everything a
         constructor may reach for is registered before the first one runs.
-        The compute section's thread switch interval takes effect here, and
-        `shutdown` puts back the one it replaced.
         """
         registry = self.make_registry()
         self._registry = registry
@@ -1309,10 +1307,6 @@ class Session(BuildableSession):
             self._claim(registry, declaration)
         self._limits = Limits()
         self.on_release(self._limits.restore)
-        interval_ms = self._compute.switch_interval_ms
-        if interval_ms is not None:
-            self.on_release(partial(sys.setswitchinterval, sys.getswitchinterval()))
-            sys.setswitchinterval(interval_ms / 1000)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
@@ -1815,8 +1809,10 @@ class Session(BuildableSession):
         component keeps its place, its wiring and what its constructor made,
         and what its `setup` was going to assign is missing where it is used.
 
-        Once every `setup` has run, the native thread pools loaded so far are
-        limited to the budget's native threads, until `shutdown`.
+        Once every `setup` has run, and only if a built component took an
+        executor, the native thread pools loaded so far are limited to the
+        budget's native threads and the compute section's switch interval
+        takes effect, both until `shutdown`.
 
         Raises
         ------
@@ -1843,7 +1839,19 @@ class Session(BuildableSession):
                     declaration.name,
                     reason,
                 )
+        if any(
+            d.instance is not None and executor_params(d.cls, d.cfg_kwargs)
+            for d in components
+        ):
+            self._limit_threads()
+
+    def _limit_threads(self) -> None:
+        """Apply the native thread limits and the switch interval, until `shutdown`."""
         self._limits.apply(self.compute_budget.native_threads)
+        interval_ms = self._compute.switch_interval_ms
+        if interval_ms is not None:
+            self.on_release(partial(sys.setswitchinterval, sys.getswitchinterval()))
+            sys.setswitchinterval(interval_ms / 1000)
 
     def _require_registry(self) -> Registry:
         """Return the registry the registry step opened.
@@ -1981,18 +1989,20 @@ class Session(BuildableSession):
                         declaration.cls, declaration.cfg_kwargs
                     ).items()
                 },
-                **{
-                    pname: self._executor(declaration.name)
-                    for pname in executor_params(
-                        declaration.cls, declaration.cfg_kwargs
-                    )
-                },
             }
-            params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
+            executors = executor_params(declaration.cls, declaration.cfg_kwargs)
+            params = injectable(
+                declaration.cls,
+                declaration.cfg_kwargs,
+                passed=[*passed, *executors],
+            )
             reason = self._not_built(registry, declaration.name, params)
             if reason is not None:
                 self._skip(declaration, reason)
                 continue
+            passed.update(
+                {pname: self._executor(declaration.name) for pname in executors}
+            )
             try:
                 instance = registry.call(factory(declaration, self._on_built, passed))
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app

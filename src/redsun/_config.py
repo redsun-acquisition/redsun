@@ -360,13 +360,13 @@ class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
     preset: Preset = "balanced"
     """How the cores split between worker threads and each worker's native threads."""
 
-    cores: int | None = None
+    cores: Annotated[int, Field(ge=1)] | None = None
     """Most cores computation may use; `None` for every core left after the reserve."""
 
-    reserve: list[int] | None = None
+    reserve: list[Annotated[int, Field(ge=0)]] | None = None
     """Physical cores kept for the rest of the application, one number each; `None` keeps one."""
 
-    switch_interval_ms: float | None = None
+    switch_interval_ms: Annotated[float, Field(gt=0)] | None = None
     """Interpreter thread switch interval in milliseconds; `None` leaves it as it is."""
 
 

@@ -73,3 +73,14 @@ def test_the_budget_is_unavailable_before_build() -> None:
     """Refuse to read the budget before the session is built."""
     with pytest.raises(RuntimeError, match="build"):
         _ = Session().compute_budget
+
+
+@pytest.mark.parametrize(
+    "section",
+    [{"switch_interval_ms": 0}, {"cores": 0}, {"reserve": [0, -1]}],
+    ids=["switch-interval", "cores", "reserve"],
+)
+def test_a_value_out_of_range_is_refused(section: dict[str, object]) -> None:
+    """Refuse a switch interval of zero, no cores and a negative reserved core."""
+    with pytest.raises(ValidationError, match=next(iter(section))):
+        SessionFile.model_validate({"compute": section})
