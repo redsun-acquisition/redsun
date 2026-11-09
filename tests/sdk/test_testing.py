@@ -55,7 +55,6 @@ def test_two_sessions(build):
 
 COLLECTION_IS_OFF = """
 import gc
-import threading
 
 
 def test_collection_is_off():
@@ -89,7 +88,6 @@ def test_the_cycle_was_freed():
 
 TURNS_COLLECTION_ON = """
 import gc
-import threading
 
 
 def test_before():
