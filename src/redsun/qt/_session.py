@@ -88,7 +88,7 @@ from .._hooks import (
     Many,
     WrapsBuild,
 )
-from ..compute._deliver import DRAINERS
+from ..compute._deliver import start_draining, stop_draining
 from ..session._base import SHUTDOWN_TIMEOUT, Session
 from ..session._declarations import Layer
 from ..session._factories import resolved
@@ -566,8 +566,6 @@ class QtSession(DesktopSession[QMainWindow], Session):
             returns anything but a `QApplication`.
         """
         super().start_runtime()
-        DRAINERS.add(self)
-        self.on_release(partial(DRAINERS.discard, self))
         self._refuse_failed_creator()
         qt_app = self._make_application()
         # the session holds it: nothing else does, and a collected
@@ -587,6 +585,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # released after the components have shut down and before the
         # application goes, since a widget needs both
         self.on_release(self._destroy_widgets)
+        # released before the widgets go, so the queue they empty stays empty
+        start_draining(self)
+        self.on_release(partial(stop_draining, self))
         self._register_actions()
         self._register_save_action()
         window = QModelMainWindow(self._model)

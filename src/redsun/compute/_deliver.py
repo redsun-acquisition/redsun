@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import weakref
 from typing import TYPE_CHECKING, TypeVar
 
 from psygnal import SignalInstance
@@ -20,21 +21,55 @@ R = TypeVar("R")
 
 logger = logging.getLogger("redsun")
 
-DRAINERS: set[object] = set()
-"""The frontends draining the main-thread queue, which is where deliveries wait."""
+DRAINERS: dict[object, threading.Thread] = {}
+"""The frontends draining the main-thread queue, each with the thread it was built on."""
+
+LOCK = threading.RLock()
+"""Held while a result is queued and while a frontend stops draining.
+
+A frontend that has stopped draining and then emptied the queue finds
+nothing queued for it afterwards.
+"""
+
+
+def start_draining(drainer: object) -> None:
+    """Queue the results delivered from now on until *drainer* stops draining.
+
+    *drainer* is built on the calling thread, where a callback marked
+    `"current"` runs.
+    """
+    with LOCK:
+        DRAINERS[drainer] = threading.current_thread()
+
+
+def stop_draining(drainer: object) -> None:
+    """Drop the results that finish from now on for the deliveries made while *drainer* drained.
+
+    What is queued already stays queued, for *drainer* to empty next.
+    """
+    with LOCK:
+        DRAINERS.pop(drainer, None)
 
 
 def deliver(future: Future[R], callback: Callable[[R], object]) -> None:
     """Call *callback* with the result of *future* once it is done.
 
-    When a slot-marked method names a thread, the call waits in `psygnal`'s
-    queue until that thread calls `psygnal.emit_queued`; a callback without
-    one is queued for the main thread. With no frontend draining the queue,
-    the callback runs on the thread that finished the future. A failed
-    future is logged and a cancelled one is not; neither calls the callback.
+    While a frontend drains the queue, the callback waits in `psygnal`'s
+    queue until the thread its slot marker names calls `psygnal.emit_queued`;
+    `"current"` names the thread the session was built on, as in wiring, and
+    a callback naming no thread is queued for the main thread. A result that
+    finishes once that frontend has shut down is dropped and logged at debug
+    level. With no frontend draining when `deliver` is called, the callback
+    runs on the thread that finished the future. A failed future is logged
+    and a cancelled one is not; neither calls the callback.
     """
     declared: SlotThread = getattr(marker_of(callback), "thread", None) or "main"
-    thread = threading.current_thread() if declared == "current" else declared
+    with LOCK:
+        queued = bool(DRAINERS)
+        # weak, so a call outliving its session does not keep the session alive
+        drainers = weakref.WeakSet(DRAINERS)
+        if declared == "current":
+            declared = next(iter(DRAINERS.values()), threading.main_thread())
     name = getattr(callback, "__qualname__", callback)
 
     def done(finished: Future[R]) -> None:
@@ -47,13 +82,21 @@ def deliver(future: Future[R], callback: Callable[[R], object]) -> None:
             logger.exception("%s: its computation failed", name)
             return
         try:
-            if DRAINERS:
-                signal = SignalInstance((object,))
-                signal.connect(callback, thread=thread)
-                signal.emit(result)
-            else:
+            if not queued:
                 callback(result)
-        except Exception:
+                return
+            with LOCK:
+                if drainers.isdisjoint(DRAINERS):
+                    logger.debug("%s: its session has shut down", name)
+                    return
+                signal = SignalInstance((object,))
+                signal.connect(callback, thread=declared)
+                signal.emit(result)
+        except BaseException as error:
+            # anything but an Exception ends a pool thread for good
+            main = threading.current_thread() is threading.main_thread()
+            if main and not isinstance(error, Exception):
+                raise
             logger.exception("%s: the callback failed", name)
 
     future.add_done_callback(done)
