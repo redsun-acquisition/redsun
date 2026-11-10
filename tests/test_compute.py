@@ -11,11 +11,12 @@ import pytest
 from threadpoolctl import threadpool_info
 
 from redsun import AsPresenter, RegistrationError, Session, provides
-from redsun.compute import ThreadExecutor, ThreadPool, ThreadPoolSettings
-from redsun.compute._future import PRE_START
+from redsun.compute import Future, ThreadExecutor, ThreadPool, ThreadPoolSettings
 
 if TYPE_CHECKING:
     from redsun.testing import BuildSession
+
+PRE_START = "the pool starts after every setup; use .then(...)"
 
 
 class Median:
@@ -100,8 +101,10 @@ class SlowCaller:
         self.gate = threading.Event()
         self.received: list[object] = []
 
-    def start_slow(self) -> None:
-        self.executor.submit(self.gate.wait, 5).then(self.received.append)
+    def start_slow(self) -> Future[bool]:
+        future = self.executor.submit(self.gate.wait, 5)
+        future.then(self.received.append)
+        return future
 
 
 class ShutdownLogger:
@@ -246,9 +249,12 @@ def test_a_late_result_skips_a_released_component(build: BuildSession) -> None:
     """Drop the callback of a call that finishes after its owner shut down."""
     session = build(Slow)
     presenter = session.slow
-    presenter.start_slow()
+    future = presenter.start_slow()
+    done = threading.Event()
+    future.add_done_callback(lambda _: done.set())
     session.shutdown()
     presenter.gate.set()
+    assert done.wait(5)
     assert presenter.received == []
 
 

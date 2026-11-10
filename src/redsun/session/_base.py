@@ -556,8 +556,8 @@ class Session(BuildableSession):
     ) -> Mapping[tuple[type[Pool], str | None], ThreadPoolSettings]:
         """The settings of each pool a component asked for, by pool class and group.
 
-        Empty before the build opens its registry, and for a session no
-        component of which asks for an executor.
+        Empty before the build's registry step, after `shutdown`, and for a
+        session no component of which asks for an executor.
         """
         return {} if self._compute is None else dict(self._compute.settings)
 
@@ -1292,6 +1292,9 @@ class Session(BuildableSession):
                 for kind in component_kinds(declaration.cls)
             },
         )
+        # registered before the pools' teardown, so it runs after it; it
+        # changes nothing when no pool started
+        self.on_release(self._compute.limits.restore)
         self.on_release(registry.close)
 
     def seal(self) -> None:
@@ -1814,7 +1817,7 @@ class Session(BuildableSession):
                     declaration.name,
                     reason,
                 )
-        self._require_compute().start(built, self.on_release)
+        self._require_compute().start(built)
 
     def _require_compute(self) -> SessionCompute:
         """Return the pools the registry step set up.

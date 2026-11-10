@@ -68,16 +68,18 @@ def component_kinds(cls: type) -> set[type[PoolExecutor[Any]]]:
 
 def asks_for_pool(owner: str, fn: Callable[..., Any]) -> TypeError | None:
     """Return why *owner* cannot be given what *fn* asks for, when it asks for a pool."""
-    for pname, kind in pool_params(fn).items():
-        executor = next(
-            (e for e in PoolExecutor.__subclasses__() if e.pool_type is kind),
-            PoolExecutor,
-        )
-        return TypeError(
-            f"{owner} asks for {kind.__name__} in '{pname}'; "
-            f"ask for {executor.__name__} instead"
-        )
-    return None
+    found = next(iter(pool_params(fn).items()), None)
+    if found is None:
+        return None
+    pname, kind = found
+    executor = next(
+        (e for e in PoolExecutor.__subclasses__() if e.pool_type is kind),
+        PoolExecutor,
+    )
+    return TypeError(
+        f"{owner} asks for {kind.__name__} in '{pname}'; "
+        f"ask for {executor.__name__} instead"
+    )
 
 
 def pool_resource(
@@ -161,14 +163,10 @@ class SessionCompute:
             on_release(partial(held.shutdown, wait=False, cancel_futures=True))
         return cast("E", held)
 
-    def start(
-        self,
-        built: Collection[str],
-        on_release: Callable[[Callable[[], None]], None],
-    ) -> list[tuple[str, str]]:
+    def start(self, built: Collection[str]) -> list[tuple[str, str]]:
         """Start each pool a component in *built* holds, after limiting native threads.
 
-        Returns the label and the reason of each pool that could not start.
+        The limits stay until `limits.restore` runs. Returns the label and the reason of each pool that could not start.
         """
         kinds = {cls.pool_type for owner, cls in self.executors if owner in built}
         pools = [pool for kind, pool in self.pools.items() if kind in kinds]
@@ -177,7 +175,6 @@ class SessionCompute:
         # every pool is a shared one, split from the same cores, so any of them
         # gives the native threads of the shared split
         self.limits.apply(pools[0].native_threads)
-        on_release(self.limits.restore)
         for pool in pools:
             try:
                 pool.start()
