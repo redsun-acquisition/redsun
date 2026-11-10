@@ -77,14 +77,14 @@ class ThreadPool(Pool):
         return self._threads
 
     def _start(self) -> None:
-        if self._initializer is not None:
-            self._initializer()
         if self._threads:
             self._executor = ThreadPoolExecutor(
                 self._threads,
                 thread_name_prefix="redsun-compute",
                 initializer=self._initializer,
             )
+        elif self._initializer is not None:
+            self._initializer()
 
     def _dispatch(self, call: Call[Any]) -> None:
         if self._executor is None:
