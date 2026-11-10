@@ -269,3 +269,24 @@ def test_the_pool_stops_after_its_components(
     component = messages.index("logs shut down")
     pool = next(i for i, m in enumerate(messages) if m.startswith("thread pool:"))
     assert component < pool
+
+
+def watchdog_threads() -> list[threading.Thread]:
+    """Return the watchdog threads alive."""
+    return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
+
+
+def test_the_watchdog_runs_with_the_pools_and_stops_at_shutdown(
+    build: BuildSession,
+) -> None:
+    """Run one watchdog thread while a pool runs, and none after shutdown."""
+    session = build(OneMedian)
+    assert len(watchdog_threads()) == 1
+    session.shutdown()
+    assert watchdog_threads() == []
+
+
+def test_a_session_without_executors_starts_no_watchdog(build: BuildSession) -> None:
+    """Start no watchdog thread when no component asks for an executor."""
+    build(NoCompute)
+    assert watchdog_threads() == []

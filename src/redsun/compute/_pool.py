@@ -17,6 +17,7 @@ from diwire import Component
 
 from ._future import BrokenPool, Future, logger, trace
 from ._usage import POOL_OWNER, Counts
+from ._watchdog import begin, end
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -83,7 +84,7 @@ class Call(Generic[R]):
                 f"A call waited {waited:.1f} s for a worker"
             )
         try:
-            result = self.fn(*self.args, **self.kwargs)
+            result = self.invoke()
         except BaseException as error:  # noqa: BLE001 - the future carries it to the caller
             self.counts.finished(self.owner, failed=True)
             future.set_exception(error)
@@ -91,6 +92,14 @@ class Call(Generic[R]):
         else:
             self.counts.finished(self.owner, failed=False)
             future.set_result(result)
+
+    def invoke(self) -> R:
+        """Return what the function returns, listing it as running meanwhile."""
+        thread, previous = begin(self.fn)
+        try:
+            return self.fn(*self.args, **self.kwargs)
+        finally:
+            end(thread, previous)
 
     def fail(self, error: BaseException) -> None:
         """Settle a call that never ran with *error*."""

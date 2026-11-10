@@ -1296,6 +1296,7 @@ class Session(BuildableSession):
         # changes nothing when no pool started
         self.on_release(self._compute.limits.restore)
         self.on_release(registry.close)
+        self.on_release(self._compute.watchdog.stop)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""

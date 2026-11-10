@@ -13,6 +13,7 @@ from ..compute._cores import compute_cores, physical_cores, split
 from ..compute._executor import PoolExecutor
 from ..compute._future import BrokenPool
 from ..compute._pool import Pool, pool_key
+from ..compute._watchdog import Watchdog
 from ..injection._registry import SESSION
 from ._factories import resolved
 from ._protocols import HasSetup
@@ -114,6 +115,7 @@ class SessionCompute:
         "pools",
         "preset",
         "settings",
+        "watchdog",
     )
 
     def __init__(self, config: ComputeConfig, delivery: Delivery) -> None:
@@ -129,6 +131,7 @@ class SessionCompute:
             tuple[str, type[PoolExecutor[Any]]], PoolExecutor[Any]
         ] = {}
         self.broken: list[tuple[str, str]] = []
+        self.watchdog = Watchdog()
 
     def register(self, registry: Registry, kinds: set[type[PoolExecutor[Any]]]) -> None:
         """Register the pool each of *kinds* submits to, made on its first request."""
@@ -175,6 +178,7 @@ class SessionCompute:
         # every pool is a shared one, split from the same cores, so any of them
         # gives the native threads of the shared split
         self.limits.apply(pools[0].native_threads)
+        self.watchdog.start()
         for pool in pools:
             try:
                 pool.start()
