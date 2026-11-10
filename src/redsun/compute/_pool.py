@@ -208,22 +208,6 @@ class Pool(Executor, ABC):
             finally:
                 self._state = State.STARTED
 
-    def submit_as(
-        self, owner: str, fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs
-    ) -> Future[R]:
-        """Run `fn(*args, **kwargs)` on a worker, counted under *owner*.
-
-        A call made before `start` waits for it.
-
-        Raises
-        ------
-        BrokenPool
-            If the pool did not start.
-        RuntimeError
-            If the pool has shut down.
-        """
-        return self._submit(owner, never_released, fn, args, kwargs)
-
     def _submit(
         self,
         owner: str,
