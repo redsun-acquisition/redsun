@@ -59,8 +59,47 @@ def test_shutdown_before_the_pool_starts_does_not_wait() -> None:
     pool = ThreadPool(1)
     executor = ThreadExecutor(pool, "early")
     executor.submit(int, "1")
-    executor.shutdown()
+    finished = threading.Thread(target=executor.shutdown)
+    finished.start()
+    finished.join(5)
+    alive = finished.is_alive()
     pool.shutdown()
+    assert not alive
+
+
+def test_cancelling_shutdown_does_not_wait_for_other_owners() -> None:
+    """Return from a cancelling shutdown while another owner holds the only worker."""
+    gate = threading.Event()
+    with ThreadPool(1) as pool:
+        busy, mine = ThreadExecutor(pool, "busy"), ThreadExecutor(pool, "mine")
+        busy.submit(wait_then_return, gate, 1)
+        waiting = mine.submit(int, "1")
+        finished = threading.Thread(
+            target=mine.shutdown, kwargs={"cancel_futures": True}
+        )
+        finished.start()
+        finished.join(5)
+        alive = finished.is_alive()
+        gate.set()
+    assert not alive
+    assert waiting.cancelled()
+
+
+def test_shutdown_waits_for_a_running_call() -> None:
+    """Block a waiting shutdown until the owner's running call returns."""
+    gate = threading.Event()
+    with ThreadPool(1) as pool:
+        executor = ThreadExecutor(pool, "running")
+        future = executor.submit(wait_then_return, gate, 4)
+        finished = threading.Thread(target=executor.shutdown)
+        finished.start()
+        finished.join(0.2)
+        waited = finished.is_alive()
+        gate.set()
+        finished.join(5)
+    assert waited
+    assert not finished.is_alive()
+    assert future.result() == 4
 
 
 def test_then_drops_callbacks_after_shutdown(caplog: pytest.LogCaptureFixture) -> None:

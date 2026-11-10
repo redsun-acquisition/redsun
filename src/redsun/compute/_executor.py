@@ -6,7 +6,7 @@ import asyncio
 import threading
 import weakref
 from concurrent.futures import Executor
-from concurrent.futures import wait as wait_for_all
+from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,6 +30,11 @@ if TYPE_CHECKING:
 P = ParamSpec("P")
 R = TypeVar("R")
 PoolT = TypeVar("PoolT", bound=Pool)
+
+
+def set_event(event: threading.Event, _future: Future[Any]) -> None:
+    """Set *event*, as a done-callback of a future."""
+    event.set()
 
 
 class PoolExecutor(Executor, Generic[PoolT]):
@@ -103,7 +108,11 @@ class PoolExecutor(Executor, Generic[PoolT]):
             for future in futures:
                 future.cancel()
         if wait:
-            wait_for_all([future for future in futures if not future._queued])
+            for future in futures:
+                if not future._queued:
+                    done = threading.Event()
+                    future.add_done_callback(partial(set_event, done))
+                    done.wait()
 
     def usage(self) -> OwnerUsage:
         """Return the counts of this owner's calls in the pool."""
