@@ -31,6 +31,7 @@ Every key is optional.
 | `layout` | mapping | the layout of the session class | [where the views start](#layout) in the window |
 | `shortcuts` | mapping | empty | [keys](#shortcuts) replacing what the components declare |
 | `providers` | mapping | empty | classes that share values with the components, by name |
+| `compute` | mapping or preset | the defaults below | [the cores background calls may use](#compute) |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
 | `pairs` | list | empty | [components linked to each other](#pairs), two names each |
@@ -151,6 +152,25 @@ services:
   beamline:
     prefix: "BL01:"
     address: 10.0.0.5
+```
+
+## Compute
+
+`compute` is a mapping, or one preset word standing for `{preset: <word>}`. A
+session class may declare the same keys in its `compute` attribute; the file
+wins over the class, key by key.
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `preset` | `latency`, `balanced` or `throughput` | `balanced` | how the compute cores are split between threads and native libraries |
+| `cores` | whole number | the physical cores less `reserve` | the most compute cores to use |
+| `reserve` | list of whole numbers | one physical core | cores kept for the window's thread |
+| `switch_interval_ms` | number | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
+
+```yaml
+compute:
+  preset: latency
+  cores: 6
 ```
 
 ## Storage

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import assert_type
 
+from redsun import Session
 from redsun.compute import Future, ThreadExecutor
 from redsun.compute._pool import Pool
 
@@ -18,3 +19,11 @@ def check(executor: ThreadExecutor) -> None:
 
 async def check_run(executor: ThreadExecutor) -> None:
     assert_type(await executor.run(len, "abc"), int)
+
+
+class Typed(Session):
+    compute = {"preset": "throughput", "cores": 4}  # noqa: RUF012
+
+
+class Word(Session):
+    compute = "latency"

@@ -33,6 +33,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from redsun.compute import Preset
 from redsun.errors import ConfigurationError
 from redsun.services._transports import TRANSPORT_KEY, TRANSPORTS, transport_of
 from redsun.view import Column, Row, Tabs, WindowLayout
@@ -570,6 +571,28 @@ class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
         return WindowLayout(self.nodes(), self.sizes, self.hidden)
 
 
+class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """The `compute` section of a session file."""
+
+    preset: Preset = "balanced"
+    """How the compute cores are split between threads and native libraries."""
+
+    cores: int | None = None
+    """Cap on the compute cores; the physical cores less `reserve` if unset."""
+
+    reserve: list[int] | None = None
+    """Cores kept for the window's thread; one physical core if unset."""
+
+    switch_interval_ms: float | None = None
+    """Interpreter thread switch interval in milliseconds; left alone if unset."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def read_preset(cls, data: Any) -> Any:
+        """Read a bare preset word as a section naming it."""
+        return {"preset": data} if isinstance(data, str) else data
+
+
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
@@ -614,6 +637,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     shortcuts: dict[str, str | list[str] | None] = {}
     """Keys by command id, `<component>.<method>`, replacing what the component declares; `null` unbinds."""
+
+    compute: ComputeConfig = ComputeConfig()
+    """Background computation: the preset and the cores it may use."""
 
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""

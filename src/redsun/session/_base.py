@@ -34,6 +34,7 @@ from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
+from redsun.compute import ComputeSettings, Preset  # noqa: TC001
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
 from redsun.injection import Registry, rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
@@ -310,6 +311,12 @@ class Session(BuildableSession):
     subclass holds what makes it that session.
     """
 
+    compute: ClassVar[Preset | ComputeSettings | None] = None
+    """The `compute` section of this session: a preset word or a mapping.
+
+    The session file's `compute` section wins over it, key by key.
+    """
+
     providers: ClassVar[list[type]] = []
     """The shared services this session installs before any component.
 
@@ -550,6 +557,9 @@ class Session(BuildableSession):
         """
         found: list[Source] = []
         for klass in reversed(type(self).__mro__):
+            if (compute := klass.__dict__.get("compute")) is not None:
+                section = {"preset": compute} if isinstance(compute, str) else compute
+                found.append({"compute": section})
             found.extend(as_sources(klass.__dict__.get("config")))
         return found + as_sources(self._config)
 
