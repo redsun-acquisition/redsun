@@ -108,6 +108,7 @@ class SessionCompute:
 
     __slots__ = (
         "broken",
+        "config",
         "cores",
         "delivery",
         "executors",
@@ -119,9 +120,8 @@ class SessionCompute:
     )
 
     def __init__(self, config: ComputeConfig, delivery: Delivery) -> None:
-        self.cores = compute_cores(
-            physical_cores(), cap=config.cores, reserve=config.reserve
-        )
+        self.cores = 0
+        self.config = config
         self.preset = config.preset
         self.limits = Limits(config.switch_interval_ms)
         self.delivery = delivery
@@ -135,6 +135,11 @@ class SessionCompute:
 
     def register(self, registry: Registry, kinds: set[type[PoolExecutor[Any]]]) -> None:
         """Register the pool each of *kinds* submits to, made on its first request."""
+        if not kinds:
+            return
+        self.cores = compute_cores(
+            physical_cores(), cap=self.config.cores, reserve=self.config.reserve
+        )
         for kind in kinds:
             pool_type = kind.pool_type
             if (pool_type, None) in self.settings:

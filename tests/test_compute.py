@@ -201,8 +201,15 @@ def test_pool_of_failed_component_never_starts(build: BuildSession) -> None:
     assert sys.getswitchinterval() == interval
 
 
-def test_session_without_executors_changes_nothing(build: BuildSession) -> None:
-    """Make no pool and leave native limits and the switch interval as found."""
+def test_session_without_executors_changes_nothing(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Make no pool, read no cores, and leave native limits and the switch interval as found."""
+
+    def unread() -> int:
+        raise AssertionError("the physical cores were read")
+
+    monkeypatch.setattr("redsun.session._compute.physical_cores", unread)
     found = threadpool_info()
     interval = sys.getswitchinterval()
     session = build(NoCompute, {"compute": {"switch_interval_ms": 1}})
