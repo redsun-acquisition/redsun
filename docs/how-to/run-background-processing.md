@@ -194,10 +194,9 @@ the test can check it on the next line.
     By the time Qt tears the window down and calls `closeEvent`, the session
     has shut down its executors and pools and closed the values it hands to
     components. A `submit` there raises `RuntimeError: cannot schedule new
-    futures after shutdown`, and a command raises `RuntimeError: the registry
-    is closed`. A call submitted from a component's own `shutdown` is
-    cancelled right after it. Start the work while the session runs, from a
-    document, a signal or a user's action.
+    futures after shutdown`. A call submitted from a component's own
+    `shutdown` is cancelled right after it. Start the work while the session
+    runs, from a document, a signal or a user's action.
 
 ## The example in full
 

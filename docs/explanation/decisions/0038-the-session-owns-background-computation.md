@@ -126,8 +126,8 @@ looked up by its exact key.
 - The session decides the pool's size and the native thread limits, so the
   `compute` section of a session file changes them for every component at
   once, and no component can start more threads than the session allows.
-- `submit` and the commands of a session refuse work once the session has
-  shut down, so a view cannot start work from Qt's `closeEvent`.
+- `submit` refuses work once the session has shut down, so a view cannot
+  start work from Qt's `closeEvent`.
 - Nothing existing changes. A session whose components ask for no executor
   makes no pool and changes no limit.
 - A later release adds pools of worker processes and of NVIDIA GPU streams as

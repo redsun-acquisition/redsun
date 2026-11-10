@@ -55,7 +55,7 @@ class Registry:
     answers a key nobody registered, each time a provider for it is called.
     """
 
-    __slots__ = ("_ask", "_closed", "_container", "_internal", "_owners")
+    __slots__ = ("_ask", "_closed", "_container", "_internal", "_owners", "_resources")
 
     def __init__(self, ask: Ask | None = None) -> None:
         self._ask = ask
@@ -69,6 +69,7 @@ class Registry:
         )
         self._owners: dict[object, str] = {}
         self._internal: set[object] = set()
+        self._resources: set[object] = set()
         self._closed = False
 
     def register(
@@ -110,6 +111,7 @@ class Registry:
             provider, provides=key, scope=Scope.APP, lifetime=Lifetime.SCOPED
         )
         self._owners[held] = owner
+        self._resources.add(held)
         if internal:
             self._internal.add(held)
 
@@ -120,7 +122,7 @@ class Registry:
     def close(self) -> None:
         """Tear down the resources made, the last made first.
 
-        A registry refuses every request after it is closed. Closing twice does
+        A closed registry refuses a request for a resource. Closing twice does
         nothing.
         """
         if self._closed:
@@ -147,8 +149,8 @@ class Registry:
             return inner
         return None
 
-    def _check_open(self) -> None:
-        if self._closed:
+    def _check_open(self, key: object) -> None:
+        if self._closed and key_of(key) in self._resources:
             raise RuntimeError("the registry is closed")
 
     def providers(self, key: object) -> Iterator[Callable[[], object]]:
@@ -157,7 +159,7 @@ class Registry:
         if found is not None:
 
             def provide() -> object:
-                self._check_open()
+                self._check_open(found)
                 return self._container.resolve(found)
 
             yield provide
@@ -183,9 +185,8 @@ class Registry:
             If a required parameter has no value, naming each, or a parameter
             asks for an internal key.
         RuntimeError
-            If the registry is closed.
+            If the registry is closed and a parameter asks for a resource.
         """
-        self._check_open()
         filled: dict[str, object] = {}
         missing: list[str] = []
         for name, param in inspect.signature(fn, eval_str=True).parameters.items():
@@ -202,6 +203,8 @@ class Registry:
                     f"{getattr(found, '__name__', found)}, "
                     "which the session keeps to itself"
                 )
+            if found is not None:
+                self._check_open(found)
             value = None if found is None else self._container.resolve(found)
             if value is not None:
                 filled[name] = value

@@ -208,12 +208,31 @@ def test_an_internal_key_is_refused_to_a_callable() -> None:
     assert registry.internal(KeyA)
 
 
-def test_a_closed_registry_refuses_a_call() -> None:
-    """Raise from call after close."""
+def test_a_closed_registry_refuses_a_call_asking_for_a_resource() -> None:
+    """Raise from call after close when a parameter asks for a resource."""
     registry = Registry()
+    registry.register_resource(KeyA, one_resource, owner=SESSION)
+
+    def wants(a: KeyA) -> None: ...
+
     registry.close()
     with pytest.raises(RuntimeError, match="the registry is closed"):
-        registry.call(one_resource)
+        registry.call(wants)
+
+
+def test_a_closed_registry_still_answers_a_factory_key() -> None:
+    """Resolve a factory key through providers and call after close."""
+    registry = Registry()
+    registry.register(KeyB, KeyB, owner=SESSION)
+    registry.register_resource(KeyA, one_resource, owner=SESSION)
+    provider = next(registry.providers(KeyB))
+    registry.close()
+
+    def wants(b: KeyB) -> KeyB:
+        return b
+
+    assert isinstance(provider(), KeyB)
+    assert isinstance(registry.call(wants), KeyB)
 
 
 def test_a_resource_never_requested_closes_quietly() -> None:
