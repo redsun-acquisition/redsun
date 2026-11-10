@@ -88,14 +88,13 @@ def test_an_unknown_key_is_refused() -> None:
     "section",
     [
         {"cores": 0},
-        {"reserve": [-1]},
-        {"reserve": [0, -2]},
+        {"reserve": -1},
         {"switch_interval_ms": 0},
         {"switch_interval_ms": -1.5},
     ],
 )
 def test_a_value_out_of_range_is_refused(section: dict[str, Any]) -> None:
-    """Refuse a core count, a reserved core or an interval that cannot be right."""
+    """Refuse a core count, a reserve or an interval that cannot be right."""
     with pytest.raises(ValidationError):
         ComputeConfig.model_validate(section)
 

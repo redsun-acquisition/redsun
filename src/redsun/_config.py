@@ -591,8 +591,8 @@ class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
     cores: int | None = Field(default=None, ge=1)
     """Cap on the compute cores; the physical cores less `reserve` if unset."""
 
-    reserve: list[Annotated[int, Field(ge=0)]] | None = None
-    """Cores kept for the window's thread; one physical core if unset."""
+    reserve: int = Field(default=1, ge=0)
+    """Physical cores kept free for the window's thread."""
 
     switch_interval_ms: float | None = Field(default=None, gt=0)
     """Interpreter thread switch interval in milliseconds; left alone if unset."""

@@ -30,14 +30,15 @@ def test_presets_split_the_compute_cores(
 @pytest.mark.parametrize(
     ("physical", "cap", "reserve", "expected"),
     [
-        (16, None, None, 15),
-        (16, 12, None, 12),
-        (16, None, [0, 1], 14),
-        (1, None, None, 1),
+        (16, None, 1, 15),
+        (16, 12, 1, 12),
+        (16, None, 2, 14),
+        (16, None, 0, 16),
+        (1, None, 1, 1),
     ],
 )
 def test_compute_cores(
-    physical: int, cap: int | None, reserve: list[int] | None, expected: int
+    physical: int, cap: int | None, reserve: int, expected: int
 ) -> None:
     """Take the reserve out of the physical cores, cap the rest and keep at least one."""
     assert compute_cores(physical, cap=cap, reserve=reserve) == expected

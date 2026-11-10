@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict, final
 from threadpoolctl import threadpool_limits
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
 Preset = Literal["latency", "balanced", "throughput"]
 """How the compute cores are split between pool threads and native threads."""
@@ -34,8 +34,8 @@ class ComputeSettings(TypedDict, total=False):
     cores: int
     """Cap on the compute cores; default: the physical cores less `reserve`."""
 
-    reserve: list[int]
-    """Cores kept for the window's thread; default: one physical core."""
+    reserve: int
+    """Physical cores kept free for the window's thread; default: 1."""
 
     switch_interval_ms: float | None
     """Interpreter thread switch interval in milliseconds; `None` leaves it alone."""
@@ -117,15 +117,13 @@ def physical_cores() -> int:
     return count
 
 
-def compute_cores(
-    physical: int, *, cap: int | None, reserve: Sequence[int] | None
-) -> int:
+def compute_cores(physical: int, *, cap: int | None, reserve: int) -> int:
     """Return the cores the shared pools may use, at least 1.
 
-    One core stays free unless *reserve* lists the cores kept for the window's thread, and
-    *cap* limits the result.
+    *reserve* cores stay free for the window's thread, and *cap* limits the
+    result.
     """
-    cores = physical - (len(reserve) if reserve is not None else 1)
+    cores = physical - reserve
     if cap is not None:
         cores = min(cores, cap)
     return max(cores, 1)
