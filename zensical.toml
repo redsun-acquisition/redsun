@@ -37,6 +37,7 @@ nav = [
             "how-to/wire-components.md",
             "how-to/offer-a-pairing.md",
             "how-to/share-a-value.md",
+            "how-to/run-background-processing.md",
             "how-to/package-a-plugin.md",
             "how-to/test-a-plugin.md",
             "how-to/connect-a-device-on-demand.md",
@@ -104,6 +105,7 @@ nav = [
         ]},
         { "Data" = [
             "explanation/derived-products.md",
+            "explanation/background-computation.md",
         ]},
         { "Decisions" = [
             "explanation/decisions/index.md",
@@ -144,6 +146,7 @@ nav = [
                 "explanation/decisions/0035-a-sharedbox-transport-answers-writes-in-its-boxes.md",
                 "explanation/decisions/0036-a-stack-is-declared-as-one-entry.md",
                 "explanation/decisions/0037-diwire-is-the-session-registry.md",
+                "explanation/decisions/0038-the-session-owns-background-computation.md",
         ]},
     ]},
     { "Reference" = [
@@ -160,6 +163,7 @@ nav = [
         { "API" = [
             "reference/api/aio.md",
             "reference/api/catalog.md",
+            "reference/api/compute.md",
             "reference/api/device-sharedbox.md",
             "reference/api/engine.md",
             "reference/api/errors.md",

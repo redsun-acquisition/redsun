@@ -8,3 +8,6 @@
 *[IOC]: Input/output controller. The EPICS server program that offers values, most often read from hardware it controls.
 *[PV]: Process variable. One named value an IOC offers.
 *[HDF5]: Hierarchical Data Format 5. A file format that stores arrays, such as camera frames, in named datasets.
+*[GIL]: Global interpreter lock. The lock that lets one thread at a time run Python code.
+*[BLAS]: Basic Linear Algebra Subprograms. The library numerical code runs its matrix arithmetic on.
+*[OpenMP]: A standard that compiled code uses to spread a loop over several threads.

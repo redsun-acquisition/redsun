@@ -44,9 +44,11 @@ screen.
 
 ### Data
 
-Learn how the products derived from a run are stored.
+Learn how the products derived from a run are stored, and how a component
+computes them in the background.
 
 - [How derived products are stored](derived-products.md)
+- [How background computation works](background-computation.md)
 
 ### Decisions
 

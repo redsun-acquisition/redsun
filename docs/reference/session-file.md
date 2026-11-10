@@ -167,11 +167,25 @@ wins over the class, key by key.
 | `reserve` | list of whole numbers, each 0 or more | one physical core | cores kept for the window's thread |
 | `switch_interval_ms` | number above 0 | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
 
+`reserve` lowers the [compute cores](../explanation/glossary.md#compute-cores)
+by the number of cores it lists; the session pins no thread to a core. A
+preset splits the compute cores `C` between the threads of the pool and the
+threads each call's native libraries may start:
+
+| Preset | Pool threads | Native threads per call |
+| --- | --- | --- |
+| `latency` | 1 | `C` |
+| `balanced` | `max(2, C // 4)` | `C // pool threads`, at least 1 |
+| `throughput` | `C` | 1 |
+
 ```yaml
 compute:
   preset: latency
   cores: 6
 ```
+
+The section changes nothing in a session whose components ask for no
+[executor](../explanation/glossary.md#executor).
 
 ## Storage
 
