@@ -18,7 +18,7 @@ POOL_OWNER: Final = "<pool>"
 RUNNING: dict[int, tuple[str, str]] = {}
 RUNNING_LOCK = threading.Lock()
 
-logger = logging.getLogger("redsun.compute")
+logger = logging.getLogger("redsun")
 
 
 @dataclass(frozen=True, slots=True)

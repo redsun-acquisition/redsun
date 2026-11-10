@@ -22,7 +22,7 @@ R = TypeVar("R")
 
 PRE_START: Final = "the pool starts after every setup; use .then(...)"
 
-logger = logging.getLogger("redsun.compute")
+logger = logging.getLogger("redsun")
 
 
 def trace(error: BaseException) -> str:

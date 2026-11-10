@@ -113,11 +113,11 @@ def test_counts_per_owner() -> None:
 def test_a_long_wait_is_logged_when_the_call_starts(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log a call that waited more than 1 s for a worker, under its owner's logger."""
+    """Log a call that waited more than 1 s for a worker, naming its owner."""
     with ThreadPool(1) as pool:
         ThreadExecutor(pool, "a").submit(time.sleep, 1.2)
         ThreadExecutor(pool, "b").submit(int, "1").result(timeout=5)
-    assert any(r.name == "redsun.compute.b" for r in caplog.records)
+    assert any(r.getMessage().startswith("A call of b waited") for r in caplog.records)
 
 
 def test_a_pool_that_fails_to_start_is_broken() -> None:

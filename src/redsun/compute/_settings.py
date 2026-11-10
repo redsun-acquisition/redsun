@@ -22,7 +22,7 @@ Preset = Literal["latency", "balanced", "throughput"]
 RELATION_PROCESSOR_CORE = 0
 INSUFFICIENT_BUFFER = 122
 
-logger = logging.getLogger("redsun.compute")
+logger = logging.getLogger("redsun")
 
 
 class ComputeSettings(TypedDict, total=False):

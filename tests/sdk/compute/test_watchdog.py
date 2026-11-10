@@ -120,7 +120,6 @@ def test_the_watchdog_names_a_call_holding_the_gil(
     assert len(warnings) == 1
     assert "spin_in_python" in warnings[0].getMessage()
     assert "may hold the GIL" in warnings[0].getMessage()
-    assert warnings[0].name == "redsun.compute"
 
 
 def test_the_watchdog_is_quiet_for_calls_releasing_the_gil(

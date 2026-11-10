@@ -43,7 +43,7 @@ PoolT = TypeVar("PoolT", bound="Pool")
 
 LONG_WAIT: Final = 1.0
 
-logger = logging.getLogger("redsun.compute")
+logger = logging.getLogger("redsun")
 
 
 class State(enum.Enum):
@@ -94,9 +94,7 @@ class Call(Generic[R]):
         waited = time.monotonic() - self.submitted
         self.counts.started(self.owner, waited)
         if waited > LONG_WAIT:
-            logging.getLogger(f"redsun.compute.{self.owner}").warning(
-                f"A call waited {waited:.1f} s for a worker"
-            )
+            logger.warning(f"A call of {self.owner} waited {waited:.1f} s for a worker")
         try:
             result = self.invoke()
         except BaseException as error:  # noqa: BLE001 - the future carries it to the caller

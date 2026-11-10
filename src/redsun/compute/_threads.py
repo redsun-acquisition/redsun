@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from ._pool import Call
     from ._settings import Limits, ThreadPoolSettings
 
-logger = logging.getLogger("redsun.compute")
+logger = logging.getLogger("redsun")
 
 
 def settle_with(call: Call[Any], internal: Future[None]) -> None:
