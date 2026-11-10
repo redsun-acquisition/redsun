@@ -6,7 +6,7 @@ import concurrent.futures
 import logging
 import traceback
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Final, TypeVar
 
 from psygnal import SignalInstance
 
@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ..ports._wiring import SlotThread
-
-__all__ = ["PRE_START", "BrokenPool", "Delivery", "Future"]
 
 R = TypeVar("R")
 
@@ -95,8 +93,8 @@ class Future(concurrent.futures.Future[R]):
         """
         name = getattr(on_result, "__qualname__", repr(on_result))
 
-        def deliver(done: concurrent.futures.Future[R]) -> None:
-            future = cast("Future[R]", done)
+        def deliver(future: concurrent.futures.Future[R]) -> None:
+            assert isinstance(future, Future)
             if future.cancelled():
                 logger.debug(f"Call before {name} was cancelled")
                 return
