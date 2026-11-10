@@ -101,6 +101,11 @@ class Call(Generic[R]):
         finally:
             end(thread, previous)
 
+    def cancel(self) -> None:
+        """Cancel a call that never ran, and release those waiting on its future."""
+        if self.future.cancel():
+            self.future.set_running_or_notify_cancel()
+
     def fail(self, error: BaseException) -> None:
         """Settle a call that never ran with *error*."""
         if self.future.set_running_or_notify_cancel():
@@ -147,11 +152,6 @@ class Pool(Executor, ABC):
     @abstractmethod
     def pool_size(self) -> int:
         """Threads, processes or devices."""
-
-    @property
-    def delivery(self) -> Delivery | None:
-        """Where callbacks of this pool's futures run, if the session set it."""
-        return self._delivery
 
     def _start(self) -> None:
         """Make the workers."""
@@ -265,7 +265,7 @@ class Pool(Executor, ABC):
             waiting = list(self._waiting)
             self._waiting.clear()
         for call in waiting:
-            call.future.cancel()
+            call.cancel()
         self._stop(wait, cancel_futures)
 
     def __enter__(self) -> Self:

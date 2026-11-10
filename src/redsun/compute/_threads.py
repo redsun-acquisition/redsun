@@ -33,7 +33,7 @@ class ThreadPoolSettings:
 def settle_with(call: Call[Any], internal: Future[None]) -> None:
     """Settle *call* when its worker never took it: cancelled, or the workers broke."""
     if internal.cancelled():
-        call.future.cancel()
+        call.cancel()
     elif (error := internal.exception()) is not None and not call.future.done():
         call.fail(BrokenPool(f"the workers stopped: {error}"))
 

@@ -6,6 +6,7 @@ import re
 import threading
 import time
 import weakref
+from concurrent.futures import wait
 from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
@@ -146,8 +147,9 @@ def test_shutdown_before_start_cancels_waiting_calls() -> None:
     """Cancel every waiting call when a pool that never started shuts down."""
     pool = ThreadPool(1)
     future = pool.submit_as("a", int, "1")
-    pool.shutdown()
+    pool.shutdown(cancel_futures=True)
     assert future.cancelled()
+    assert wait([future], timeout=5).done == {future}
     with pytest.raises(RuntimeError, match="after shutdown"):
         pool.submit_as("a", int, "1")
 
@@ -170,6 +172,7 @@ def test_shutdown_can_cancel_calls_no_worker_took() -> None:
     release.set()
     assert running.result(timeout=5) is True
     assert queued.cancelled()
+    assert wait([queued], timeout=5).done == {queued}
     assert pool.usage().owners["a"] == OwnerUsage(
         queued=0,
         active=0,

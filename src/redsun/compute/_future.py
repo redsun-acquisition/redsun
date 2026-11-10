@@ -130,5 +130,6 @@ class Future(concurrent.futures.Future[R]):
             relay = SignalInstance((object,))
             relay.connect(call, thread=target)
             relay.emit(None)
+            relay.disconnect()
 
         self.add_done_callback(deliver)

@@ -6,6 +6,7 @@ import concurrent.futures
 import logging
 import re
 import threading
+import weakref
 
 import pytest
 from psygnal import emit_queued
@@ -13,6 +14,7 @@ from psygnal import emit_queued
 from redsun.compute import Future
 from redsun.compute._future import PRE_START, Delivery
 from redsun.ports import slot
+from tests.sdk.helpers import automatic_collection
 
 
 def handler(value: int) -> None:
@@ -31,6 +33,11 @@ class Receiver:
     def __init__(self) -> None:
         self.threads: list[threading.Thread] = []
         self.taken = threading.Event()
+        self.values: list[int] = []
+
+    def keep(self, value: int) -> None:
+        """Record the result."""
+        self.values.append(value)
 
     @slot(thread="current")
     def take(self, value: int) -> None:
@@ -106,6 +113,21 @@ def test_then_queues_for_the_main_thread() -> None:
     assert got == []
     emit_queued()
     assert got == [threading.main_thread().name]
+
+
+def test_a_delivered_result_frees_its_owner_without_a_collection() -> None:
+    """Free the object a queued callback belongs to once the queue drains."""
+    with automatic_collection(False):
+        owner = Receiver()
+        future: Future[int] = Future()
+        future._bind("owner", Delivery("main", None), lambda: False)
+        future.then(owner.keep)
+        future.set_result(1)
+        emit_queued()
+        assert owner.values == [1]
+        ref = weakref.ref(owner)
+        del owner, future
+        assert ref() is None
 
 
 def test_a_slot_marker_on_the_callback_wins() -> None:
