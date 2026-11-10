@@ -42,10 +42,6 @@ executors a component submits its calls through. Usage is in
 
 ## Counts
 
-::: redsun.compute.Usage
-    options:
-      show_root_heading: true
-
 ::: redsun.compute.OwnerUsage
     options:
       show_root_heading: true

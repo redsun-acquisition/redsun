@@ -11,7 +11,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Final, final
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Mapping
+    from collections.abc import Callable, Generator
 
 POOL_OWNER: Final = "<pool>"
 
@@ -42,20 +42,6 @@ class OwnerUsage:
 
 
 EMPTY: Final = OwnerUsage(0, 0, 0, 0, 0.0)
-
-
-@dataclass(frozen=True, slots=True)
-class Usage:
-    """What a pool's calls did, in total and per owner."""
-
-    pool_size: int
-    """Threads, processes or devices."""
-
-    active: int
-    """Workers running a call now."""
-
-    owners: Mapping[str, OwnerUsage]
-    """Counts by owner name."""
 
 
 class Counts:
@@ -95,13 +81,6 @@ class Counts:
         """Return the counts of *owner*."""
         with self._lock:
             return self._owners.get(owner, EMPTY)
-
-    def usage(self, pool_size: int) -> Usage:
-        """Return the counts of every owner."""
-        with self._lock:
-            owners = dict(self._owners)
-        active = sum(u.active for u in owners.values())
-        return Usage(pool_size, active, owners)
 
     def summary(self, label: str, pool_size: int) -> str:
         """Return one line on the calls made, such as `thread pool: 3 workers, ...`."""

@@ -89,25 +89,24 @@ def test_cancel_before_start_leaves_the_queue() -> None:
     """Cancel a waiting call and count it out of queued."""
     pool = ThreadPool(0)
     ran: list[int] = []
-    future = ThreadExecutor(pool, "a").submit(ran.append, 1)
+    executor = ThreadExecutor(pool, "a")
+    future = executor.submit(ran.append, 1)
     assert future.cancel()
-    assert pool.usage().owners["a"].queued == 0
+    assert executor.usage().queued == 0
     pool.start()
     assert ran == []
     pool.shutdown()
 
 
 def test_counts_per_owner() -> None:
-    """Count completed and failed calls per owner, and direct calls under '<pool>'."""
+    """Count completed and failed calls per owner, apart from other owners' calls."""
     with ThreadPool(0) as pool:
         executor = ThreadExecutor(pool, "a")
         executor.submit(int, "1")
         executor.submit(int, "x")
-        pool.submit(int, "2")
-        usage = pool.usage()
-    assert counts(usage.owners["a"]) == (0, 0, 1, 1)
-    assert usage.owners["<pool>"].completed == 1
-    assert usage.pool_size == 0
+        ThreadExecutor(pool, "b").submit(int, "2")
+        pool.submit(int, "3")
+    assert counts(executor.usage()) == (0, 0, 1, 1)
 
 
 def test_a_long_wait_is_logged_when_the_call_starts(
@@ -158,7 +157,7 @@ def test_shutdown_can_cancel_calls_no_worker_took() -> None:
     assert running.result(timeout=5) is True
     assert queued.cancelled()
     assert wait([queued], timeout=5).done == {queued}
-    assert counts(pool.usage().owners["a"]) == (0, 0, 1, 0)
+    assert counts(executor.usage()) == (0, 0, 1, 0)
 
 
 def test_summary_names_the_busiest_owners_first() -> None:

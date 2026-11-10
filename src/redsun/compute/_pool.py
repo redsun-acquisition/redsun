@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from typing import Self
 
     from ._future import Delivery
-    from ._usage import OwnerUsage, Usage
+    from ._usage import OwnerUsage
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -255,10 +255,6 @@ class Pool(Executor, ABC):
     ) -> Future[R]:
         """Run `fn(*args, **kwargs)` on a worker, counted under `"<pool>"`."""
         return self._submit(POOL_OWNER, never_released, fn, args, kwargs)
-
-    def usage(self) -> Usage:
-        """Return the calls counted so far."""
-        return self._counts.usage(self.pool_size)
 
     def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
         """Cancel the calls waiting for `start`, then stop the workers."""

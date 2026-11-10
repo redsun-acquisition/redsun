@@ -5,7 +5,7 @@ from __future__ import annotations
 from ._future import BrokenPool, Future
 from ._settings import ComputeSettings, Limits, Preset, ThreadPoolSettings
 from ._threads import ThreadExecutor, ThreadPool
-from ._usage import OwnerUsage, Usage
+from ._usage import OwnerUsage
 
 __all__ = [
     "BrokenPool",
@@ -17,5 +17,4 @@ __all__ = [
     "ThreadExecutor",
     "ThreadPool",
     "ThreadPoolSettings",
-    "Usage",
 ]
