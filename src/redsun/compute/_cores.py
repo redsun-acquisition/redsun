@@ -91,7 +91,7 @@ def compute_cores(
 ) -> int:
     """Return the cores the shared pools may use, at least 1.
 
-    One core stays free unless *reserve* lists the cores the groups take, and
+    One core stays free unless *reserve* lists the cores kept for the window's thread, and
     *cap* limits the result.
     """
     cores = physical - (len(reserve) if reserve is not None else 1)

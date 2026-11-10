@@ -32,6 +32,9 @@ class OwnerUsage:
     """Seconds a call waited for a worker, the longest so far."""
 
 
+EMPTY: Final = OwnerUsage(0, 0, 0, 0, 0.0)
+
+
 @dataclass(frozen=True, slots=True)
 class Usage:
     """What a pool's calls did, in total and per owner."""
@@ -44,9 +47,6 @@ class Usage:
 
     owners: Mapping[str, OwnerUsage]
     """Counts by owner name."""
-
-
-EMPTY: Final = OwnerUsage(0, 0, 0, 0, 0.0)
 
 
 class Counts:

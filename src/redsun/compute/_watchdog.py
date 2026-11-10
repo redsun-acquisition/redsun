@@ -92,5 +92,5 @@ class Watchdog:
         self._reported.update(names)
         logger.warning(
             f"A thread woke {late:.2f} s late while {', '.join(names)} ran in a pool: "
-            "a function that may hold the GIL belongs on a ProcessExecutor"
+            "it may hold the GIL, which slows every other thread, the window's included"
         )

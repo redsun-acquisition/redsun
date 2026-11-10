@@ -82,6 +82,8 @@ class PoolExecutor(Executor, Generic[PoolT]):
         ------
         RuntimeError
             If this executor has shut down.
+        BrokenPool
+            If the pool broke at start, or its workers broke.
         """
         if self._closed:
             raise RuntimeError("cannot schedule new futures after shutdown")
