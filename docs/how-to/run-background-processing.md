@@ -166,8 +166,8 @@ only owner is the `median` presenter:
 thread pool: 3 workers, 214 calls (median 214), 2 failed, longest idle 1.4 s
 ```
 
-A call that waited more than a second for a free thread is logged when it
-starts, under the logger `redsun.compute.<owner>`. A thread the session
+A call that waited more than a second for a free thread is logged as a
+warning naming its owner when it starts. A thread the session
 keeps for this wakes every 50 ms. If it wakes more than 0.2 s late, something
 held every other thread back, so the session logs the name of each function
 the pool was running at that moment, once per function.
