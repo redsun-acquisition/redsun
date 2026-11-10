@@ -125,9 +125,9 @@ class Pool(Executor, ABC):
         self._delivery: Delivery | None = None
 
     @classmethod
+    @abstractmethod
     def resource(cls, *args: Any, **kwargs: Any) -> Generator[Self, None, None]:
         """Build a pool, yield it unstarted, and stop it at teardown."""
-        raise NotImplementedError
 
     @property
     def native_threads(self) -> int:

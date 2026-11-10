@@ -6,7 +6,7 @@ import re
 import threading
 import time
 import weakref
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
 from diwire import Component
@@ -16,6 +16,9 @@ from redsun.compute._future import PRE_START
 from redsun.compute._pool import Call, Pool, pool_key
 from redsun.compute._usage import Counts
 from tests.sdk.helpers import automatic_collection
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 def explode() -> None:
@@ -29,6 +32,11 @@ class FlakyPool(Pool):
     def __init__(self) -> None:
         super().__init__()
         self.starts = 0
+
+    @classmethod
+    def resource(cls) -> Generator[FlakyPool, None, None]:
+        """Yield a pool."""
+        yield cls()
 
     @property
     def pool_size(self) -> int:

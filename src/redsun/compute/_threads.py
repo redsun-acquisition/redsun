@@ -7,13 +7,15 @@ from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, final
 
-from ._future import BrokenPool
+from ._future import BrokenPool, logger
 from ._pool import Pool
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
     from concurrent.futures import Future
 
+    from ._future import Delivery
+    from ._limits import Limits
     from ._pool import Call
 
 
@@ -51,6 +53,32 @@ class ThreadPool(Pool):
         self._threads = threads
         self._initializer = initializer
         self._executor: ThreadPoolExecutor | None = None
+
+    @classmethod
+    def resource(
+        cls,
+        settings: ThreadPoolSettings,
+        limits: Limits,
+        delivery: Delivery | None = None,
+    ) -> Generator[ThreadPool, None, None]:
+        """Build a pool from *settings*, yield it unstarted, and stop it at teardown.
+
+        Teardown logs one line on the calls made and does not wait for the
+        calls still running.
+        """
+        pool = cls(
+            settings.threads,
+            native_threads=settings.native_threads,
+            initializer=limits.initializer(settings.native_threads),
+        )
+        pool._delivery = delivery
+        try:
+            yield pool
+        finally:
+            try:
+                logger.info(pool._counts.summary("thread pool", pool.pool_size))
+            finally:
+                pool.shutdown(wait=False, cancel_futures=True)
 
     @property
     def pool_size(self) -> int:
