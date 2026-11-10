@@ -6,7 +6,7 @@ import concurrent.futures
 import logging
 import traceback
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, TypeVar
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 from psygnal import SignalInstance
 
@@ -43,6 +43,17 @@ class Delivery:
 
     session_thread: threading.Thread | None
     """The thread `"current"` stands for."""
+
+
+def target_thread(
+    delivery: Delivery | None, on_result: Callable[[Any], object]
+) -> SlotThread:
+    """Return the thread to run *on_result* on, `None` to run it where the call finished."""
+    if delivery is None:
+        return None
+    marker = marker_of(on_result)
+    target = (marker.thread if marker else None) or delivery.thread
+    return delivery.session_thread if target == "current" else target
 
 
 class Future(concurrent.futures.Future[R]):
@@ -116,14 +127,7 @@ class Future(concurrent.futures.Future[R]):
                 except Exception as e:  # noqa: BLE001 - a failing callback must not stop the delivery of others
                     logger.error(f"Callback {name} raised: {trace(e)}")
 
-            delivery = future._delivery
-            if delivery is None:
-                call()
-                return
-            marker = marker_of(on_result)
-            target = (marker.thread if marker else None) or delivery.thread
-            if target == "current":
-                target = delivery.session_thread
+            target = target_thread(future._delivery, on_result)
             if target is None:
                 call()
                 return

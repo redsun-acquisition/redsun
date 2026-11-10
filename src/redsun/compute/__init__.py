@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from ._cores import Preset
-from ._executor import ThreadExecutor
 from ._future import BrokenPool, Future
-from ._limits import Limits
-from ._settings import ComputeSettings
-from ._threads import ThreadPool, ThreadPoolSettings
+from ._settings import ComputeSettings, Limits, Preset, ThreadPoolSettings
+from ._threads import ThreadExecutor, ThreadPool
 from ._usage import OwnerUsage, Usage
 
 __all__ = [

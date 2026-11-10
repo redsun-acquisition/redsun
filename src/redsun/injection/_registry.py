@@ -115,10 +115,6 @@ class Registry:
         if internal:
             self._internal.add(held)
 
-    def internal(self, key: object) -> bool:
-        """Return whether *key* is a resource the session keeps to itself."""
-        return key_of(key) in self._internal
-
     def close(self) -> None:
         """Tear down the resources made, the last made first.
 
@@ -197,7 +193,7 @@ class Registry:
                 continue
             hint = param.annotation
             found = self._registered(hint)
-            if found is not None and self.internal(found):
+            if found is not None and key_of(found) in self._internal:
                 raise TypeError(
                     f"'{name}' of {getattr(fn, '__name__', fn)} asks for "
                     f"{getattr(found, '__name__', found)}, "

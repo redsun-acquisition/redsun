@@ -597,12 +597,6 @@ class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
     switch_interval_ms: float | None = Field(default=None, gt=0)
     """Interpreter thread switch interval in milliseconds; left alone if unset."""
 
-    @model_validator(mode="before")
-    @classmethod
-    def read_preset(cls, data: Any) -> Any:
-        """Read a bare preset word as a section naming it."""
-        return {"preset": data} if isinstance(data, str) else data
-
 
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""

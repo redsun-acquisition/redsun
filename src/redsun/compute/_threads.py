@@ -1,33 +1,24 @@
-"""A pool of threads."""
+"""A pool of threads, and the executor that submits to it."""
 
 from __future__ import annotations
 
+import logging
 from concurrent.futures import BrokenExecutor, ThreadPoolExecutor
-from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, final
 
-from ._future import BrokenPool, logger
-from ._pool import Pool
+from ._future import BrokenPool
+from ._pool import Pool, PoolExecutor
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from concurrent.futures import Future
 
     from ._future import Delivery
-    from ._limits import Limits
     from ._pool import Call
+    from ._settings import Limits, ThreadPoolSettings
 
-
-@dataclass(frozen=True, slots=True)
-class ThreadPoolSettings:
-    """How many threads a thread pool has."""
-
-    threads: int
-    """Worker threads; 0 runs each call in the thread that submits it."""
-
-    native_threads: int
-    """Threads each worker's native libraries may use."""
+logger = logging.getLogger("redsun.compute")
 
 
 def settle_with(call: Call[Any], internal: Future[None]) -> None:
@@ -108,3 +99,8 @@ class ThreadPool(Pool):
     def _stop(self, wait: bool, cancel_futures: bool) -> None:
         if self._executor is not None:
             self._executor.shutdown(wait, cancel_futures=cancel_futures)
+
+
+@final
+class ThreadExecutor(PoolExecutor[ThreadPool]):
+    """Runs one owner's calls on a shared pool of threads."""

@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, TypeVar, get_type_hints
 
 from .._structural import without_none
-from ..compute._executor import PoolExecutor
-from ..compute._pool import Pool
+from ..compute._pool import Pool, PoolExecutor
 from ..errors import RegistrationError
 
 if TYPE_CHECKING:

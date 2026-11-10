@@ -9,11 +9,10 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin
 from redsun.compute import Limits
 
 from .._structural import without_none
-from ..compute._cores import compute_cores, physical_cores, split
-from ..compute._executor import PoolExecutor
 from ..compute._future import BrokenPool
-from ..compute._pool import Pool, pool_key
-from ..compute._watchdog import Watchdog
+from ..compute._pool import Pool, PoolExecutor, pool_key
+from ..compute._settings import compute_cores, physical_cores, split
+from ..compute._usage import Watchdog
 from ..injection._registry import SESSION
 from ._factories import resolved
 from ._protocols import HasSetup
@@ -52,13 +51,6 @@ def executor_params(fn: Callable[..., Any]) -> dict[str, type[PoolExecutor[Any]]
     }
 
 
-def pool_params(fn: Callable[..., Any]) -> dict[str, type[Pool]]:
-    """Return the parameters of *fn* asking for a pool, by pool class."""
-    return {
-        pname: kind for pname, kind in classes_of(fn).items() if issubclass(kind, Pool)
-    }
-
-
 def component_kinds(cls: type) -> set[type[PoolExecutor[Any]]]:
     """Return the executor classes the constructor and the `setup` of *cls* ask for."""
     kinds = set(executor_params(cls).values())
@@ -69,7 +61,14 @@ def component_kinds(cls: type) -> set[type[PoolExecutor[Any]]]:
 
 def asks_for_pool(owner: str, fn: Callable[..., Any]) -> TypeError | None:
     """Return why *owner* cannot be given what *fn* asks for, when it asks for a pool."""
-    found = next(iter(pool_params(fn).items()), None)
+    found = next(
+        (
+            (pname, kind)
+            for pname, kind in classes_of(fn).items()
+            if issubclass(kind, Pool)
+        ),
+        None,
+    )
     if found is None:
         return None
     pname, kind = found
@@ -113,27 +112,27 @@ class SessionCompute:
         "delivery",
         "executors",
         "limits",
-        "pools",
-        "preset",
+        "registry",
         "settings",
         "watchdog",
     )
 
-    def __init__(self, config: ComputeConfig, delivery: Delivery) -> None:
+    def __init__(
+        self, config: ComputeConfig, delivery: Delivery, registry: Registry
+    ) -> None:
         self.cores = 0
         self.config = config
-        self.preset = config.preset
+        self.registry = registry
         self.limits = Limits(config.switch_interval_ms)
         self.delivery = delivery
         self.settings: dict[tuple[type[Pool], str | None], ThreadPoolSettings] = {}
-        self.pools: dict[type[Pool], Pool] = {}
         self.executors: dict[
             tuple[str, type[PoolExecutor[Any]]], PoolExecutor[Any]
         ] = {}
         self.broken: list[tuple[str, str]] = []
         self.watchdog = Watchdog()
 
-    def register(self, registry: Registry, kinds: set[type[PoolExecutor[Any]]]) -> None:
+    def register(self, kinds: set[type[PoolExecutor[Any]]]) -> None:
         """Register the pool each of *kinds* submits to, made on its first request."""
         if not kinds:
             return
@@ -144,9 +143,9 @@ class SessionCompute:
             pool_type = kind.pool_type
             if (pool_type, None) in self.settings:
                 continue
-            settings = split(self.preset, self.cores)
+            settings = split(self.config.preset, self.cores)
             self.settings[pool_type, None] = settings
-            registry.register_resource(
+            self.registry.register_resource(
                 pool_key(pool_type, None),
                 pool_resource(pool_type, settings, self.limits, self.delivery),
                 owner=SESSION,
@@ -157,29 +156,33 @@ class SessionCompute:
         self,
         cls: type[E],
         owner: str,
-        registry: Registry,
         on_release: Callable[[Callable[[], None]], None],
     ) -> E:
         """Return the executor of *cls* for *owner*, making it and its pool on the first request."""
         held = self.executors.get((owner, cls))
         if held is None:
-            provide = next(registry.providers(pool_key(cls.pool_type, None)))
+            provide = next(self.registry.providers(pool_key(cls.pool_type, None)))
             pool = cast("Pool", provide())
-            self.pools[cls.pool_type] = pool
             held = cls(pool, owner)
             self.executors[owner, cls] = held
             on_release(partial(held.shutdown, wait=False, cancel_futures=True))
         return cast("E", held)
 
-    def start(self, built: Collection[str]) -> list[tuple[str, str]]:
+    def start(self, built: Collection[str]) -> None:
         """Start each pool a component in *built* holds, after limiting native threads.
 
-        The limits stay until `limits.restore` runs. Returns the label and the reason of each pool that could not start.
+        The limits stay until `limits.restore` runs. A pool that cannot start
+        is logged and recorded in `broken`.
         """
-        kinds = {cls.pool_type for owner, cls in self.executors if owner in built}
-        pools = [pool for kind, pool in self.pools.items() if kind in kinds]
+        pools = list(
+            dict.fromkeys(
+                held._pool
+                for (owner, _), held in self.executors.items()
+                if owner in built
+            )
+        )
         if not pools:
-            return []
+            return
         # every pool is a shared one, split from the same cores, so any of them
         # gives the native threads of the shared split
         self.limits.apply(pools[0].native_threads)
@@ -191,13 +194,12 @@ class SessionCompute:
                 label = type(pool).__name__
                 self.broken.append((label, str(error)))
                 logger.error(f"{label} is broken: {error}")
-        return list(self.broken)
 
     def summary(self) -> list[str]:
         """Return the lines the build summary adds, none when no pool was asked for."""
         if not self.settings:
             return []
-        lines = [f"Compute: {self.cores} cores, preset {self.preset}"]
+        lines = [f"Compute: {self.cores} cores, preset {self.config.preset}"]
         lines.extend(
             f"{kind.__name__}: {s.threads} threads, {s.native_threads} native threads each"
             for (kind, _), s in self.settings.items()

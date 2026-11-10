@@ -576,8 +576,7 @@ class Session(BuildableSession):
         found: list[Source] = []
         for klass in reversed(type(self).__mro__):
             if (compute := klass.__dict__.get("compute")) is not None:
-                section = {"preset": compute} if isinstance(compute, str) else compute
-                found.append({"compute": section})
+                found.append({"compute": compute})
             found.extend(as_sources(klass.__dict__.get("config")))
         return found + as_sources(self._config)
 
@@ -1283,9 +1282,9 @@ class Session(BuildableSession):
         self._compute = SessionCompute(
             self._configuration().compute,
             Delivery(self.frontend.results_thread, threading.current_thread()),
+            registry,
         )
         self._compute.register(
-            registry,
             {
                 kind
                 for declaration in self._components()
@@ -1869,7 +1868,7 @@ class Session(BuildableSession):
             return refusal
         compute = self._require_compute()
         executors: dict[str, object] = {
-            pname: compute.executor(kind, declaration.name, registry, self.on_release)
+            pname: compute.executor(kind, declaration.name, self.on_release)
             for pname, kind in executor_params(ready.setup).items()
         }
         params = get_setup_params(declaration.cls)
@@ -1981,9 +1980,7 @@ class Session(BuildableSession):
             # made before the component, so its own teardown is released first,
             # the executors of its setup included
             executors = {
-                kind: compute.executor(
-                    kind, declaration.name, registry, self.on_release
-                )
+                kind: compute.executor(kind, declaration.name, self.on_release)
                 for kind in component_kinds(declaration.cls)
             }
             passed = {
