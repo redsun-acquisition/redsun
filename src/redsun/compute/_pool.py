@@ -40,6 +40,11 @@ class State(enum.Enum):
     SHUT_DOWN = enum.auto()
 
 
+def never_released() -> bool:
+    """Report that the owner of a call is still there."""
+    return False
+
+
 def pool_key(kind: type[Pool], group: str | None) -> object:
     """Return the registry key of the pool of *kind* that serves *group*."""
     return kind if group is None else Annotated[kind, Component(group)]
@@ -197,8 +202,19 @@ class Pool(Executor, ABC):
         RuntimeError
             If the pool has shut down.
         """
+        return self._submit(owner, never_released, fn, args, kwargs)
+
+    def _submit(
+        self,
+        owner: str,
+        released: Callable[[], bool],
+        fn: Callable[..., R],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> Future[R]:
+        """Run `fn(*args, **kwargs)` as `submit_as` does, binding *released* to the future."""
         future: Future[R] = Future()
-        future._bind(owner, self._delivery, future._released)
+        future._bind(owner, self._delivery, released)
         call = Call(owner, fn, args, kwargs, future, time.monotonic(), self._counts)
         with self._lock:
             match self._state:
