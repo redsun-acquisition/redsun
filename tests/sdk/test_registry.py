@@ -206,3 +206,18 @@ def test_an_internal_key_is_refused_to_a_callable() -> None:
     with pytest.raises(TypeError, match="'a' of wants asks for KeyA"):
         registry.call(wants)
     assert registry.internal(KeyA)
+
+
+def test_a_closed_registry_refuses_a_call() -> None:
+    """Raise from call after close."""
+    registry = Registry()
+    registry.close()
+    with pytest.raises(RuntimeError, match="the registry is closed"):
+        registry.call(one_resource)
+
+
+def test_a_resource_never_requested_closes_quietly() -> None:
+    """Close a registry holding a resource nobody resolved without raising."""
+    registry = Registry()
+    registry.register_resource(KeyA, one_resource, owner=SESSION)
+    registry.close()
