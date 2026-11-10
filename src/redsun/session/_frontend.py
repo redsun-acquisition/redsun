@@ -44,6 +44,12 @@ class Frontend:
     hides: ClassVar[bool] = False
     """Whether a window layout may start a view hidden."""
 
+    results_thread: ClassVar[SlotThread] = None
+    """The thread a pool call's result is handed to when its callback names none.
+
+    `None` here: the callback runs on the thread that finishes the call.
+    """
+
     view_coroutines: ClassVar[bool] = False
     """Whether a key can run a view's coroutine method.
 

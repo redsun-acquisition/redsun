@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, TypeVar, get_type_hints
 
 from .._structural import without_none
+from ..compute._executor import PoolExecutor
+from ..compute._pool import Pool
+from ..errors import RegistrationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -79,9 +82,16 @@ def claim_shared(cls: type, name: str, seen: dict[Key, str]) -> dict[str, Key]:
     ------
     TypeError
         If another component claimed a type *cls* shares.
+    RegistrationError
+        If *cls* shares a pool or an executor.
     """
     keys = shared_keys(cls)
     for provided in keys.values():
+        if isinstance(provided, type) and issubclass(provided, (Pool, PoolExecutor)):
+            raise RegistrationError(
+                f"'{name}' cannot provide {provided.__name__}: "
+                "the session makes pools and executors"
+            )
         owner = seen.get(provided)
         if owner is not None:
             raise TypeError(
