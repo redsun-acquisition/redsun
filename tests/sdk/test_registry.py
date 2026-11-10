@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Generator
 from typing import Annotated, Any, NewType, Protocol
 
 import pytest
@@ -29,6 +30,22 @@ class Unbuilt:
 
 
 Named = NewType("Named", Motor)
+
+
+class KeyA: ...
+
+
+class KeyB: ...
+
+
+class KeyC: ...
+
+
+def one_resource() -> Generator[str, None, None]:
+    try:
+        yield "one"
+    finally:
+        pass
 
 
 def test_a_registry_answers_every_key_it_holds() -> None:
@@ -142,3 +159,50 @@ def test_the_error_names_the_callable_not_its_repr() -> None:
 
     with pytest.raises(TypeError, match=r"^cannot fill 'motor' of build_taker$"):
         registry.call(build_taker)
+
+
+def test_resources_are_made_once_and_torn_down_last_made_first() -> None:
+    """Make a resource on first request, once, and tear resources down in reverse creation order."""
+    events: list[str] = []
+
+    def resource(label: str) -> Callable[[], Generator[str, None, None]]:
+        def make() -> Generator[str, None, None]:
+            events.append(f"make {label}")
+            try:
+                yield label
+            finally:
+                events.append(f"close {label}")
+
+        return make
+
+    registry = Registry()
+    for label, key in (("A", KeyA), ("B", KeyB), ("C", KeyC)):
+        registry.register_resource(key, resource(label), owner=SESSION)
+    assert events == []
+    for key in (KeyC, KeyA, KeyB, KeyA):
+        next(registry.providers(key))()
+    registry.close()
+    registry.close()
+    assert events == ["make C", "make A", "make B", "close B", "close A", "close C"]
+
+
+def test_a_closed_registry_refuses_requests() -> None:
+    """Raise on a request after close rather than hand back a torn-down resource."""
+    registry = Registry()
+    registry.register_resource(KeyA, one_resource, owner=SESSION)
+    provider = next(registry.providers(KeyA))
+    registry.close()
+    with pytest.raises(RuntimeError, match="the registry is closed"):
+        provider()
+
+
+def test_an_internal_key_is_refused_to_a_callable() -> None:
+    """Refuse a parameter asking for an internal key, naming the parameter."""
+    registry = Registry()
+    registry.register_resource(KeyA, one_resource, owner=SESSION, internal=True)
+
+    def wants(a: KeyA) -> None: ...
+
+    with pytest.raises(TypeError, match="'a' of wants asks for KeyA"):
+        registry.call(wants)
+    assert registry.internal(KeyA)

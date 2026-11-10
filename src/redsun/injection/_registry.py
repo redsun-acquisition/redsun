@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from typing import (
     Annotated,
+    Any,
     Final,
     TypeAlias,
     TypeVar,
@@ -20,6 +21,7 @@ from diwire import (
     Lifetime,
     MissingPolicy,
     ResolverContext,
+    Scope,
 )
 
 from .._structural import is_optional, optional_arg
@@ -53,7 +55,7 @@ class Registry:
     answers a key nobody registered, each time a provider for it is called.
     """
 
-    __slots__ = ("_ask", "_container", "_owners")
+    __slots__ = ("_ask", "_closed", "_container", "_internal", "_owners")
 
     def __init__(self, ask: Ask | None = None) -> None:
         self._ask = ask
@@ -66,6 +68,8 @@ class Registry:
             use_resolver_context=False,
         )
         self._owners: dict[object, str] = {}
+        self._internal: set[object] = set()
+        self._closed = False
 
     def register(
         self, key: object, factory: Callable[[], object], *, owner: str
@@ -77,14 +81,63 @@ class Registry:
         RegistrationError
             If *key* is registered already, metadata `diwire` ignores aside.
         """
+        held = self._claim(key, owner)
+        self._container.add_factory(factory, provides=key, lifetime=Lifetime.TRANSIENT)
+        self._owners[held] = owner
+
+    def register_resource(
+        self,
+        key: object,
+        provider: Callable[[], Generator[Any, None, None]],
+        *,
+        owner: str,
+        internal: bool = False,
+    ) -> None:
+        """Register the generator *provider* under *key* as a resource.
+
+        The resource is made on its first request, shared by every request
+        after it, and torn down by [`close`][redsun.injection.Registry.close],
+        the last made first. An *internal* key is refused to
+        [`call`][redsun.injection.Registry.call].
+
+        Raises
+        ------
+        RegistrationError
+            If *key* is registered already, metadata `diwire` ignores aside.
+        """
+        held = self._claim(key, owner)
+        self._container.add_generator(
+            provider, provides=key, scope=Scope.APP, lifetime=Lifetime.SCOPED
+        )
+        self._owners[held] = owner
+        if internal:
+            self._internal.add(held)
+
+    def internal(self, key: object) -> bool:
+        """Return whether *key* is a resource the session keeps to itself."""
+        return key_of(key) in self._internal
+
+    def close(self) -> None:
+        """Tear down the resources made, the last made first.
+
+        A registry refuses every request after it is closed. Closing twice does
+        nothing.
+        """
+        if self._closed:
+            return
+        self._closed = True
+        # diwire's close raises when nothing was ever resolved
+        self._container.compile()
+        self._container.close()
+
+    def _claim(self, key: object, owner: str) -> object:
         held = key_of(key)
         if held in self._owners:
             raise RegistrationError(
                 f"'{getattr(held, '__name__', held)}' is provided by "
                 f"'{self._owners[held]}' already, so '{owner}' cannot provide it too"
             )
-        self._container.add_factory(factory, provides=key, lifetime=Lifetime.TRANSIENT)
-        self._owners[held] = owner
+        return held
 
     def _registered(self, key: object) -> object | None:
         if key_of(key) in self._owners:
@@ -94,11 +147,20 @@ class Registry:
             return inner
         return None
 
+    def _check_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("the registry is closed")
+
     def providers(self, key: object) -> Iterator[Callable[[], object]]:
         """Yield a provider of *key*, or none when nothing answers it."""
         found = self._registered(key)
         if found is not None:
-            yield lambda: self._container.resolve(found)
+
+            def provide() -> object:
+                self._check_open()
+                return self._container.resolve(found)
+
+            yield provide
         elif self._ask is not None and self._ask(key) is not None:
             ask = self._ask
 
@@ -118,8 +180,12 @@ class Registry:
         Raises
         ------
         TypeError
-            If a required parameter has no value, naming each.
+            If a required parameter has no value, naming each, or a parameter
+            asks for an internal key.
+        RuntimeError
+            If the registry is closed.
         """
+        self._check_open()
         filled: dict[str, object] = {}
         missing: list[str] = []
         for name, param in inspect.signature(fn, eval_str=True).parameters.items():
@@ -130,6 +196,12 @@ class Registry:
                 continue
             hint = param.annotation
             found = self._registered(hint)
+            if found is not None and self.internal(found):
+                raise TypeError(
+                    f"'{name}' of {getattr(fn, '__name__', fn)} asks for "
+                    f"{getattr(found, '__name__', found)}, "
+                    "which the session keeps to itself"
+                )
             value = None if found is None else self._container.resolve(found)
             if value is not None:
                 filled[name] = value
