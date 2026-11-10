@@ -144,7 +144,7 @@ def read(source: Source) -> dict[str, Any]:
         If the file's top level is not a mapping.
     """
     if not isinstance(source, (str, Path)):
-        return dict(source)
+        return with_compute_section(dict(source))
     with open(source) as fh:
         data = yaml.safe_load(fh)
     if data is None:
@@ -154,6 +154,17 @@ def read(source: Source) -> dict[str, Any]:
             f"Expected a YAML mapping at top level in {source}, got "
             f"{type(data).__name__}"
         )
+    return with_compute_section(data)
+
+
+def with_compute_section(data: dict[str, Any]) -> dict[str, Any]:
+    """Return *data* with a bare preset word under `compute` written as a section.
+
+    A source layered over another then merges key by key rather than
+    replacing a section the other source wrote as a mapping.
+    """
+    if isinstance(data.get("compute"), str):
+        data = {**data, "compute": {"preset": data["compute"]}}
     return data
 
 
@@ -577,13 +588,13 @@ class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
     preset: Preset = "balanced"
     """How the compute cores are split between threads and native libraries."""
 
-    cores: int | None = None
+    cores: int | None = Field(default=None, ge=1)
     """Cap on the compute cores; the physical cores less `reserve` if unset."""
 
-    reserve: list[int] | None = None
+    reserve: list[Annotated[int, Field(ge=0)]] | None = None
     """Cores kept for the window's thread; one physical core if unset."""
 
-    switch_interval_ms: float | None = None
+    switch_interval_ms: float | None = Field(default=None, gt=0)
     """Interpreter thread switch interval in milliseconds; left alone if unset."""
 
     @model_validator(mode="before")

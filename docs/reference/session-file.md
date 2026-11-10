@@ -163,9 +163,9 @@ wins over the class, key by key.
 | Key | Type | Default | Holds |
 | --- | --- | --- | --- |
 | `preset` | `latency`, `balanced` or `throughput` | `balanced` | how the compute cores are split between threads and native libraries |
-| `cores` | whole number | the physical cores less `reserve` | the most compute cores to use |
-| `reserve` | list of whole numbers | one physical core | cores kept for the window's thread |
-| `switch_interval_ms` | number | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
+| `cores` | whole number, 1 or more | the physical cores less `reserve` | the most compute cores to use |
+| `reserve` | list of whole numbers, each 0 or more | one physical core | cores kept for the window's thread |
+| `switch_interval_ms` | number above 0 | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
 
 ```yaml
 compute:
