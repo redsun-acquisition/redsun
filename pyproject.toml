@@ -340,6 +340,8 @@ conflicts = [
         { group = "qlementine-pyside" },
     ],
 ]
+# PyQt6 6.12.0 ships a QtGui.pyi that mypy cannot parse
+constraint-dependencies = ["pyqt6!=6.12.0"]
 
 [tool.tox]
 requires = ["tox>=4.28", "tox-uv-bare>=1.36"]
