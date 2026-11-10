@@ -117,6 +117,11 @@ class ShutdownLogger:
         logging.getLogger("redsun.tests").info("logs shut down")
 
 
+def watchdog_threads() -> list[threading.Thread]:
+    """Return the watchdog threads alive."""
+    return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
+
+
 class OneMedian(Session):
     median: AsPresenter[Median]
 
@@ -269,11 +274,6 @@ def test_the_pool_stops_after_its_components(
     component = messages.index("logs shut down")
     pool = next(i for i, m in enumerate(messages) if m.startswith("thread pool:"))
     assert component < pool
-
-
-def watchdog_threads() -> list[threading.Thread]:
-    """Return the watchdog threads alive."""
-    return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
 
 
 def test_the_watchdog_runs_with_the_pools_and_stops_at_shutdown(

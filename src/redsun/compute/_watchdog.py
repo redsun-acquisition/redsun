@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from functools import partial
 from typing import TYPE_CHECKING, final
 
 from ._future import logger
@@ -12,33 +13,41 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
-RUNNING: dict[str, str] = {}
+RUNNING: dict[int, tuple[str, str]] = {}
 RUNNING_LOCK = threading.Lock()
 
 
 def running() -> dict[str, str]:
     """Return the qualified name of the function each pool thread is running, by thread name."""
     with RUNNING_LOCK:
-        return dict(RUNNING)
+        return dict(RUNNING.values())
 
 
-def begin(fn: Callable[..., Any]) -> tuple[str, str | None]:
-    """Record *fn* as running in this thread; return the thread name and what it replaced."""
-    name = threading.current_thread().name
-    label = getattr(fn, "__qualname__", None) or type(fn).__qualname__
+def label_of(fn: Callable[..., Any]) -> str:
+    """Return the module and qualified name of *fn*, looking through `functools.partial`."""
+    while isinstance(fn, partial):
+        fn = fn.func
+    name = getattr(fn, "__qualname__", None) or type(fn).__qualname__
+    return f"{getattr(fn, '__module__', None) or '?'}.{name}"
+
+
+def begin(fn: Callable[..., Any]) -> tuple[int, tuple[str, str] | None]:
+    """Record *fn* as running in this thread; return the thread's id and what it replaced."""
+    thread = threading.current_thread()
+    entry = (thread.name, label_of(fn))
     with RUNNING_LOCK:
-        previous = RUNNING.get(name)
-        RUNNING[name] = label
-    return name, previous
+        previous = RUNNING.get(thread.ident or 0)
+        RUNNING[thread.ident or 0] = entry
+    return thread.ident or 0, previous
 
 
-def end(name: str, previous: str | None) -> None:
+def end(ident: int, previous: tuple[str, str] | None) -> None:
     """Forget the call `begin` recorded, putting back the one it interrupted."""
     with RUNNING_LOCK:
         if previous is None:
-            RUNNING.pop(name, None)
+            RUNNING.pop(ident, None)
         else:
-            RUNNING[name] = previous
+            RUNNING[ident] = previous
 
 
 @final
@@ -83,5 +92,5 @@ class Watchdog:
         self._reported.update(names)
         logger.warning(
             f"A thread woke {late:.2f} s late while {', '.join(names)} ran in a pool: "
-            "a function that holds the GIL belongs on a ProcessExecutor"
+            "a function that may hold the GIL belongs on a ProcessExecutor"
         )
