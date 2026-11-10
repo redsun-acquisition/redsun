@@ -112,9 +112,10 @@ looked up by its exact key.
 - A pool that fails to start is broken: its waiting calls fail with
   `BrokenPool`, a subclass of `concurrent.futures.BrokenExecutor`, and
   `submit` raises it. The components holding the pool stay built.
-- Pools count calls per owner under Micrometer's names (`queued`, `active`,
-  `completed`, `pool_size`, the longest idle time). An executor reports its
-  owner's counts, and the session logs each pool's totals at shutdown.
+- Pools count calls per owner under the names the Java metrics library
+  Micrometer uses for its executors (`queued`, `active`, `completed`,
+  `failed`, `pool_size`, `longest_idle`). An executor reports its owner's
+  counts, and the session logs each pool's totals at shutdown.
 - No new build step: the work fits the registry, presenters, views and setup
   steps.
 

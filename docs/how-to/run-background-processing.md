@@ -159,7 +159,8 @@ ThreadPool: 3 threads, 5 native threads each
 [`usage`][redsun.compute.ThreadExecutor.usage] returns the counts of the
 component's own calls: waiting, running, completed and failed, and the
 longest any call waited for a free thread. The session also logs what each
-pool did when it shuts down:
+pool did when it shuts down, with each owner's calls in brackets; here the
+only owner is the `median` presenter:
 
 ```text
 thread pool: 3 workers, 214 calls (median 214), 2 failed, longest idle 1.4 s

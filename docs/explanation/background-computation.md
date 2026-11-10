@@ -23,11 +23,10 @@ makes the decisions that need it: how many threads to start, how many
 threads each library may start on its own, when the threads start and what
 happens to a call whose component has gone.
 
-Qt's `QThreadPool.globalInstance()` and the thread pools a Spring
-application configures in one place work the same way: the code that runs a
-task asks for a pool, and never builds one. A component that built its own pool would
-size it as if it were alone on the computer, and two such components would
-each start a thread per core.
+Qt's `QThreadPool.globalInstance()` works the same way: the code that runs a
+task asks for the shared pool and never builds one. A component that built
+its own pool would size it as if it were alone on the computer, and two such
+components would each start a thread per core.
 
 ## Pools and executors
 
