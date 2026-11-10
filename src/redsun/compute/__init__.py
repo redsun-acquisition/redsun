@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from ._future import BrokenPool, Delivery, Future
+from ._future import BrokenPool, Future
 
-__all__ = ["BrokenPool", "Delivery", "Future"]
+__all__ = ["BrokenPool", "Future"]

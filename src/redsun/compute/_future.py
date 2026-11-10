@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+import traceback
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, TypeVar
+from typing import TYPE_CHECKING, Final, TypeVar, cast
 
 from psygnal import SignalInstance
 
@@ -24,6 +25,11 @@ R = TypeVar("R")
 PRE_START: Final = "the pool starts after every setup; use .then(...)"
 
 logger = logging.getLogger("redsun.compute")
+
+
+def trace(error: BaseException) -> str:
+    """Return *error* and its traceback as text."""
+    return "".join(traceback.format_exception(error))
 
 
 class BrokenPool(concurrent.futures.BrokenExecutor):
@@ -89,26 +95,30 @@ class Future(concurrent.futures.Future[R]):
         """
         name = getattr(on_result, "__qualname__", repr(on_result))
 
-        def call() -> None:
-            if self._released():
-                logger.debug(f"Dropping the result for {name}: {self._owner} is gone")
-                return
-            error = self.exception()
-            try:
-                if error is None:
-                    on_result(self.result())
-                elif on_error is not None:
-                    on_error(error)
-                else:
-                    logger.error(f"Call before {name} failed: {error!r}")
-            except Exception as e:  # noqa: BLE001 - a failing callback must not stop the delivery of others
-                logger.error(f"Callback {name} raised: {e!r}")
-
-        def deliver(_: object) -> None:
-            if self.cancelled():
+        def deliver(done: concurrent.futures.Future[R]) -> None:
+            future = cast("Future[R]", done)
+            if future.cancelled():
                 logger.debug(f"Call before {name} was cancelled")
                 return
-            delivery = self._delivery
+
+            def call() -> None:
+                if future._released():
+                    logger.debug(
+                        f"Dropping the result for {name}: {future._owner} is gone"
+                    )
+                    return
+                error = future.exception()
+                try:
+                    if error is None:
+                        on_result(future.result())
+                    elif on_error is not None:
+                        on_error(error)
+                    else:
+                        logger.error(f"Call before {name} failed: {trace(error)}")
+                except Exception as e:  # noqa: BLE001 - a failing callback must not stop the delivery of others
+                    logger.error(f"Callback {name} raised: {trace(e)}")
+
+            delivery = future._delivery
             if delivery is None:
                 call()
                 return

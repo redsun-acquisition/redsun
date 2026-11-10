@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import re
 import threading
@@ -9,8 +10,8 @@ import threading
 import pytest
 from psygnal import emit_queued
 
-from redsun.compute import Delivery, Future
-from redsun.compute._future import PRE_START
+from redsun.compute import Future
+from redsun.compute._future import PRE_START, Delivery
 from redsun.ports import slot
 
 
@@ -133,3 +134,45 @@ def test_result_before_start_raises() -> None:
         future.exception()
     with pytest.raises(TimeoutError):
         future.result(timeout=0.01)
+
+
+def test_a_slot_marker_wins_over_a_delivery_thread() -> None:
+    """Deliver on the session's thread when the marker says current, whatever the delivery names."""
+    receiver = Receiver()
+    stop = threading.Event()
+    home = threading.Thread(target=pump_until, args=(stop,))
+    home.start()
+    future: Future[int] = Future()
+    future._bind("owner", Delivery("main", home), lambda: False)
+    future.then(receiver.take)
+    future.set_result(1)
+    receiver.taken.wait(timeout=5)
+    stop.set()
+    home.join()
+    assert receiver.threads == [home]
+
+
+def test_a_raising_callback_is_logged_and_not_propagated(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log an exception raised by on_result at error level instead of raising it."""
+
+    def explode(value: int) -> None:
+        raise ValueError("boom")
+
+    future: Future[int] = Future()
+    future.then(explode)
+    future.set_result(1)
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "explode" in errors[0].getMessage() and "boom" in errors[0].getMessage()
+    assert errors[0].exc_info is None and errors[0].args == ()
+
+
+def test_a_cancelled_queued_future_raises_cancelled_error() -> None:
+    """Raise CancelledError, not the pre-start error, from result() once cancelled."""
+    future: Future[int] = Future()
+    future._mark_queued(True)
+    future.cancel()
+    with pytest.raises(concurrent.futures.CancelledError):
+        future.result()
