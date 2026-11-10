@@ -60,9 +60,17 @@ class Call(Generic[R]):
     counts: Counts
 
     def run(self) -> None:
-        """Run the call in this thread and settle its future."""
-        if not self.future.set_running_or_notify_cancel():
+        """Run the call in this thread and settle its future.
+
+        The call lets go of its future when it starts, and the failing branch
+        drops the local too: the exception's traceback reaches this frame and
+        the caller's, so any reference to the future from there would keep it
+        alive in a cycle.
+        """
+        future = self.future
+        if not future.set_running_or_notify_cancel():
             return
+        del self.future
         waited = time.monotonic() - self.submitted
         self.counts.started(self.owner, waited)
         if waited > LONG_WAIT:
@@ -73,15 +81,17 @@ class Call(Generic[R]):
             result = self.fn(*self.args, **self.kwargs)
         except BaseException as error:  # noqa: BLE001 - the future carries it to the caller
             self.counts.finished(self.owner, failed=True)
-            self.future.set_exception(error)
+            future.set_exception(error)
+            del future
         else:
             self.counts.finished(self.owner, failed=False)
-            self.future.set_result(result)
+            future.set_result(result)
 
     def fail(self, error: BaseException) -> None:
         """Settle a call that never ran with *error*."""
         if self.future.set_running_or_notify_cancel():
-            self.counts.dropped(self.owner)
+            self.counts.started(self.owner, 0.0)
+            self.counts.finished(self.owner, failed=True)
             self.future.set_exception(error)
 
 
@@ -160,12 +170,18 @@ class Pool(Executor, ABC):
                 while self._waiting:
                     self._waiting.popleft().fail(BrokenPool(self._broken))
                 raise BrokenPool(self._broken) from error
-            while self._waiting:
-                call = self._waiting.popleft()
-                call.future._mark_queued(False)
-                call.submitted = time.monotonic()
-                self._dispatch(call)
-            self._state = State.STARTED
+            try:
+                while self._waiting:
+                    call = self._waiting.popleft()
+                    call.future._mark_queued(False)
+                    call.submitted = time.monotonic()
+                    try:
+                        self._dispatch(call)
+                    except Exception as error:  # noqa: BLE001 - the call's future carries it
+                        logger.error(f"A waiting call could not start: {trace(error)}")
+                        call.fail(error.with_traceback(None))
+            finally:
+                self._state = State.STARTED
 
     def submit_as(
         self, owner: str, fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs

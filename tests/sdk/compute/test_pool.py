@@ -5,23 +5,58 @@ from __future__ import annotations
 import re
 import threading
 import time
-from typing import TYPE_CHECKING, Annotated
+import weakref
+from typing import Annotated, Any
 
 import pytest
 from diwire import Component
 
 from redsun.compute import BrokenPool, OwnerUsage, ThreadPool
 from redsun.compute._future import PRE_START
-from redsun.compute._pool import pool_key
+from redsun.compute._pool import Call, Pool, pool_key
 from redsun.compute._usage import Counts
-
-if TYPE_CHECKING:
-    pass
+from tests.sdk.helpers import automatic_collection
 
 
 def explode() -> None:
     """Raise, as an initializer that cannot run."""
     raise RuntimeError("boom")
+
+
+class FlakyPool(Pool):
+    """Runs calls in place, except that it cannot send a call made with 'bad'."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.starts = 0
+
+    @property
+    def pool_size(self) -> int:
+        """No workers."""
+        return 0
+
+    def _start(self) -> None:
+        self.starts += 1
+
+    def _dispatch(self, call: Call[Any]) -> None:
+        if call.args == ("bad",):
+            raise ValueError("cannot send")
+        call.run()
+
+    def _stop(self, wait: bool, cancel_futures: bool) -> None:
+        """Stop nothing."""
+
+
+def initializer_failing_in_workers() -> Any:
+    """Return an initializer that runs once, then raises."""
+    runs: list[int] = []
+
+    def initializer() -> None:
+        runs.append(1)
+        if len(runs) > 1:
+            raise RuntimeError("worker initializer failed")
+
+    return initializer
 
 
 def test_calls_wait_for_start_and_run_in_order() -> None:
@@ -111,10 +146,17 @@ def test_shutdown_before_start_cancels_waiting_calls() -> None:
 
 def test_shutdown_can_cancel_calls_no_worker_took() -> None:
     """Cancel a call still queued for a worker and count it out of queued."""
+    started = threading.Event()
     release = threading.Event()
+
+    def hold() -> bool:
+        started.set()
+        return release.wait(5)
+
     pool = ThreadPool(1)
     pool.start()
-    running = pool.submit_as("a", release.wait, 5)
+    running = pool.submit_as("a", hold)
+    assert started.wait(5)
     queued = pool.submit_as("a", int, "1")
     pool.shutdown(wait=False, cancel_futures=True)
     release.set()
@@ -147,3 +189,40 @@ def test_summary_names_the_busiest_owners_first() -> None:
     assert counts.summary("thread pool", 3) == (
         "thread pool: 3 workers, 3 calls (median 2, roi 1), 1 failed, longest idle 1.4 s"
     )
+
+
+def test_a_failed_call_is_freed_without_a_collection() -> None:
+    """Free a failed call's future as soon as the caller drops it."""
+    with automatic_collection(False):
+        with ThreadPool(1) as pool:
+            future = pool.submit_as("a", int, "x")
+            assert isinstance(future.exception(timeout=5), ValueError)
+        ref = weakref.ref(future)
+        del future
+        assert ref() is None
+
+
+def test_a_call_the_pool_cannot_send_fails_and_the_rest_run() -> None:
+    """Fail only the waiting call that cannot be sent, and start the pool once."""
+    pool = FlakyPool()
+    bad = pool.submit_as("a", str, "bad")
+    good = pool.submit_as("a", str, "good")
+    pool.start()
+    pool.start()
+    assert isinstance(bad.exception(timeout=1), ValueError)
+    assert good.result(timeout=1) == "good"
+    assert pool.submit_as("a", str, "later").result(timeout=1) == "later"
+    assert pool.starts == 1
+    assert pool.usage().owners["a"].failed == 1
+    assert pool.usage().owners["a"].queued == 0
+
+
+def test_workers_that_break_after_start_fail_the_calls() -> None:
+    """Fail a call and refuse later ones with BrokenPool when a worker's initializer raises."""
+    pool = ThreadPool(1, initializer=initializer_failing_in_workers())
+    waiting = pool.submit_as("a", int, "1")
+    pool.start()
+    assert isinstance(waiting.exception(timeout=5), BrokenPool)
+    with pytest.raises(BrokenPool):
+        pool.submit_as("a", int, "1")
+    pool.shutdown()

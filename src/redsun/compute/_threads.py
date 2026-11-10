@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import BrokenExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, final
 
+from ._future import BrokenPool
 from ._pool import Pool
 
 if TYPE_CHECKING:
@@ -27,10 +28,12 @@ class ThreadPoolSettings:
     """Threads each worker's native libraries may use."""
 
 
-def cancel_with(call: Call[Any], internal: Future[None]) -> None:
-    """Cancel *call* when its worker never took it."""
+def settle_with(call: Call[Any], internal: Future[None]) -> None:
+    """Settle *call* when its worker never took it: cancelled, or the workers broke."""
     if internal.cancelled():
         call.future.cancel()
+    elif (error := internal.exception()) is not None and not call.future.done():
+        call.fail(BrokenPool(f"the workers stopped: {error}"))
 
 
 @final
@@ -68,9 +71,11 @@ class ThreadPool(Pool):
         if self._executor is None:
             call.run()
         else:
-            self._executor.submit(call.run).add_done_callback(
-                partial(cancel_with, call)
-            )
+            try:
+                internal = self._executor.submit(call.run)
+            except BrokenExecutor as error:
+                raise BrokenPool(f"the workers stopped: {error}") from error
+            internal.add_done_callback(partial(settle_with, call))
 
     def _stop(self, wait: bool, cancel_futures: bool) -> None:
         if self._executor is not None:
