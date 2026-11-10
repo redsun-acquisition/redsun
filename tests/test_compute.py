@@ -5,15 +5,35 @@ from __future__ import annotations
 import logging
 import sys
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
+import bluesky.plan_stubs as bps
+import numpy as np
 import pytest
+from bluesky.utils import MsgGenerator
+from ophyd_async.core import StandardReadable, soft_signal_rw
 from threadpoolctl import threadpool_info
 
-from redsun import AsPresenter, RegistrationError, Session, provides
+from docs.examples.background_processing import MedianPresenter
+from redsun import (
+    AsDevice,
+    AsPresenter,
+    Declare,
+    RegistrationError,
+    Session,
+    provides,
+)
 from redsun.compute import Future, ThreadExecutor, ThreadPool, ThreadPoolSettings
+from redsun.presenter import AcquisitionPresenter
+from redsun.qt import QtSession
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+
+    from numpy.typing import NDArray
+    from qtpy.QtWidgets import QApplication
+
+    from redsun import PlanEntry
     from redsun.testing import BuildSession
 
 PRE_START = "the pool starts after every setup; use .then(...)"
@@ -117,6 +137,34 @@ class ShutdownLogger:
         logging.getLogger("redsun.tests").info("logs shut down")
 
 
+class FrameCamera(StandardReadable):
+    """Camera whose frame a plan sets before each reading."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.frame = soft_signal_rw(np.ndarray, np.zeros((4, 4)))
+        super().__init__(name=name)
+
+
+class FramePlans:
+    """Offers a run of three frames of 1, 2 and 9."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        """Return the plan offered."""
+        return {"frames": {"plan": self.frames}}
+
+    def frames(self, camera: FrameCamera) -> MsgGenerator[None]:
+        """Read *camera* once per frame value, in one run."""
+        yield from bps.open_run()
+        for value in (1, 2, 9):
+            yield from bps.mv(camera.frame, np.full((4, 4), value))
+            yield from bps.trigger_and_read([camera])
+        yield from bps.close_run()
+
+
 def watchdog_threads() -> list[threading.Thread]:
     """Return the watchdog threads alive."""
     return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
@@ -161,6 +209,13 @@ class Slow(Session):
 
 class LogsShutdown(Session):
     logs: AsPresenter[ShutdownLogger]
+
+
+class MedianLab(QtSession):
+    camera: AsDevice[FrameCamera]
+    plans: AsPresenter[FramePlans]
+    acquisition: AsPresenter[AcquisitionPresenter]
+    median: Annotated[AsPresenter[MedianPresenter], Declare(source="camera-frame")]
 
 
 def test_a_component_gets_an_executor_and_its_result(build: BuildSession) -> None:
@@ -297,3 +352,33 @@ def test_a_session_without_executors_starts_no_watchdog(build: BuildSession) -> 
     """Start no watchdog thread when no component asks for an executor."""
     build(NoCompute)
     assert watchdog_threads() == []
+
+
+@pytest.mark.qt
+def test_a_run_s_documents_reach_a_presenter_that_computes_in_the_pool(
+    qapp: QApplication,
+    build: BuildSession,
+    monkeypatch: pytest.MonkeyPatch,
+    wait_until: Callable[..., bool],
+) -> None:
+    """Compute the median of a run's frames on a pool thread and publish it on the main thread."""
+    computed_on: list[str] = []
+
+    def median_of(frames: list[NDArray[np.uint16]]) -> NDArray[np.float64]:
+        computed_on.append(threading.current_thread().name)
+        return np.median(np.stack(frames), axis=0)
+
+    monkeypatch.setattr("docs.examples.background_processing.median_of", median_of)
+    session = build(MedianLab, {"mock": True})
+    published: list[tuple[NDArray[np.float64], str]] = []
+    session.median.sig_median.connect(
+        lambda m: published.append((m, threading.current_thread().name))
+    )
+
+    session.acquisition.launch("frames", {"camera": "camera"}, ["median"])
+
+    assert wait_until(lambda: bool(published))
+    median, published_on = published[-1]
+    assert np.array_equal(median, np.full((4, 4), 2))
+    assert published_on == threading.main_thread().name
+    assert threading.main_thread().name not in computed_on
