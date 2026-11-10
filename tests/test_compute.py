@@ -24,6 +24,7 @@ from redsun import (
     provides,
 )
 from redsun.compute import Future, ThreadExecutor, ThreadPool, ThreadPoolSettings
+from redsun.compute._future import PRE_START
 from redsun.presenter import AcquisitionPresenter
 from redsun.qt import QtSession
 
@@ -35,8 +36,6 @@ if TYPE_CHECKING:
 
     from redsun import PlanEntry
     from redsun.testing import BuildSession
-
-PRE_START = "the pool starts after every setup; use .then(...)"
 
 
 class Median:
@@ -259,7 +258,7 @@ def test_pool_of_failed_component_never_starts(build: BuildSession) -> None:
 def test_session_without_executors_changes_nothing(
     build: BuildSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Make no pool, read no cores, and leave native limits and the switch interval as found."""
+    """Make no pool, start no watchdog, and leave native limits and the switch interval as found."""
 
     def unread() -> int:
         raise AssertionError("the physical cores were read")
@@ -270,15 +269,7 @@ def test_session_without_executors_changes_nothing(
     session = build(NoCompute, {"compute": {"switch_interval_ms": 1}})
     assert session.pool_settings == {}
     assert threadpool_info() == found and sys.getswitchinterval() == interval
-
-
-def test_limits_are_restored_at_shutdown(build: BuildSession) -> None:
-    """Restore the switch interval once the session shuts down."""
-    interval = sys.getswitchinterval()
-    session = build(OneMedian, {"compute": {"switch_interval_ms": 1}})
-    assert sys.getswitchinterval() == 0.001
-    session.shutdown()
-    assert sys.getswitchinterval() == interval
+    assert watchdog_threads() == []
 
 
 def test_the_file_lays_over_the_class(
@@ -341,17 +332,14 @@ def test_the_pool_stops_after_its_components(
 def test_the_watchdog_runs_with_the_pools_and_stops_at_shutdown(
     build: BuildSession,
 ) -> None:
-    """Run one watchdog thread while a pool runs, and none after shutdown."""
-    session = build(OneMedian)
+    """Run one watchdog thread and the switch interval while a pool runs, and restore both at shutdown."""
+    interval = sys.getswitchinterval()
+    session = build(OneMedian, {"compute": {"switch_interval_ms": 1}})
     assert len(watchdog_threads()) == 1
+    assert sys.getswitchinterval() == 0.001
     session.shutdown()
     assert watchdog_threads() == []
-
-
-def test_a_session_without_executors_starts_no_watchdog(build: BuildSession) -> None:
-    """Start no watchdog thread when no component asks for an executor."""
-    build(NoCompute)
-    assert watchdog_threads() == []
+    assert sys.getswitchinterval() == interval
 
 
 @pytest.mark.qt

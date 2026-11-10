@@ -7,6 +7,7 @@ import logging
 import re
 import threading
 import weakref
+from typing import TYPE_CHECKING
 
 import pytest
 from psygnal import emit_queued
@@ -15,6 +16,9 @@ from redsun.compute import Future
 from redsun.compute._future import PRE_START, Delivery
 from redsun.ports import slot
 from tests.sdk.helpers import automatic_collection
+
+if TYPE_CHECKING:
+    from redsun.ports import SlotThread
 
 
 def handler(value: int) -> None:
@@ -25,6 +29,29 @@ def pump_until(stop: threading.Event) -> None:
     """Deliver queued callbacks on this thread every 10 ms until *stop* is set."""
     while not stop.wait(0.01):
         emit_queued()
+
+
+def delivered_to_a_marked_callback(delivery_thread: SlotThread) -> list[bool]:
+    """Deliver a result to a callback marked `current`; report whether it ran on the session's thread."""
+    receiver = Receiver()
+    stop = threading.Event()
+    home = threading.Thread(target=pump_until, args=(stop,))
+    home.start()
+    future: Future[int] = Future()
+    future._bind("owner", Delivery(delivery_thread, home), lambda: False)
+    future.then(receiver.take)
+    future.set_result(1)
+    receiver.taken.wait(timeout=5)
+    stop.set()
+    home.join()
+    return [thread is home for thread in receiver.threads]
+
+
+def one_logged_error(caplog: pytest.LogCaptureFixture) -> str:
+    """Return the message of the only ERROR record, which carries text and no exc_info."""
+    (record,) = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert record.exc_info is None and record.args == ()
+    return record.getMessage()
 
 
 class Receiver:
@@ -72,10 +99,8 @@ def test_an_unhandled_failure_is_logged_once_as_text(
     future: Future[int] = Future()
     future.then(handler)
     future.set_exception(ValueError("bad"))
-    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
-    assert len(errors) == 1
-    assert "handler" in errors[0].getMessage() and "bad" in errors[0].getMessage()
-    assert errors[0].exc_info is None and errors[0].args == ()
+    message = one_logged_error(caplog)
+    assert "handler" in message and "bad" in message
 
 
 def test_a_cancelled_call_is_logged_at_debug_only(
@@ -130,20 +155,10 @@ def test_a_delivered_result_frees_its_owner_without_a_collection() -> None:
         assert ref() is None
 
 
-def test_a_slot_marker_on_the_callback_wins() -> None:
-    """Deliver on the session's thread when the callback's marker says current."""
-    receiver = Receiver()
-    stop = threading.Event()
-    home = threading.Thread(target=pump_until, args=(stop,))
-    home.start()
-    future: Future[int] = Future()
-    future._bind("owner", Delivery(None, home), lambda: False)
-    future.then(receiver.take)
-    future.set_result(1)
-    receiver.taken.wait(timeout=5)
-    stop.set()
-    home.join()
-    assert receiver.threads == [home]
+@pytest.mark.parametrize("delivery_thread", [None, "main"])
+def test_a_slot_marker_on_the_callback_wins(delivery_thread: SlotThread) -> None:
+    """Deliver on the session's thread when the callback's marker says current, whatever the delivery names."""
+    assert delivered_to_a_marked_callback(delivery_thread) == [True]
 
 
 def test_result_before_start_raises() -> None:
@@ -158,22 +173,6 @@ def test_result_before_start_raises() -> None:
         future.result(timeout=0.01)
 
 
-def test_a_slot_marker_wins_over_a_delivery_thread() -> None:
-    """Deliver on the session's thread when the marker says current, whatever the delivery names."""
-    receiver = Receiver()
-    stop = threading.Event()
-    home = threading.Thread(target=pump_until, args=(stop,))
-    home.start()
-    future: Future[int] = Future()
-    future._bind("owner", Delivery("main", home), lambda: False)
-    future.then(receiver.take)
-    future.set_result(1)
-    receiver.taken.wait(timeout=5)
-    stop.set()
-    home.join()
-    assert receiver.threads == [home]
-
-
 def test_a_raising_callback_is_logged_and_not_propagated(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -185,10 +184,8 @@ def test_a_raising_callback_is_logged_and_not_propagated(
     future: Future[int] = Future()
     future.then(explode)
     future.set_result(1)
-    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
-    assert len(errors) == 1
-    assert "explode" in errors[0].getMessage() and "boom" in errors[0].getMessage()
-    assert errors[0].exc_info is None and errors[0].args == ()
+    message = one_logged_error(caplog)
+    assert "explode" in message and "boom" in message
 
 
 def test_a_cancelled_queued_future_raises_cancelled_error() -> None:

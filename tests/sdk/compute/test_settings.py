@@ -75,7 +75,7 @@ def test_the_typed_dict_mirrors_the_model() -> None:
 
 def test_a_preset_word_is_a_section() -> None:
     """Read a bare preset as a compute section naming it."""
-    assert ComputeConfig.model_validate("latency").preset == "latency"
+    assert load([{"compute": "latency"}]) == {"compute": {"preset": "latency"}}
 
 
 def test_an_unknown_key_is_refused() -> None:

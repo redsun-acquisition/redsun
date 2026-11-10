@@ -5,12 +5,13 @@ from __future__ import annotations
 import importlib
 import logging
 import sys
+import threading
 from typing import TYPE_CHECKING
 
 import pytest
 from threadpoolctl import threadpool_info, threadpool_limits
 
-from redsun.compute import Limits, ThreadPool, ThreadPoolSettings
+from redsun.compute import Limits, ThreadExecutor, ThreadPool, ThreadPoolSettings
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -51,6 +52,20 @@ def test_pool_threads_apply_the_limit() -> None:
     assert all(pool["num_threads"] == 1 for pool in seen)
 
 
+@pytest.mark.parametrize(("threads", "on_caller"), [(2, False), (0, True)])
+def test_the_initializer_runs_where_the_calls_run(
+    threads: int, on_caller: bool
+) -> None:
+    """Run the initializer in the workers, or in the starting thread of an inline pool."""
+    ran_on: list[threading.Thread] = []
+    with ThreadPool(
+        threads, initializer=lambda: ran_on.append(threading.current_thread())
+    ) as pool:
+        pool.submit(int, "1").result(timeout=5)
+    assert (threading.current_thread() in ran_on) is on_caller
+    assert ran_on
+
+
 @pytest.mark.usefixtures("native_limits_kept")
 def test_the_resource_logs_usage_and_stops_the_pool(
     caplog: pytest.LogCaptureFixture,
@@ -60,7 +75,7 @@ def test_the_resource_logs_usage_and_stops_the_pool(
     resource = ThreadPool.resource(ThreadPoolSettings(1, 1), Limits())
     pool = next(resource)
     pool.start()
-    pool.submit_as("median", int, "1").result(timeout=5)
+    ThreadExecutor(pool, "median").submit(int, "1").result(timeout=5)
     resource.close()
     assert any(
         r.getMessage().startswith("thread pool: 1 workers, 1 calls (median 1)")

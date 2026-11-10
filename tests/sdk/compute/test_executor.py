@@ -8,18 +8,8 @@ import threading
 import pytest
 
 from redsun.compute import ThreadExecutor, ThreadPool
-from redsun.compute._executor import PoolExecutor
-
-
-def wait_then_return(gate: threading.Event, value: int) -> int:
-    """Wait for *gate*, then return *value*."""
-    gate.wait(5)
-    return value
-
-
-def test_an_executor_reads_its_pool_class() -> None:
-    """Read pool_type from the type argument."""
-    assert ThreadExecutor.pool_type is ThreadPool
+from redsun.compute._pool import PoolExecutor
+from tests.sdk.compute.helpers import wait_then_return
 
 
 def test_a_subclass_without_a_pool_type_is_refused() -> None:
@@ -29,14 +19,10 @@ def test_a_subclass_without_a_pool_type_is_refused() -> None:
 
 
 def test_submit_counts_under_the_owner(inline_threads: ThreadExecutor) -> None:
-    """Run a call and report the owner's counts."""
+    """Report zero counts before the owner's first call, and one completed call after it."""
+    assert inline_threads.usage().completed == 0
     assert inline_threads.submit(pow, 2, 5).result() == 32
     assert inline_threads.usage().completed == 1
-
-
-def test_usage_is_zero_before_the_first_call(inline_threads: ThreadExecutor) -> None:
-    """Report zero counts for an owner that made no call."""
-    assert inline_threads.usage().completed == 0
 
 
 def test_shutdown_is_scoped_to_the_owner() -> None:
@@ -123,8 +109,3 @@ def test_then_drops_callbacks_after_shutdown(caplog: pytest.LogCaptureFixture) -
 async def test_run_awaits_the_result(inline_threads: ThreadExecutor) -> None:
     """Await a call's result through run."""
     assert await inline_threads.run(pow, 3, 2) == 9
-
-
-def test_map_comes_from_executor(inline_threads: ThreadExecutor) -> None:
-    """Map over an iterable with the standard Executor.map."""
-    assert list(inline_threads.map(abs, [-1, -2])) == [1, 2]

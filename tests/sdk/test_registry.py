@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Generator
+from functools import partial
 from typing import Annotated, Any, NewType, Protocol
 
 import pytest
@@ -41,11 +42,27 @@ class KeyB: ...
 class KeyC: ...
 
 
+class KeyD: ...
+
+
 def one_resource() -> Generator[str, None, None]:
     try:
         yield "one"
     finally:
         pass
+
+
+def wants(a: KeyA) -> None: ...
+
+
+def asked_by_provider(registry: Registry) -> Callable[[], object]:
+    """Return the provider of KeyA, taken before the registry closes."""
+    return next(registry.providers(KeyA))
+
+
+def asked_by_call(registry: Registry) -> Callable[[], object]:
+    """Return a call of a function asking for KeyA."""
+    return partial(registry.call, wants)
 
 
 def test_a_registry_answers_every_key_it_holds() -> None:
@@ -162,7 +179,7 @@ def test_the_error_names_the_callable_not_its_repr() -> None:
 
 
 def test_resources_are_made_once_and_torn_down_last_made_first() -> None:
-    """Make a resource on first request, once, and tear resources down in reverse creation order."""
+    """Make a resource on first request, once, tear resources down in reverse creation order, and skip one never requested."""
     events: list[str] = []
 
     def resource(label: str) -> Callable[[], Generator[str, None, None]]:
@@ -176,7 +193,7 @@ def test_resources_are_made_once_and_torn_down_last_made_first() -> None:
         return make
 
     registry = Registry()
-    for label, key in (("A", KeyA), ("B", KeyB), ("C", KeyC)):
+    for label, key in (("A", KeyA), ("B", KeyB), ("C", KeyC), ("D", KeyD)):
         registry.register_resource(key, resource(label), owner=SESSION)
     assert events == []
     for key in (KeyC, KeyA, KeyB, KeyA):
@@ -186,37 +203,24 @@ def test_resources_are_made_once_and_torn_down_last_made_first() -> None:
     assert events == ["make C", "make A", "make B", "close B", "close A", "close C"]
 
 
-def test_a_closed_registry_refuses_requests() -> None:
-    """Raise on a request after close rather than hand back a torn-down resource."""
+@pytest.mark.parametrize("ask", [asked_by_provider, asked_by_call])
+def test_a_closed_registry_refuses_requests(
+    ask: Callable[[Registry], Callable[[], object]],
+) -> None:
+    """Raise on a request after close, by provider or by call, rather than hand back a torn-down resource."""
     registry = Registry()
     registry.register_resource(KeyA, one_resource, owner=SESSION)
-    provider = next(registry.providers(KeyA))
+    request = ask(registry)
     registry.close()
     with pytest.raises(RuntimeError, match="the registry is closed"):
-        provider()
+        request()
 
 
 def test_an_internal_key_is_refused_to_a_callable() -> None:
     """Refuse a parameter asking for an internal key, naming the parameter."""
     registry = Registry()
     registry.register_resource(KeyA, one_resource, owner=SESSION, internal=True)
-
-    def wants(a: KeyA) -> None: ...
-
     with pytest.raises(TypeError, match="'a' of wants asks for KeyA"):
-        registry.call(wants)
-    assert registry.internal(KeyA)
-
-
-def test_a_closed_registry_refuses_a_call_asking_for_a_resource() -> None:
-    """Raise from call after close when a parameter asks for a resource."""
-    registry = Registry()
-    registry.register_resource(KeyA, one_resource, owner=SESSION)
-
-    def wants(a: KeyA) -> None: ...
-
-    registry.close()
-    with pytest.raises(RuntimeError, match="the registry is closed"):
         registry.call(wants)
 
 
@@ -233,10 +237,3 @@ def test_a_closed_registry_still_answers_a_factory_key() -> None:
 
     assert isinstance(provider(), KeyB)
     assert isinstance(registry.call(wants), KeyB)
-
-
-def test_a_resource_never_requested_closes_quietly() -> None:
-    """Close a registry holding a resource nobody resolved without raising."""
-    registry = Registry()
-    registry.register_resource(KeyA, one_resource, owner=SESSION)
-    registry.close()

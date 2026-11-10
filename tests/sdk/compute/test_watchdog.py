@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from redsun.compute import ThreadPool
-from redsun.compute._watchdog import Watchdog, running
+from redsun.compute._usage import Watchdog, running
+from tests.sdk.compute.helpers import explode
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -33,11 +34,6 @@ def what_runs() -> dict[str, str]:
 def thread_name() -> str:
     """Return the name of the thread running the call."""
     return threading.current_thread().name
-
-
-def explode() -> None:
-    """Raise."""
-    raise RuntimeError("boom")
 
 
 @pytest.fixture

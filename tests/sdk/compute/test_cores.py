@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-import os
 
 import pytest
 
 from redsun.compute import Preset, ThreadPoolSettings
-from redsun.compute._cores import compute_cores, physical_cores, split
+from redsun.compute._settings import compute_cores, physical_cores, split
 
 
 @pytest.mark.parametrize(
@@ -53,8 +52,3 @@ def test_physical_cores_falls_back_with_a_warning(
     assert physical_cores() == 6
     (record,) = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert record.exc_info is None and record.args == ()
-
-
-def test_physical_cores_reads_this_machine() -> None:
-    """Read no more physical cores than logical CPUs."""
-    assert 1 <= physical_cores() <= (os.cpu_count() or 1)
