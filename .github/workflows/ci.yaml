@@ -91,6 +91,13 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.12"
 
+      # points apt at the kernel.org mirror, as in the docs job:
+      # https://github.com/actions/runner-images/issues/15040
+      - name: Use the kernel.org apt mirror
+        run: |
+          printf 'https://mirrors.edge.kernel.org/ubuntu/\tpriority:1\n' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
       # tests/conftest.py imports Qt, so collecting any test needs its libraries
       - name: Install Qt system libraries
         run: |
