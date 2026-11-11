@@ -83,3 +83,12 @@ def test_the_resource_logs_usage_and_stops_the_pool(
     )
     with pytest.raises(RuntimeError):
         pool.submit(int, "1")
+
+
+def test_the_environment_limits_every_library() -> None:
+    """Name the variables that limit the native libraries of a worker process."""
+    assert Limits.environment(3) == {
+        "OMP_NUM_THREADS": "3",
+        "OPENBLAS_NUM_THREADS": "3",
+        "MKL_NUM_THREADS": "3",
+    }

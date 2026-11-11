@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 Preset = Literal["latency", "balanced", "throughput"]
 """How the compute cores are split between pool threads and native threads."""
 
+Priority = Literal["low", "normal", "high"]
+"""How much processor time worker processes get against the rest of the system."""
+
 RELATION_PROCESSOR_CORE = 0
 INSUFFICIENT_BUFFER = 122
 
@@ -40,6 +43,12 @@ class ComputeSettings(TypedDict, total=False):
     switch_interval_ms: float | None
     """Interpreter thread switch interval in milliseconds; `None` leaves it alone."""
 
+    processes: int
+    """Worker processes in the process pool."""
+
+    priority: Priority
+    """How much processor time worker processes get against the rest of the system."""
+
 
 @dataclass(frozen=True, slots=True)
 class ThreadPoolSettings:
@@ -50,6 +59,20 @@ class ThreadPoolSettings:
 
     native_threads: int
     """Threads each worker's native libraries may use."""
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessPoolSettings:
+    """How many processes a process pool has."""
+
+    processes: int
+    """Worker processes; 0 runs each call in the thread that submits it."""
+
+    native_threads: int
+    """Threads each worker's native libraries may use."""
+
+    priority: Priority = "normal"
+    """How much processor time the workers get against the rest of the system."""
 
 
 def physical_cores() -> int:
@@ -186,3 +209,11 @@ class Limits:
     def initializer(native_threads: int) -> Callable[[], object]:
         """Return what each pool thread runs to apply the limit in itself."""
         return partial(threadpool_limits, limits=native_threads)
+
+    @staticmethod
+    def environment(native_threads: int) -> dict[str, str]:
+        """Return the variables that limit native libraries in a process that starts with them."""
+        return {
+            name: str(native_threads)
+            for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
+        }

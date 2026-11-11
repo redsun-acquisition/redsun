@@ -33,7 +33,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from redsun.compute import Preset
+from redsun.compute import Preset, Priority
 from redsun.errors import ConfigurationError
 from redsun.services._transports import TRANSPORT_KEY, TRANSPORTS, transport_of
 from redsun.view import Column, Row, Tabs, WindowLayout
@@ -596,6 +596,12 @@ class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     switch_interval_ms: float | None = Field(default=None, gt=0)
     """Interpreter thread switch interval in milliseconds; left alone if unset."""
+
+    processes: int = Field(default=1, ge=1)
+    """Worker processes in the process pool."""
+
+    priority: Priority = "normal"
+    """How much processor time worker processes get against the rest of the system."""
 
 
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
