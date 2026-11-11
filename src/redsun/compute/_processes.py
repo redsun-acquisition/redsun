@@ -206,7 +206,16 @@ def spawn_worker(
 
 @final
 class ProcessPool(Pool):
-    """Processes several executors share; with `processes=0` a call runs where it is submitted."""
+    """Processes several executors share; with `processes=0` a call runs where it is submitted.
+
+    Parameters
+    ----------
+    stop_timeout
+        Seconds each step of stopping a worker waits for it.
+    priority
+        The priority the workers start at. When the system refuses it, the pool
+        warns once and starts its workers at normal.
+    """
 
     def __init__(
         self,
@@ -482,8 +491,9 @@ class ProcessPool(Pool):
         # threads return before any channel closes under them
         for worker in workers:
             worker.service.stop()
-        for thread in self._threads:
-            thread.join()
+        if wait or workers:
+            for thread in self._threads:
+                thread.join()
         for worker in workers:
             worker.stop()
         if self._listener is not None:

@@ -48,6 +48,21 @@ def test_a_lambda_is_refused_before_anything_starts() -> None:
     pool.shutdown()
 
 
+def test_a_function_from_the_script_being_run_is_refused() -> None:
+    """Refuse a function defined in `__main__`, plain or inside a partial."""
+    pool = ProcessPool(0)
+
+    def in_script() -> int:
+        return 1
+
+    in_script.__qualname__ = "in_script"
+    in_script.__module__ = "__main__"
+    for fn in (in_script, partial(in_script)):
+        with pytest.raises(TypeError, match="script being run"):
+            pool.submit(fn)
+    pool.shutdown()
+
+
 def test_the_argument_at_fault_is_named() -> None:
     """Fail the call with a TypeError naming the argument that cannot be pickled."""
     with ProcessPool(0) as pool:

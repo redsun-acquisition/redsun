@@ -646,6 +646,18 @@ def test_an_unknown_priority_is_refused() -> None:
         Service("urgent", module=STAND_IN, priority="urgent")  # type: ignore[arg-type]
 
 
+def test_env_values_reach_the_service_as_strings(
+    launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """Pass a number in env to the launched process as its string."""
+    stand_in = launch("--print-env", "STAND_IN_VALUE", env={"STAND_IN_VALUE": 42})
+
+    stand_in.start()
+    stand_in.stop()
+
+    assert "STAND_IN_VALUE=42" in messages(service_log, logging.DEBUG)
+
+
 def test_env_reaches_the_service(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:

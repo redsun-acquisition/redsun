@@ -230,7 +230,7 @@ class Service:
         self.startup_timeout = startup_timeout
         self.stop_timeout = stop_timeout
         self.transport = transport
-        self.env = dict(env or {})
+        self.env = {str(key): str(value) for key, value in (env or {}).items()}
         self.priority = priority
         self._tail: deque[str] = deque(maxlen=TAIL_LINES)
         self._process: subprocess.Popen[str] | None = None

@@ -29,10 +29,10 @@ def name_of(fn: Callable[..., Any]) -> str:
 
 
 def check_function(fn: Callable[..., Any]) -> None:
-    """Raise `TypeError` if *fn* is a lambda, a closure or a bound method.
+    """Raise `TypeError` if *fn* is a lambda, a closure, a bound method or defined in `__main__`.
 
     A worker process imports a function by name, so only one defined at module
-    level can reach it.
+    level of a module it can import can reach it.
     """
     target = underlying(fn)
     name = name_of(fn)
@@ -40,6 +40,11 @@ def check_function(fn: Callable[..., Any]) -> None:
         raise TypeError(
             f"{name} cannot be sent to a worker process: "
             "send a function defined at module level"
+        )
+    if getattr(target, "__module__", None) == "__main__":
+        raise TypeError(
+            f"{name} is defined in the script being run, which a worker cannot "
+            "import: send a function from a module a worker can import"
         )
 
 

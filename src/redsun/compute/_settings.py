@@ -63,7 +63,7 @@ class ThreadPoolSettings:
 
 @dataclass(frozen=True, slots=True)
 class ProcessPoolSettings:
-    """How many processes a process pool has."""
+    """How many processes a process pool has, and the priority they start at."""
 
     processes: int
     """Worker processes; 0 runs each call in the thread that submits it."""
