@@ -45,6 +45,19 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.11"
 
+      # apt on GitHub's Ubuntu runners takes its mirrors from
+      # /etc/apt/apt-mirrors.txt: azure.archive.ubuntu.com, archive.ubuntu.com
+      # and security.ubuntu.com. Since October 2026 none of them reliably
+      # answers the runners, and apt-get update repeats "Ign: ... InRelease"
+      # until the next step's 5-minute timeout fails the job. This step points
+      # apt at the kernel.org mirror instead. Reported upstream in
+      # https://github.com/actions/runner-images/issues/15040; drop the step
+      # once it is fixed.
+      - name: Use the kernel.org apt mirror
+        run: |
+          printf 'https://mirrors.edge.kernel.org/ubuntu/\tpriority:1\n' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
       # the build runs the tutorial's session to take a picture of its window
       - name: Set up a display for Qt
         uses: pyvista/setup-headless-display-action@v5
@@ -77,6 +90,13 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.12"
+
+      # points apt at the kernel.org mirror, as in the docs job:
+      # https://github.com/actions/runner-images/issues/15040
+      - name: Use the kernel.org apt mirror
+        run: |
+          printf 'https://mirrors.edge.kernel.org/ubuntu/\tpriority:1\n' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
 
       # tests/conftest.py imports Qt, so collecting any test needs its libraries
       - name: Install Qt system libraries
@@ -136,6 +156,14 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
 
+      # points apt at the kernel.org mirror, as in the docs job:
+      # https://github.com/actions/runner-images/issues/15040
+      - name: Use the kernel.org apt mirror
+        if: runner.os == 'Linux'
+        run: |
+          printf 'https://mirrors.edge.kernel.org/ubuntu/\tpriority:1\n' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
       - name: Set up Qt's system libraries
         if: runner.os == 'Linux'
         uses: pyvista/setup-headless-display-action@v5
@@ -175,6 +203,13 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.12"
+
+      # points apt at the kernel.org mirror, as in the docs job:
+      # https://github.com/actions/runner-images/issues/15040
+      - name: Use the kernel.org apt mirror
+        run: |
+          printf 'https://mirrors.edge.kernel.org/ubuntu/\tpriority:1\n' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
 
       - name: Set up Qt's system libraries
         uses: pyvista/setup-headless-display-action@v5
