@@ -38,6 +38,7 @@ def main() -> int:
     parser.add_argument(
         "--ready-when", type=Path, help="print READY only once this file exists"
     )
+    parser.add_argument("--print-env", help="a variable printed as NAME=value")
     options = parser.parse_args()
 
     if options.ignore_sigint:
@@ -52,6 +53,9 @@ def main() -> int:
             f"prefix {os.environ.get('REDSUN_SERVICE_PREFIX')}",
             flush=True,
         )
+        if options.print_env is not None:
+            name = options.print_env
+            print(f"{name}={os.environ.get(name)}", flush=True)
         if options.touch is not None:
             options.touch.touch()
         while options.ready_when is not None and not options.ready_when.exists():

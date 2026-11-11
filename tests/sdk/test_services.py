@@ -107,6 +107,7 @@ def launch(
         stop_timeout: float = STOP_TIMEOUT,
         name: str = "stand-in",
         prefix: str = "",
+        **keywords: Any,
     ) -> Service:
         made.append(
             Service(
@@ -117,6 +118,7 @@ def launch(
                 ready=READY,
                 stop_timeout=stop_timeout,
                 startup_timeout=startup_timeout,
+                **keywords,
             )
         )
         return made[-1]
@@ -575,6 +577,85 @@ def test_a_service_given_an_unknown_transport_names_the_known_ones() -> None:
     """Refuse an unknown transport, naming the ones a session accepts."""
     with pytest.raises(ValueError, match="'channel-access', 'pv-access'"):
         Service("misnamed", module=STAND_IN, transport="pv_access")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="nice values are POSIX")
+def test_a_service_starts_at_its_priority(
+    launch: Callable[..., Service], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Set the nice value of a low-priority service right after it starts."""
+    calls: list[tuple[int, ...]] = []
+    monkeypatch.setattr("os.setpriority", lambda *a: calls.append(a))
+    stand_in = launch(priority="low")
+
+    stand_in.start()
+    stand_in.stop()
+
+    assert [call[2] for call in calls] == [10]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="priority classes are Windows")
+def test_a_service_starts_in_its_priority_class(
+    launch: Callable[..., Service], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Start a high-priority service with the high priority class among its creation flags."""
+    flags: list[int] = []
+    real = subprocess.Popen
+
+    def recording(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
+        flags.append(kwargs["creationflags"])
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr("redsun.services._service.subprocess.Popen", recording)
+    stand_in = launch(priority="high")
+
+    stand_in.start()
+    stand_in.stop()
+
+    # the skip says it to pytest, the if statement to a type checker elsewhere
+    if sys.platform == "win32":
+        assert flags[0] & subprocess.HIGH_PRIORITY_CLASS
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="nice values are POSIX")
+def test_a_refused_priority_leaves_the_service_running(
+    launch: Callable[..., Service],
+    monkeypatch: pytest.MonkeyPatch,
+    service_log: pytest.LogCaptureFixture,
+) -> None:
+    """Start the service at normal priority and warn when raising it is refused."""
+
+    def refuse(*args: int) -> None:
+        raise PermissionError("not permitted")
+
+    monkeypatch.setattr("os.setpriority", refuse)
+    stand_in = launch(priority="high")
+
+    stand_in.start()
+
+    assert stand_in.running
+    assert stand_in.priority == "normal"
+    assert "Service 'stand-in' runs at normal priority: not permitted" in messages(
+        service_log, logging.WARNING
+    )
+
+
+def test_an_unknown_priority_is_refused() -> None:
+    """Refuse a priority other than low, normal and high."""
+    with pytest.raises(ValueError, match="priority"):
+        Service("urgent", module=STAND_IN, priority="urgent")  # type: ignore[arg-type]
+
+
+def test_env_reaches_the_service(
+    launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """Pass the entries of env to the launched process."""
+    stand_in = launch("--print-env", "STAND_IN_VALUE", env={"STAND_IN_VALUE": "42"})
+
+    stand_in.start()
+    stand_in.stop()
+
+    assert "STAND_IN_VALUE=42" in messages(service_log, logging.DEBUG)
 
 
 @pytest.mark.parametrize(

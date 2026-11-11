@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
 
+    from redsun.compute import Priority
+
 STARTUP_TIMEOUT: Final = 15.0
 """Seconds a launched service has to print its readiness line, unless the service gives its own."""
 
@@ -47,6 +49,20 @@ PVXS_LINE: Final = re.compile(
 It bypasses Python logging, so the level, time and logger name are read
 back from the text.
 """
+
+PRIORITIES: Final = ("low", "normal", "high")
+"""The priorities a launched service may start at."""
+
+NICE: Final = {"low": 10, "high": -10}
+"""Nice value a priority other than normal sets on POSIX."""
+
+if sys.platform == "win32":
+    WINDOWS_PRIORITY: Final = {
+        "low": subprocess.BELOW_NORMAL_PRIORITY_CLASS,
+        "normal": 0,
+        "high": subprocess.HIGH_PRIORITY_CLASS,
+    }
+    """Creation flag giving a process each priority on Windows."""
 
 PVXS_LEVELS: Final = {
     "CRIT": logging.CRITICAL,
@@ -126,6 +142,13 @@ class Service:
         it.
     startup_timeout
         Seconds `start` waits for the readiness line.
+    env
+        Variables given to the launched process, over this process's
+        environment. The variables the session sets itself take precedence.
+    priority
+        How much processor time the launched process gets against the rest
+        of the system: `low`, `normal` or `high`. Where the system refuses
+        it, the process runs at `normal` and this attribute says so.
 
     Raises
     ------
@@ -133,7 +156,8 @@ class Service:
         If *args* are given without a *module*, or as text, or an *address*
         with a *module*.
     ValueError
-        If *transport* is not a protocol a session accepts.
+        If *transport* is not a protocol a session accepts, or *priority* is
+        not one of the three.
     """
 
     __slots__ = (
@@ -146,9 +170,11 @@ class Service:
         "_tail",
         "address",
         "args",
+        "env",
         "module",
         "name",
         "prefix",
+        "priority",
         "ready",
         "startup_timeout",
         "stop_timeout",
@@ -172,6 +198,8 @@ class Service:
         transport: str = CHANNEL_ACCESS,
         address: str | None = None,
         startup_timeout: float = STARTUP_TIMEOUT,
+        env: Mapping[str, str] | None = None,
+        priority: Priority = "normal",
     ) -> None:
         if args and module is None:
             raise TypeError(
@@ -188,6 +216,11 @@ class Service:
             raise ValueError(
                 f"service {name!r} names transport {transport!r}; expected one of {known}"
             )
+        if priority not in PRIORITIES:
+            raise ValueError(
+                f"service {name!r} names priority {priority!r}; expected low, "
+                "normal or high"
+            )
         self.name = name
         self.prefix = prefix
         self.address = address
@@ -197,6 +230,8 @@ class Service:
         self.startup_timeout = startup_timeout
         self.stop_timeout = stop_timeout
         self.transport = transport
+        self.env = dict(env or {})
+        self.priority = priority
         self._tail: deque[str] = deque(maxlen=TAIL_LINES)
         self._process: subprocess.Popen[str] | None = None
         self._drain: threading.Thread | None = None
@@ -223,10 +258,11 @@ class Service:
         transport gives it the environment it is reached on and tells this
         process where to look, so devices find it among several local
         services. What a transport reserves lasts for every start in this
-        process. The process learns its name, prefix, ready text and the
-        level this session records at through the functions of
-        `redsun.services`, so a module serving several sessions needs no
-        arguments for them. The process
+        process. The process starts at `priority`; where the system refuses
+        it, a warning is logged and `priority` becomes `normal`. The process
+        learns its name, prefix, ready text and the level this session
+        records at through the functions of `redsun.services`, so a module
+        serving several sessions needs no arguments for them. The process
         writes UTF-8, and each output line is logged as `service_record`
         rebuilds it. An attached service only adds its address to this
         process's list, if it names one.
@@ -251,6 +287,7 @@ class Service:
             transport.publish(self.name)
             env = {
                 **os.environ,
+                **self.env,
                 **reserved,
                 "PYTHONUTF8": "1",
                 NAME_VARIABLE: self.name,
@@ -267,7 +304,7 @@ class Service:
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one
         if sys.platform == "win32":
-            flags = subprocess.CREATE_NO_WINDOW
+            flags = subprocess.CREATE_NO_WINDOW | WINDOWS_PRIORITY[self.priority]
         self._tail.clear()
         self._settled.clear()
         self._is_ready = self.ready is None
@@ -283,6 +320,13 @@ class Service:
             errors="replace",
             creationflags=flags,
         )
+        if sys.platform != "win32":
+            refusal = apply_priority(self._process.pid, self.priority)
+            if refusal is not None:
+                logger.warning(
+                    "Service '%s' runs at normal priority: %s", self.name, refusal
+                )
+                self.priority = "normal"
         self._drain = threading.Thread(
             target=self._drain_output,
             args=(self._process,),
@@ -437,6 +481,22 @@ def service_record(service: str, line: str) -> logging.LogRecord:
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
         pass
     return logging.makeLogRecord(fields)
+
+
+if sys.platform != "win32":
+
+    def apply_priority(pid: int, priority: Priority) -> str | None:
+        """Give process *pid* the nice value of *priority*.
+
+        Returns `None` once it is set, or why the system refused it.
+        """
+        if priority == "normal":
+            return None
+        try:
+            os.setpriority(os.PRIO_PROCESS, pid, NICE[priority])
+        except PermissionError as error:
+            return str(error)
+        return None
 
 
 def exited(process: subprocess.Popen[str], timeout: float) -> bool:
