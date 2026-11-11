@@ -119,12 +119,18 @@ def test_a_long_wait_is_logged_when_the_call_starts(
     assert any(r.getMessage().startswith("A call of b waited") for r in caplog.records)
 
 
-def test_a_pool_that_fails_to_start_is_broken() -> None:
-    """Fail waiting calls with BrokenPool and refuse later ones when start raises."""
+def test_a_pool_that_fails_to_start_is_broken(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Fail waiting calls with BrokenPool, refuse later ones and log the traceback when start raises."""
     pool = ThreadPool(0, initializer=explode)
     waiting = pool.submit(int, "1")
     with pytest.raises(BrokenPool, match="the pool did not start: "):
         pool.start()
+    assert any(
+        "Traceback" in r.getMessage() and "boom" in r.getMessage()
+        for r in caplog.records
+    )
     assert isinstance(waiting.exception(timeout=1), BrokenPool)
     with pytest.raises(BrokenPool):
         pool.submit(int, "1")

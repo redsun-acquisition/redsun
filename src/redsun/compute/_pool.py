@@ -197,6 +197,7 @@ class Pool(Executor, ABC):
             try:
                 self._start()
             except Exception as error:
+                logger.error(f"Pool did not start: {trace(error)}")
                 self._break(f"the pool did not start: {error}")
                 raise BrokenPool(self._broken) from error
             try:
