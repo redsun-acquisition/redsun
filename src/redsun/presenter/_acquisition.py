@@ -10,7 +10,12 @@ from concurrent.futures import wait
 from dataclasses import KW_ONLY, dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from bluesky.utils import RequestAbort, RequestStop, RunEngineInterrupted
+from bluesky.utils import (
+    FailedStatus,
+    RequestAbort,
+    RequestStop,
+    RunEngineInterrupted,
+)
 from psygnal import Signal
 
 from redsun.engine import Deferrals, RunEngine
@@ -70,6 +75,21 @@ class AbortFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         """Keep every record but one carrying a `RequestAbort`."""
         return not (record.exc_info and isinstance(record.exc_info[1], RequestAbort))
+
+
+def failure_reason(error: BaseException) -> str:
+    """Return the text that tells a user why *error* stopped a plan.
+
+    A device status that failed is reported by its own exception, which
+    `bluesky` chains under a `FailedStatus` whose text is the status itself.
+    Any other exception is reported by its message, or by its class name when
+    it has none.
+    """
+    match error:
+        case FailedStatus(__cause__=BaseException() as cause):
+            return failure_reason(cause)
+        case _:
+            return str(error) or type(error).__name__
 
 
 @dataclass(eq=False)
@@ -213,11 +233,11 @@ class AcquisitionPresenter(Loggable):
             ]
         except ValueError as error:
             self.logger.warning(f"Not launching {plan!r}: {error}")
-            self.sig_plan_failed.emit(plan, str(error))
+            self.sig_plan_failed.emit(plan, failure_reason(error))
             return
         except Exception as error:
             self.logger.exception(f"Launching {plan!r} failed")
-            self.sig_plan_failed.emit(plan, str(error) or type(error).__name__)
+            self.sig_plan_failed.emit(plan, failure_reason(error))
             return
         if self._futures or self._engine.state != "idle":
             self.logger.warning(f"A plan is running; {plan!r} not launched")
@@ -373,7 +393,7 @@ class AcquisitionPresenter(Loggable):
             return
         if failure is not None:
             self.logger.error(f"{plan!r} failed", exc_info=failure)
-            self.sig_plan_failed.emit(plan, str(failure) or type(failure).__name__)
+            self.sig_plan_failed.emit(plan, failure_reason(failure))
         elif stopped:
             self.logger.info(f"{plan!r} stopped")
             self.sig_plan_stopped.emit(plan)
