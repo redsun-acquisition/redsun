@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._future import BrokenPool, Future
+from ._future import BrokenPool, Future, WorkerCrashed
 from ._processes import ProcessPool
 from ._settings import (
     ComputeSettings,
@@ -28,4 +28,5 @@ __all__ = [
     "ThreadExecutor",
     "ThreadPool",
     "ThreadPoolSettings",
+    "WorkerCrashed",
 ]
