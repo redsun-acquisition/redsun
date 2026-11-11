@@ -124,7 +124,8 @@ pool of eight threads, each calling a library that starts sixteen threads,
 asks for 128 threads on sixteen cores, and the threads spend their time
 waiting for each other.
 [Who controls parallelism?](https://pythonspeed.com/articles/parallelism-slower/)
-measures this slowdown with `numpy` and shows the limit that removes it.
+explains how the threads `numpy` starts for BLAS compete with a program's own
+parallel work, and limits them with `threadpoolctl`.
 
 So the session limits them, with `threadpoolctl` for BLAS and OpenMP and
 `torch.set_num_threads` when PyTorch is loaded. It sets the limit from the
