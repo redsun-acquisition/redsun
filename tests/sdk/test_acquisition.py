@@ -16,7 +16,7 @@ from redsun.aio import get_shared_loop
 from redsun.engine.actions import ActionManager
 from redsun.path_provider import SessionPathProvider
 from redsun.presenter import AcquisitionPresenter
-from tests.sdk.mocks import MockDetector, QuietAxis
+from tests.sdk.mocks import MockDetector, QuietAxis, SoftAxis
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
@@ -38,13 +38,15 @@ class RecordedActions(ActionManager):
 
 
 class Plans:
-    """Offers plans that rest, fail, hold the engine and read a device."""
+    """Offers plans that rest, fail, hold the engine, read and move a device."""
 
     def __init__(self, name: str = "plans") -> None:
         self.name = name
         self.actions = RecordedActions()
         self.running = threading.Event()
         self.cleaned = threading.Event()
+        self.axis = SoftAxis("axis")
+        self.axis.logic.refuse = "refused"
 
     def plan_map(self) -> Mapping[str, PlanEntry]:
         """Return the plans offered."""
@@ -56,6 +58,8 @@ class Plans:
             "read": {"plan": self.read},
             "guarded": {"plan": self.guarded},
             "limited": {"plan": self.limited},
+            "wrapped": {"plan": self.wrapped},
+            "refused": {"plan": self.refused},
         }
 
     def limited(self, frames: Annotated[int, Ge(1)] = 1) -> MsgGenerator[None]:
@@ -70,6 +74,15 @@ class Plans:
         """Raise after one message."""
         yield from bps.null()
         raise ValueError("bad target")
+
+    def wrapped(self) -> MsgGenerator[None]:
+        """Raise an error of its own, chained to the one that caused it."""
+        yield from bps.null()
+        raise RuntimeError("no frame count") from KeyError("frames")
+
+    def refused(self) -> MsgGenerator[None]:
+        """Move an axis that refuses every move."""
+        yield from bps.mv(self.axis, 1.0)
 
     def hold(self) -> MsgGenerator[None]:
         """Keep the engine busy until stopped, saying when it has begun."""
@@ -223,6 +236,21 @@ def test_a_plan_that_raises_is_reported_failed(
     assert "'broken' failed" in caplog.text
 
 
+@pytest.mark.parametrize(
+    ("plan", "reason"), [("refused", "refused"), ("wrapped", "no frame count")]
+)
+def test_a_failed_plan_reports_the_message_meant_for_the_user(
+    presenter: AcquisitionPresenter, plan: str, reason: str
+) -> None:
+    """Report a refused move by the device's message, and a plan's chained error by its own."""
+    seen, ended = record(presenter)
+
+    presenter.launch(plan, {})
+
+    assert ended.wait(10)
+    assert seen[-1] == ("failed", plan, reason)
+
+
 @pytest.mark.parametrize("value", ["ghost", "plain", 3])
 def test_values_the_plan_cannot_take_are_reported_and_not_run(
     presenter: AcquisitionPresenter, value: object, caplog: pytest.LogCaptureFixture
@@ -334,6 +362,8 @@ def test_a_plan_no_widget_can_show_is_left_out(
         "read",
         "guarded",
         "limited",
+        "wrapped",
+        "refused",
     }
     assert ("'odd'" in warnings, "'flat'" in warnings) == (True, True)
 
