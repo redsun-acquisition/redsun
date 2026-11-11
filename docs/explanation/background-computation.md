@@ -68,7 +68,7 @@ though, since the pool starts only after `setup` returns. That is why
 with a `RuntimeError` while its call waits for the pool to start, instead of
 waiting forever.
 
-A pool whose threads cannot be made is broken: its waiting calls fail with
+A pool whose threads or worker processes cannot be started is broken: its waiting calls fail with
 [`BrokenPool`][redsun.compute.BrokenPool], and `submit` raises it for every
 later call. The
 components holding it stay built, because by then every component has been
@@ -129,13 +129,14 @@ parallel work, and limits them with `threadpoolctl`.
 
 So the session limits them, with `threadpoolctl` for BLAS and OpenMP and
 `torch.set_num_threads` when PyTorch is loaded. It sets the limit from the
-main thread when the pools start, and each pool thread sets it again for
+main thread when the thread pool starts, and each of its threads sets it again for
 itself as it starts, because OpenMP keeps a limit per thread. A limit reaches
 only the libraries already imported at that moment; a library imported later
 starts at its own size.
 
-The limits apply only when a built component holds a pool, so a session that
-computes nothing in the background leaves every library as it found it. The
+The limits apply only when a built component holds a thread pool, so a
+session that computes nothing in the background, or only in worker processes,
+leaves every library of its own process as it found it. The
 session puts the old limits back when it shuts down.
 
 ## The GIL
@@ -179,14 +180,17 @@ A pipe from `multiprocessing.connection` carries each call and its answer.
 Arrays larger than 64 KiB travel beside the pipe, through two shared-memory
 rings per worker made with `sharedbox` when it is installed, so the pipe
 carries only their description. A ring is made with the first large array and
-grows when a larger one comes. Without `sharedbox`, every array travels
-through the pipe, which is slower for large ones, and an info line in the
-log names the `sharedbox` extra. For one large send at the end of a run, a block of shared
+grows when a larger one comes. Each ring holds four arrays of the largest
+size sent so far, so four workers exchanging 32 MiB arrays reserve about
+1 GiB of shared memory, far more than the 64 MiB a container gets for
+`/dev/shm` by default. Without `sharedbox`, every array travels through the
+pipe, which is slower for large ones, and an info line in the log names the
+`sharedbox` extra. For one large send at the end of a run, a block of shared
 memory the component fills as the data arrives beats both, as
 [How to run background processing](../how-to/run-background-processing.md#send-large-arrays-through-a-shared-block)
 shows.
 
-On an interpreter built without the GIL, a `ProcessExecutor` runs its calls
+On an interpreter running without the GIL, a `ProcessExecutor` runs its calls
 on threads of the session's own process, since threads no longer take turns
 there. It still pickles each call and its result, so code that works there
 also works with worker processes.

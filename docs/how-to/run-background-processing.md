@@ -50,10 +50,11 @@ for a stack of camera frames can take longer than the computation.
 shows how to avoid most of that copy.
 
 A call sent to a worker process travels by name, so the function must be
-defined at the top level of a module; `submit` refuses a lambda, a function
-defined inside another one and a bound method. Keep such functions in a module
-that doesn't import `qtpy`, since every worker that imports the module loads Qt
-too. Both executors take the same calls, so the rest of this page applies to
+defined at the top level of a module the worker can import. `submit`
+refuses a lambda, a function defined inside another one, a bound method, and
+a function defined in the script you run, which a worker can't import. Keep
+such functions in a module that doesn't import `qtpy`, since every worker that
+imports the module loads Qt too. Both executors take the same calls, so the rest of this page applies to
 either.
 
 ## Ask for an executor
@@ -165,10 +166,11 @@ once the result or the error comes back:
 !!! warning "A block a worker opened may be reported as leaked"
 
     On Linux and macOS, Python 3.11 and 3.12 track every shared block a
-    process opens and warn about it when that process exits, even when
-    another process unlinked it. A worker that opened the block logs such a
-    warning when the session stops it. The presenter's `unlink` frees the
-    memory either way, so you can ignore the warning.
+    process opens and unlink it when that process exits, warning that it
+    leaked. A worker that opened the block logs such a warning when the
+    session stops it, which you can ignore. A worker that crashes inside the
+    function unlinks the block too, so the call sent again to its
+    replacement fails with `FileNotFoundError` instead of running twice.
 
 ## Warm up from `setup`
 

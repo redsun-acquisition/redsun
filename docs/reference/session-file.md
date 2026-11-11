@@ -128,6 +128,8 @@ An entry:
 | `ready` | text | none | the line the service prints once it serves |
 | `startup_timeout` | number | `15.0` | seconds the session waits for the `ready` line |
 | `stop_timeout` | number | `10.0` | seconds each step of stopping waits |
+| `env` | mapping | empty | variables added to the environment the service starts with; a value that isn't text is written as text |
+| `priority` | `low`, `normal` or `high` | `normal` | the priority the service's process starts at; `high` needs privileges on Linux and macOS |
 | `address` | text | none | where an attached service answers, added to the address list of the transport |
 
 A mapping under `args` becomes arguments this way:
