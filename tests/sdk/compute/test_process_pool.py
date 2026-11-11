@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import multiprocessing
 import threading
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from redsun.compute import BrokenPool, ProcessPool, WorkerCrashed
-from redsun.compute._processes import PipeClosed
+from redsun.compute._channel import Channel
+from redsun.compute._processes import MAX_RESTARTS, ChannelFailed, PipeClosed, Worker
+from redsun.services import Service
 from tests.sdk.compute.helpers import wait_then_return
 
 if TYPE_CHECKING:
@@ -29,6 +32,10 @@ def crash() -> None:
 
 def hang() -> None:
     """Stand for a call that runs until its worker is stopped."""
+
+
+def short_of_memory() -> None:
+    """Stand for a call whose ring this process cannot make."""
 
 
 def fail() -> None:
@@ -62,6 +69,8 @@ class FakeWorker:
         """Return what *fn* returns, or raise `PipeClosed` as a worker that ended would."""
         self.sent.append(fn)
         self.busy.set()
+        if fn is short_of_memory:
+            raise ChannelFailed(OSError("no room for a ring"))
         if fn is crash:
             raise PipeClosed
         if fn is hang:
@@ -194,3 +203,45 @@ def test_a_second_shutdown_does_nothing(spawns: list[FakeWorker]) -> None:
     pool.shutdown()
     assert len(spawns) == 2
     assert all(worker.service.stopped.is_set() for worker in spawns)
+
+
+def test_a_failure_in_this_process_fails_the_call_and_counts_no_restart(
+    spawns: list[FakeWorker],
+) -> None:
+    """Fail a call with this process's own error, replace its worker, and count no restart."""
+    with ProcessPool(1) as pool:
+        for _ in range(MAX_RESTARTS + 1):
+            error = pool.submit(short_of_memory).exception(timeout=5)
+            assert type(error) is OSError
+        assert pool.submit(add, 2, 3).result(timeout=5) == 5
+    assert len(spawns) == 1 + MAX_RESTARTS + 1
+    assert spawns[0].service.stopped.is_set()
+
+
+@pytest.mark.parametrize(
+    ("error", "raised"),
+    [
+        (EOFError(), PipeClosed),
+        (BrokenPipeError(), PipeClosed),
+        (ConnectionResetError(), PipeClosed),
+        (OSError("no room for a ring"), ChannelFailed),
+        (FileNotFoundError("no such ring"), ChannelFailed),
+    ],
+)
+def test_only_a_closed_pipe_counts_as_a_worker_gone(
+    monkeypatch: pytest.MonkeyPatch, error: Exception, raised: type[Exception]
+) -> None:
+    """Raise PipeClosed for a pipe the worker closed, and ChannelFailed for any other channel error."""
+
+    def refuse(*args: object) -> None:
+        raise error
+
+    monkeypatch.setattr(Channel, "send", refuse)
+    here, there = multiprocessing.Pipe()
+    worker = Worker(Service("worker"), Channel(here))
+    try:
+        with pytest.raises(raised):
+            worker.call(add, (1, 2), {})
+    finally:
+        worker.channel.close()
+        there.close()

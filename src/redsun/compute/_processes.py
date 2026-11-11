@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import itertools
 import logging
 import os
@@ -63,6 +64,14 @@ class PipeClosed(EOFError):
     """Raised by `Worker.call` when the pipe to the worker closed."""
 
 
+class ChannelFailed(Exception):
+    """Raised by `Worker.call` when this end of the channel failed, which may leave it out of step."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__(str(error))
+        self.error = error
+
+
 class Worker:
     """One started worker process and the channel to it."""
 
@@ -84,6 +93,9 @@ class Worker:
             If the pipe closed before the answer arrived.
         TypeError
             If the call cannot be pickled, or its answer cannot be read here.
+        ChannelFailed
+            If sending or receiving failed in this process, such as a ring
+            that cannot be made.
         Exception
             The error the call raised in the worker.
         """
@@ -96,8 +108,13 @@ class Worker:
                 f"the answer of {name_of(fn)}() cannot be read in this process: "
                 f"{unreadable.error}"
             ) from unreadable.error
-        except (EOFError, OSError) as error:
+        except (EOFError, ConnectionError) as error:
             raise PipeClosed(str(error)) from error
+        except TypeError:
+            # the call cannot be pickled, so nothing was sent
+            raise
+        except Exception as error:
+            raise ChannelFailed(error) from error
         if kind == "error":
             raise answer
         return answer
@@ -358,13 +375,22 @@ class ProcessPool(Pool):
                 return worker.call(fn, args, kwargs)
             except PipeClosed:
                 pass
+            except ChannelFailed as failed:
+                # the call's own failure: a half-sent message leaves the
+                # channel out of step, so the worker goes, but nothing crashed
+                with contextlib.suppress(BrokenPool):
+                    self._replace(slot, crashed=False)
+                raise failed.error from None
             self._replace(slot)
             crashes += 1
             if crashes == CRASHES_PER_CALL:
                 raise WorkerCrashed(f"the call ended {CRASHES_PER_CALL} workers")
 
-    def _replace(self, slot: int) -> None:
-        """Stop the worker of *slot* after it ended, and start another in its place.
+    def _replace(self, slot: int, *, crashed: bool = True) -> None:
+        """Stop the worker of *slot* and start another in its place.
+
+        A worker that *crashed* counts as a restart; one this process gave up
+        on is stopped without waiting for it to exit, and does not count.
 
         Raises
         ------
@@ -379,13 +405,18 @@ class ProcessPool(Pool):
                 raise BrokenPool(self._broken)
             ended = self._workers[slot]
             self._workers[slot] = None
-            now = time.monotonic()
-            self._restarts.append(now)
-            while self._restarts[0] < now - RESTART_WINDOW:
-                self._restarts.popleft()
-            too_many = len(self._restarts) > MAX_RESTARTS
+            too_many = False
+            if crashed:
+                now = time.monotonic()
+                self._restarts.append(now)
+                while self._restarts[0] < now - RESTART_WINDOW:
+                    self._restarts.popleft()
+                too_many = len(self._restarts) > MAX_RESTARTS
         if ended is not None:
-            ended.stop_ended()
+            if crashed:
+                ended.stop_ended()
+            else:
+                ended.stop()
         if too_many:
             self._break_and_fail(TOO_MANY_RESTARTS)
             raise BrokenPool(TOO_MANY_RESTARTS)

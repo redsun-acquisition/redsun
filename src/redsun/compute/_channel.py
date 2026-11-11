@@ -178,7 +178,16 @@ class Channel:
             if kind != "ring":
                 break
             self.attach(*data)
-        items = [self.reader.receive() for _ in range(count)]
+        items = []
+        if count:
+            box = rings()
+            assert box is not None
+            try:
+                items = [self.reader.receive() for _ in range(count)]
+            except box.EndOfStream as error:
+                raise EOFError(
+                    "the other end closed before sending every ring item"
+                ) from error
         try:
             return kind, id, pickle.loads(data, buffers=items)
         except Exception as error:

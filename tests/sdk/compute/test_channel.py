@@ -217,3 +217,29 @@ def test_a_send_waiting_on_a_full_ring_ends_when_the_other_end_closes(
 
     assert not thread.is_alive()
     assert [type(error) for error in failures] == [EOFError]
+
+
+@needs_sharedbox
+def test_a_receive_waiting_on_ring_items_ends_when_the_other_end_closes(
+    channels: tuple[Channel, Channel],
+) -> None:
+    """Raise EOFError from a receive whose sender closed before sending every ring item."""
+    sender, receiver = channels
+    exchange(sender, receiver, np.zeros(MIB, dtype=np.uint8))
+    failures: list[Exception] = []
+
+    def receive() -> None:
+        try:
+            receiver.receive()
+        except Exception as error:  # noqa: BLE001 - the test checks which one
+            failures.append(error)
+
+    thread = threading.Thread(target=receive, daemon=True)
+    thread.start()
+    sender.connection.send(("result", 1, b"", 2))
+    sender.send_item(np.zeros(MIB, dtype=np.uint8))
+    sender.close()
+    thread.join(timeout=10)
+
+    assert not thread.is_alive()
+    assert [type(error) for error in failures] == [EOFError]
