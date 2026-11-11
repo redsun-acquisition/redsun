@@ -13,7 +13,7 @@ from multiprocessing.connection import Client
 from redsun.services import configure_logging, ready
 from redsun.workers import ADDRESS_VARIABLE, AUTHKEY_VARIABLE
 
-from ..compute._channel import Channel
+from ..compute._channel import Channel, UnreadableMessage
 from ..compute._pickling import name_of
 
 QT_MODULES = ("qtpy", "PyQt6", "PySide6")
@@ -40,6 +40,9 @@ def main() -> None:
                 kind, id, payload = channel.receive()
             except EOFError:
                 break
+            except UnreadableMessage as unreadable:
+                answer_error(channel, unreadable.id, unreadable.error)
+                continue
             if kind != "call":
                 continue
             fn, args, kwargs = payload

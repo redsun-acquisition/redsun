@@ -29,6 +29,9 @@ RING_THRESHOLD: Final = 64 * 1024
 RING_CAPACITY: Final = 4
 """Items a ring holds before its sender waits for the reader."""
 
+PEER_CHECK: Final = 0.25
+"""Seconds a send waits on a full ring before it checks the other end is still there."""
+
 logger = logging.getLogger("redsun")
 
 
@@ -44,6 +47,16 @@ def rings() -> ModuleType | None:
         )
         return None
     return sharedbox
+
+
+class UnreadableMessage(Exception):
+    """Raised by `Channel.receive` for a message whose payload could not be unpickled."""
+
+    def __init__(self, kind: str, id: int, error: Exception) -> None:
+        super().__init__(f"{kind} {id} could not be read: {error}")
+        self.kind = kind
+        self.id = id
+        self.error = error
 
 
 def ring_item(box: ModuleType, size: int) -> object:
@@ -94,6 +107,8 @@ class Channel:
         ------
         TypeError
             If a `call` cannot be pickled; the message names the culprit.
+        EOFError
+            If the other end closed while a ring item waited for room.
         """
         box = rings()
         items: list[memoryview] = []
@@ -121,7 +136,32 @@ class Channel:
             self.grow(box, max(item.nbytes for item in items))
         self.connection.send((kind, id, data, len(items)))
         for item in items:
-            self.sender.send(np.frombuffer(item, dtype=np.uint8))
+            self.send_item(np.frombuffer(item, dtype=np.uint8))
+
+    def send_item(self, item: np.ndarray[Any, Any]) -> None:
+        """Send one ring item, checking the other end while the ring stays full.
+
+        Raises
+        ------
+        EOFError
+            If the other end closed the pipe.
+        """
+        while True:
+            try:
+                self.sender.send(item, timeout=PEER_CHECK)
+            except TimeoutError:
+                # the other end sends nothing while it reads ring items, so a
+                # readable or broken pipe means it closed
+                try:
+                    gone = self.connection.poll()
+                except OSError:
+                    gone = True
+                if gone:
+                    raise EOFError(
+                        "the other end closed while a ring was full"
+                    ) from None
+            else:
+                return
 
     def receive(self) -> tuple[str, int, Any]:
         """Return the next message, with the buffers it sent through the ring.
@@ -130,6 +170,8 @@ class Channel:
         ------
         EOFError
             If the other end has closed.
+        UnreadableMessage
+            If the payload could not be unpickled; the channel stays usable.
         """
         while True:
             kind, id, data, count = self.connection.recv()
@@ -137,7 +179,10 @@ class Channel:
                 break
             self.attach(*data)
         items = [self.reader.receive() for _ in range(count)]
-        return kind, id, pickle.loads(data, buffers=items)
+        try:
+            return kind, id, pickle.loads(data, buffers=items)
+        except Exception as error:
+            raise UnreadableMessage(kind, id, error) from error
 
     def grow(self, box: ModuleType, needed: int) -> None:
         """Replace the sending ring with one holding *needed* bytes, unless it already does.

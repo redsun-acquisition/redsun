@@ -12,16 +12,29 @@ from typing import TYPE_CHECKING, Annotated, Any
 import numpy as np
 import pytest
 
-from redsun.compute._channel import Channel, rings
+from redsun.compute._channel import Channel, UnreadableMessage, rings
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
 needs_sharedbox = pytest.mark.skipif(
     find_spec("sharedbox") is None, reason="needs sharedbox"
 )
 
 MIB = 1 << 20
+
+
+def refuse() -> None:
+    """Raise as unpickling a function the receiver cannot import does."""
+    raise AttributeError("Can't get attribute 'fit' on <module '__main__'>")
+
+
+class Unreadable:
+    """A value that pickles and fails to unpickle."""
+
+    def __reduce__(self) -> tuple[Callable[[], None], tuple[()]]:
+        """Rebuild by calling `refuse`."""
+        return (refuse, ())
 
 
 @pytest.fixture
@@ -153,3 +166,54 @@ def test_receive_raises_eoferror_once_the_other_end_closes(
 
     with pytest.raises(EOFError):
         receiver.receive()
+
+
+def test_an_unreadable_message_names_its_id_and_the_next_one_arrives(
+    channels: tuple[Channel, Channel],
+) -> None:
+    """Raise UnreadableMessage with the kind and id of a payload that fails to unpickle, then read on."""
+    sender, receiver = channels
+    errors: list[UnreadableMessage] = []
+    received: list[tuple[str, int, Any]] = []
+
+    def read() -> None:
+        try:
+            receiver.receive()
+        except UnreadableMessage as error:
+            errors.append(error)
+        received.append(receiver.receive())
+
+    thread = threading.Thread(target=read)
+    thread.start()
+    sender.send("call", 7, (np.negative, (np.zeros(MIB, np.uint8), Unreadable()), {}))
+    sender.send("result", 8, "next")
+    thread.join(timeout=10)
+
+    (error,) = errors
+    assert (error.kind, error.id, type(error.error)) == ("call", 7, AttributeError)
+    assert received == [("result", 8, "next")]
+
+
+@needs_sharedbox
+def test_a_send_waiting_on_a_full_ring_ends_when_the_other_end_closes(
+    channels: tuple[Channel, Channel],
+) -> None:
+    """Raise EOFError from a send waiting for ring room once the other end closes its pipe."""
+    sender, receiver = channels
+    exchange(sender, receiver, np.zeros(MIB, dtype=np.uint8))
+    failures: list[Exception] = []
+
+    def send() -> None:
+        try:
+            sender.send("result", 1, [np.zeros(MIB, np.uint8) for _ in range(6)])
+        except Exception as error:  # noqa: BLE001 - the test checks which one
+            failures.append(error)
+
+    thread = threading.Thread(target=send)
+    thread.start()
+    receiver.connection.recv()
+    receiver.connection.close()
+    thread.join(timeout=10)
+
+    assert not thread.is_alive()
+    assert [type(error) for error in failures] == [EOFError]
