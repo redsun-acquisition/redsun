@@ -36,6 +36,26 @@ function spends its time in code that lets other threads run meanwhile, as
 every other thread, the window's included, so it runs no faster on a thread
 and slows the window down while it runs.
 
+## Choose an executor
+
+Ask for a [`ThreadExecutor`][redsun.compute.ThreadExecutor] when the work
+lets go of the GIL, as `np.median` does, and for a
+[`ProcessExecutor`][redsun.compute.ProcessExecutor] when it is Python code
+that holds it. A `ProcessExecutor` runs each call in one of the session's
+[worker processes](../explanation/glossary.md#worker-process), so plain Python
+there runs alongside the window instead of taking turns with it. The cost is a
+copy: the call's arguments and its result travel between the processes, which
+for a stack of camera frames can take longer than the computation.
+[Send large arrays through a shared block](#send-large-arrays-through-a-shared-block)
+shows how to avoid most of that copy.
+
+A call sent to a worker process travels by name, so the function must be
+defined at the top level of a module; `submit` refuses a lambda, a function
+defined inside another one and a bound method. Keep such functions in a module
+that doesn't import `qtpy`, since every worker that imports the module loads Qt
+too. Both executors take the same calls, so the rest of this page applies to
+either.
+
 ## Ask for an executor
 
 Annotate a constructor parameter with
@@ -109,6 +129,47 @@ Link the two in the session:
 --8<-- "docs/examples/background_processing.py:session"
 ```
 
+## Send large arrays through a shared block
+
+A `ProcessExecutor` copies a call's arguments into the worker, so a stack of
+frames sent at the end of a run makes `stop` wait for the copy. Write the
+frames into a block of shared memory as they arrive instead, and send the
+worker only the block's name. The function opens the block by name and reads
+the frames where they are:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:function"
+```
+
+The presenter asks for a `ProcessExecutor`:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:presenter"
+```
+
+It makes the block when the run describes its data, with room for the number
+of frames it is given, and fills one frame per event. At `stop` only
+the name, the shape and the type cross to the worker:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:documents"
+```
+
+The block belongs to the presenter, so the presenter closes and unlinks it
+once the result or the error comes back:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:release"
+```
+
+!!! warning "A block a worker opened may be reported as leaked"
+
+    On Linux and macOS, Python 3.11 and 3.12 track every shared block a
+    process opens and warn about it when that process exits, even when
+    another process unlinked it. A worker that opened the block logs such a
+    warning when the session stops it. The presenter's `unlink` frees the
+    memory either way, so you can ignore the warning.
+
 ## Warm up from `setup`
 
 The first call of a function is often slower than the next ones, because a
@@ -154,6 +215,36 @@ Compute: 15 cores, preset balanced
 ThreadPool: 3 threads, 5 native threads each
 ```
 
+The preset sizes the thread pool only. The worker processes are counted on
+their own, with `processes`, and each runs its native libraries on one thread:
+
+```yaml
+compute:
+  processes: 4
+```
+
+## Set the priority of the workers
+
+Worker processes start at normal priority, the same as the rest of the
+session. Set `priority` to `low` when their work can wait, so services such as
+a camera's driver keep their share of the CPU during an acquisition, or to
+`high` when the workers must keep up:
+
+```yaml
+compute:
+  priority: low
+```
+
+The priority applies to the worker processes only, never to the threads of
+the thread pool, which run in the session's own process.
+
+!!! warning "`high` needs privileges on Linux and macOS"
+
+    Raising a process above normal priority needs root, or the
+    `CAP_SYS_NICE` capability on Linux. Without it the session logs a warning
+    and starts the workers at normal priority. Windows lets any user choose
+    `high`.
+
 ## Read what the pool did
 
 [`usage`][redsun.compute.ThreadExecutor.usage] returns the counts of the
@@ -187,6 +278,15 @@ a pool with no threads, already started. Each call runs in the test's own
 thread before `submit` returns, and `then` hands its result over at once, so
 the test can check it on the next line.
 
+[`inline_processes`][redsun.testing.inline_processes] does the same for a
+`ProcessExecutor`. Each call still runs in the test's thread, but its
+arguments and its result are pickled and read back first, so a value that
+couldn't reach a real worker fails the call:
+
+```{.python}
+--8<-- "tests/test_doc_examples.py:test-processes"
+```
+
 ## Leave the window's teardown alone
 
 !!! warning "Work started while the window closes fails"
@@ -204,4 +304,10 @@ the test can check it on the next line.
 
     ```{.python}
     --8<-- "docs/examples/background_processing.py"
+    ```
+
+??? example "The shared block"
+
+    ```{.python}
+    --8<-- "docs/examples/shared_block.py"
     ```

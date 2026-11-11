@@ -165,6 +165,8 @@ wins over the class, key by key.
 | `preset` | `latency`, `balanced` or `throughput` | `balanced` | how the compute cores are split between threads and native libraries |
 | `cores` | whole number, 1 or more | the physical cores less `reserve` | the most compute cores to use |
 | `reserve` | whole number, 0 or more | `1` | physical cores kept free for the window's thread |
+| `processes` | whole number, 1 or more | `1` | the [worker processes](../explanation/glossary.md#worker-process) of the shared process pool |
+| `priority` | `low`, `normal` or `high` | `normal` | the priority the worker processes start at; `high` needs privileges on Linux and macOS |
 | `switch_interval_ms` | number above 0 | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
 
 `reserve` lowers the [compute cores](../explanation/glossary.md#compute-cores)
@@ -182,7 +184,12 @@ threads each call's native libraries may start:
 compute:
   preset: latency
   cores: 6
+  processes: 2
+  priority: low
 ```
+
+The preset sizes the thread pool only. Each worker process runs its native
+libraries on one thread.
 
 The section changes nothing in a session whose components ask for no
 [executor](../explanation/glossary.md#executor).

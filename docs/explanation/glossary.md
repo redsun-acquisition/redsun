@@ -319,9 +319,10 @@ A plugin is an installed package that offers components, services and
 
 ### Pool
 
-A pool is a set of threads the session starts and stops, which every
-component asking for the same kind of [executor](#executor) shares. Its size
-comes from the [compute cores](#compute-cores).
+A pool is a set of threads or [worker processes](#worker-process) the session
+starts and stops, which every component asking for the same kind of
+[executor](#executor) shares. A thread pool's size comes from the
+[compute cores](#compute-cores).
 
 ### Port
 
@@ -550,6 +551,15 @@ Wiring is the choice of which [signal](#signal) reaches which [slot](#slot).
 The session decides it, in its `wire` method or in the `wiring` and `pairs`
 sections of its file, where each line of `pairs` is a [pairing](#pairing);
 components only declare their [ports](#port).
+
+### Worker process
+
+A worker process is a Python process the session starts to run the calls a
+component submits to a
+[`ProcessExecutor`][redsun.compute.ProcessExecutor]. It runs Python code
+that holds the GIL alongside the window, at the cost of copying each call's
+arguments and result between the processes. The session replaces a worker
+that dies and stops every worker when it shuts down.
 
 ### Writer
 

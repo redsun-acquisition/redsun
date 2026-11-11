@@ -152,5 +152,75 @@ running at that moment. The `switch_interval_ms` key of the session file
 changes how often Python passes the GIL between threads, and is left alone
 unless you set it.
 
-A later release adds pools of worker processes for code that holds the GIL,
-and pools for NVIDIA GPUs.
+## Worker processes
+
+Code that holds the GIL runs alongside the window only in another process, so
+a [`ProcessExecutor`][redsun.compute.ProcessExecutor] sends its calls to the
+session's [worker processes](glossary.md#worker-process). Each worker runs
+`python -m redsun.workers`, which the session starts the way it starts a
+[service](glossary.md#service): without a console window, each line it prints
+logged under its name, ready once it prints a line saying so, and stopped by
+closing its standard input. Each worker gets one native thread, through
+`OMP_NUM_THREADS` and the matching variables of OpenBLAS and MKL in its
+environment, because there are as many workers as `processes` asks for and
+each would otherwise start a thread per core. The `compute` section's
+`processes` key sets the count, one by default.
+
+Only values cross between the processes, never live objects, because each
+call and its result are pickled. A function travels by its module and its
+name, and the worker imports the module on the first call. That is why
+`submit` refuses a lambda, a function defined inside another one and a bound
+method: none of them has a name a worker can import, and a bound method
+would also carry its component along. A module that imports `qtpy` loads Qt
+in every worker that imports it, which costs memory and start time for
+nothing, so the worker logs a warning naming the function when that happens.
+
+A pipe from `multiprocessing.connection` carries each call and its answer.
+Arrays larger than 64 KiB travel beside the pipe, through two shared-memory
+rings per worker made with `sharedbox` when it is installed, so the pipe
+carries only their description. A ring is made with the first large array and
+grows when a larger one comes. Without `sharedbox`, every array travels
+through the pipe, which is slower for large ones, and an info line in the
+log names the `sharedbox` extra. For one large send at the end of a run, a block of shared
+memory the component fills as the data arrives beats both, as
+[How to run background processing](../how-to/run-background-processing.md#send-large-arrays-through-a-shared-block)
+shows.
+
+On an interpreter built without the GIL, a `ProcessExecutor` runs its calls
+on threads of the session's own process, since threads no longer take turns
+there. It still pickles each call and its result, so code that works there
+also works with worker processes.
+
+## Crashes
+
+A worker can die in the middle of a call, from a crash in compiled code or an
+`os._exit`. The session logs the worker's exit code and its last output,
+starts a new worker in its place and sends the call again, so a single crash
+doesn't fail the call. Sending a call again repeats what it did before it
+crashed, such as writing a file. A call that has ended 3 workers fails with
+[`WorkerCrashed`][redsun.compute.WorkerCrashed] instead, so a call that
+always crashes fails on its own while every other owner's calls go on. A pool
+that has to start more than 5 new workers within 60 s stops trying: it is
+broken, and its calls fail with [`BrokenPool`][redsun.compute.BrokenPool].
+
+Only a closed pipe counts as a crash. An error in the call itself, or one on
+the session's side of the pipe such as running out of shared memory, fails
+that call and leaves the pool's count of crashes alone.
+
+## Priority
+
+The worker processes start at the priority the `compute` section names:
+`low`, `normal` or `high`, `normal` by default. The setting belongs to the
+pool rather than to a component or a call, because one worker runs the calls
+of several components, and on Linux and macOS a process can lower its own
+priority but never raise it back. On Windows the session starts each worker
+with the matching priority class; on Linux and macOS it sets the worker's
+nice value to 10 for `low` or -10 for `high` right after starting it.
+
+Raising a priority there needs root, or the `CAP_SYS_NICE` capability on
+Linux. When that is refused, the session logs one warning for the pool and
+starts its workers at normal priority instead of stopping the build. Priority
+is the only say `redsun` takes over where work runs: no thread or process is
+tied to particular cores.
+
+A later release adds pools for NVIDIA GPUs.

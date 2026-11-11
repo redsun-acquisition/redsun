@@ -4,13 +4,18 @@ icon: lucide/code
 
 # redsun.compute
 
-Pools of threads the session shares between its components, and the
+Pools of threads and worker processes the session shares between its components, and the
 executors a component submits its calls through. Usage is in
 [How to run background processing](../../how-to/run-background-processing.md).
 
 ## Executors
 
 ::: redsun.compute.ThreadExecutor
+    options:
+      show_root_heading: true
+      inherited_members: true
+
+::: redsun.compute.ProcessExecutor
     options:
       show_root_heading: true
       inherited_members: true
@@ -25,6 +30,10 @@ executors a component submits its calls through. Usage is in
     options:
       show_root_heading: true
 
+::: redsun.compute.WorkerCrashed
+    options:
+      show_root_heading: true
+
 ## Pools
 
 ::: redsun.compute.ThreadPool
@@ -33,6 +42,15 @@ executors a component submits its calls through. Usage is in
       inherited_members: true
 
 ::: redsun.compute.ThreadPoolSettings
+    options:
+      show_root_heading: true
+
+::: redsun.compute.ProcessPool
+    options:
+      show_root_heading: true
+      inherited_members: true
+
+::: redsun.compute.ProcessPoolSettings
     options:
       show_root_heading: true
 
@@ -49,6 +67,10 @@ executors a component submits its calls through. Usage is in
 ## Configuration
 
 ::: redsun.compute.Preset
+    options:
+      show_root_heading: true
+
+::: redsun.compute.Priority
     options:
       show_root_heading: true
 
