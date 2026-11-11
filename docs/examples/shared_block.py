@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
+from functools import partial
 from multiprocessing import shared_memory
 from typing import TYPE_CHECKING
 
@@ -74,27 +76,29 @@ class StackPresenter(DocumentRouter, Loggable):
     def stop(self, doc: RunStop) -> RunStop:
         if self._block is None or self._stack is None:
             return doc
+        block, self._block = self._block, None
         shape, dtype = self._stack.shape, self._stack.dtype.str
-        future = self._executor.submit(fit_stack, self._block.name, shape, dtype)
-        future.then(self._publish, self._report)
+        self._stack = None
+        future = self._executor.submit(fit_stack, block.name, shape, dtype)
+        future.then(partial(self._publish, block), partial(self._report, block))
         return doc
 
     # --8<-- [end:documents]
     # --8<-- [start:release]
-    def _publish(self, fit: NDArray[np.float64]) -> None:
-        self._release()
+    def _publish(
+        self, block: shared_memory.SharedMemory, fit: NDArray[np.float64]
+    ) -> None:
+        self._release(block)
         self.sig_fit.emit(fit)
 
-    def _report(self, error: BaseException) -> None:
-        self._release()
+    def _report(self, block: shared_memory.SharedMemory, error: BaseException) -> None:
+        self._release(block)
         self.logger.warning(f"No fit for this run: {error}")
 
-    def _release(self) -> None:
-        self._stack = None
-        if self._block is not None:
-            self._block.close()
-            self._block.unlink()
-            self._block = None
+    def _release(self, block: shared_memory.SharedMemory) -> None:
+        block.close()
+        with suppress(FileNotFoundError):
+            block.unlink()
 
 
 # --8<-- [end:release]
