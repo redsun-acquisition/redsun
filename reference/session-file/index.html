@@ -1053,6 +1053,8 @@
       
         
       
+        
+      
     
     
     
@@ -1288,6 +1290,35 @@
     
   
   How to share a value between components
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/run-background-processing/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-cpu" viewBox="0 0 24 24"><path d="M12 20v2M12 2v2M17 20v2M17 2v2M2 12h2M2 17h2M2 7h2M20 12h2M20 17h2M20 7h2M7 20v2M7 2v2"/><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="8" height="8" x="8" y="8" rx="1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to run background processing
 
     
   </span>
@@ -3291,6 +3322,8 @@
       
         
       
+        
+      
     
     
     
@@ -3364,6 +3397,35 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/background-computation/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-cpu" viewBox="0 0 24 24"><path d="M12 20v2M12 2v2M17 20v2M17 2v2M2 12h2M2 17h2M2 7h2M20 12h2M20 17h2M20 7h2M7 20v2M7 2v2"/><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="8" height="8" x="8" y="8" rx="1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How background computation works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -3384,6 +3446,8 @@
       
         
           
+        
+      
         
       
         
@@ -4514,6 +4578,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0038-the-session-owns-background-computation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  38. The session owns background computation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4825,6 +4916,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compute
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#storage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5100,6 +5202,8 @@
       
         
       
+        
+      
     
     
     
@@ -5193,6 +5297,35 @@
     
   
   redsun.catalog
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/compute/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  redsun.compute
 
     
   </span>
@@ -6019,6 +6152,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compute
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#storage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6310,6 +6454,12 @@ write one, split it over several files and read a failure.</p>
 <td>classes that share values with the components, by name</td>
 </tr>
 <tr>
+<td><code>compute</code></td>
+<td>mapping or preset</td>
+<td>the defaults below</td>
+<td><a href="#compute">the cores background calls may use</a></td>
+</tr>
+<tr>
 <td><code>storage</code></td>
 <td>mapping</td>
 <td>the defaults below</td>
@@ -6593,6 +6743,82 @@ its own, <code>transport</code>.</p>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"BL01:"</span>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0.0.5</span>
 </span></code></pre></div>
+<h2 id="compute">Compute<a class="headerlink" href="#compute" title="Permanent link">&para;</a></h2>
+<p><code>compute</code> is a mapping, or one preset word standing for <code>{preset: &lt;word&gt;}</code>. A
+session class may declare the same keys in its <code>compute</code> attribute; the file
+wins over the class, key by key.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>preset</code></td>
+<td><code>latency</code>, <code>balanced</code> or <code>throughput</code></td>
+<td><code>balanced</code></td>
+<td>how the compute cores are split between threads and native libraries</td>
+</tr>
+<tr>
+<td><code>cores</code></td>
+<td>whole number, 1 or more</td>
+<td>the physical cores less <code>reserve</code></td>
+<td>the most compute cores to use</td>
+</tr>
+<tr>
+<td><code>reserve</code></td>
+<td>whole number, 0 or more</td>
+<td><code>1</code></td>
+<td>physical cores kept free for the window's thread</td>
+</tr>
+<tr>
+<td><code>switch_interval_ms</code></td>
+<td>number above 0</td>
+<td>none</td>
+<td>the interpreter's thread switch interval, in milliseconds; absent, it is left alone</td>
+</tr>
+</tbody>
+</table>
+<p><code>reserve</code> lowers the <a href="../../explanation/glossary/#compute-cores">compute cores</a>
+by its count; the session pins no thread to a core. A
+preset splits the compute cores <code>C</code> between the threads of the pool and the
+threads each call's native libraries may start:</p>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Pool threads</th>
+<th>Native threads per call</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>latency</code></td>
+<td>1</td>
+<td><code>C</code></td>
+</tr>
+<tr>
+<td><code>balanced</code></td>
+<td><code>max(2, C // 4)</code></td>
+<td><code>C // pool threads</code>, at least 1</td>
+</tr>
+<tr>
+<td><code>throughput</code></td>
+<td><code>C</code></td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">compute</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">preset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">latency</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">cores</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+</span></code></pre></div>
+<p>The section changes nothing in a session whose components ask for no
+<a href="../../explanation/glossary/#executor">executor</a>.</p>
 <h2 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -6630,38 +6856,38 @@ its own, <code>transport</code>.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">storage</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">base_dir</span><span class="p">:</span><span class="w"> </span><span class="s">"D:/experiments/2026-09"</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">max_digits</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">catalog</span><span class="p">:</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">readable</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">/data/camera</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">storage</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">base_dir</span><span class="p">:</span><span class="w"> </span><span class="s">"D:/experiments/2026-09"</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">max_digits</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">catalog</span><span class="p">:</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">readable</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">/data/camera</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <h2 id="wiring">Wiring<a class="headerlink" href="#wiring" title="Permanent link">&para;</a></h2>
 <p><code>wiring</code> maps a signal to a slot, or to a list of slots. Both are written
 <code>component.port</code>.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">wiring</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">motor_ctrl.sig_moved</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">motor_widget.refresh</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">motor_ctrl.sig_moved</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">motor_widget.refresh</span>
 </span></code></pre></div>
 <h2 id="pairs">Pairs<a class="headerlink" href="#pairs" title="Permanent link">&para;</a></h2>
 <p><code>pairs</code> lists two components by name. Each signal of one reaches each slot of
 the other that names it in its <code>signal</code>, both ways. A pairing that connects
 nothing is refused, and one naming a component that failed to build is skipped
 with a warning.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">pairs</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">motor_ctrl</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">motor_widget</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">pairs</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">motor_ctrl</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">motor_widget</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <h2 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">&para;</a></h2>
 <p><code>layout</code> sets where the views start in the window. It replaces the layout the
 session class returns from <code>window_layout()</code>, and a later file's <code>layout</code>
 replaces an earlier one whole.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">layout</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">regions</span><span class="p">:</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">center</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">image</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">plot</span><span class="p p-Indicator">]}</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stage</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">lights</span><span class="p p-Indicator">],</span><span class="nt"> current</span><span class="p">:</span><span class="w"> </span><span class="nv">stage</span><span class="p p-Indicator">}</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">right</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">plans</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">progress</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">files</span><span class="p p-Indicator">]}],</span><span class="nt"> sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]}</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">bottom</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nt">sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> right</span><span class="p">:</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="nt"> bottom</span><span class="p">:</span><span class="w"> </span><span class="nv">0.15</span><span class="p p-Indicator">}</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">hidden</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">log</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">layout</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">regions</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">center</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">image</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">plot</span><span class="p p-Indicator">]}</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stage</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">lights</span><span class="p p-Indicator">],</span><span class="nt"> current</span><span class="p">:</span><span class="w"> </span><span class="nv">stage</span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">right</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">plans</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">tabs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">progress</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">files</span><span class="p p-Indicator">]}],</span><span class="nt"> sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">bottom</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">sizes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> right</span><span class="p">:</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="nt"> bottom</span><span class="p">:</span><span class="w"> </span><span class="nv">0.15</span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span><span class="nt">hidden</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">log</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -6742,10 +6968,10 @@ answers to is logged and left out, and refused when <code>strict</code> is set.<
 <p><code>shortcuts</code> gives commands other keys than the components declare. A
 command is named <code>&lt;component&gt;.&lt;method&gt;</code>, after the component's name in the
 session and the method its shortcut runs.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">acquisition_view.run_plan</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">acquisition_view.stop_plan</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Ctrl+.</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Escape</span><span class="p p-Indicator">]</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">positioner_view.step_down</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">shortcuts</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">acquisition_view.run_plan</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ctrl+Shift+R</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">acquisition_view.stop_plan</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Ctrl+.</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">Escape</span><span class="p p-Indicator">]</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">positioner_view.step_down</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -6820,8 +7046,8 @@ order they run.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">hooks</span><span class="p">:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napari</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napari</span>
 </span></code></pre></div>
 
 

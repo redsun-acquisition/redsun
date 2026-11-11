@@ -7,6 +7,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/background-computation/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/components/</loc>
       </url>
       <url>
@@ -124,6 +127,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0037-diwire-is-the-session-registry/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0038-the-session-owns-background-computation/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
       </url>
       <url>
@@ -229,6 +235,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-a-plan/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-background-processing/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-plans-from-the-window/</loc>
       </url>
       <url>
@@ -287,6 +296,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/catalog/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/compute/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/device-sharedbox/</loc>

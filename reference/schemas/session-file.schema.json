@@ -101,6 +101,60 @@
       "title": "ComponentEntry",
       "type": "object"
     },
+    "ComputeConfig": {
+      "additionalProperties": false,
+      "description": "The `compute` section of a session file.",
+      "properties": {
+        "preset": {
+          "default": "balanced",
+          "description": "How the compute cores are split between threads and native libraries.",
+          "enum": [
+            "latency",
+            "balanced",
+            "throughput"
+          ],
+          "title": "Preset",
+          "type": "string"
+        },
+        "cores": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cap on the compute cores; the physical cores less `reserve` if unset.",
+          "title": "Cores"
+        },
+        "reserve": {
+          "default": 1,
+          "description": "Physical cores kept free for the window's thread.",
+          "minimum": 0,
+          "title": "Reserve",
+          "type": "integer"
+        },
+        "switch_interval_ms": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Interpreter thread switch interval in milliseconds; left alone if unset.",
+          "title": "Switch Interval Ms"
+        }
+      },
+      "title": "ComputeConfig",
+      "type": "object"
+    },
     "DeviceEntry": {
       "additionalProperties": true,
       "description": "A device's entry, with the keys the container keeps from its constructor.",
@@ -637,6 +691,16 @@
       "description": "Keys by command id, `<component>.<method>`, replacing what the component declares; `null` unbinds.",
       "title": "Shortcuts",
       "type": "object"
+    },
+    "compute": {
+      "$ref": "#/$defs/ComputeConfig",
+      "default": {
+        "preset": "balanced",
+        "cores": null,
+        "reserve": 1,
+        "switch_interval_ms": null
+      },
+      "description": "Background computation: the preset and the cores it may use."
     },
     "storage": {
       "anyOf": [
