@@ -11,7 +11,14 @@ from redsun.compute import Limits
 from .._structural import without_none
 from ..compute._future import BrokenPool
 from ..compute._pool import Pool, PoolExecutor, pool_key
-from ..compute._settings import compute_cores, physical_cores, split
+from ..compute._processes import ProcessPool
+from ..compute._settings import (
+    ProcessPoolSettings,
+    compute_cores,
+    physical_cores,
+    split,
+)
+from ..compute._threads import ThreadPool
 from ..compute._usage import Watchdog
 from ..injection._registry import SESSION
 from ._factories import resolved
@@ -82,9 +89,21 @@ def asks_for_pool(owner: str, fn: Callable[..., Any]) -> TypeError | None:
     )
 
 
+def settings_for(
+    pool_type: type[Pool], config: ComputeConfig, cores: int
+) -> ThreadPoolSettings | ProcessPoolSettings:
+    """Return the settings of the pool of *pool_type* a session with *config* makes.
+
+    A worker process gets one native thread unless its group says otherwise.
+    """
+    if pool_type is ProcessPool:
+        return ProcessPoolSettings(config.processes, 1, config.priority)
+    return split(config.preset, cores)
+
+
 def pool_resource(
     pool_type: type[Pool],
-    settings: ThreadPoolSettings,
+    settings: ThreadPoolSettings | ProcessPoolSettings,
     limits: Limits,
     delivery: Delivery,
 ) -> Callable[[], Generator[Pool, None, None]]:
@@ -125,7 +144,9 @@ class SessionCompute:
         self.registry = registry
         self.limits = Limits(config.switch_interval_ms)
         self.delivery = delivery
-        self.settings: dict[tuple[type[Pool], str | None], ThreadPoolSettings] = {}
+        self.settings: dict[
+            tuple[type[Pool], str | None], ThreadPoolSettings | ProcessPoolSettings
+        ] = {}
         self.executors: dict[
             tuple[str, type[PoolExecutor[Any]]], PoolExecutor[Any]
         ] = {}
@@ -143,7 +164,7 @@ class SessionCompute:
             pool_type = kind.pool_type
             if (pool_type, None) in self.settings:
                 continue
-            settings = split(self.config.preset, self.cores)
+            settings = settings_for(pool_type, self.config, self.cores)
             self.settings[pool_type, None] = settings
             self.registry.register_resource(
                 pool_key(pool_type, None),
@@ -183,10 +204,10 @@ class SessionCompute:
         )
         if not pools:
             return
-        # every pool is a shared one, split from the same cores, so any of them
-        # gives the native threads of the shared split
-        self.limits.apply(pools[0].native_threads)
-        self.watchdog.start()
+        threaded = next((pool for pool in pools if isinstance(pool, ThreadPool)), None)
+        if threaded is not None:
+            self.limits.apply(threaded.native_threads)
+            self.watchdog.start()
         for pool in pools:
             try:
                 pool.start()
@@ -200,10 +221,17 @@ class SessionCompute:
         if not self.settings:
             return []
         lines = [f"Compute: {self.cores} cores, preset {self.config.preset}"]
-        lines.extend(
-            f"{kind.__name__}: {s.threads} threads, {s.native_threads} native threads each"
-            for (kind, _), s in self.settings.items()
-        )
+        for (kind, _), s in self.settings.items():
+            match s:
+                case ProcessPoolSettings(processes, native_threads, priority):
+                    lines.append(
+                        f"{kind.__name__}: {processes} processes, "
+                        f"{native_threads} native thread each, priority {priority}"
+                    )
+                case _:
+                    lines.append(
+                        f"{kind.__name__}: {s.threads} threads, {s.native_threads} native threads each"
+                    )
         if self.broken:
             lines.append(
                 "Broken pools: "

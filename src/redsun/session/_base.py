@@ -130,7 +130,7 @@ if TYPE_CHECKING:
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
-    from redsun.compute import ThreadPoolSettings
+    from redsun.compute import ProcessPoolSettings, ThreadPoolSettings
     from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
     from redsun.view import Placement, WindowLayout
@@ -553,7 +553,9 @@ class Session(BuildableSession):
     @property
     def pool_settings(
         self,
-    ) -> Mapping[tuple[type[Pool], str | None], ThreadPoolSettings]:
+    ) -> Mapping[
+        tuple[type[Pool], str | None], ThreadPoolSettings | ProcessPoolSettings
+    ]:
         """The settings of each pool a component asked for, by pool class and group.
 
         Empty before the build's registry step, after `shutdown`, and for a

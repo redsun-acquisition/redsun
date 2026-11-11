@@ -8,13 +8,17 @@ from __future__ import annotations
 from typing import assert_type
 
 from redsun import Session
-from redsun.compute import Future, ThreadExecutor
+from redsun.compute import Future, ProcessExecutor, ThreadExecutor
 from redsun.compute._pool import Pool
 
 
 def check(executor: ThreadExecutor) -> None:
     assert_type(executor.submit(len, "abc"), Future[int])
     assert_type(executor.pool_type, type[Pool])
+
+
+def check_processes(executor: ProcessExecutor) -> None:
+    assert_type(executor.submit(len, "a"), Future[int])
 
 
 async def check_run(executor: ThreadExecutor) -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import sys
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -18,12 +19,16 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from multiprocessing.connection import Listener
 
-    from redsun.compute import Priority
+    from redsun.compute import Priority, ProcessExecutor
 
 
 def add(a: int, b: int) -> int:
     """Return the sum."""
     return a + b
+
+
+def fit(lock: object) -> None:
+    """Stand for a call whose argument is handed to a worker."""
 
 
 def crash() -> None:
@@ -245,3 +250,24 @@ def test_only_a_closed_pipe_counts_as_a_worker_gone(
     finally:
         worker.channel.close()
         there.close()
+
+
+def test_free_threaded_fallback_uses_threads(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run calls on threads of this process, after a pickle round trip, when the GIL is off."""
+    monkeypatch.setattr(sys, "_is_gil_enabled", lambda: False, raising=False)
+    with ProcessPool(2) as pool:
+        assert (
+            pool.submit(threading.get_ident).result(timeout=5) != threading.get_ident()
+        )
+        assert isinstance(
+            pool.submit(fit, threading.Lock()).exception(timeout=5), TypeError
+        )
+
+
+def test_inline_processes_catches_an_unpicklable_argument(
+    inline_processes: ProcessExecutor,
+) -> None:
+    """Fail a call whose argument could not reach a real worker."""
+    assert isinstance(
+        inline_processes.submit(fit, threading.Lock()).exception(), TypeError
+    )

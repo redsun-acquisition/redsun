@@ -23,7 +23,15 @@ from redsun import (
     Session,
     provides,
 )
-from redsun.compute import Future, ThreadExecutor, ThreadPool, ThreadPoolSettings
+from redsun.compute import (
+    Future,
+    ProcessExecutor,
+    ProcessPool,
+    ProcessPoolSettings,
+    ThreadExecutor,
+    ThreadPool,
+    ThreadPoolSettings,
+)
 from redsun.compute._future import PRE_START
 from redsun.presenter import AcquisitionPresenter
 from redsun.qt import QtSession
@@ -84,6 +92,13 @@ class Failing:
 
     def __init__(self, name: str, executor: ThreadExecutor) -> None:
         raise RuntimeError("no median today")
+
+
+class FailingProcess:
+    """Presenter failing to build after asking for a process executor."""
+
+    def __init__(self, name: str, executor: ProcessExecutor) -> None:
+        raise RuntimeError("no processes today")
 
 
 class Plain:
@@ -190,6 +205,10 @@ class FailsAfterAsking(Session):
     plain: AsPresenter[Plain]
 
 
+class FailsAfterAskingForProcesses(Session):
+    fails: AsPresenter[FailingProcess]
+
+
 class NoCompute(Session):
     plain: AsPresenter[Plain]
 
@@ -283,6 +302,15 @@ def test_the_file_lays_over_the_class(
     monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 8)
     session = build(Latency, {"compute": {"cores": 3}})
     assert session.pool_settings == {(ThreadPool, None): ThreadPoolSettings(1, 3)}
+
+
+def test_process_settings_come_from_the_file(build: BuildSession) -> None:
+    """Report a ProcessPool of the file's processes and priority, with one native thread."""
+    session = build(
+        FailsAfterAskingForProcesses,
+        {"compute": {"processes": 3, "priority": "low"}},
+    )
+    assert session.pool_settings[ProcessPool, None] == ProcessPoolSettings(3, 1, "low")
 
 
 def test_asking_for_a_pool_names_the_executor(

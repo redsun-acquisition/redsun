@@ -5,21 +5,33 @@ from __future__ import annotations
 import os
 import re
 import sys
-from typing import final
+import threading
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from mock_pkg import compute_calls, compute_qt
+from threadpoolctl import threadpool_info
 
-from redsun.compute import ProcessPool, WorkerCrashed
-from redsun.compute._pool import PoolExecutor
+from redsun import AsPresenter, Session
+from redsun.compute import ProcessExecutor, ProcessPool, WorkerCrashed
+
+if TYPE_CHECKING:
+    from redsun.testing import BuildSession
 
 pytestmark = [pytest.mark.processes, pytest.mark.usefixtures("launchable")]
 
 
-@final
-class OwnerExecutor(PoolExecutor[ProcessPool]):
-    """Submits one owner's calls to a process pool."""
+class Computer:
+    """Presenter taking a process executor in its constructor."""
+
+    def __init__(self, name: str, executor: ProcessExecutor) -> None:
+        self.name = name
+        self.executor = executor
+
+
+class Computes(Session):
+    computer: AsPresenter[Computer]
 
 
 def test_a_call_runs_in_a_worker() -> None:
@@ -34,9 +46,9 @@ def test_a_call_runs_in_a_worker() -> None:
 def test_a_crashing_call_fails_alone(caplog: pytest.LogCaptureFixture) -> None:
     """Fail a call that kills its workers, log the exit code, and run another owner's call."""
     with ProcessPool(1) as pool:
-        crash = OwnerExecutor(pool, "a").submit(compute_calls.crash, 3)
+        crash = ProcessExecutor(pool, "a").submit(compute_calls.crash, 3)
         assert isinstance(crash.exception(timeout=60), WorkerCrashed)
-        added = OwnerExecutor(pool, "b").submit(compute_calls.add, 2, 3)
+        added = ProcessExecutor(pool, "b").submit(compute_calls.add, 2, 3)
         assert added.result(timeout=30) == 5
     assert "exited with code 3" in caplog.text
 
@@ -92,3 +104,22 @@ def test_a_function_whose_module_loads_qt_is_named(
         assert pool.submit(compute_qt.answer).result(timeout=30) == 42
         assert pool.submit(compute_qt.answer).result(timeout=30) == 42
     assert len(re.findall(r"answer imported [\w, ]*qtpy", caplog.text)) == 1
+
+
+def test_a_component_gets_a_process_executor(build: BuildSession) -> None:
+    """Hand a presenter a ProcessExecutor whose call runs in a worker once the session starts."""
+    session = build(Computes)
+    assert session.computer.executor.pool_type is ProcessPool
+    future = session.computer.executor.submit(compute_calls.pid)
+    assert future.result(timeout=30) != os.getpid()
+
+
+def test_a_session_with_only_processes_leaves_its_own_limits(
+    build: BuildSession,
+) -> None:
+    """Leave this process's native limits, switch interval and watchdog alone when only processes are asked for."""
+    found = threadpool_info()
+    interval = sys.getswitchinterval()
+    build(Computes, {"compute": {"switch_interval_ms": 1}})
+    assert threadpool_info() == found and sys.getswitchinterval() == interval
+    assert [t for t in threading.enumerate() if t.name == "redsun-watchdog"] == []

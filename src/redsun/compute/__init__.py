@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ._future import BrokenPool, Future, WorkerCrashed
-from ._processes import ProcessPool
+from ._processes import ProcessExecutor, ProcessPool
 from ._settings import (
     ComputeSettings,
     Limits,
@@ -23,6 +23,7 @@ __all__ = [
     "OwnerUsage",
     "Preset",
     "Priority",
+    "ProcessExecutor",
     "ProcessPool",
     "ProcessPoolSettings",
     "ThreadExecutor",

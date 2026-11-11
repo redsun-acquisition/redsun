@@ -23,7 +23,7 @@ from ..services._transports import SHAREDBOX
 from ._channel import Channel, UnreadableMessage
 from ._future import BrokenPool, WorkerCrashed
 from ._pickling import check_function, name_of, round_trip
-from ._pool import Pool, State
+from ._pool import Pool, PoolExecutor, State
 from ._settings import Limits
 
 if TYPE_CHECKING:
@@ -488,3 +488,8 @@ class ProcessPool(Pool):
             worker.stop()
         if self._listener is not None:
             self._listener.close()
+
+
+@final
+class ProcessExecutor(PoolExecutor[ProcessPool]):
+    """Runs one owner's calls in a shared pool of worker processes."""
