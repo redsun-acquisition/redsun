@@ -270,6 +270,7 @@ class Qt(Frontend):
         "bottom": Row,
     }
     hides: ClassVar[bool] = True
+    results_thread: ClassVar[SlotThread] = "main"
 
     @classmethod
     def check_view(cls, view: type, where: str) -> None:

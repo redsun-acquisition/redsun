@@ -18,6 +18,7 @@ icon: lucide/code
         - collect_after_module
         - keep_automatic_collection_off
         - start_service
+        - inline_threads
 
 ## redsun.testing.qt
 

@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import logging
 import sys
+import threading
 import weakref
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -34,6 +35,7 @@ from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
+from redsun.compute import ComputeSettings, Preset  # noqa: TC001
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
 from redsun.injection import Registry, rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
@@ -72,6 +74,7 @@ from .._hooks import (
 )
 from .._settings import Settings
 from .._structural import is_optional, without_none
+from ..compute._future import Delivery
 from ..injection._provides import (
     claim_shared,
     constant,
@@ -81,6 +84,7 @@ from ..injection._provides import (
 )
 from ..injection._registry import SESSION
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
+from ._compute import SessionCompute, asks_for_pool, component_kinds, executor_params
 from ._declarations import (
     Declaration,
     HookDeclaration,
@@ -126,11 +130,13 @@ if TYPE_CHECKING:
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
+    from redsun.compute import ThreadPoolSettings
     from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
     from redsun.view import Placement, WindowLayout
 
     from .._settings import JsonValue
+    from ..compute._pool import Pool
     from ._declarations import Key
     from ._profile import ProfileKind
     from ._questions import Shape
@@ -266,6 +272,7 @@ class Session(BuildableSession):
         "_callbacks",
         "_catalog",
         "_class_counts",
+        "_compute",
         "_config",
         "_declarations",
         "_device_index",
@@ -308,6 +315,12 @@ class Session(BuildableSession):
     hand. Several layer in the order given, and a subclass's layer over its
     bases', so a base holds what every session of an instrument shares and a
     subclass holds what makes it that session.
+    """
+
+    compute: ClassVar[Preset | ComputeSettings | None] = None
+    """The `compute` section of this session: a preset word or a mapping.
+
+    The session file's `compute` section wins over it, key by key.
     """
 
     providers: ClassVar[list[type]] = []
@@ -414,6 +427,7 @@ class Session(BuildableSession):
         )
         self._settings: Settings | None = None
         self._registry: Registry | None = None
+        self._compute: SessionCompute | None = None
         # the component sharing each key, carried across the layer steps so
         # that a presenter and a view offering one type still clash
         self._shared: dict[Key, str] = {}
@@ -537,6 +551,17 @@ class Session(BuildableSession):
         return self._settings
 
     @property
+    def pool_settings(
+        self,
+    ) -> Mapping[tuple[type[Pool], str | None], ThreadPoolSettings]:
+        """The settings of each pool a component asked for, by pool class and group.
+
+        Empty before the build's registry step, after `shutdown`, and for a
+        session no component of which asks for an executor.
+        """
+        return {} if self._compute is None else dict(self._compute.settings)
+
+    @property
     def is_built(self) -> bool:
         """Whether `build` has completed."""
         return self._is_built
@@ -550,6 +575,8 @@ class Session(BuildableSession):
         """
         found: list[Source] = []
         for klass in reversed(type(self).__mro__):
+            if (compute := klass.__dict__.get("compute")) is not None:
+                found.append({"compute": compute})
             found.extend(as_sources(klass.__dict__.get("config")))
         return found + as_sources(self._config)
 
@@ -1252,6 +1279,23 @@ class Session(BuildableSession):
         self._share(registry, self._configuration().providers)
         for declaration in self._components():
             self._claim(registry, declaration)
+        self._compute = SessionCompute(
+            self._configuration().compute,
+            Delivery(self.frontend.results_thread, threading.current_thread()),
+            registry,
+        )
+        self._compute.register(
+            {
+                kind
+                for declaration in self._components()
+                for kind in component_kinds(declaration.cls)
+            },
+        )
+        # registered before the pools' teardown, so it runs after it; it
+        # changes nothing when no pool started
+        self.on_release(self._compute.limits.restore)
+        self.on_release(registry.close)
+        self.on_release(self._compute.watchdog.stop)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
@@ -1403,6 +1447,8 @@ class Session(BuildableSession):
                 for failure in self._failed_hooks
             )
             summary += f"\nHooks skipped: {skipped}"
+        if self._compute is not None:
+            summary += "".join(f"\n{line}" for line in self._compute.summary())
         named_services = {
             s for d in self._declarations.values() for s in d.services.values()
         }
@@ -1496,6 +1542,7 @@ class Session(BuildableSession):
         self._filled.clear()
         self._shared_values.clear()
         self._registry = None
+        self._compute = None
         logger.info("Session shut down")
 
     def serialize(self) -> dict[str, Any]:
@@ -1770,6 +1817,21 @@ class Session(BuildableSession):
                     declaration.name,
                     reason,
                 )
+        self._require_compute().start(built)
+
+    def _require_compute(self) -> SessionCompute:
+        """Return the pools the registry step set up.
+
+        Raises
+        ------
+        RuntimeError
+            If the registry step has not run yet.
+        """
+        if self._compute is None:
+            raise RuntimeError(
+                "The registry step has to run before a component is built or set up"
+            )
+        return self._compute
 
     def _require_registry(self) -> Registry:
         """Return the registry the registry step opened.
@@ -1798,27 +1860,42 @@ class Session(BuildableSession):
         TypeError
             If the `setup` asks for something nothing in the session declares.
         """
+        # `as_protocol` cannot take the generic `HasSetup`, which mypy
+        # refuses as a type form; the caller checked the class
+        ready = cast("HasSetup[...]", declaration.instance)
+        refusal = asks_for_pool(f"{declaration.name}.setup", ready.setup)
+        if refusal is not None:
+            return refusal
+        compute = self._require_compute()
+        executors: dict[str, object] = {
+            pname: compute.executor(kind, declaration.name, self.on_release)
+            for pname, kind in executor_params(ready.setup).items()
+        }
         params = get_setup_params(declaration.cls)
         questions = {
             pname: shape
             for pname, hint in params.items()
-            if (shape := shape_of(hint)) is not None
+            if pname not in executors and (shape := shape_of(hint)) is not None
         }
         reason = self._not_built(
             registry,
             f"{declaration.name}.setup",
-            {p: h for p, h in params.items() if p not in questions},
+            {
+                p: h
+                for p, h in params.items()
+                if p not in questions and p not in executors
+            },
         )
         if reason is not None:
             return reason
         try:
-            answers = self._answers_for(declaration, questions, built)
+            answers = {
+                **executors,
+                **self._answers_for(declaration, questions, built),
+            }
         except NoAnswer as e:
             return TypeError(str(e))
         try:
-            # `as_protocol` cannot take the generic `HasSetup`, which mypy
-            # refuses as a type form; the caller checked the class
-            ready = cast("HasSetup[...]", declaration.instance)
             registry.call(setup_call(ready, declaration.name, answers))
         except Exception as e:  # noqa: BLE001 - a setup must not abort the app
             return e
@@ -1892,9 +1969,20 @@ class Session(BuildableSession):
             If the registry step has not opened the registry yet.
         """
         registry = self._require_registry()
+        compute = self._require_compute()
         declarations = [d for d in self._components() if d.kind is layer]
         view_arguments = self.view_arguments if layer is Layer.VIEW else {}
         for declaration in declarations:
+            refusal = asks_for_pool(declaration.name, declaration.cls)
+            if refusal is not None:
+                self._skip(declaration, refusal)
+                continue
+            # made before the component, so its own teardown is released first,
+            # the executors of its setup included
+            executors = {
+                kind: compute.executor(kind, declaration.name, self.on_release)
+                for kind in component_kinds(declaration.cls)
+            }
             passed = {
                 **view_arguments,
                 **{
@@ -1902,6 +1990,10 @@ class Session(BuildableSession):
                     for pname, protocol in device_questions(
                         declaration.cls, declaration.cfg_kwargs
                     ).items()
+                },
+                **{
+                    pname: executors[kind]
+                    for pname, kind in executor_params(declaration.cls).items()
                 },
             }
             params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)

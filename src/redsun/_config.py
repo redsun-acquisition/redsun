@@ -33,6 +33,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from redsun.compute import Preset
 from redsun.errors import ConfigurationError
 from redsun.services._transports import TRANSPORT_KEY, TRANSPORTS, transport_of
 from redsun.view import Column, Row, Tabs, WindowLayout
@@ -143,7 +144,7 @@ def read(source: Source) -> dict[str, Any]:
         If the file's top level is not a mapping.
     """
     if not isinstance(source, (str, Path)):
-        return dict(source)
+        return with_compute_section(dict(source))
     with open(source) as fh:
         data = yaml.safe_load(fh)
     if data is None:
@@ -153,6 +154,17 @@ def read(source: Source) -> dict[str, Any]:
             f"Expected a YAML mapping at top level in {source}, got "
             f"{type(data).__name__}"
         )
+    return with_compute_section(data)
+
+
+def with_compute_section(data: dict[str, Any]) -> dict[str, Any]:
+    """Return *data* with a bare preset word under `compute` written as a section.
+
+    A source layered over another then merges key by key rather than
+    replacing a section the other source wrote as a mapping.
+    """
+    if isinstance(data.get("compute"), str):
+        data = {**data, "compute": {"preset": data["compute"]}}
     return data
 
 
@@ -570,6 +582,22 @@ class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
         return WindowLayout(self.nodes(), self.sizes, self.hidden)
 
 
+class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """The `compute` section of a session file."""
+
+    preset: Preset = "balanced"
+    """How the compute cores are split between threads and native libraries."""
+
+    cores: int | None = Field(default=None, ge=1)
+    """Cap on the compute cores; the physical cores less `reserve` if unset."""
+
+    reserve: int = Field(default=1, ge=0)
+    """Physical cores kept free for the window's thread."""
+
+    switch_interval_ms: float | None = Field(default=None, gt=0)
+    """Interpreter thread switch interval in milliseconds; left alone if unset."""
+
+
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
@@ -614,6 +642,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     shortcuts: dict[str, str | list[str] | None] = {}
     """Keys by command id, `<component>.<method>`, replacing what the component declares; `null` unbinds."""
+
+    compute: ComputeConfig = ComputeConfig()
+    """Background computation: the preset and the cores it may use."""
 
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""

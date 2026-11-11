@@ -23,6 +23,7 @@ them together.
 - [How to wire components together](wire-components.md)
 - [How to offer a pairing](offer-a-pairing.md)
 - [How to share a value between components](share-a-value.md)
+- [How to run background processing](run-background-processing.md)
 - [How to package components as a plugin](package-a-plugin.md)
 - [How to test a plugin](test-a-plugin.md)
 - [How to connect a device on demand](connect-a-device-on-demand.md)

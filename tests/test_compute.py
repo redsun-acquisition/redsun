@@ -1,0 +1,372 @@
+"""A session hands its components executors and starts the pools behind them."""
+
+from __future__ import annotations
+
+import logging
+import sys
+import threading
+from typing import TYPE_CHECKING, Annotated
+
+import bluesky.plan_stubs as bps
+import numpy as np
+import pytest
+from bluesky.utils import MsgGenerator
+from ophyd_async.core import StandardReadable, soft_signal_rw
+from threadpoolctl import threadpool_info
+
+from docs.examples.background_processing import MedianPresenter
+from redsun import (
+    AsDevice,
+    AsPresenter,
+    Declare,
+    RegistrationError,
+    Session,
+    provides,
+)
+from redsun.compute import Future, ThreadExecutor, ThreadPool, ThreadPoolSettings
+from redsun.compute._future import PRE_START
+from redsun.presenter import AcquisitionPresenter
+from redsun.qt import QtSession
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+
+    from numpy.typing import NDArray
+    from qtpy.QtWidgets import QApplication
+
+    from redsun import PlanEntry
+    from redsun.testing import BuildSession
+
+
+class Median:
+    """Presenter taking an executor in its constructor."""
+
+    def __init__(self, name: str, executor: ThreadExecutor) -> None:
+        self.name = name
+        self.executor = executor
+
+
+class SetupAsker:
+    """Presenter asking for its executor in both its constructor and `setup`."""
+
+    def __init__(self, name: str, executor: ThreadExecutor) -> None:
+        self.name = name
+        self.executor = executor
+        self.from_setup: ThreadExecutor | None = None
+
+    def setup(self, executor: ThreadExecutor) -> None:
+        self.from_setup = executor
+
+
+class Warmer:
+    """Presenter submitting a call from `setup`."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.warmed = threading.Event()
+
+    def setup(self, executor: ThreadExecutor) -> None:
+        executor.submit(self.warmed.set)
+
+
+class Waiter:
+    """Presenter waiting for a result in `setup`, before the pool starts."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(self, executor: ThreadExecutor) -> None:
+        executor.submit(pow, 2, 3).result()
+
+
+class Failing:
+    """Presenter failing to build after asking for an executor."""
+
+    def __init__(self, name: str, executor: ThreadExecutor) -> None:
+        raise RuntimeError("no median today")
+
+
+class Plain:
+    """Presenter asking for nothing."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class PoolAsker:
+    """Presenter asking for a pool directly."""
+
+    def __init__(self, name: str, pool: ThreadPool) -> None:
+        self.name = name
+
+
+class ExecutorSharer:
+    """Presenter sharing an executor of its own."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @provides
+    def executor(self) -> ThreadExecutor:
+        raise AssertionError("never read")
+
+
+class SlowCaller:
+    """Presenter whose call finishes once its gate opens."""
+
+    def __init__(self, name: str, executor: ThreadExecutor) -> None:
+        self.name = name
+        self.executor = executor
+        self.gate = threading.Event()
+        self.received: list[object] = []
+
+    def start_slow(self) -> Future[bool]:
+        future = self.executor.submit(self.gate.wait, 5)
+        future.then(self.received.append)
+        return future
+
+
+class ShutdownLogger:
+    """Presenter logging its own shutdown."""
+
+    def __init__(self, name: str, executor: ThreadExecutor) -> None:
+        self.name = name
+
+    def shutdown(self) -> None:
+        logging.getLogger("redsun.tests").info("logs shut down")
+
+
+class FrameCamera(StandardReadable):
+    """Camera whose frame a plan sets before each reading."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.frame = soft_signal_rw(np.ndarray, np.zeros((4, 4)))
+        super().__init__(name=name)
+
+
+class FramePlans:
+    """Offers a run of three frames of 1, 2 and 9."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        """Return the plan offered."""
+        return {"frames": {"plan": self.frames}}
+
+    def frames(self, camera: FrameCamera) -> MsgGenerator[None]:
+        """Read *camera* once per frame value, in one run."""
+        yield from bps.open_run()
+        for value in (1, 2, 9):
+            yield from bps.mv(camera.frame, np.full((4, 4), value))
+            yield from bps.trigger_and_read([camera])
+        yield from bps.close_run()
+
+
+def watchdog_threads() -> list[threading.Thread]:
+    """Return the watchdog threads alive."""
+    return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
+
+
+class OneMedian(Session):
+    median: AsPresenter[Median]
+
+
+class SetupAsks(Session):
+    asks: AsPresenter[SetupAsker]
+
+
+class Warms(Session):
+    warms: AsPresenter[Warmer]
+
+
+class WaitsInSetup(Session):
+    waits: AsPresenter[Waiter]
+
+
+class FailsAfterAsking(Session):
+    fails: AsPresenter[Failing]
+    plain: AsPresenter[Plain]
+
+
+class NoCompute(Session):
+    plain: AsPresenter[Plain]
+
+
+class AsksForPool(Session):
+    pool: AsPresenter[PoolAsker]
+
+
+class ProvidesExecutor(Session):
+    sharer: AsPresenter[ExecutorSharer]
+
+
+class Slow(Session):
+    slow: AsPresenter[SlowCaller]
+
+
+class LogsShutdown(Session):
+    logs: AsPresenter[ShutdownLogger]
+
+
+class MedianLab(QtSession):
+    camera: AsDevice[FrameCamera]
+    plans: AsPresenter[FramePlans]
+    acquisition: AsPresenter[AcquisitionPresenter]
+    median: Annotated[AsPresenter[MedianPresenter], Declare(source="camera-frame")]
+
+
+def test_a_component_gets_an_executor_and_its_result(build: BuildSession) -> None:
+    """Hand a presenter a ThreadExecutor whose call runs once the session has started its pool."""
+    session = build(OneMedian)
+    future = session.median.executor.submit(pow, 2, 3)
+    assert future.result(timeout=5) == 8
+    assert session.median.executor.pool_type is ThreadPool
+
+
+def test_constructor_and_setup_share_one_executor(build: BuildSession) -> None:
+    """Give a component one executor per kind, in its constructor and its setup alike."""
+    session = build(SetupAsks)
+    assert session.asks.from_setup is session.asks.executor
+
+
+def test_setup_calls_wait_for_start(build: BuildSession) -> None:
+    """Run a call submitted from setup once the pool starts."""
+    session = build(Warms)
+    assert session.warms.warmed.wait(timeout=5)
+
+
+def test_setup_result_raises_and_component_stays_in_place(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """Refuse result() in setup with the pre-start message and keep the component, not set up."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(WaitsInSetup)
+    assert "waits" in session.presenters
+    assert f"Failed to set up presenter 'waits': {PRE_START}" in caplog.text
+
+
+def test_pool_of_failed_component_never_starts(build: BuildSession) -> None:
+    """Make but never start a pool whose only holder failed to build, and change no limit."""
+    interval = sys.getswitchinterval()
+    session = build(FailsAfterAsking, {"compute": {"switch_interval_ms": 1}})
+    assert "fails" not in session.presenters
+    assert sys.getswitchinterval() == interval
+
+
+def test_session_without_executors_changes_nothing(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Make no pool, start no watchdog, and leave native limits and the switch interval as found."""
+
+    def unread() -> int:
+        raise AssertionError("the physical cores were read")
+
+    monkeypatch.setattr("redsun.session._compute.physical_cores", unread)
+    found = threadpool_info()
+    interval = sys.getswitchinterval()
+    session = build(NoCompute, {"compute": {"switch_interval_ms": 1}})
+    assert session.pool_settings == {}
+    assert threadpool_info() == found and sys.getswitchinterval() == interval
+    assert watchdog_threads() == []
+
+
+def test_the_file_lays_over_the_class(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Size the shared pool from the class's preset and the file's cores."""
+
+    class Latency(OneMedian):
+        compute = "latency"
+
+    monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 8)
+    session = build(Latency, {"compute": {"cores": 3}})
+    assert session.pool_settings == {(ThreadPool, None): ThreadPoolSettings(1, 3)}
+
+
+def test_asking_for_a_pool_names_the_executor(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """Skip a component asking for a pool, naming the executor to ask for instead."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(AsksForPool)
+    assert "pool" not in session.presenters
+    assert "ask for ThreadExecutor instead" in caplog.text
+
+
+def test_providing_an_executor_is_refused(build: BuildSession) -> None:
+    """Refuse a provider whose provided type is an executor."""
+    with pytest.raises(
+        RegistrationError, match="the session makes pools and executors"
+    ):
+        build(ProvidesExecutor)
+
+
+def test_a_late_result_skips_a_released_component(build: BuildSession) -> None:
+    """Drop the callback of a call that finishes after its owner shut down."""
+    session = build(Slow)
+    presenter = session.slow
+    future = presenter.start_slow()
+    done = threading.Event()
+    future.add_done_callback(lambda _: done.set())
+    session.shutdown()
+    presenter.gate.set()
+    assert done.wait(5)
+    assert presenter.received == []
+
+
+def test_the_pool_stops_after_its_components(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Shut a component down before its pool's teardown logs the pool's summary."""
+    caplog.set_level(logging.INFO, logger="redsun")
+    session = build(LogsShutdown)
+    session.shutdown()
+    messages = [r.getMessage() for r in caplog.records]
+    component = messages.index("logs shut down")
+    pool = next(i for i, m in enumerate(messages) if m.startswith("thread pool:"))
+    assert component < pool
+
+
+def test_the_watchdog_runs_with_the_pools_and_stops_at_shutdown(
+    build: BuildSession,
+) -> None:
+    """Run one watchdog thread and the switch interval while a pool runs, and restore both at shutdown."""
+    interval = sys.getswitchinterval()
+    session = build(OneMedian, {"compute": {"switch_interval_ms": 1}})
+    assert len(watchdog_threads()) == 1
+    assert sys.getswitchinterval() == 0.001
+    session.shutdown()
+    assert watchdog_threads() == []
+    assert sys.getswitchinterval() == interval
+
+
+@pytest.mark.qt
+def test_a_run_s_documents_reach_a_presenter_that_computes_in_the_pool(
+    qapp: QApplication,
+    build: BuildSession,
+    monkeypatch: pytest.MonkeyPatch,
+    wait_until: Callable[..., bool],
+) -> None:
+    """Compute the median of a run's frames on a pool thread and publish it on the main thread."""
+    computed_on: list[str] = []
+
+    def median_of(frames: list[NDArray[np.uint16]]) -> NDArray[np.float64]:
+        computed_on.append(threading.current_thread().name)
+        return np.median(np.stack(frames), axis=0)
+
+    monkeypatch.setattr("docs.examples.background_processing.median_of", median_of)
+    session = build(MedianLab, {"mock": True})
+    published: list[tuple[NDArray[np.float64], str]] = []
+    session.median.sig_median.connect(
+        lambda m: published.append((m, threading.current_thread().name))
+    )
+
+    session.acquisition.launch("frames", {"camera": "camera"}, ["median"])
+
+    assert wait_until(lambda: bool(published))
+    median, published_on = published[-1]
+    assert np.array_equal(median, np.full((4, 4), 2))
+    assert published_on == threading.main_thread().name
+    assert threading.main_thread().name not in computed_on

@@ -56,6 +56,7 @@ release notes.
 | choose where files go | [`redsun.path_provider`](api/path_provider.md) |
 | launch or attach to a service | [`redsun.services`](api/services.md) |
 | serve a `fastcs` controller over shared memory and build its device | [`redsun.services.sharedbox`](api/services-sharedbox.md), [`redsun.device.sharedbox`](api/device-sharedbox.md) |
+| run work off the main thread | [`redsun.compute`](api/compute.md) |
 | test a plugin's components and services | [`redsun.testing`](api/testing.md) |
 | log from a component | [`redsun.log`](api/log.md) |
 | catch what a session raises | [`redsun.errors`](api/errors.md) |
@@ -68,6 +69,8 @@ Find a class or a function by the module you import it from.
     - [`redsun.aio`](api/aio.md): run a coroutine on the event loop the
       session shares
     - [`redsun.catalog`](api/catalog.md): the catalog of runs a session keeps
+    - [`redsun.compute`](api/compute.md): the threads a session shares
+      between its components, and the executors they submit calls through
     - `redsun.device`: devices a session builds from what a service serves
         - [`redsun.device.sharedbox`](api/device-sharedbox.md): a device
           filled from the boxes of a `fastcs` controller

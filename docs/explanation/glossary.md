@@ -100,6 +100,13 @@ what came after it. The term comes from [`bluesky`](#bluesky).
 A component is a [device](#device), a [presenter](#presenter) or a
 [view](#view): one of the objects a session makes and owns.
 
+### Compute cores
+
+The compute cores are the cores the session's [pools](#pool) may use: the
+physical cores of the computer, less one kept for the window's thread. A
+core running two hardware threads counts once. The `compute` section of the
+[session file](#session-file) can lower the count.
+
 ### Configuration
 
 The configuration is the set of settings a session is built from. It comes
@@ -177,6 +184,13 @@ EPICS is a set of tools for controlling instruments over a network. A server
 offers values by name, and a program that can reach it reads them and, where
 the server allows, sets them. See
 [epics-controls.org](https://epics-controls.org/).
+
+### Executor
+
+An executor is a component's own handle on a [pool](#pool), which it asks for
+by annotating a constructor parameter with
+[`ThreadExecutor`][redsun.compute.ThreadExecutor]. The component submits its
+calls through it, and the session shuts it down with the component.
 
 ### Frontend
 
@@ -256,6 +270,12 @@ present.
 hardware, directly or through a [service](#service). See the
 [documentation of `ophyd-async`](https://blueskyproject.io/ophyd-async/main/index.html).
 
+### Owner
+
+The owner of an [executor](#executor) is the component holding it. The
+executor carries the owner's name, so the counts and log lines of a
+[pool](#pool) say which component made each call.
+
 ### Pairing
 
 A pairing is a line of the `pairs` section of a session file, or a
@@ -296,6 +316,12 @@ read from the plan's signature.
 
 A plugin is an installed package that offers components, services and
 [providers](#provider) to sessions through its [manifest](#manifest).
+
+### Pool
+
+A pool is a set of threads the session starts and stops, which every
+component asking for the same kind of [executor](#executor) shares. Its size
+comes from the [compute cores](#compute-cores).
 
 ### Port
 

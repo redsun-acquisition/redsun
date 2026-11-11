@@ -6066,6 +6066,7 @@ dependencies = [
     { name = "psygnal" },
     { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "threadpoolctl" },
     { name = "typing-extensions" },
 ]
 
@@ -6344,6 +6345,7 @@ requires-dist = [
     { name = "superqt", marker = "extra == 'qlementine-pyside'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qt-common'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'testing-qt'", specifier = ">=0.9.0" },
+    { name = "threadpoolctl", specifier = ">=3.7.0" },
     { name = "tiled", extras = ["client", "server"], marker = "extra == 'tiled'", specifier = ">=0.2.20" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]

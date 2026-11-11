@@ -46,3 +46,4 @@ never edited; a later one replaces it.
 - [35. A sharedbox transport answers writes in its boxes](0035-a-sharedbox-transport-answers-writes-in-its-boxes.md)
 - [36. A stack is declared as one entry](0036-a-stack-is-declared-as-one-entry.md)
 - [37. diwire is the session registry](0037-diwire-is-the-session-registry.md)
+- [38. The session owns background computation](0038-the-session-owns-background-computation.md)

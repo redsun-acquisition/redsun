@@ -21,6 +21,7 @@ import pytest
 from psygnal._queue import QueuedCallback
 
 from redsun.aio import run_coro
+from redsun.compute import ThreadExecutor, ThreadPool
 from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 from redsun.services import Service
 from redsun.session import Session
@@ -43,6 +44,7 @@ __all__ = [
     "config_home",
     "data_directory",
     "empty_emission_queue",
+    "inline_threads",
     "keep_automatic_collection_off",
     "log_directory",
     "no_automatic_collection",
@@ -306,3 +308,19 @@ def start_service(
         service.stop()
     for transport in {service.transport for service in started}:
         run_coro(TRANSPORTS[transport].release())
+
+
+@pytest.fixture
+def inline_threads(
+    request: pytest.FixtureRequest,
+) -> Generator[ThreadExecutor, None, None]:
+    """Return a [`ThreadExecutor`][redsun.compute.ThreadExecutor] that runs each call where it is submitted.
+
+    The executor is named after the test and its pool is started, so a call's
+    result is there when `submit` returns, and `then` callbacks run at once.
+    Both are shut down when the test ends.
+    """
+    with ThreadPool(0) as pool:
+        executor = ThreadExecutor(pool, request.node.name)
+        yield executor
+        executor.shutdown()

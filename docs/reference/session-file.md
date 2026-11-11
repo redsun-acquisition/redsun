@@ -31,6 +31,7 @@ Every key is optional.
 | `layout` | mapping | the layout of the session class | [where the views start](#layout) in the window |
 | `shortcuts` | mapping | empty | [keys](#shortcuts) replacing what the components declare |
 | `providers` | mapping | empty | classes that share values with the components, by name |
+| `compute` | mapping or preset | the defaults below | [the cores background calls may use](#compute) |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
 | `pairs` | list | empty | [components linked to each other](#pairs), two names each |
@@ -152,6 +153,39 @@ services:
     prefix: "BL01:"
     address: 10.0.0.5
 ```
+
+## Compute
+
+`compute` is a mapping, or one preset word standing for `{preset: <word>}`. A
+session class may declare the same keys in its `compute` attribute; the file
+wins over the class, key by key.
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `preset` | `latency`, `balanced` or `throughput` | `balanced` | how the compute cores are split between threads and native libraries |
+| `cores` | whole number, 1 or more | the physical cores less `reserve` | the most compute cores to use |
+| `reserve` | whole number, 0 or more | `1` | physical cores kept free for the window's thread |
+| `switch_interval_ms` | number above 0 | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
+
+`reserve` lowers the [compute cores](../explanation/glossary.md#compute-cores)
+by its count; the session pins no thread to a core. A
+preset splits the compute cores `C` between the threads of the pool and the
+threads each call's native libraries may start:
+
+| Preset | Pool threads | Native threads per call |
+| --- | --- | --- |
+| `latency` | 1 | `C` |
+| `balanced` | `max(2, C // 4)` | `C // pool threads`, at least 1 |
+| `throughput` | `C` | 1 |
+
+```yaml
+compute:
+  preset: latency
+  cores: 6
+```
+
+The section changes nothing in a session whose components ask for no
+[executor](../explanation/glossary.md#executor).
 
 ## Storage
 
