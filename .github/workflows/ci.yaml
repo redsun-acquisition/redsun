@@ -45,6 +45,21 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.11"
 
+      # apt on GitHub's Ubuntu runners takes its mirrors from
+      # /etc/apt/apt-mirrors.txt, and since October 2026 azure.archive.ubuntu.com
+      # there often doesn't answer: apt-get update repeats "Ign: ... InRelease"
+      # for it until the next step's 5-minute timeout fails the job. This step
+      # removes that mirror and prints the list left. Reported upstream in
+      # https://github.com/actions/runner-images/issues/15040; drop the step
+      # once it is fixed.
+      - name: Skip the Azure apt mirror
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+            cat /etc/apt/apt-mirrors.txt
+          fi
+          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
       # the build runs the tutorial's session to take a picture of its window
       - name: Set up a display for Qt
         uses: pyvista/setup-headless-display-action@v5
@@ -136,6 +151,17 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
 
+      # skips the stalling Azure apt mirror, as in the docs job:
+      # https://github.com/actions/runner-images/issues/15040
+      - name: Skip the Azure apt mirror
+        if: runner.os == 'Linux'
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+            cat /etc/apt/apt-mirrors.txt
+          fi
+          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
       - name: Set up Qt's system libraries
         if: runner.os == 'Linux'
         uses: pyvista/setup-headless-display-action@v5
@@ -175,6 +201,16 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.12"
+
+      # skips the stalling Azure apt mirror, as in the docs job:
+      # https://github.com/actions/runner-images/issues/15040
+      - name: Skip the Azure apt mirror
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+            cat /etc/apt/apt-mirrors.txt
+          fi
+          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
 
       - name: Set up Qt's system libraries
         uses: pyvista/setup-headless-display-action@v5
