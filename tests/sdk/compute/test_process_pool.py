@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import os
 import sys
 import threading
 from typing import TYPE_CHECKING, Any
@@ -256,6 +257,7 @@ def test_free_threaded_fallback_uses_threads(monkeypatch: pytest.MonkeyPatch) ->
     """Run calls on threads of this process, after a pickle round trip, when the GIL is off."""
     monkeypatch.setattr(sys, "_is_gil_enabled", lambda: False, raising=False)
     with ProcessPool(2) as pool:
+        assert pool.submit(os.getpid).result(timeout=5) == os.getpid()
         assert (
             pool.submit(threading.get_ident).result(timeout=5) != threading.get_ident()
         )
