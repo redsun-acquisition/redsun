@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 import numpy as np
 import pytest
 
-from redsun.compute._channel import Channel, UnreadableMessage, rings
+from redsun.compute._channel import Channel, UnreadableMessage, import_sharedbox
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -51,9 +51,9 @@ def channels() -> Iterator[tuple[Channel, Channel]]:
 def no_sharedbox(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Make `sharedbox` fail to import, for the channels the test makes."""
     monkeypatch.setitem(sys.modules, "sharedbox", None)
-    rings.cache_clear()
+    import_sharedbox.cache_clear()
     yield
-    rings.cache_clear()
+    import_sharedbox.cache_clear()
 
 
 def exchange(sender: Channel, receiver: Channel, *payloads: object) -> list[Any]:
@@ -121,7 +121,7 @@ def test_more_buffers_than_ring_slots_arrive_in_order(
 @needs_sharedbox
 def test_closing_unlinks_every_ring(channels: tuple[Channel, Channel]) -> None:
     """Leave no ring attachable after both ends close."""
-    box = rings()
+    box = import_sharedbox()
     assert box is not None
     a, b = channels
     exchange(a, b, np.zeros(MIB, dtype=np.uint8))

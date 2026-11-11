@@ -36,7 +36,7 @@ logger = logging.getLogger("redsun")
 
 
 @cache
-def rings() -> ModuleType | None:
+def import_sharedbox() -> ModuleType | None:
     """Return `sharedbox`, or `None` and log once that it is not installed."""
     try:
         import sharedbox  # noqa: PLC0415
@@ -110,7 +110,7 @@ class Channel:
         EOFError
             If the other end closed while a ring item waited for room.
         """
-        box = rings()
+        box = import_sharedbox()
         items: list[memoryview] = []
 
         def out_of_band(buffer: pickle.PickleBuffer) -> bool:
@@ -180,7 +180,7 @@ class Channel:
             self.attach(*data)
         items = []
         if count:
-            box = rings()
+            box = import_sharedbox()
             assert box is not None
             try:
                 items = [self.reader.receive() for _ in range(count)]
@@ -218,7 +218,7 @@ class Channel:
 
     def attach(self, name: str, size: int) -> None:
         """Read the ring the other end announced from now on, and tell it so."""
-        box = rings()
+        box = import_sharedbox()
         assert box is not None
         if self.incoming is not None:
             self.incoming.close()
@@ -239,7 +239,7 @@ class Channel:
         # a closed sender or reader still maps its ring until it is freed, and
         # on Windows the ring lasts as long as any mapping does
         self.outgoing = self.sender = self.incoming = self.reader = None
-        box = rings()
+        box = import_sharedbox()
         if box is None:
             return
         for name in self.ring_names:
