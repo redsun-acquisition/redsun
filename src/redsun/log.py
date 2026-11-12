@@ -309,7 +309,9 @@ class SessionFileHandler(RotatingFileHandler):
             delay=service is not None,
         )
         if service is None:
-            self.addFilter(lambda record: service_of(record) is None)
+            self.addFilter(
+                lambda record: not record.name.startswith(f"{SERVICE_LOGGER}.")
+            )
 
     def _folder(self, root: Path) -> Path:
         return (
