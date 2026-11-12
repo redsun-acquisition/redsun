@@ -34,6 +34,10 @@ class BrokenPool(concurrent.futures.BrokenExecutor):
     """Raised by a call whose pool stopped working before it could run."""
 
 
+class WorkerCrashed(Exception):
+    """Raised by a call that was unfinished when a worker process ended."""
+
+
 @dataclass(frozen=True, slots=True)
 class Delivery:
     """Where a future's callbacks run."""

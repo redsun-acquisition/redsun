@@ -40,6 +40,9 @@ class OwnerUsage:
     longest_idle: float
     """Seconds a call waited for a worker, the longest so far."""
 
+    crashed: int = 0
+    """Calls that failed because a worker process ended."""
+
 
 EMPTY: Final = OwnerUsage(0, 0, 0, 0, 0.0)
 
@@ -72,6 +75,10 @@ class Counts:
     def finished(self, owner: str, failed: bool) -> None:
         """Move a call from running to completed or failed."""
         self._bump(owner, active=-1, completed=not failed, failed=failed)
+
+    def crashed(self, owner: str) -> None:
+        """Count a call that failed because a worker process ended."""
+        self._bump(owner, crashed=1)
 
     def dropped(self, owner: str) -> None:
         """Remove a waiting call that never ran."""
