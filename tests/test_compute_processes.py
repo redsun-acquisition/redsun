@@ -68,6 +68,22 @@ def test_a_value_that_cannot_be_read_fails_only_its_call(
     assert caplog.text.count("' started") == 1
 
 
+def test_an_answer_that_cannot_be_pickled_fails_only_its_call(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Fail a call whose result or error cannot be pickled, naming why, and keep the worker."""
+    with ProcessPool(1) as pool:
+        returned = pool.submit(compute_calls.make_lock)
+        with pytest.raises(TypeError, match="returned a value that cannot be pickled"):
+            returned.result(timeout=30)
+        raised = pool.submit(compute_calls.raise_held_lock).exception(timeout=30)
+        assert isinstance(raised, RuntimeError)
+        assert str(raised).startswith("HeldLock: ")
+        assert "Traceback in the worker process" in "".join(raised.__notes__)
+        assert pool.submit(compute_calls.add, 2, 3).result(timeout=30) == 5
+    assert "exited with code" not in caplog.text
+
+
 def test_shutdown_stops_every_worker(caplog: pytest.LogCaptureFixture) -> None:
     """Stop each worker process at shutdown and log its exit."""
     pool = ProcessPool(2)

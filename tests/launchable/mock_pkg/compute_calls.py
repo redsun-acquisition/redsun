@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import threading
 
 import numpy as np
 from numpy.typing import NDArray
@@ -46,3 +47,17 @@ def rebuild_here(pid: int) -> Unmovable:
 def make_unmovable() -> Unmovable:
     """Return a value the caller's process cannot read."""
     return Unmovable()
+
+
+class HeldLock(Exception):
+    """An error carrying a lock, which cannot be pickled."""
+
+
+def make_lock() -> threading.Lock:
+    """Return a lock, which cannot be pickled."""
+    return threading.Lock()
+
+
+def raise_held_lock() -> None:
+    """Raise an error that cannot be pickled."""
+    raise HeldLock(threading.Lock())
