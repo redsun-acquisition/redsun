@@ -159,6 +159,11 @@ class SessionCompute:
         processes, else `compute.processes`, else its share of the compute
         cores.
         """
+        asking = [name for name, held in owners.items() if ProcessExecutor in held]
+        for name in workers.keys() - set(asking):
+            logger.warning(
+                f"{name} gives 'workers' but asks for no ProcessExecutor; ignored"
+            )
         kinds = set().union(*owners.values())
         if not kinds:
             return
@@ -176,11 +181,6 @@ class SessionCompute:
                 pool_resource(pool_type, settings, self.limits, self.delivery),
                 owner=SESSION,
                 internal=True,
-            )
-        asking = [name for name, held in owners.items() if ProcessExecutor in held]
-        for name in workers.keys() - set(asking):
-            logger.warning(
-                f"{name} gives 'workers' but asks for no ProcessExecutor; ignored"
             )
         share = max(1, self.cores // max(len(asking), 1))
         for name in asking:
@@ -229,13 +229,14 @@ class SessionCompute:
         The limits stay until `limits.restore` runs. A pool that cannot start
         is logged and recorded in `broken`.
         """
-        pools = list(
-            dict.fromkeys(
-                held._pool
-                for (owner, _), held in self.executors.items()
-                if owner in built
-            )
-        )
+        pools: dict[Pool, str] = {}
+        for (owner, _), held in self.executors.items():
+            if owner in built:
+                pools[held._pool] = (
+                    f"ProcessPool of {owner}"
+                    if isinstance(held._pool, ProcessPool)
+                    else type(held._pool).__name__
+                )
         if not pools:
             return
         # every thread pool is split from the same cores, so any of them gives
@@ -244,11 +245,10 @@ class SessionCompute:
         if threaded is not None:
             self.limits.apply(threaded.native_threads)
             self.watchdog.start()
-        for pool in pools:
+        for pool, label in pools.items():
             try:
                 pool.start()
             except BrokenPool as error:
-                label = type(pool).__name__
                 self.broken.append((label, str(error)))
                 logger.error(f"{label} is broken: {error}")
 

@@ -252,6 +252,10 @@ class Declaration:
     TypeError
         If a device's keywords name its services ambiguously, or give an
         `autoconnect` that is not a bool.
+
+    A `workers` keyword that a device gives, that is not an `int` of at least
+    1, or that the component's own constructor takes, is not raised: it
+    becomes the declaration's `refusal`, like a refused `placement`.
     """
 
     __slots__ = (
@@ -475,7 +479,7 @@ def take_workers(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, 
     if "workers" in inspect.signature(declaration.cls).parameters:
         raise TypeError(
             f"{declaration.cls.__name__} ({where}) takes a 'workers' keyword of "
-            "its own, which a declaration reserves for the session"
+            "its own, but a declaration's 'workers' is reserved for the session"
         )
     rest = dict(kwargs)
     workers = rest.pop("workers")

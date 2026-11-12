@@ -249,6 +249,18 @@ class FitterAndCamera(Session):
     camera: AsDevice[FrameCamera]
 
 
+class FailingFitter:
+    """Presenter failing to build after asking for a process executor."""
+
+    def __init__(self, name: str, executor: ProcessExecutor) -> None:
+        raise RuntimeError("no fit today")
+
+
+class FitterFailsAfterAsking(Session):
+    fails: AsPresenter[FailingFitter]
+    plain: AsPresenter[Plain]
+
+
 class NoCompute(Session):
     plain: AsPresenter[Plain]
 
@@ -516,6 +528,31 @@ def test_workers_without_a_process_executor_are_ignored_with_a_warning(
     )
 
 
+def test_workers_with_no_executor_asked_for_are_ignored_with_a_warning(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn that workers is ignored in a session whose components ask for no executor."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(NoCompute, {"presenters": {"plain": {"workers": 2}}})
+    assert "plain" in session.presenters
+    assert "plain gives 'workers' but asks for no ProcessExecutor; ignored" in (
+        caplog.text
+    )
+
+
+@pytest.mark.usefixtures("eight_cores")
+def test_a_process_pool_of_a_failed_component_never_starts(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a component that fails after asking for a ProcessExecutor, and shut down cleanly."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        session = build(FitterFailsAfterAsking)
+    assert "fails" not in session.presenters
+    assert "plain" in session.presenters
+    assert "no fit today" in caplog.text
+    session.shutdown()
+
+
 def test_workers_on_a_device_skips_it(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -544,7 +581,7 @@ def test_a_class_taking_workers_itself_is_skipped(
     with caplog.at_level(logging.ERROR, logger="redsun"):
         session = build(OwnWorkersLab, {"presenters": {"own": {"workers": 2}}})
     assert "own" not in session.presenters
-    assert "takes a 'workers' keyword of its own" in caplog.text
+    assert "'workers' is reserved for the session" in caplog.text
 
 
 def test_build_is_refused_inside_a_worker(monkeypatch: pytest.MonkeyPatch) -> None:
