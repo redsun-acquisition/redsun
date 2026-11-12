@@ -69,6 +69,13 @@ class Future(concurrent.futures.Future[R]):
         self._delivery: Delivery | None = None
         self._released: Callable[[], bool] = lambda: False
         self._queued = False
+        self._linked: concurrent.futures.Future[Any] | None = None
+
+    def cancel(self) -> bool:
+        """Cancel the call, unless a worker has taken it."""
+        if self._linked is not None and not self._linked.cancel():
+            return False
+        return super().cancel()
 
     def _bind(
         self, owner: str, delivery: Delivery | None, released: Callable[[], bool]

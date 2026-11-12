@@ -72,6 +72,10 @@ class Counts:
         """Move a call from waiting to running, after *waited* seconds."""
         self._bump(owner, waited, queued=-1, active=1)
 
+    def unstarted(self, owner: str) -> None:
+        """Move a call that never ran back from running to waiting."""
+        self._bump(owner, queued=1, active=-1)
+
     def finished(self, owner: str, failed: bool) -> None:
         """Move a call from running to completed or failed."""
         self._bump(owner, active=-1, completed=not failed, failed=failed)

@@ -2,17 +2,43 @@
 
 from __future__ import annotations
 
+import logging
+import multiprocessing
+import time
+from concurrent.futures import BrokenExecutor, ProcessPoolExecutor
+from concurrent.futures import wait as wait_for
+from functools import partial
+from logging.handlers import QueueListener
 from typing import TYPE_CHECKING, Any, final
 
+from ._future import BrokenPool
 from ._pickling import check_function, round_trip
 from ._pool import Pool, PoolExecutor
+from ._worker import prepare_worker
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
+    from concurrent.futures import Future
+    from multiprocessing.queues import Queue
 
     from ._future import Delivery
     from ._pool import Call
     from ._settings import Limits, Priority, ProcessPoolSettings
+
+logger = logging.getLogger("redsun")
+
+
+class FileUnder(logging.Handler):
+    """File each record it gets under the logger *name*, whatever it was named."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self._name = name
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Hand *record* to the logger named after the pool."""
+        record.name = self._name
+        logging.getLogger(self._name).handle(record)
 
 
 @final
@@ -24,6 +50,12 @@ class ProcessPool(Pool):
     sent by name; a lambda, a closure, a bound method or a function defined in
     the script being run is refused at `submit`. With `workers=0` each call
     and its result still make a pickle round trip.
+
+    Workers start with the `spawn` method, so a script that starts a pool must
+    be guarded by `if __name__ == "__main__":`. The workers' log records reach
+    the session's log under *log_name*. Shutting the pool down waits for
+    running calls at most *stop_timeout* seconds, then ends the workers
+    still running, which fails their calls with `BrokenPool`.
 
     Parameters
     ----------
@@ -50,6 +82,11 @@ class ProcessPool(Pool):
         self._priority = priority
         self._stop_timeout = stop_timeout
         self._log_name = log_name
+        self._executor: ProcessPoolExecutor | None = None
+        self._listener: QueueListener | None = None
+        self._queue: Queue[Any] | None = None
+        self._inflight: set[Future[Any]] = set()
+        self._stopping = False
 
     @classmethod
     def resource(
@@ -59,8 +96,25 @@ class ProcessPool(Pool):
         delivery: Delivery | None = None,
         owner: str = "<pool>",
     ) -> Generator[ProcessPool, None, None]:
-        """Build a pool from *settings*, yield it unstarted, and stop it at teardown."""
-        raise NotImplementedError
+        """Build a pool from *settings*, yield it unstarted, and stop it at teardown.
+
+        Teardown logs one line on the calls made, then waits for the running
+        calls as `shutdown` does.
+        """
+        pool = cls(
+            settings.processes,
+            priority=settings.priority,
+            log_name=f"redsun.workers.{owner}",
+        )
+        pool._native_threads = settings.native_threads
+        pool._delivery = delivery
+        try:
+            yield pool
+        finally:
+            try:
+                logger.info(pool._counts.summary("process pool", pool.pool_size))
+            finally:
+                pool.shutdown(wait=True)
 
     @property
     def pool_size(self) -> int:
@@ -71,14 +125,104 @@ class ProcessPool(Pool):
         check_function(fn)
 
     def _start(self) -> None:
-        if self._workers:
-            raise NotImplementedError("worker processes are not started yet")
+        if not self._workers:
+            return
+        context = multiprocessing.get_context("spawn")
+        queue = context.Queue()
+        listener = QueueListener(queue, FileUnder(self._log_name))
+        listener.start()
+        try:
+            self._executor = ProcessPoolExecutor(
+                self._workers,
+                mp_context=context,
+                initializer=prepare_worker,
+                initargs=(
+                    queue,
+                    logger.getEffectiveLevel(),
+                    self._priority,
+                    self._native_threads,
+                ),
+            )
+        except Exception:
+            listener.stop()
+            raise
+        self._listener = listener
+        self._queue = queue
 
     def _dispatch(self, call: Call[Any]) -> None:
-        call.run(through=round_trip)
+        if not self._workers:
+            call.run(through=round_trip)
+            return
+        if self._executor is None:
+            raise BrokenPool("the pool shut down")
+        future = call.future
+        if future.cancelled():
+            call.cancel()
+            return
+        waited = time.monotonic() - call.submitted
+        try:
+            standard = self._executor.submit(call.fn, *call.args, **call.kwargs)
+        except BrokenExecutor as error:
+            raise BrokenPool(f"the workers stopped: {error}") from error
+        self._counts.started(call.owner, waited)
+        future._linked = standard
+        with self._lock:
+            self._inflight.add(standard)
+        standard.add_done_callback(partial(self._settle, call))
+
+    def _settle(self, call: Call[Any], standard: Future[Any]) -> None:
+        """Settle *call* from the worker's answer, or from its being cancelled or ended."""
+        with self._lock:
+            self._inflight.discard(standard)
+        future = call.future
+        future._linked = None
+        if standard.cancelled() or future.cancelled():
+            self._counts.unstarted(call.owner)
+            call.cancel()
+            return
+        error = standard.exception()
+        if isinstance(error, BrokenExecutor):
+            error = BrokenPool(
+                "the pool shut down"
+                if self._stopping
+                else f"the workers stopped: {error}"
+            )
+        future.set_running_or_notify_cancel()
+        self._counts.finished(call.owner, failed=error is not None)
+        if error is None:
+            future.set_result(standard.result())
+        else:
+            future.set_exception(error)
 
     def _stop(self, wait: bool, cancel_futures: bool) -> None:
-        """Stop the workers; an inline pool has none."""
+        """Wait for the running calls, end the workers still running, and stop the log listener.
+
+        Always waits up to `stop_timeout`, and always cancels the calls no
+        worker has taken.
+        """
+        with self._lock:
+            self._stopping = True
+            executor, self._executor = self._executor, None
+            listener, self._listener = self._listener, None
+            queue, self._queue = self._queue, None
+            inflight = list(self._inflight)
+        if executor is None:
+            return
+        # shortcut: private _processes, read before shutdown empties it; no public way to list the workers
+        processes = list(executor._processes.values())
+        executor.shutdown(wait=False, cancel_futures=True)
+        _, unfinished = wait_for(inflight, timeout=self._stop_timeout)
+        if unfinished:
+            for process in processes:
+                process.terminate()
+            for process in processes:
+                process.join(self._stop_timeout)
+        else:
+            executor.shutdown(wait=True)
+        if queue is not None:
+            queue.cancel_join_thread()
+        if listener is not None:
+            listener.stop()
 
 
 @final

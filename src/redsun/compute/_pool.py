@@ -86,8 +86,9 @@ class Call(Generic[R]):
     ) -> None:
         """Run the call in this thread and settle its future.
 
-        With *through*, the result is `through(fn, args, kwargs)` and the call
-        is not listed as running: it holds no GIL of this process.
+        With *through*, the result is `through(fn, args, kwargs)`, so the
+        function may run elsewhere and is left out of the list of functions
+        this process's pool threads are running.
 
         The call lets go of its future when it starts, and the failing branch
         drops the local too: the exception's traceback reaches this frame and
@@ -198,7 +199,7 @@ class Pool(Executor, ABC):
                 self._start()
             except Exception as error:
                 logger.error(f"Pool did not start: {trace(error)}")
-                self._break(f"the pool did not start: {error}")
+                self._break(f"the pool did not start: {error}", log=False)
                 raise BrokenPool(self._broken) from error
             try:
                 while self._waiting:
@@ -216,12 +217,13 @@ class Pool(Executor, ABC):
     def _check(self, fn: Callable[..., Any]) -> None:
         """Raise before anything is queued if the pool cannot run *fn*."""
 
-    def _break(self, reason: str) -> None:
-        """Mark the pool broken and fail the calls waiting for it."""
+    def _break(self, reason: str, *, log: bool = True) -> None:
+        """Mark the pool broken and fail the calls waiting for it, logging *reason* unless *log* is false."""
         with self._lock:
             self._state = State.BROKEN
             self._broken = reason
-            logger.error(f"Pool is broken: {reason}")
+            if log:
+                logger.error(f"Pool is broken: {reason}")
             while self._waiting:
                 self._waiting.popleft().fail(BrokenPool(reason))
 
