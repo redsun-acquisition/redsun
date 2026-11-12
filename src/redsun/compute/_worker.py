@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Final
 
 from threadpoolctl import threadpool_limits
 
-from ..log import text_copy
+from redsun.log import text_copy
 
 if TYPE_CHECKING:
     from logging import LogRecord
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 BELOW_NORMAL_PRIORITY_CLASS: Final = 0x4000
 HIGH_PRIORITY_CLASS: Final = 0x80
+THREAD_VARIABLES: Final = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
 
 logger = logging.getLogger("redsun")
 
@@ -61,6 +62,9 @@ def prepare_worker(
 ) -> None:
     """Make this process a worker: log into *queue*, limit native threads, set the priority.
 
+    The limit reaches the native libraries loaded already, and the ones a call
+    loads later through the variables they read when they load.
+
     Never raises: an exception in a pool's initializer breaks the pool.
     """
     try:
@@ -70,6 +74,7 @@ def prepare_worker(
         logger.handlers.clear()
         logger.setLevel(logging.NOTSET)
         logging.getLogger("multiprocessing").propagate = False
+        os.environ.update(dict.fromkeys(THREAD_VARIABLES, str(native_threads)))
         threadpool_limits(native_threads)
         try:
             set_priority(priority)

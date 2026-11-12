@@ -68,3 +68,8 @@ def spin_for(seconds: float) -> None:
 def log_warning(message: str) -> None:
     """Log *message* at WARNING."""
     logging.getLogger(__name__).warning(message)
+
+
+def environment(name: str) -> str | None:
+    """Return the environment variable *name* of the process running the call."""
+    return os.environ.get(name)

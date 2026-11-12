@@ -18,6 +18,7 @@ from mock_pkg.compute_calls import (
     add,
     crash,
     current_priority,
+    environment,
     log_debug,
     log_error,
     make_lock,
@@ -103,6 +104,16 @@ def test_a_worker_pool_names_an_unpicklable_argument() -> None:
         with pytest.raises(TypeError, match=r"add\(b=\.\.\.\)"):
             future.result(timeout=30)
     pool.shutdown()
+
+
+@pytest.mark.processes
+def test_a_worker_limits_the_libraries_a_call_loads_later() -> None:
+    """Set the thread count variables of OpenMP, OpenBLAS and MKL to 1 in a worker."""
+    names = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
+    with ProcessPool(1) as pool:
+        values = [pool.submit(environment, name).result(timeout=30) for name in names]
+    pool.shutdown()
+    assert values == ["1", "1", "1"]
 
 
 @pytest.mark.processes
