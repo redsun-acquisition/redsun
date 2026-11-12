@@ -174,6 +174,18 @@ def test_summary_names_the_busiest_owners_first() -> None:
     )
 
 
+def test_summary_counts_crashed_calls() -> None:
+    """Name the calls a worker crash failed, after the failures."""
+    tally = Counts()
+    tally.submitted("fit")
+    tally.started("fit", 0.0)
+    tally.finished("fit", failed=True)
+    tally.crashed("fit")
+    assert tally.summary("process pool", 1) == (
+        "process pool: 1 workers, 1 calls (fit 1), 1 failed, 1 crashed, longest idle 0.0 s"
+    )
+
+
 def test_a_failed_call_is_freed_without_a_collection() -> None:
     """Free a failed call's future as soon as the caller drops it."""
     with automatic_collection(False):

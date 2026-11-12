@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import logging
 import os
+import pickle
 import sys
 import time
+from concurrent.futures import wait
+from concurrent.futures.process import BrokenProcessPool
 from typing import TYPE_CHECKING
 
 import pytest
 from mock_pkg.compute_calls import (
     add,
+    crash,
     current_priority,
     log_debug,
     log_error,
@@ -20,7 +24,7 @@ from mock_pkg.compute_calls import (
     spin_for,
 )
 
-from redsun.compute import BrokenPool, ProcessExecutor, ProcessPool
+from redsun.compute import BrokenPool, ProcessExecutor, ProcessPool, WorkerCrashed
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -186,4 +190,56 @@ def test_a_waiting_call_can_be_cancelled() -> None:
         assert waiting.cancel()
         usage = executor.usage()
         assert (usage.queued, usage.active) == (0, 3)
+    pool.shutdown()
+
+
+@pytest.mark.processes
+def test_a_crash_fails_every_unfinished_call_and_the_pool_recovers() -> None:
+    """Fail the crashing call and its neighbour with WorkerCrashed, then run the next call."""
+    with ProcessPool(2) as pool:
+        executor = ProcessExecutor(pool, "owner")
+        # both workers up first: the standard pool watches only the workers it had when it last woke
+        wait([executor.submit(add, 0, 0) for _ in range(2)], timeout=30)
+        neighbour = executor.submit(spin_for, 5.0)
+        crashing = executor.submit(crash, 3)
+        for future in (crashing, neighbour):
+            with pytest.raises(WorkerCrashed) as caught:
+                future.result(timeout=30)
+            assert isinstance(caught.value.__cause__, BrokenProcessPool)
+        assert executor.submit(add, 1, 2).result(timeout=30) == 3
+        assert executor.usage().crashed == 2
+    pool.shutdown()
+
+
+@pytest.mark.processes
+def test_calls_after_a_crash_run_on_the_new_executor() -> None:
+    """Run calls submitted while the pool replaces its executor."""
+    with ProcessPool(1) as pool:
+        with pytest.raises(WorkerCrashed):
+            pool.submit(crash, 3).result(timeout=30)
+        later = [pool.submit(add, i, i) for i in range(5)]
+        assert [f.result(timeout=30) for f in later] == [0, 2, 4, 6, 8]
+    pool.shutdown()
+
+
+@pytest.mark.processes
+def test_repeated_crashes_break_the_pool() -> None:
+    """Break the pool after more than 3 replacements in 60 s and refuse later calls."""
+    with ProcessPool(1) as pool:
+        for _ in range(4):
+            with pytest.raises(WorkerCrashed):
+                pool.submit(crash, 3).result(timeout=30)
+        with pytest.raises(BrokenPool, match="replaced more than 3 times in 60 s"):
+            pool.submit(add, 1, 1)
+    pool.shutdown()
+
+
+@pytest.mark.processes
+def test_an_answer_that_cannot_be_pickled_fails_only_its_call() -> None:
+    """Fail a call returning a lock with TypeError or PicklingError and keep the workers."""
+    with ProcessPool(1) as pool:
+        before = pool.submit(pid).result(timeout=30)
+        with pytest.raises((TypeError, pickle.PicklingError)):
+            pool.submit(make_lock).result(timeout=30)
+        assert pool.submit(pid).result(timeout=30) == before
     pool.shutdown()

@@ -104,11 +104,13 @@ class Counts:
             if n
         )
         failed = sum(u.failed for u in owners.values())
+        crashed = sum(u.crashed for u in owners.values())
         longest = max((u.longest_idle for u in owners.values()), default=0.0)
         split = f" ({by_owner})" if by_owner else ""
+        crashes = f", {crashed} crashed" if crashed else ""
         return (
             f"{label}: {pool_size} workers, {sum(calls.values())} calls{split},"
-            f" {failed} failed, longest idle {longest:.1f} s"
+            f" {failed} failed{crashes}, longest idle {longest:.1f} s"
         )
 
 

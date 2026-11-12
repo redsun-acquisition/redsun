@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 import threading
 import time
+from collections import deque
 from concurrent.futures import BrokenExecutor, ProcessPoolExecutor
 from concurrent.futures import wait as wait_for
 from functools import partial
@@ -13,7 +14,7 @@ from logging.handlers import QueueListener
 from queue import Empty
 from typing import TYPE_CHECKING, Any, Final, final
 
-from ._future import BrokenPool
+from ._future import BrokenPool, WorkerCrashed, trace
 from ._pickling import check_function, round_trip
 from ._pool import Pool, PoolExecutor
 from ._worker import prepare_worker
@@ -28,6 +29,9 @@ if TYPE_CHECKING:
     from ._settings import Limits, Priority, ProcessPoolSettings
 
 POLL_INTERVAL: Final = 0.1
+MAX_REPLACEMENTS: Final = 3
+REPLACEMENT_WINDOW: Final = 60.0
+LISTENER_TIMEOUT: Final = 1.0
 
 logger = logging.getLogger("redsun")
 
@@ -71,6 +75,25 @@ class PollingListener(QueueListener):
         """Ask the listener thread to end once the queue is empty."""
         self._finished.set()
 
+    def stop(self, timeout: float | None = None) -> None:
+        """Ask the listener thread to end, and wait for it at most *timeout* seconds.
+
+        A thread still running after *timeout* is logged as a warning and left
+        behind: a worker ended while writing a record can leave a partial one
+        the thread waits on for ever.
+        """
+        thread = self._thread
+        if thread is None:
+            return
+        self.enqueue_sentinel()
+        thread.join(timeout)
+        if thread.is_alive():
+            logger.warning(
+                f"The log listener of a process pool did not stop in {timeout:g} s;"
+                " a worker may have ended while writing a record"
+            )
+        self._thread = None
+
 
 @final
 class ProcessPool(Pool):
@@ -87,6 +110,11 @@ class ProcessPool(Pool):
     the session's log under *log_name*. Shutting the pool down waits for
     running calls at most *stop_timeout* seconds, then ends the workers
     still running, which fails their calls with `BrokenPool`.
+
+    A worker that ends while calls are unfinished fails every one of them
+    with `WorkerCrashed`, and the pool starts new workers. Replaced more than
+    `MAX_REPLACEMENTS` times within `REPLACEMENT_WINDOW` seconds, the pool
+    breaks instead and refuses later calls with `BrokenPool`.
 
     Parameters
     ----------
@@ -114,9 +142,12 @@ class ProcessPool(Pool):
         self._stop_timeout = stop_timeout
         self._log_name = log_name
         self._executor: ProcessPoolExecutor | None = None
-        self._listener: QueueListener | None = None
+        self._listener: PollingListener | None = None
         self._queue: Queue[Any] | None = None
         self._inflight: set[Future[Any]] = set()
+        # not the pool lock: done-callbacks take it under the standard pool's own lock
+        self._inflight_lock = threading.Lock()
+        self._replaced: deque[float] = deque()
         self._stopping = False
 
     @classmethod
@@ -158,67 +189,124 @@ class ProcessPool(Pool):
     def _start(self) -> None:
         if not self._workers:
             return
-        context = multiprocessing.get_context("spawn")
-        queue = context.Queue()
+        queue = multiprocessing.get_context("spawn").Queue()
         listener = PollingListener(queue, FileUnder(self._log_name))
         listener.start()
         try:
-            self._executor = ProcessPoolExecutor(
-                self._workers,
-                mp_context=context,
-                initializer=prepare_worker,
-                initargs=(
-                    queue,
-                    logger.getEffectiveLevel(),
-                    self._priority,
-                    self._native_threads,
-                ),
-            )
+            self._executor = self._new_executor(queue)
         except Exception:
             listener.stop()
             raise
         self._listener = listener
         self._queue = queue
 
+    def _new_executor(self, queue: Queue[Any]) -> ProcessPoolExecutor:
+        """Return a standard pool whose workers log to the pool's queue."""
+        return ProcessPoolExecutor(
+            self._workers,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=prepare_worker,
+            initargs=(
+                queue,
+                logger.getEffectiveLevel(),
+                self._priority,
+                self._native_threads,
+            ),
+        )
+
+    def _replace(
+        self, broken: ProcessPoolExecutor, error: BaseException
+    ) -> ProcessPoolExecutor | None:
+        """Replace *broken* with a new standard pool, or break the pool after too many replacements.
+
+        Only the first caller naming a given *broken* replaces it; the others
+        get the pool's current one. `None` means the pool broke or shut down.
+        """
+        with self._lock:
+            if self._executor is not broken or self._queue is None:
+                return self._executor
+            self._executor = None
+            logging.getLogger(self._log_name).error(
+                f"A worker process ended: {trace(error)}"
+            )
+            now = time.monotonic()
+            self._replaced.append(now)
+            while now - self._replaced[0] > REPLACEMENT_WINDOW:
+                self._replaced.popleft()
+            if len(self._replaced) > MAX_REPLACEMENTS:
+                self._break(
+                    f"the pool was replaced more than {MAX_REPLACEMENTS} times"
+                    f" in {REPLACEMENT_WINDOW:g} s"
+                )
+                return None
+            self._executor = self._new_executor(self._queue)
+            return self._executor
+
     def _dispatch(self, call: Call[Any]) -> None:
         if not self._workers:
             call.run(through=round_trip)
             return
-        if self._executor is None:
-            raise BrokenPool("the pool shut down")
         future = call.future
-        if future.cancelled():
-            call.cancel()
-            return
         waited = time.monotonic() - call.submitted
-        try:
-            standard = self._executor.submit(call.fn, *call.args, **call.kwargs)
-        except BrokenExecutor as error:
-            raise BrokenPool(f"the workers stopped: {error}") from error
-        self._counts.started(call.owner, waited)
-        future._linked = standard
-        with self._lock:
+        # a cancel waits for the hand-over, so the counts never see it half done
+        with future._condition:
+            if future.cancelled():
+                call.cancel()
+                return
+            executor = self._executor
+            if executor is None:
+                raise BrokenPool(self._broken or "the pool shut down")
+            try:
+                standard = executor.submit(call.fn, *call.args, **call.kwargs)
+            except BrokenExecutor as error:
+                executor = self._replace(executor, error)
+                if executor is None:
+                    raise BrokenPool(self._broken or "the pool shut down") from error
+                standard = executor.submit(call.fn, *call.args, **call.kwargs)
+            self._counts.started(call.owner, waited)
+            future._linked = standard
+        with self._inflight_lock:
             self._inflight.add(standard)
-        standard.add_done_callback(partial(self._settle, call))
+        standard.add_done_callback(partial(self._settle, call, executor))
 
-    def _settle(self, call: Call[Any], standard: Future[Any]) -> None:
-        """Settle *call* from the worker's answer, or from its being cancelled or ended."""
-        with self._lock:
+    def _settle(
+        self, call: Call[Any], executor: ProcessPoolExecutor, standard: Future[Any]
+    ) -> None:
+        """Settle *call* from the worker's answer, or from its being cancelled or ended.
+
+        Runs on the standard pool's thread, under its lock when the pool
+        broke, so it hands the replacement to a thread of its own.
+        """
+        with self._inflight_lock:
             self._inflight.discard(standard)
         future = call.future
-        future._linked = None
-        if standard.cancelled() or future.cancelled():
+        if standard.cancelled():
+            future._linked = None
             self._counts.unstarted(call.owner)
             call.cancel()
             return
+        if not future.set_running_or_notify_cancel():
+            self._counts.unstarted(call.owner)
+            return
+        future._linked = None
         error = standard.exception()
         if isinstance(error, BrokenExecutor):
-            error = BrokenPool(
-                "the pool shut down"
-                if self._stopping
-                else f"the workers stopped: {error}"
-            )
-        future.set_running_or_notify_cancel()
+            if self._stopping:
+                error = BrokenPool("the pool shut down")
+            else:
+                self._counts.crashed(call.owner)
+                if self._executor is executor:
+                    threading.Thread(
+                        target=self._replace,
+                        args=(executor, error),
+                        name="redsun-process-pool-replace",
+                        daemon=True,
+                    ).start()
+                crashed = WorkerCrashed(
+                    f"a worker process of {call.owner} ended before the call finished"
+                )
+                crashed.__cause__ = error
+                error = crashed
         self._counts.finished(call.owner, failed=error is not None)
         if error is None:
             future.set_result(standard.result())
@@ -236,22 +324,25 @@ class ProcessPool(Pool):
             executor, self._executor = self._executor, None
             listener, self._listener = self._listener, None
             queue, self._queue = self._queue, None
+        with self._inflight_lock:
             inflight = list(self._inflight)
-        if executor is None:
-            return
-        # shortcut: private _processes, read before shutdown empties it; no public way to list the workers
-        processes = list(executor._processes.values())
-        executor.shutdown(wait=False, cancel_futures=True)
-        _, unfinished = wait_for(inflight, timeout=self._stop_timeout)
-        if unfinished:
-            for process in processes:
-                process.terminate()
-            for process in processes:
-                process.join(self._stop_timeout)
-        else:
-            executor.shutdown(wait=True)
+        timeout: float | None = None
+        if executor is not None:
+            # shortcut: private _processes until 3.14 is the oldest Python; then terminate_workers()
+            # read before shutdown, which empties it on 3.14 too
+            processes = list(executor._processes.values())
+            executor.shutdown(wait=False, cancel_futures=True)
+            _, unfinished = wait_for(inflight, timeout=self._stop_timeout)
+            if unfinished:
+                for process in processes:
+                    process.terminate()
+                for process in processes:
+                    process.join(self._stop_timeout)
+                timeout = LISTENER_TIMEOUT
+            else:
+                executor.shutdown(wait=True)
         if listener is not None:
-            listener.stop()
+            listener.stop(timeout)
         if queue is not None:
             queue.close()
 
