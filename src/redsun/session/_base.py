@@ -842,10 +842,11 @@ class Session(BuildableSession):
         Raises
         ------
         RuntimeError
-            If called inside a worker process, which a script not guarded by
-            `if __name__ == "__main__":` runs again when a pool spawns it.
+            If called while a worker process starts, which runs again a script
+            not guarded by `if __name__ == "__main__":`.
         """
-        if multiprocessing.parent_process() is not None:
+        # shortcut: private _inheriting, what multiprocessing's own check of an unguarded script reads; replace it if the standard library offers a public sign
+        if getattr(multiprocessing.current_process(), "_inheriting", False):
             raise RuntimeError(
                 "Session.build ran inside a worker process; start the session "
                 "under 'if __name__ == \"__main__\":'"

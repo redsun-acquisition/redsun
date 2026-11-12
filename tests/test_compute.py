@@ -582,10 +582,3 @@ def test_a_class_taking_workers_itself_is_skipped(
         session = build(OwnWorkersLab, {"presenters": {"own": {"workers": 2}}})
     assert "own" not in session.presenters
     assert "'workers' is reserved for the session" in caplog.text
-
-
-def test_build_is_refused_inside_a_worker(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Refuse Session.build when multiprocessing reports a parent process."""
-    monkeypatch.setattr("multiprocessing.parent_process", object)
-    with pytest.raises(RuntimeError, match='if __name__ == "__main__":'):
-        NoCompute().build()

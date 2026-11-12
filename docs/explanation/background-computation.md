@@ -180,7 +180,7 @@ Workers start with the `spawn` method on every platform, so a worker inherits
 none of the session's threads, Qt objects or open devices. `spawn` starts a
 worker by importing the script the session was started from, which is why the
 script starts its session under `if __name__ == "__main__":`, and why the
-session refuses to build inside a worker process.
+session refuses to build while a worker process is starting.
 
 Only values cross between the processes, never live objects, because each
 call and its result are pickled. A function travels by its module and its

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import threading
 from typing import TYPE_CHECKING
@@ -13,13 +14,40 @@ from threadpoolctl import threadpool_info
 from redsun import AsPresenter, Session
 from redsun.compute import ProcessExecutor, WorkerCrashed
 from redsun.log import log_buffer
+from tests.sdk.helpers import kept_under
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.processes
+
+UNGUARDED = """
+from redsun import AsPresenter, Session
+from redsun.compute import ProcessExecutor, WorkerCrashed
+
+
+class Fitter:
+    def __init__(self, name, executor: ProcessExecutor):
+        print("built", flush=True)
+        self.name = name
+        self.executor = executor
+
+
+class Lab(Session):
+    fit: AsPresenter[Fitter]
+
+
+session = Lab({"compute": {"processes": 1}}).build()
+try:
+    session.fit.executor.submit(pow, 2, 3).result(timeout=60)
+except WorkerCrashed:
+    print("crashed", flush=True)
+finally:
+    session.shutdown()
+"""
 
 
 class Computer:
@@ -103,3 +131,22 @@ def test_the_pool_stops_after_the_component(build: BuildSession) -> None:
     component = session.last
     session.shutdown()
     assert component.last == 3
+
+
+def test_an_unguarded_script_builds_its_session_once(tmp_path: Path) -> None:
+    """Refuse the build a worker starts by running an unguarded script, and fail the call."""
+    script = tmp_path / "unguarded.py"
+    script.write_text(kept_under(tmp_path) + UNGUARDED, encoding="utf-8")
+    ran = subprocess.run(
+        [sys.executable, str(script)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+        cwd=tmp_path,
+    )
+
+    assert ran.returncode == 0, ran.stderr
+    printed = [line for line in ran.stdout.splitlines() if line in ("built", "crashed")]
+    assert printed == ["built", "crashed"]
+    assert "RuntimeError: Session.build ran inside a worker process" in ran.stderr
