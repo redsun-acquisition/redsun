@@ -8,7 +8,6 @@ import threading
 import time
 from collections import deque
 from concurrent.futures import BrokenExecutor, ProcessPoolExecutor
-from concurrent.futures import wait as wait_for
 from functools import partial
 from logging.handlers import QueueListener
 from queue import Empty
@@ -147,6 +146,7 @@ class ProcessPool(Pool):
         self._inflight: set[Future[Any]] = set()
         # not the pool lock: done-callbacks take it under the standard pool's own lock
         self._inflight_lock = threading.Lock()
+        self._settled = threading.Condition(self._inflight_lock)
         self._crashed: dict[
             ProcessPoolExecutor, list[tuple[Call[Any], BaseException]]
         ] = {}
@@ -302,6 +302,8 @@ class ProcessPool(Pool):
         """
         with self._inflight_lock:
             self._inflight.discard(standard)
+            if not self._inflight:
+                self._settled.notify_all()
         future = call.future
         if standard.cancelled():
             future._linked = None
@@ -365,16 +367,19 @@ class ProcessPool(Pool):
             executor, self._executor = self._executor, None
             listener, self._listener = self._listener, None
             queue, self._queue = self._queue, None
-        with self._inflight_lock:
-            inflight = list(self._inflight)
         terminated = False
         if executor is not None:
             # shortcut: private _processes until 3.14 is the oldest Python; then terminate_workers()
             # read before shutdown, which empties it on 3.14 too
             processes = list(executor._processes.values())
             executor.shutdown(wait=False, cancel_futures=True)
-            _, unfinished = wait_for(inflight, timeout=self._stop_timeout)
-            if unfinished:
+            # the standard futures that shutdown cancels never count as done for
+            # concurrent.futures.wait, so wait for _settle to have seen each
+            with self._settled:
+                settled = self._settled.wait_for(
+                    lambda: not self._inflight, timeout=self._stop_timeout
+                )
+            if not settled:
                 for process in processes:
                     process.terminate()
                 for process in processes:

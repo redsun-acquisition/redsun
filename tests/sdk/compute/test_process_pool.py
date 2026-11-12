@@ -33,6 +33,12 @@ if TYPE_CHECKING:
 
     from redsun.compute import Priority
 
+EXPECTED: dict[str, int] = (
+    {"low": 0x4000, "normal": 0x20}
+    if sys.platform == "win32"
+    else {"low": 10, "normal": 0}
+)
+
 
 class RecordingHandler(logging.Handler):
     """Keeps every record it is given, whatever its level."""
@@ -63,13 +69,6 @@ def session_level() -> Generator[None, None, None]:
     found = session_logger.level
     yield
     session_logger.setLevel(found)
-
-
-EXPECTED: dict[str, int] = (
-    {"low": 0x4000, "normal": 0x20}
-    if sys.platform == "win32"
-    else {"low": 10, "normal": 0}
-)
 
 
 def test_an_inline_pool_returns_the_result() -> None:
@@ -179,6 +178,20 @@ def test_shutdown_ends_a_stuck_call() -> None:
     assert time.monotonic() - started < 6
     with pytest.raises(BrokenPool, match="the pool shut down"):
         future.result(timeout=5)
+
+
+@pytest.mark.processes
+def test_shutdown_returns_once_the_running_calls_are_done() -> None:
+    """Return from shutdown when the running call ends, not after stop_timeout, with calls cancelled."""
+    pool = ProcessPool(1, stop_timeout=30.0)
+    pool.start()
+    assert pool.submit(add, 1, 1).result(timeout=30) == 2
+    pool.submit(spin_for, 0.5)
+    for _ in range(3):
+        pool.submit(add, 1, 1)
+    started = time.monotonic()
+    pool.shutdown()
+    assert time.monotonic() - started < 15
 
 
 @pytest.mark.processes
