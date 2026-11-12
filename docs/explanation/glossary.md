@@ -189,8 +189,10 @@ the server allows, sets them. See
 
 An executor is a component's own handle on a [pool](#pool), which it asks for
 by annotating a constructor parameter with
-[`ThreadExecutor`][redsun.compute.ThreadExecutor]. The component submits its
-calls through it, and the session shuts it down with the component.
+[`ThreadExecutor`][redsun.compute.ThreadExecutor] for the thread pool every
+component shares, or with [`ProcessExecutor`][redsun.compute.ProcessExecutor]
+for a process pool of its own. The component submits its calls through it,
+and the session shuts it down with the component.
 
 ### Frontend
 

@@ -31,15 +31,18 @@ components would each start a thread per core.
 ## Pools and executors
 
 The session keeps two kinds of object apart. A [pool](glossary.md#pool) owns
-the threads, and every component of a session shares it. An
+the threads or worker processes. Every component of a session shares the
+thread pool, while each component asking for a `ProcessExecutor` gets a
+process pool of its own. An
 [executor](glossary.md#executor) is one component's handle on the pool: it
 sends that component's calls to the pool and keeps track of them. The
 component that holds an executor is its [owner](glossary.md#owner), and the
 executor carries the owner's name into every count and log line.
 
 A component asks for an executor by annotating a constructor parameter with
-[`ThreadExecutor`][redsun.compute.ThreadExecutor]. It never sees the
-pool, so it cannot stop the threads that other components use, and it doesn't
+[`ThreadExecutor`][redsun.compute.ThreadExecutor] or
+[`ProcessExecutor`][redsun.compute.ProcessExecutor]. It never sees the
+pool, so it cannot stop the workers that other components use, and it doesn't
 write a `shutdown` for the executor either: the session shuts the executor
 down right after the component's own `shutdown`.
 

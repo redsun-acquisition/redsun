@@ -99,7 +99,7 @@ with their own protocol for sending calls and data, or to hold a standard
 `ProcessPoolExecutor`. Workers of our own could resend the lost call of a
 crashed worker and move large arrays through rings of shared memory, but
 they put a process protocol, its readiness check and its crash handling into
-`redsun`. The standard pool already starts, feeds and replaces workers, so
+`redsun`. The standard pool already starts and feeds workers, so
 `ProcessPool` holds one, started with `spawn`:
 
 ```python
