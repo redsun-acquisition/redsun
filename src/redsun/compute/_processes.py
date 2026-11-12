@@ -97,7 +97,7 @@ class PollingListener(QueueListener):
 
 @final
 class ProcessPool(Pool):
-    """Worker processes several executors share; with `workers=0` a call runs where it is submitted.
+    """A pool of worker processes; with `workers=0` a call runs where it is submitted.
 
     A call runs in a worker only if its function and arguments survive
     pickling. A function defined at module level of an importable module is
@@ -398,4 +398,7 @@ class ProcessPool(Pool):
 
 @final
 class ProcessExecutor(PoolExecutor[ProcessPool]):
-    """Runs one owner's calls on a shared pool of worker processes."""
+    """Runs one owner's calls on a pool of worker processes.
+
+    A session gives each owner a pool of its own.
+    """

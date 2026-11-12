@@ -319,9 +319,11 @@ A plugin is an installed package that offers components, services and
 
 ### Pool
 
-A pool is a set of threads the session starts and stops, which every
-component asking for the same kind of [executor](#executor) shares. Its size
-comes from the [compute cores](#compute-cores).
+A pool is a set of threads or [worker processes](#worker-process) the session
+starts and stops. Every component asking for a thread [executor](#executor)
+shares one thread pool, while each component asking for a process executor
+gets a process pool of its own. Their sizes come from the
+[compute cores](#compute-cores).
 
 ### Port
 
@@ -550,6 +552,13 @@ Wiring is the choice of which [signal](#signal) reaches which [slot](#slot).
 The session decides it, in its `wire` method or in the `wiring` and `pairs`
 sections of its file, where each line of `pairs` is a [pairing](#pairing);
 components only declare their [ports](#port).
+
+### Worker process
+
+A worker process is a Python process a process [pool](#pool) starts to run
+the calls of one component, so code holding the GIL runs alongside the
+window. The call's function, its arguments and its result are pickled to
+cross between the processes.
 
 ### Writer
 
