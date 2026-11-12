@@ -161,11 +161,34 @@ class SetupFitter:
         pass
 
 
+class FailingFitter:
+    """Presenter failing to build after asking for a process executor."""
+
+    def __init__(self, name: str, executor: ProcessExecutor) -> None:
+        raise RuntimeError("no fit today")
+
+
 class OwnWorkers:
-    """Presenter taking a `workers` keyword of its own."""
+    """Presenter taking a `workers` keyword of its own and a process executor."""
 
     def __init__(self, name: str, workers: int, executor: ProcessExecutor) -> None:
         self.name = name
+
+
+class ThreadWorkers:
+    """Presenter taking a `workers` keyword of its own and no process executor."""
+
+    def __init__(self, name: str, workers: int) -> None:
+        self.name = name
+        self.workers = workers
+
+
+class WorkerCamera(StandardReadable):
+    """Device taking a `workers` keyword of its own."""
+
+    def __init__(self, workers: int, name: str = "") -> None:
+        self.workers = workers
+        super().__init__(name=name)
 
 
 class FrameCamera(StandardReadable):
@@ -244,16 +267,13 @@ class OwnWorkersLab(Session):
     own: AsPresenter[OwnWorkers]
 
 
+class ThreadWorkersLab(Session):
+    own: AsPresenter[ThreadWorkers]
+
+
 class FitterAndCamera(Session):
     fit: AsPresenter[Fitter]
-    camera: AsDevice[FrameCamera]
-
-
-class FailingFitter:
-    """Presenter failing to build after asking for a process executor."""
-
-    def __init__(self, name: str, executor: ProcessExecutor) -> None:
-        raise RuntimeError("no fit today")
+    camera: AsDevice[WorkerCamera]
 
 
 class FitterFailsAfterAsking(Session):
@@ -553,14 +573,16 @@ def test_a_process_pool_of_a_failed_component_never_starts(
     session.shutdown()
 
 
-def test_workers_on_a_device_skips_it(
-    build: BuildSession, caplog: pytest.LogCaptureFixture
+def test_workers_reach_the_constructor_of_a_device_or_a_class_without_processes(
+    build: BuildSession,
 ) -> None:
-    """Skip a device whose declaration gives workers, naming the key."""
-    with caplog.at_level(logging.ERROR, logger="redsun"):
-        session = build(FitterAndCamera, {"devices": {"camera": {"workers": 2}}})
-    assert "camera" not in session.devices
-    assert "only a presenter or a view takes 'workers'" in caplog.text
+    """Pass workers to a device, and to a presenter taking it and asking for no ProcessExecutor."""
+    session = build(FitterAndCamera, {"devices": {"camera": {"workers": 2}}})
+    assert session.camera.workers == 2
+    assert (
+        build(ThreadWorkersLab, {"presenters": {"own": {"workers": 3}}}).own.workers
+        == 3
+    )
 
 
 @pytest.mark.parametrize("workers", [0, -1, True, 1.5, "2"])
@@ -577,8 +599,10 @@ def test_a_workers_that_is_not_a_whole_number_of_one_or_more_skips_the_component
 def test_a_class_taking_workers_itself_is_skipped(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Skip a presenter whose constructor takes workers when the declaration gives it too."""
+    """Skip a presenter taking workers and a ProcessExecutor when the declaration gives workers."""
     with caplog.at_level(logging.ERROR, logger="redsun"):
         session = build(OwnWorkersLab, {"presenters": {"own": {"workers": 2}}})
     assert "own" not in session.presenters
-    assert "'workers' is reserved for the session" in caplog.text
+    assert "takes a 'workers' keyword of its own and asks for a ProcessExecutor" in (
+        caplog.text
+    )

@@ -20,6 +20,7 @@ from typing import (
 from ophyd_async.core import Device
 from psygnal import Signal
 
+from redsun.compute import ProcessExecutor
 from redsun.errors import HookError, PluginError
 from redsun.services import Service
 from redsun.view import Placement
@@ -30,6 +31,7 @@ from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
+from ._compute import component_kinds
 from ._factories import constructor, resolved
 from ._frontend import Frontend
 from ._plugins import resolve, service_entry
@@ -241,21 +243,23 @@ class Declaration:
     the frontend: `placement` is where the view attaches, or `None` when the
     declaration is refused or not a view.
     A presenter's or view's `workers` keyword is kept here too, the worker
-    processes of its pool: `None` when it gives none.
+    processes of its pool: `None` when it gives none. It reaches the
+    constructor instead when the class takes `workers` and asks for no
+    `ProcessExecutor`, as a device's always does.
     `refusal` is why the class cannot be built in its layer, or `None`; a
     refused declaration is never built. `attribute` is the annotation the
     session class declares it under and `source` the configuration entry its
     keywords are read from; both are the name unless a marker says otherwise.
+
+    A `workers` keyword that is not an `int` of at least 1, or that a class
+    asking for a `ProcessExecutor` takes itself, is not raised: it becomes the
+    declaration's `refusal`, like a refused `placement`.
 
     Raises
     ------
     TypeError
         If a device's keywords name its services ambiguously, or give an
         `autoconnect` that is not a bool.
-
-    A `workers` keyword that a device gives, that is not an `int` of at least
-    1, or that the component's own constructor takes, is not raised: it
-    becomes the declaration's `refusal`, like a refused `placement`.
     """
 
     __slots__ = (
@@ -295,11 +299,6 @@ class Declaration:
         self.autoconnect = True
         self.placement: Placement | None = None
         self.workers: int | None = None
-        if kind is Layer.DEVICE and "workers" in cfg_kwargs and refusal is None:
-            refusal = TypeError(
-                f"{name!r} is declared as a device, and only a presenter or a view "
-                "takes 'workers'"
-            )
         if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
             refusal = TypeError(
                 f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
@@ -465,21 +464,27 @@ def take_view_placement(
 def take_workers(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Move a presenter's or view's `workers` from *kwargs* onto *declaration*.
 
+    A component whose class takes `workers` itself and asks for no
+    `ProcessExecutor` keeps the keyword for its constructor.
+
     Returns the keywords left for the component's constructor.
 
     Raises
     ------
     TypeError
-        If the component's class takes `workers` itself, or the value is not
-        an `int` of at least 1.
+        If the component's class takes `workers` itself and asks for a
+        `ProcessExecutor`, or the value is not an `int` of at least 1.
     """
     if "workers" not in kwargs:
         return kwargs
     where = f"{declaration.kind} {declaration.name!r}"
     if "workers" in inspect.signature(declaration.cls).parameters:
+        if ProcessExecutor not in component_kinds(declaration.cls):
+            return kwargs
         raise TypeError(
             f"{declaration.cls.__name__} ({where}) takes a 'workers' keyword of "
-            "its own, but a declaration's 'workers' is reserved for the session"
+            "its own and asks for a ProcessExecutor, whose 'workers' a "
+            "declaration gives"
         )
     rest = dict(kwargs)
     workers = rest.pop("workers")
