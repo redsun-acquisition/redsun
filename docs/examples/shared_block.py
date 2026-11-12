@@ -51,6 +51,7 @@ class StackPresenter(DocumentRouter, Loggable):
         self._next = 0
         self._block: shared_memory.SharedMemory | None = None
         self._stack: NDArray[np.generic] | None = None
+        self._sent: set[shared_memory.SharedMemory] = set()
 
     # --8<-- [end:presenter]
     # --8<-- [start:documents]
@@ -59,6 +60,9 @@ class StackPresenter(DocumentRouter, Loggable):
         return doc
 
     def descriptor(self, doc: EventDescriptor) -> EventDescriptor:
+        if self._block is not None:
+            self._stack = None
+            self._release(self._block)
         key = doc["data_keys"][self.source]
         shape = (self._count, *(int(n or 0) for n in key["shape"]))
         dtype = np.dtype(key.get("dtype_numpy", "uint16"))
@@ -79,6 +83,7 @@ class StackPresenter(DocumentRouter, Loggable):
         block, self._block = self._block, None
         shape, dtype = self._stack.shape, self._stack.dtype.str
         self._stack = None
+        self._sent.add(block)
         future = self._executor.submit(fit_stack, block.name, shape, dtype)
         future.then(partial(self._publish, block), partial(self._report, block))
         return doc
@@ -96,9 +101,17 @@ class StackPresenter(DocumentRouter, Loggable):
         self.logger.warning(f"No fit for this run: {error}")
 
     def _release(self, block: shared_memory.SharedMemory) -> None:
+        self._sent.discard(block)
         block.close()
         with suppress(FileNotFoundError):
             block.unlink()
+
+    def shutdown(self) -> None:
+        self._stack = None
+        for block in [*self._sent, self._block]:
+            if block is not None:
+                self._release(block)
+        self._block = None
 
 
 # --8<-- [end:release]
