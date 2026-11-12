@@ -23,7 +23,41 @@ from mock_pkg.compute_calls import (
 from redsun.compute import BrokenPool, ProcessExecutor, ProcessPool
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from redsun.compute import Priority
+
+
+class RecordingHandler(logging.Handler):
+    """Keeps every record it is given, whatever its level."""
+
+    def __init__(self) -> None:
+        super().__init__(logging.NOTSET)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Keep *record*."""
+        self.records.append(record)
+
+
+@pytest.fixture
+def worker_records() -> Generator[RecordingHandler, None, None]:
+    """Record what is filed under redsun.workers.stack, at any level."""
+    handler = RecordingHandler()
+    pool_logger = logging.getLogger("redsun.workers.stack")
+    pool_logger.addHandler(handler)
+    yield handler
+    pool_logger.removeHandler(handler)
+
+
+@pytest.fixture
+def session_level() -> Generator[None, None, None]:
+    """Put back the level of the redsun logger after the test."""
+    session_logger = logging.getLogger("redsun")
+    found = session_logger.level
+    yield
+    session_logger.setLevel(found)
+
 
 EXPECTED: dict[str, int] = (
     {"low": 0x4000, "normal": 0x20}
@@ -105,14 +139,26 @@ def test_a_worker_error_reaches_the_session_log(
 
 @pytest.mark.processes
 def test_a_record_below_the_session_level_stays_in_the_worker(
-    caplog: pytest.LogCaptureFixture,
+    worker_records: RecordingHandler, session_level: None
 ) -> None:
     """Drop a worker's debug record when the session logs at INFO."""
-    caplog.set_level(logging.INFO, logger="redsun")
+    logging.getLogger("redsun").setLevel(logging.INFO)
     with ProcessPool(1, log_name="redsun.workers.stack") as pool:
         pool.submit(log_debug, "noise").result(timeout=30)
     pool.shutdown()
-    assert not [r for r in caplog.records if r.name == "redsun.workers.stack"]
+    assert not worker_records.records
+
+
+@pytest.mark.processes
+def test_a_record_at_the_session_level_reaches_the_session(
+    worker_records: RecordingHandler, session_level: None
+) -> None:
+    """File a worker's debug record under its pool's logger when the session logs at DEBUG."""
+    logging.getLogger("redsun").setLevel(logging.DEBUG)
+    with ProcessPool(1, log_name="redsun.workers.stack") as pool:
+        pool.submit(log_debug, "detail").result(timeout=30)
+    pool.shutdown()
+    assert [r.getMessage() for r in worker_records.records] == ["detail"]
 
 
 @pytest.mark.processes

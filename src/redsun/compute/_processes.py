@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import logging
 import multiprocessing
+import threading
 import time
 from concurrent.futures import BrokenExecutor, ProcessPoolExecutor
 from concurrent.futures import wait as wait_for
 from functools import partial
 from logging.handlers import QueueListener
-from typing import TYPE_CHECKING, Any, final
+from queue import Empty
+from typing import TYPE_CHECKING, Any, Final, final
 
 from ._future import BrokenPool
 from ._pickling import check_function, round_trip
@@ -25,6 +27,8 @@ if TYPE_CHECKING:
     from ._pool import Call
     from ._settings import Limits, Priority, ProcessPoolSettings
 
+POLL_INTERVAL: Final = 0.1
+
 logger = logging.getLogger("redsun")
 
 
@@ -39,6 +43,33 @@ class FileUnder(logging.Handler):
         """Hand *record* to the logger named after the pool."""
         record.name = self._name
         logging.getLogger(self._name).handle(record)
+
+
+class PollingListener(QueueListener):
+    """Hand the records of a worker log queue to handlers, and stop without writing to the queue.
+
+    `stop` sets a flag the listener thread checks between reads, so it returns
+    even when a terminated worker left the queue's write lock held. Records
+    already in the queue are handed over before the thread ends.
+    """
+
+    def __init__(self, source: Queue[Any], *handlers: logging.Handler) -> None:
+        super().__init__(source, *handlers)
+        self._source = source
+        self._finished = threading.Event()
+
+    def dequeue(self, block: bool) -> Any:
+        """Return the next record, or `None`, the end marker, once stopped and the queue is empty."""
+        while True:
+            try:
+                return self._source.get(timeout=POLL_INTERVAL)
+            except Empty:
+                if self._finished.is_set():
+                    return None
+
+    def enqueue_sentinel(self) -> None:
+        """Ask the listener thread to end once the queue is empty."""
+        self._finished.set()
 
 
 @final
@@ -129,7 +160,7 @@ class ProcessPool(Pool):
             return
         context = multiprocessing.get_context("spawn")
         queue = context.Queue()
-        listener = QueueListener(queue, FileUnder(self._log_name))
+        listener = PollingListener(queue, FileUnder(self._log_name))
         listener.start()
         try:
             self._executor = ProcessPoolExecutor(
@@ -219,10 +250,10 @@ class ProcessPool(Pool):
                 process.join(self._stop_timeout)
         else:
             executor.shutdown(wait=True)
-        if queue is not None:
-            queue.cancel_join_thread()
         if listener is not None:
             listener.stop()
+        if queue is not None:
+            queue.close()
 
 
 @final
