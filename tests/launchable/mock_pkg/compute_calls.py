@@ -100,3 +100,8 @@ def spin() -> NoReturn:
 def spin_for(seconds: float) -> None:
     """Sleep for *seconds*."""
     time.sleep(seconds)
+
+
+def log_warning(message: str) -> None:
+    """Log *message* at WARNING."""
+    logging.getLogger(__name__).warning(message)

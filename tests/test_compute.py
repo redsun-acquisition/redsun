@@ -23,7 +23,15 @@ from redsun import (
     Session,
     provides,
 )
-from redsun.compute import Future, ThreadExecutor, ThreadPool, ThreadPoolSettings
+from redsun.compute import (
+    Future,
+    ProcessExecutor,
+    ProcessPool,
+    ProcessPoolSettings,
+    ThreadExecutor,
+    ThreadPool,
+    ThreadPoolSettings,
+)
 from redsun.compute._future import PRE_START
 from redsun.presenter import AcquisitionPresenter
 from redsun.qt import QtSession
@@ -136,6 +144,30 @@ class ShutdownLogger:
         logging.getLogger("redsun.tests").info("logs shut down")
 
 
+class Fitter:
+    """Presenter asking for a process executor in its constructor, never submitting."""
+
+    def __init__(self, name: str, executor: ProcessExecutor) -> None:
+        self.name = name
+
+
+class SetupFitter:
+    """Presenter asking for a process executor in its `setup` only."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(self, executor: ProcessExecutor) -> None:
+        pass
+
+
+class OwnWorkers:
+    """Presenter taking a `workers` keyword of its own."""
+
+    def __init__(self, name: str, workers: int, executor: ProcessExecutor) -> None:
+        self.name = name
+
+
 class FrameCamera(StandardReadable):
     """Camera whose frame a plan sets before each reading."""
 
@@ -188,6 +220,33 @@ class WaitsInSetup(Session):
 class FailsAfterAsking(Session):
     fails: AsPresenter[Failing]
     plain: AsPresenter[Plain]
+
+
+class TwoFitters(Session):
+    fit_a: AsPresenter[Fitter]
+    fit_b: AsPresenter[Fitter]
+
+
+class OneFitter(Session):
+    fit: AsPresenter[Fitter]
+
+
+class FitterWithSetupFitter(Session):
+    fit: AsPresenter[Fitter]
+    later: AsPresenter[SetupFitter]
+
+
+class ThreadsWithWorkers(Session):
+    median: AsPresenter[Median]
+
+
+class OwnWorkersLab(Session):
+    own: AsPresenter[OwnWorkers]
+
+
+class FitterAndCamera(Session):
+    fit: AsPresenter[Fitter]
+    camera: AsDevice[FrameCamera]
 
 
 class NoCompute(Session):
@@ -370,3 +429,126 @@ def test_a_run_s_documents_reach_a_presenter_that_computes_in_the_pool(
     assert np.array_equal(median, np.full((4, 4), 2))
     assert published_on == threading.main_thread().name
     assert threading.main_thread().name not in computed_on
+
+
+@pytest.fixture
+def eight_cores(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Report eight physical cores to the session."""
+    monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 8)
+
+
+@pytest.mark.usefixtures("eight_cores")
+def test_each_component_gets_its_own_process_pool(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Report one ProcessPool per component, sized by the share of the compute cores."""
+    caplog.set_level(logging.INFO, logger="redsun")
+    session = build(TwoFitters, {"compute": {"cores": 4}})
+    assert session.pool_settings[ProcessPool, "fit_a"] == ProcessPoolSettings(2)
+    assert session.pool_settings[ProcessPool, "fit_b"] == ProcessPoolSettings(2)
+    assert "ProcessPool of fit_a: 2 processes, priority normal" in caplog.text
+    assert "ProcessPool of fit_b: 2 processes, priority normal" in caplog.text
+
+
+@pytest.mark.usefixtures("eight_cores")
+def test_a_setup_asking_for_processes_counts_for_the_share(build: BuildSession) -> None:
+    """Divide the compute cores between the components asking in a constructor or in a setup."""
+    session = build(FitterWithSetupFitter, {"compute": {"cores": 4}})
+    assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(2)
+    assert session.pool_settings[ProcessPool, "later"] == ProcessPoolSettings(2)
+
+
+@pytest.mark.usefixtures("eight_cores")
+@pytest.mark.parametrize(
+    ("entry", "section", "expected"),
+    [({"workers": 3}, {"processes": 2}, 3), ({}, {"processes": 2}, 2), ({}, {}, 4)],
+)
+def test_the_worker_count_comes_from_the_entry_then_the_section_then_the_share(
+    build: BuildSession,
+    entry: dict[str, object],
+    section: dict[str, object],
+    expected: int,
+) -> None:
+    """Take the entry's workers, else compute.processes, else the session's share."""
+    session = build(
+        OneFitter,
+        {"presenters": {"fit": entry}, "compute": {"cores": 4, **section}},
+    )
+    assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(expected)
+
+
+@pytest.mark.usefixtures("eight_cores")
+def test_the_priority_of_the_section_reaches_every_process_pool(
+    build: BuildSession,
+) -> None:
+    """Give each process pool the priority the compute section names."""
+    session = build(TwoFitters, {"compute": {"cores": 4, "priority": "low"}})
+    for owner in ("fit_a", "fit_b"):
+        assert session.pool_settings[ProcessPool, owner] == ProcessPoolSettings(
+            2, priority="low"
+        )
+
+
+@pytest.mark.usefixtures("eight_cores")
+def test_more_workers_than_cores_are_warned_and_kept(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn once when the pools ask for more workers than the compute cores, and keep them."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(
+            OneFitter,
+            {"presenters": {"fit": {"workers": 9}}, "compute": {"cores": 4}},
+        )
+    assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(9)
+    warning = "Process pools have 9 workers in all, more than the 4 compute cores"
+    assert caplog.text.count(warning) == 1
+
+
+def test_workers_without_a_process_executor_are_ignored_with_a_warning(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn that workers is ignored for a component asking for no ProcessExecutor."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(ThreadsWithWorkers, {"presenters": {"median": {"workers": 2}}})
+    assert "median" in session.presenters
+    assert "median gives 'workers' but asks for no ProcessExecutor; ignored" in (
+        caplog.text
+    )
+
+
+def test_workers_on_a_device_skips_it(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a device whose declaration gives workers, naming the key."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        session = build(FitterAndCamera, {"devices": {"camera": {"workers": 2}}})
+    assert "camera" not in session.devices
+    assert "only a presenter or a view takes 'workers'" in caplog.text
+
+
+@pytest.mark.parametrize("workers", [0, -1, True, 1.5, "2"])
+def test_a_workers_that_is_not_a_whole_number_of_one_or_more_skips_the_component(
+    build: BuildSession, caplog: pytest.LogCaptureFixture, workers: object
+) -> None:
+    """Skip a presenter whose workers is not an int of at least 1, naming the key."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        session = build(OneFitter, {"presenters": {"fit": {"workers": workers}}})
+    assert "fit" not in session.presenters
+    assert f"gives workers={workers!r}" in caplog.text
+
+
+def test_a_class_taking_workers_itself_is_skipped(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a presenter whose constructor takes workers when the declaration gives it too."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        session = build(OwnWorkersLab, {"presenters": {"own": {"workers": 2}}})
+    assert "own" not in session.presenters
+    assert "takes a 'workers' keyword of its own" in caplog.text
+
+
+def test_build_is_refused_inside_a_worker(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Refuse Session.build when multiprocessing reports a parent process."""
+    monkeypatch.setattr("multiprocessing.parent_process", object)
+    with pytest.raises(RuntimeError, match='if __name__ == "__main__":'):
+        NoCompute().build()

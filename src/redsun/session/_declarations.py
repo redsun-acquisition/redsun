@@ -240,6 +240,8 @@ class Declaration:
     A view's `placement` keyword is kept here too, read and checked against
     the frontend: `placement` is where the view attaches, or `None` when the
     declaration is refused or not a view.
+    A presenter's or view's `workers` keyword is kept here too, the worker
+    processes of its pool: `None` when it gives none.
     `refusal` is why the class cannot be built in its layer, or `None`; a
     refused declaration is never built. `attribute` is the annotation the
     session class declares it under and `source` the configuration entry its
@@ -265,6 +267,7 @@ class Declaration:
         "refusal",
         "services",
         "source",
+        "workers",
     )
 
     def __init__(
@@ -287,6 +290,12 @@ class Declaration:
         self.services: dict[str, str] = {}
         self.autoconnect = True
         self.placement: Placement | None = None
+        self.workers: int | None = None
+        if kind is Layer.DEVICE and "workers" in cfg_kwargs and refusal is None:
+            refusal = TypeError(
+                f"{name!r} is declared as a device, and only a presenter or a view "
+                "takes 'workers'"
+            )
         if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
             refusal = TypeError(
                 f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
@@ -297,6 +306,11 @@ class Declaration:
             try:
                 cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
             except (TypeError, ValueError) as error:
+                refusal = error
+        if kind is not Layer.DEVICE and refusal is None:
+            try:
+                cfg_kwargs = take_workers(self, cfg_kwargs)
+            except TypeError as error:
                 refusal = error
         self.cfg_kwargs = cfg_kwargs
         self.key: Key = NewType(name, cls)
@@ -441,6 +455,37 @@ def take_view_placement(
         )
     frontend.check_placement(declaration.cls, declared, where)
     declaration.placement = declared
+    return rest
+
+
+def take_workers(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Move a presenter's or view's `workers` from *kwargs* onto *declaration*.
+
+    Returns the keywords left for the component's constructor.
+
+    Raises
+    ------
+    TypeError
+        If the component's class takes `workers` itself, or the value is not
+        an `int` of at least 1.
+    """
+    if "workers" not in kwargs:
+        return kwargs
+    where = f"{declaration.kind} {declaration.name!r}"
+    if "workers" in inspect.signature(declaration.cls).parameters:
+        raise TypeError(
+            f"{declaration.cls.__name__} ({where}) takes a 'workers' keyword of "
+            "its own, which a declaration reserves for the session"
+        )
+    rest = dict(kwargs)
+    workers = rest.pop("workers")
+    if workers is not None:
+        if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+            raise TypeError(
+                f"{where} gives workers={workers!r}; it takes a whole number of "
+                "at least 1"
+            )
+        declaration.workers = workers
     return rest
 
 
