@@ -271,7 +271,7 @@ disable_error_code = ["misc", "untyped-decorator"]
 [tool.coverage.run]
 source = ["redsun"]
 # services under test run as child processes; their code is measured there
-patch = ["subprocess"]
+patch = ["subprocess", "_exit"]
 omit = [
     "*/tests/conftest.py",
     "*/src/redsun/view/*",
