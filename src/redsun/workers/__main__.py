@@ -37,13 +37,11 @@ def main() -> None:
         while True:
             before = loaded_qt()
             try:
-                kind, id, payload = channel.receive()
+                _, id, payload = channel.receive()
             except EOFError:
                 break
             except UnreadableMessage as unreadable:
                 answer_error(channel, unreadable.id, unreadable.error)
-                continue
-            if kind != "call":
                 continue
             fn, args, kwargs = payload
             name = name_of(fn)
