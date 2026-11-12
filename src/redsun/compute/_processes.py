@@ -274,14 +274,14 @@ class ProcessPool(Pool):
             return
         future = call.future
         waited = time.monotonic() - call.submitted
-        executor = self._executor
-        if executor is None:
-            raise BrokenPool(self._broken or "the pool shut down")
         # a worker may take the call before submit returns, so cancels wait for the link
         if not future._hand_over():
             call.cancel()
             return
+        executor = self._executor
         try:
+            if executor is None:
+                raise BrokenPool(self._broken or "the pool shut down")
             executor, standard = self._send(executor, call)
         except BaseException:
             future._link(None)
@@ -386,13 +386,10 @@ class ProcessPool(Pool):
             replaced = bool(self._replaced)
         with self._inflight_lock:
             crashed = bool(self._crashed)
+        # shortcut: private _broken, the stdlib's only sign of a worker that died with no call running; drop it if that case stops mattering
+        broken = executor is not None and bool(executor._broken)
         # a worker that ended, by crash or terminate, may have left a partial record
-        ended = (
-            terminated
-            or replaced
-            or crashed
-            or (executor is not None and bool(executor._broken))
-        )
+        ended = terminated or replaced or crashed or broken
         if listener is not None:
             listener.stop(LISTENER_TIMEOUT if ended else None)
         if queue is not None:
