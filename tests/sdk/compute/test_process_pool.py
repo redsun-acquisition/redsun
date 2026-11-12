@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing
 import os
 import pickle
+import signal
 import sys
 import time
-from concurrent.futures import wait
+from concurrent.futures import Future, wait
 from concurrent.futures.process import BrokenProcessPool
 from typing import TYPE_CHECKING
 
@@ -242,4 +244,30 @@ def test_an_answer_that_cannot_be_pickled_fails_only_its_call() -> None:
         with pytest.raises((TypeError, pickle.PicklingError)):
             pool.submit(make_lock).result(timeout=30)
         assert pool.submit(pid).result(timeout=30) == before
+    pool.shutdown()
+
+
+@pytest.mark.processes
+def test_a_crashed_call_can_submit_again_from_its_callback() -> None:
+    """Return the result of a call submitted from the done-callback of a crashed call."""
+    with ProcessPool(1) as pool:
+        again: Future[Future[int]] = Future()
+        pool.submit(crash, 3).add_done_callback(
+            lambda _: again.set_result(pool.submit(add, 1, 1))
+        )
+        assert again.result(timeout=30).result(timeout=30) == 2
+    pool.shutdown()
+
+
+@pytest.mark.processes
+def test_a_call_after_an_idle_worker_died_runs_on_new_workers() -> None:
+    """Return a result from a call submitted after an idle worker was killed."""
+    with ProcessPool(1) as pool:
+        worker = pool.submit(pid).result(timeout=30)
+        os.kill(worker, signal.SIGTERM)
+        while any(p.pid == worker for p in multiprocessing.active_children()):
+            time.sleep(0.05)
+        # the standard pool notices the death on its own thread
+        time.sleep(0.5)
+        assert pool.submit(add, 2, 2).result(timeout=30) == 4
     pool.shutdown()

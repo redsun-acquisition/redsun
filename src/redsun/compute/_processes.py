@@ -112,9 +112,9 @@ class ProcessPool(Pool):
     still running, which fails their calls with `BrokenPool`.
 
     A worker that ends while calls are unfinished fails every one of them
-    with `WorkerCrashed`, and the pool starts new workers. Replaced more than
-    `MAX_REPLACEMENTS` times within `REPLACEMENT_WINDOW` seconds, the pool
-    breaks instead and refuses later calls with `BrokenPool`.
+    with `WorkerCrashed` once the pool has started new workers. Replaced more
+    than 3 times within 60 s, the pool breaks instead and refuses later calls
+    with `BrokenPool`.
 
     Parameters
     ----------
@@ -147,6 +147,9 @@ class ProcessPool(Pool):
         self._inflight: set[Future[Any]] = set()
         # not the pool lock: done-callbacks take it under the standard pool's own lock
         self._inflight_lock = threading.Lock()
+        self._crashed: dict[
+            ProcessPoolExecutor, list[tuple[Call[Any], BaseException]]
+        ] = {}
         self._replaced: deque[float] = deque()
         self._stopping = False
 
@@ -225,7 +228,6 @@ class ProcessPool(Pool):
         with self._lock:
             if self._executor is not broken or self._queue is None:
                 return self._executor
-            self._executor = None
             logging.getLogger(self._log_name).error(
                 f"A worker process ended: {trace(error)}"
             )
@@ -234,6 +236,7 @@ class ProcessPool(Pool):
             while now - self._replaced[0] > REPLACEMENT_WINDOW:
                 self._replaced.popleft()
             if len(self._replaced) > MAX_REPLACEMENTS:
+                self._executor = None
                 self._break(
                     f"the pool was replaced more than {MAX_REPLACEMENTS} times"
                     f" in {REPLACEMENT_WINDOW:g} s"
@@ -247,24 +250,28 @@ class ProcessPool(Pool):
             call.run(through=round_trip)
             return
         future = call.future
+        if future.cancelled():
+            call.cancel()
+            return
         waited = time.monotonic() - call.submitted
-        # a cancel waits for the hand-over, so the counts never see it half done
-        with future._condition:
-            if future.cancelled():
-                call.cancel()
-                return
-            executor = self._executor
+        executor = self._executor
+        if executor is None:
+            raise BrokenPool(self._broken or "the pool shut down")
+        try:
+            standard = executor.submit(call.fn, *call.args, **call.kwargs)
+        except BrokenExecutor as error:
+            executor = self._replace(executor, error)
             if executor is None:
-                raise BrokenPool(self._broken or "the pool shut down")
+                raise BrokenPool(self._broken or "the pool shut down") from error
             try:
                 standard = executor.submit(call.fn, *call.args, **call.kwargs)
-            except BrokenExecutor as error:
-                executor = self._replace(executor, error)
-                if executor is None:
-                    raise BrokenPool(self._broken or "the pool shut down") from error
-                standard = executor.submit(call.fn, *call.args, **call.kwargs)
-            self._counts.started(call.owner, waited)
-            future._linked = standard
+            except BrokenExecutor as again:
+                raise BrokenPool(f"the workers stopped: {again}") from again
+        if not future._link(
+            standard, partial(self._counts.started, call.owner, waited)
+        ):
+            standard.cancel()
+            return
         with self._inflight_lock:
             self._inflight.add(standard)
         standard.add_done_callback(partial(self._settle, call, executor))
@@ -274,8 +281,9 @@ class ProcessPool(Pool):
     ) -> None:
         """Settle *call* from the worker's answer, or from its being cancelled or ended.
 
-        Runs on the standard pool's thread, under its lock when the pool
-        broke, so it hands the replacement to a thread of its own.
+        Runs on the standard pool's thread, under its lock when a worker
+        ended, so a crashed call is left to `_recover` on a thread of its own:
+        callbacks that submit again must not run under that lock.
         """
         with self._inflight_lock:
             self._inflight.discard(standard)
@@ -291,27 +299,45 @@ class ProcessPool(Pool):
         future._linked = None
         error = standard.exception()
         if isinstance(error, BrokenExecutor):
-            if self._stopping:
-                error = BrokenPool("the pool shut down")
-            else:
-                self._counts.crashed(call.owner)
-                if self._executor is executor:
+            if not self._stopping:
+                with self._inflight_lock:
+                    crashed = self._crashed.setdefault(executor, [])
+                    crashed.append((call, error))
+                    first = len(crashed) == 1
+                if first:
                     threading.Thread(
-                        target=self._replace,
-                        args=(executor, error),
-                        name="redsun-process-pool-replace",
+                        target=self._recover,
+                        args=(executor,),
+                        name="redsun-process-pool-recover",
                         daemon=True,
                     ).start()
-                crashed = WorkerCrashed(
-                    f"a worker process of {call.owner} ended before the call finished"
-                )
-                crashed.__cause__ = error
-                error = crashed
+                return
+            error = BrokenPool("the pool shut down")
         self._counts.finished(call.owner, failed=error is not None)
         if error is None:
             future.set_result(standard.result())
         else:
             future.set_exception(error)
+
+    def _recover(self, broken: ProcessPoolExecutor) -> None:
+        """Replace *broken*, then fail the calls it left unfinished with `WorkerCrashed`."""
+        while True:
+            with self._inflight_lock:
+                crashed = self._crashed.pop(broken, [])
+            if not crashed:
+                return
+            try:
+                self._replace(broken, crashed[0][1])
+            finally:
+                for call, error in crashed:
+                    self._counts.crashed(call.owner)
+                    self._counts.finished(call.owner, failed=True)
+                    failure = WorkerCrashed(
+                        f"a worker process of {call.owner}"
+                        " ended before the call finished"
+                    )
+                    failure.__cause__ = error
+                    call.future.set_exception(failure)
 
     def _stop(self, wait: bool, cancel_futures: bool) -> None:
         """Wait for the running calls, end the workers still running, and stop the log listener.
@@ -326,7 +352,8 @@ class ProcessPool(Pool):
             queue, self._queue = self._queue, None
         with self._inflight_lock:
             inflight = list(self._inflight)
-        timeout: float | None = None
+        # a worker that ended, by crash or terminate, may have left a partial record
+        timeout = LISTENER_TIMEOUT if self._replaced else None
         if executor is not None:
             # shortcut: private _processes until 3.14 is the oldest Python; then terminate_workers()
             # read before shutdown, which empties it on 3.14 too

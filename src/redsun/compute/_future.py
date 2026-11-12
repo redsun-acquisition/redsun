@@ -70,14 +70,28 @@ class Future(concurrent.futures.Future[R]):
         self._released: Callable[[], bool] = lambda: False
         self._queued = False
         self._linked: concurrent.futures.Future[Any] | None = None
+        self._cancel_asked = False
 
     def cancel(self) -> bool:
         """Cancel the call, unless a worker has taken it."""
-        # held while the pool hands the call over, so a cancel sees it either before or after
         with self._condition:
-            if self._linked is not None and not self._linked.cancel():
+            linked = self._linked
+            if linked is None:
+                self._cancel_asked = True
+        if linked is not None and not linked.cancel():
+            return False
+        return super().cancel()
+
+    def _link(
+        self, standard: concurrent.futures.Future[Any], on_link: Callable[[], object]
+    ) -> bool:
+        """Link the future of the worker running the call and call *on_link*, unless a cancel came first."""
+        with self._condition:
+            if self._cancel_asked:
                 return False
-            return super().cancel()
+            self._linked = standard
+            on_link()
+            return True
 
     def _bind(
         self, owner: str, delivery: Delivery | None, released: Callable[[], bool]
