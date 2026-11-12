@@ -180,7 +180,7 @@ name, the shape and the type cross to the worker:
 The block belongs to the presenter, so the presenter closes and unlinks it
 once the result or the error comes back, and before it makes the block of
 the next descriptor. A session shutting down drops the result of a call
-still running, so `shutdown` releases the blocks still out:
+still running, so `shutdown` releases every block it has not released yet:
 
 ```{.python}
 --8<-- "docs/examples/shared_block.py:release"
