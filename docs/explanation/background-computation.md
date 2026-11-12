@@ -198,7 +198,8 @@ shows; the pool itself adds no shared memory.
 A worker's log records reach the session's log through a queue, the method of
 the `logging` cookbook. The session formats them like its own records, under
 `redsun.workers.<component>`, so the log view shows each component's workers
-as a source of their own. A worker sends nothing below the session's level.
+as a source of their own. A worker sends nothing below the level the session
+had when its pool started.
 
 A `ProcessPool` starts worker processes on an interpreter running without the
 GIL too; a component that wants threads there asks for a `ThreadExecutor`.

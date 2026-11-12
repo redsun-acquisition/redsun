@@ -157,6 +157,7 @@ class Pool(Executor, ABC):
         self._state = State.MADE
         self._broken = ""
         self._delivery: Delivery | None = None
+        self._label = "Pool"
 
     @classmethod
     @abstractmethod
@@ -198,7 +199,7 @@ class Pool(Executor, ABC):
             try:
                 self._start()
             except Exception as error:
-                logger.error(f"Pool did not start: {trace(error)}")
+                logger.error(f"{self._label} did not start: {trace(error)}")
                 self._break(f"the pool did not start: {error}", log=False)
                 raise BrokenPool(self._broken) from error
             try:
@@ -223,7 +224,7 @@ class Pool(Executor, ABC):
             self._state = State.BROKEN
             self._broken = reason
             if log:
-                logger.error(f"Pool is broken: {reason}")
+                logger.error(f"{self._label} is broken: {reason}")
             while self._waiting:
                 self._waiting.popleft().fail(BrokenPool(reason))
 
@@ -347,6 +348,10 @@ class PoolExecutor(Executor, Generic[PoolT]):
             If this executor has shut down.
         BrokenPool
             If the pool broke at start, or its workers broke.
+        TypeError
+            If the pool runs calls in worker processes and *fn* is one a worker
+            cannot import: a lambda, a closure, a bound method or a function
+            defined in the script being run.
         """
         if self._closed:
             raise RuntimeError("cannot schedule new futures after shutdown")

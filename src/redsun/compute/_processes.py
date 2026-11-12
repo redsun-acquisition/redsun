@@ -41,12 +41,12 @@ class FileUnder(logging.Handler):
 
     def __init__(self, name: str) -> None:
         super().__init__()
-        self._name = name
+        self.logger_name = name
 
     def emit(self, record: logging.LogRecord) -> None:
         """Hand *record* to the logger named after the pool."""
-        record.name = self._name
-        logging.getLogger(self._name).handle(record)
+        record.name = self.logger_name
+        logging.getLogger(self.logger_name).handle(record)
 
 
 class PollingListener(QueueListener):
@@ -117,7 +117,9 @@ class ProcessPool(Pool):
 
     Workers start with the `spawn` method, so a script that starts a pool must
     be guarded by `if __name__ == "__main__":`. The workers' log records reach
-    the session's log under *log_name*. Shutting the pool down waits for
+    the session's log under *log_name*, from the level the `redsun` logger had
+    when the pool started; a later change of that level does not reach the
+    workers. Shutting the pool down waits for
     running calls at most *stop_timeout* seconds, then ends the workers
     still running, which fails their calls with `BrokenPool`.
 
@@ -184,11 +186,14 @@ class ProcessPool(Pool):
         )
         pool._native_threads = settings.native_threads
         pool._delivery = delivery
+        pool._label = f"The process pool of {owner}"
         try:
             yield pool
         finally:
             try:
-                logger.info(pool._counts.summary("process pool", pool.pool_size))
+                logger.info(
+                    pool._counts.summary(f"process pool of {owner}", pool.pool_size)
+                )
             finally:
                 pool.shutdown(wait=True)
 
@@ -253,6 +258,7 @@ class ProcessPool(Pool):
                     f" in {REPLACEMENT_WINDOW:g} s"
                 )
                 return None
+            # shortcut: a replacement shares the log queue, whose write lock a worker killed while logging on POSIX leaves held; give each replacement a queue and listener of its own if new workers hang there
             self._executor = self._new_executor(self._queue)
             return self._executor
 
@@ -382,9 +388,9 @@ class ProcessPool(Pool):
             queue, self._queue = self._queue, None
         terminated = False
         if executor is not None:
-            # shortcut: private _processes until 3.14 is the oldest Python; then terminate_workers()
-            # read before shutdown, which empties it on 3.14 too
+            # shortcut: private _processes, read before shutdown empties it; 3.14's terminate_workers() cannot replace it, since it ends running calls at once and finds no process after shutdown
             processes = list(executor._processes.values())
+            deadline = time.monotonic() + self._stop_timeout
             executor.shutdown(wait=False, cancel_futures=True)
             # the standard futures that shutdown cancels never count as done for
             # concurrent.futures.wait, so wait for _settle to have seen each
@@ -392,13 +398,16 @@ class ProcessPool(Pool):
                 settled = self._settled.wait_for(
                     lambda: not self._inflight, timeout=self._stop_timeout
                 )
-            if not settled:
+            if settled:
                 for process in processes:
-                    process.terminate()
-                for process in processes:
-                    process.join(self._stop_timeout)
-                terminated = True
-            else:
+                    process.join(max(0.0, deadline - time.monotonic()))
+            stuck = [process for process in processes if process.is_alive()]
+            for process in stuck:
+                process.terminate()
+            for process in stuck:
+                process.join(self._stop_timeout)
+            terminated = bool(stuck)
+            if not terminated:
                 executor.shutdown(wait=True)
         with self._lock:
             replaced = bool(self._replaced)
