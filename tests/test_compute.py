@@ -219,11 +219,6 @@ class FramePlans:
         yield from bps.close_run()
 
 
-def watchdog_threads() -> list[threading.Thread]:
-    """Return the watchdog threads alive."""
-    return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
-
-
 class OneMedian(Session):
     median: AsPresenter[Median]
 
@@ -306,6 +301,17 @@ class MedianLab(QtSession):
     plans: AsPresenter[FramePlans]
     acquisition: AsPresenter[AcquisitionPresenter]
     median: Annotated[AsPresenter[MedianPresenter], Declare(source="camera-frame")]
+
+
+@pytest.fixture
+def eight_cores(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Report eight physical cores to the session."""
+    monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 8)
+
+
+def watchdog_threads() -> list[threading.Thread]:
+    """Return the watchdog threads alive."""
+    return [t for t in threading.enumerate() if t.name == "redsun-watchdog"]
 
 
 def test_a_component_gets_an_executor_and_its_result(build: BuildSession) -> None:
@@ -463,12 +469,6 @@ def test_a_run_s_documents_reach_a_presenter_that_computes_in_the_pool(
     assert threading.main_thread().name not in computed_on
 
 
-@pytest.fixture
-def eight_cores(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Report eight physical cores to the session."""
-    monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 8)
-
-
 @pytest.mark.usefixtures("eight_cores")
 def test_each_component_gets_its_own_process_pool(
     build: BuildSession, caplog: pytest.LogCaptureFixture
@@ -561,7 +561,7 @@ def test_workers_with_no_executor_asked_for_are_ignored_with_a_warning(
 
 
 @pytest.mark.usefixtures("eight_cores")
-def test_a_process_pool_of_a_failed_component_never_starts(
+def test_a_component_failing_after_asking_for_processes_is_skipped(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Skip a component that fails after asking for a ProcessExecutor, and shut down cleanly."""
