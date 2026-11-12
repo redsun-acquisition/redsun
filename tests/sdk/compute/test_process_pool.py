@@ -96,6 +96,16 @@ def test_inline_processes_catches_an_unpicklable_argument(
 
 
 @pytest.mark.processes
+def test_a_worker_pool_names_an_unpicklable_argument() -> None:
+    """Fail a call whose argument holds a lock with TypeError naming the argument."""
+    with ProcessPool(1) as pool:
+        future = pool.submit(add, 1, make_lock())  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match=r"add\(b=\.\.\.\)"):
+            future.result(timeout=30)
+    pool.shutdown()
+
+
+@pytest.mark.processes
 def test_a_worker_runs_the_call_in_another_process() -> None:
     """Return a result computed in a process other than the test's."""
     with ProcessPool(1) as pool:

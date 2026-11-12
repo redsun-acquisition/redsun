@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import multiprocessing
+import pickle
 import threading
 import time
 from collections import deque
@@ -14,7 +15,7 @@ from queue import Empty
 from typing import TYPE_CHECKING, Any, Final, final
 
 from ._future import BrokenPool, WorkerCrashed, trace
-from ._pickling import check_function, round_trip
+from ._pickling import check_function, dumps_call, round_trip
 from ._pool import Pool, PoolExecutor
 from ._worker import prepare_worker
 
@@ -92,6 +93,16 @@ class PollingListener(QueueListener):
                 " a worker may have ended while writing a record"
             )
         self._thread = None
+
+
+def named_culprit(call: Call[Any], error: BaseException) -> BaseException:
+    """Return the error naming what of *call* cannot be pickled, or *error* if all of it can."""
+    try:
+        dumps_call(call.fn, call.args, call.kwargs)
+    except TypeError as named:
+        named.__cause__ = error
+        return named
+    return error
 
 
 @final
@@ -330,6 +341,8 @@ class ProcessPool(Pool):
                     ).start()
                 return
             error = BrokenPool("the pool shut down")
+        elif isinstance(error, (TypeError, pickle.PicklingError, AttributeError)):
+            error = named_culprit(call, error)
         self._counts.finished(call.owner, failed=error is not None)
         if error is None:
             future.set_result(standard.result())
