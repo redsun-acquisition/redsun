@@ -23,7 +23,14 @@ logger = logging.getLogger("redsun")
 
 @dataclass(frozen=True, slots=True)
 class OwnerUsage:
-    """What one owner's calls did in a pool."""
+    """What one owner's calls did in a pool.
+
+    A `ProcessExecutor` counts a call as `active` once it hands the call to
+    the standard library's pool, which may still hold it in its own queue
+    until a worker is free. Its `queued` counts the calls waiting for the pool
+    to start or for that hand-over, and `longest_idle` covers only the wait
+    before the hand-over.
+    """
 
     queued: int
     """Calls waiting for a worker."""

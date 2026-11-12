@@ -418,5 +418,8 @@ class ProcessPool(Pool):
 class ProcessExecutor(PoolExecutor[ProcessPool]):
     """Runs one owner's calls on a pool of worker processes.
 
-    A session gives each owner a pool of its own.
+    A session gives each owner a pool of its own. Its `usage` counts a call
+    as active once the call is handed to the standard library's pool, whether
+    a worker runs it yet or not, so the waiting count and the longest wait
+    cover only the time before that hand-over.
     """

@@ -56,7 +56,8 @@ a lambda, a function defined inside another one, a bound method, and a
 function defined in the script you run, which a worker can't import. Keep
 such functions in a module that doesn't import `qtpy`, because every worker
 that imports the module loads Qt too. Both executors take the same calls, so
-the rest of this page applies to either.
+the rest of this page applies to either, except for the counts
+[Read what the pool did](#read-what-the-pool-did) describes.
 
 ## Ask for an executor
 
@@ -305,6 +306,11 @@ only owner is the `median` presenter:
 ```text
 thread pool: 3 workers, 214 calls (median 214), 2 failed, longest idle 1.4 s
 ```
+
+A `ProcessExecutor` counts a call as running once it hands the call to its
+worker processes, where the call may still wait in a queue for a free worker.
+Its waiting count and longest wait cover only the time before that hand-over,
+for instance while the pool has not started yet.
 
 A call that waited more than a second for a free thread is logged as a
 warning naming its owner when it starts. A thread the session
