@@ -70,28 +70,39 @@ class Future(concurrent.futures.Future[R]):
         self._released: Callable[[], bool] = lambda: False
         self._queued = False
         self._linked: concurrent.futures.Future[Any] | None = None
-        self._cancel_asked = False
+        self._handing_over = False
 
     def cancel(self) -> bool:
         """Cancel the call, unless a worker has taken it."""
         with self._condition:
             linked = self._linked
-            if linked is None:
-                self._cancel_asked = True
+            if linked is None and self._handing_over:
+                return False
         if linked is not None and not linked.cancel():
             return False
         return super().cancel()
 
-    def _link(
-        self, standard: concurrent.futures.Future[Any], on_link: Callable[[], object]
-    ) -> bool:
-        """Link the future of the worker running the call and call *on_link*, unless a cancel came first."""
+    def _hand_over(self) -> bool:
+        """Refuse cancels from now on, unless the call is already cancelled."""
         with self._condition:
-            if self._cancel_asked:
+            if self.cancelled():
                 return False
-            self._linked = standard
-            on_link()
+            self._handing_over = True
             return True
+
+    def _link(
+        self,
+        standard: concurrent.futures.Future[Any] | None,
+        on_link: Callable[[], object] = lambda: None,
+    ) -> None:
+        """End the hand-over: link the future of the worker running the call and call *on_link*.
+
+        With no *standard*, the hand-over failed and cancels work again.
+        """
+        with self._condition:
+            self._linked = standard
+            self._handing_over = False
+            on_link()
 
     def _bind(
         self, owner: str, delivery: Delivery | None, released: Callable[[], bool]

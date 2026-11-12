@@ -245,33 +245,48 @@ class ProcessPool(Pool):
             self._executor = self._new_executor(self._queue)
             return self._executor
 
+    def _send(
+        self, executor: ProcessPoolExecutor, call: Call[Any]
+    ) -> tuple[ProcessPoolExecutor, Future[Any]]:
+        """Submit *call* to *executor*, or once to its replacement if it broke.
+
+        Returns the executor that took the call and its future.
+
+        Raises
+        ------
+        BrokenPool
+            If the pool broke or shut down, or the replacement broke too.
+        """
+        try:
+            return executor, executor.submit(call.fn, *call.args, **call.kwargs)
+        except BrokenExecutor as error:
+            replacement = self._replace(executor, error)
+            if replacement is None:
+                raise BrokenPool(self._broken or "the pool shut down") from error
+        try:
+            return replacement, replacement.submit(call.fn, *call.args, **call.kwargs)
+        except BrokenExecutor as error:
+            raise BrokenPool(f"the workers stopped: {error}") from error
+
     def _dispatch(self, call: Call[Any]) -> None:
         if not self._workers:
             call.run(through=round_trip)
             return
         future = call.future
-        if future.cancelled():
-            call.cancel()
-            return
         waited = time.monotonic() - call.submitted
         executor = self._executor
         if executor is None:
             raise BrokenPool(self._broken or "the pool shut down")
-        try:
-            standard = executor.submit(call.fn, *call.args, **call.kwargs)
-        except BrokenExecutor as error:
-            executor = self._replace(executor, error)
-            if executor is None:
-                raise BrokenPool(self._broken or "the pool shut down") from error
-            try:
-                standard = executor.submit(call.fn, *call.args, **call.kwargs)
-            except BrokenExecutor as again:
-                raise BrokenPool(f"the workers stopped: {again}") from again
-        if not future._link(
-            standard, partial(self._counts.started, call.owner, waited)
-        ):
-            standard.cancel()
+        # a worker may take the call before submit returns, so cancels wait for the link
+        if not future._hand_over():
+            call.cancel()
             return
+        try:
+            executor, standard = self._send(executor, call)
+        except BaseException:
+            future._link(None)
+            raise
+        future._link(standard, partial(self._counts.started, call.owner, waited))
         with self._inflight_lock:
             self._inflight.add(standard)
         standard.add_done_callback(partial(self._settle, call, executor))
@@ -352,8 +367,7 @@ class ProcessPool(Pool):
             queue, self._queue = self._queue, None
         with self._inflight_lock:
             inflight = list(self._inflight)
-        # a worker that ended, by crash or terminate, may have left a partial record
-        timeout = LISTENER_TIMEOUT if self._replaced else None
+        terminated = False
         if executor is not None:
             # shortcut: private _processes until 3.14 is the oldest Python; then terminate_workers()
             # read before shutdown, which empties it on 3.14 too
@@ -365,11 +379,22 @@ class ProcessPool(Pool):
                     process.terminate()
                 for process in processes:
                     process.join(self._stop_timeout)
-                timeout = LISTENER_TIMEOUT
+                terminated = True
             else:
                 executor.shutdown(wait=True)
+        with self._lock:
+            replaced = bool(self._replaced)
+        with self._inflight_lock:
+            crashed = bool(self._crashed)
+        # a worker that ended, by crash or terminate, may have left a partial record
+        ended = (
+            terminated
+            or replaced
+            or crashed
+            or (executor is not None and bool(executor._broken))
+        )
         if listener is not None:
-            listener.stop(timeout)
+            listener.stop(LISTENER_TIMEOUT if ended else None)
         if queue is not None:
             queue.close()
 

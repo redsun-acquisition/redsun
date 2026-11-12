@@ -267,7 +267,13 @@ def test_a_call_after_an_idle_worker_died_runs_on_new_workers() -> None:
         os.kill(worker, signal.SIGTERM)
         while any(p.pid == worker for p in multiprocessing.active_children()):
             time.sleep(0.05)
-        # the standard pool notices the death on its own thread
-        time.sleep(0.5)
-        assert pool.submit(add, 2, 2).result(timeout=30) == 4
+        deadline = time.monotonic() + 30
+        while True:
+            # the standard pool notices the death on its own thread, so a call
+            # may still reach the dying workers and crash with them
+            try:
+                assert pool.submit(add, 2, 2).result(timeout=30) == 4
+                break
+            except WorkerCrashed:
+                assert time.monotonic() < deadline
     pool.shutdown()
