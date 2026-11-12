@@ -509,6 +509,16 @@ def test_the_worker_count_comes_from_the_entry_then_the_section_then_the_share(
     assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(expected)
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="the limit is Windows's")
+def test_the_share_stays_within_what_windows_accepts(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Size a process pool at 61 workers at most on Windows when the share is larger."""
+    monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 128)
+    session = build(OneFitter, {"compute": {"cores": 100}})
+    assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(61)
+
+
 @pytest.mark.usefixtures("eight_cores")
 def test_the_priority_of_the_section_reaches_every_process_pool(
     build: BuildSession,

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import sys
 from functools import partial
-from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, get_origin
 
 from redsun.compute import Limits
 
@@ -34,6 +35,9 @@ if TYPE_CHECKING:
     from ..compute._future import Delivery
 
 E = TypeVar("E", bound=PoolExecutor[Any])
+
+WINDOWS_MAX_WORKERS: Final = 61
+"""Most worker processes `ProcessPoolExecutor` accepts on Windows."""
 
 logger = logging.getLogger("redsun")
 
@@ -157,7 +161,7 @@ class SessionCompute:
         A pool other than the process pool is shared. Each owner asking for a
         `ProcessExecutor` has a process pool of its own, of `workers[owner]`
         processes, else `compute.processes`, else its share of the compute
-        cores.
+        cores, at most 61 on Windows.
         """
         asking = [name for name, held in owners.items() if ProcessExecutor in held]
         for name in workers.keys() - set(asking):
@@ -183,6 +187,8 @@ class SessionCompute:
                 internal=True,
             )
         share = max(1, self.cores // max(len(asking), 1))
+        if sys.platform == "win32":
+            share = min(share, WINDOWS_MAX_WORKERS)
         for name in asking:
             count = workers.get(name, self.config.processes or share)
             process_settings = ProcessPoolSettings(count, priority=self.config.priority)

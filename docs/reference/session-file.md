@@ -167,7 +167,7 @@ wins over the class, key by key.
 | `cores` | whole number, 1 or more | the physical cores less `reserve` | the most compute cores to use |
 | `reserve` | whole number, 0 or more | `1` | physical cores kept free for the window's thread |
 | `switch_interval_ms` | number above 0 | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
-| `processes` | whole number, 1 or more | the compute cores shared between the process pools, at least 1 each | the worker processes of each component's process pool |
+| `processes` | whole number, 1 or more | the compute cores shared between the process pools, at least 1 and on Windows at most 61 each | the worker processes of each component's process pool |
 | `priority` | `low`, `normal` or `high` | `normal` | the priority of every worker process; `high` needs root or `CAP_SYS_NICE` on Linux and macOS |
 
 `reserve` lowers the [compute cores](../explanation/glossary.md#compute-cores)
