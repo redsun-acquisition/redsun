@@ -24,7 +24,7 @@ def fit_stack(name: str, shape: tuple[int, ...], dtype: str) -> NDArray[np.float
     block = shared_memory.SharedMemory(name=name)
     stack = np.ndarray(shape, dtype, block.buf)
     try:
-        return stack.mean(axis=0)
+        return np.asarray(stack.mean(axis=0), dtype=np.float64)
     finally:
         del stack
         block.close()
