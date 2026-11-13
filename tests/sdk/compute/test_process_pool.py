@@ -34,11 +34,7 @@ if TYPE_CHECKING:
 
     from redsun.compute import Priority
 
-EXPECTED: dict[str, int] = (
-    {"low": 0x4000, "normal": 0x20}
-    if sys.platform == "win32"
-    else {"low": 10, "normal": 0}
-)
+LOW = 0x4000 if sys.platform == "win32" else 10
 
 
 class RecordingHandler(logging.Handler):
@@ -127,15 +123,19 @@ def test_a_worker_runs_the_call_in_another_process() -> None:
 @pytest.mark.processes
 @pytest.mark.parametrize("priority", ["low", "normal"])
 def test_workers_run_at_the_pool_priority(priority: Priority) -> None:
-    """Read back the priority the worker's initializer set."""
+    """Run workers at the low priority, or at the test process's own for normal."""
+    expected = LOW if priority == "low" else current_priority()
     with ProcessPool(1, priority=priority) as pool:
-        assert pool.submit(current_priority).result(timeout=30) == EXPECTED[priority]
+        assert pool.submit(current_priority).result(timeout=30) == expected
     pool.shutdown()
 
 
 @pytest.mark.processes
 @pytest.mark.skipif(
-    sys.platform == "win32" or os.geteuid() == 0, reason="raising priority is allowed"
+    sys.platform == "win32"
+    or os.geteuid() == 0
+    or os.getpriority(os.PRIO_PROCESS, 0) <= -10,
+    reason="raising priority is allowed, or the process runs at high priority already",
 )
 def test_a_refused_priority_warns_and_runs(caplog: pytest.LogCaptureFixture) -> None:
     """Log the worker's refusal under the pool's logger and still run calls."""

@@ -33,12 +33,13 @@ def make_lock() -> threading.Lock:
 
 def current_priority() -> int:
     """Return the priority of the process: its class on Windows, its nice value elsewhere."""
-    if sys.platform != "win32":
+    if sys.platform == "win32":
+        kernel32 = ctypes.WinDLL("kernel32")
+        kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+        kernel32.GetPriorityClass.argtypes = [ctypes.c_void_p]
+        return int(kernel32.GetPriorityClass(kernel32.GetCurrentProcess()))
+    else:
         return os.getpriority(os.PRIO_PROCESS, 0)
-    kernel32 = ctypes.WinDLL("kernel32")
-    kernel32.GetCurrentProcess.restype = ctypes.c_void_p
-    kernel32.GetPriorityClass.argtypes = [ctypes.c_void_p]
-    return int(kernel32.GetPriorityClass(kernel32.GetCurrentProcess()))
 
 
 def log_error(message: str) -> None:
