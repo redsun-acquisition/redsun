@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import multiprocessing
 import pickle
@@ -12,10 +13,9 @@ from concurrent.futures import BrokenExecutor, ProcessPoolExecutor
 from functools import partial
 from logging.handlers import QueueListener
 from queue import Empty
-from typing import TYPE_CHECKING, Any, Final, final
+from typing import TYPE_CHECKING, Any, Final, TypeVar, final
 
 from ._future import BrokenPool, WorkerCrashed, trace
-from ._pickling import check_function, dumps_call, round_trip
 from ._pool import Pool, PoolExecutor
 from ._worker import prepare_worker
 
@@ -28,12 +28,45 @@ if TYPE_CHECKING:
     from ._pool import Call
     from ._settings import Limits, Priority, ProcessPoolSettings
 
+R = TypeVar("R")
+
 POLL_INTERVAL: Final = 0.1
 MAX_REPLACEMENTS: Final = 3
 REPLACEMENT_WINDOW: Final = 60.0
 LISTENER_TIMEOUT: Final = 1.0
 
 logger = logging.getLogger("redsun")
+
+
+def check_function(fn: Callable[..., Any]) -> None:
+    """Raise `TypeError` if *fn* is a lambda, a closure, a bound method or defined in `__main__`.
+
+    A worker imports a function by its module and name. A worker that cannot
+    find it ends, and its pool breaks, so only a function defined at module
+    level of a module the worker can import is sent.
+    """
+    while isinstance(fn, partial):
+        fn = fn.func
+    name = getattr(fn, "__qualname__", repr(fn))
+    if inspect.ismethod(fn) or "<lambda>" in name or "<locals>" in name:
+        raise TypeError(
+            f"{name} cannot be sent to a worker process: "
+            "send a function defined at module level"
+        )
+    if getattr(fn, "__module__", None) == "__main__":
+        raise TypeError(
+            f"{name} is defined in the script being run, which a worker cannot "
+            "import: send a function from a module a worker can import"
+        )
+
+
+def round_trip(
+    fn: Callable[..., R], args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> R:
+    """Run a call as a worker process would: pickled in, and its result pickled out."""
+    fn, args, kwargs = pickle.loads(pickle.dumps((fn, args, kwargs)))
+    result: R = pickle.loads(pickle.dumps(fn(*args, **kwargs)))
+    return result
 
 
 class FileUnder(logging.Handler):
@@ -93,16 +126,6 @@ class PollingListener(QueueListener):
                 " a worker may have ended while writing a record"
             )
         self._thread = None
-
-
-def named_culprit(call: Call[Any], error: BaseException) -> BaseException:
-    """Return the error naming what of *call* cannot be pickled, or *error* if all of it can."""
-    try:
-        dumps_call(call.fn, call.args, call.kwargs)
-    except TypeError as named:
-        named.__cause__ = error
-        return named
-    return error
 
 
 @final
@@ -347,8 +370,6 @@ class ProcessPool(Pool):
                     ).start()
                 return
             error = BrokenPool("the pool shut down")
-        elif isinstance(error, (TypeError, pickle.PicklingError, AttributeError)):
-            error = named_culprit(call, error)
         self._counts.finished(call.owner, failed=error is not None)
         if error is None:
             future.set_result(standard.result())

@@ -9,8 +9,10 @@ import pickle
 import signal
 import sys
 import time
+from collections import Counter
 from concurrent.futures import Future, wait
 from concurrent.futures.process import BrokenProcessPool
+from functools import partial
 from typing import TYPE_CHECKING
 
 import pytest
@@ -30,7 +32,7 @@ from mock_pkg.compute_calls import (
 from redsun.compute import BrokenPool, ProcessExecutor, ProcessPool, WorkerCrashed
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from redsun.compute import Priority
 
@@ -83,22 +85,73 @@ def test_a_lambda_is_refused_at_submit() -> None:
         assert executor.usage().queued == 0
 
 
+def test_a_closure_a_bound_method_or_a_partial_of_one_is_refused_at_submit() -> None:
+    """Refuse a closure, a bound method and a partial of a closure at submit."""
+    pool = ProcessPool(0)
+
+    def local() -> int:
+        return 1
+
+    refused: tuple[Callable[..., object], ...] = (
+        local,
+        Counter().most_common,
+        partial(local),
+    )
+    for fn in refused:
+        with pytest.raises(TypeError, match="send a function defined at module level"):
+            pool.submit(fn)
+    pool.shutdown()
+
+
+def test_a_function_from_the_script_being_run_is_refused() -> None:
+    """Refuse a function defined in `__main__`, plain or inside a partial."""
+    pool = ProcessPool(0)
+
+    def in_script() -> int:
+        return 1
+
+    in_script.__qualname__ = "in_script"
+    in_script.__module__ = "__main__"
+    for fn in (in_script, partial(in_script)):
+        with pytest.raises(TypeError, match="script being run"):
+            pool.submit(fn)
+    pool.shutdown()
+
+
 def test_inline_processes_catches_an_unpicklable_argument(
     inline_processes: ProcessExecutor,
 ) -> None:
-    """Fail a call whose argument holds a lock, naming the argument."""
+    """Fail a call whose argument holds a lock with pickle's TypeError."""
     future = inline_processes.submit(add, make_lock(), 1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match=r"add\(a=\.\.\.\)"):
+    with pytest.raises(TypeError, match="cannot pickle"):
         future.result()
 
 
+def test_an_inline_pool_catches_an_unpicklable_result() -> None:
+    """Fail a call whose result cannot be pickled."""
+    with ProcessPool(0) as pool, pytest.raises(TypeError, match="cannot pickle"):
+        pool.submit(make_lock).result(timeout=1)
+
+
+def test_an_unpicklable_argument_before_start_fails_alone() -> None:
+    """Fail only the call whose argument cannot be pickled when a pool that queued it starts."""
+    pool = ProcessPool(0)
+    bad = pool.submit(add, 1, make_lock())  # type: ignore[arg-type]
+    good = pool.submit(add, 2, 3)
+    pool.start()
+    assert isinstance(bad.exception(timeout=1), TypeError)
+    assert good.result(timeout=1) == 5
+    pool.shutdown()
+
+
 @pytest.mark.processes
-def test_a_worker_pool_names_an_unpicklable_argument() -> None:
-    """Fail a call whose argument holds a lock with TypeError naming the argument."""
+def test_a_worker_pool_fails_a_call_with_an_unpicklable_argument() -> None:
+    """Fail a call whose argument holds a lock with pickle's TypeError, and run the next."""
     with ProcessPool(1) as pool:
         future = pool.submit(add, 1, make_lock())  # type: ignore[arg-type]
-        with pytest.raises(TypeError, match=r"add\(b=\.\.\.\)"):
+        with pytest.raises(TypeError, match="cannot pickle"):
             future.result(timeout=30)
+        assert pool.submit(add, 2, 3).result(timeout=30) == 5
     pool.shutdown()
 
 
