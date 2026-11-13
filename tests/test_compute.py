@@ -183,6 +183,14 @@ class ThreadWorkers:
         self.workers = workers
 
 
+class KeywordWorkers:
+    """Presenter taking every keyword through `**kwargs` and no process executor."""
+
+    def __init__(self, name: str, **kwargs: object) -> None:
+        self.name = name
+        self.kwargs = kwargs
+
+
 class WorkerCamera(StandardReadable):
     """Device taking a `workers` keyword of its own."""
 
@@ -264,6 +272,10 @@ class OwnWorkersLab(Session):
 
 class ThreadWorkersLab(Session):
     own: AsPresenter[ThreadWorkers]
+
+
+class KeywordWorkersLab(Session):
+    own: AsPresenter[KeywordWorkers]
 
 
 class FitterAndCamera(Session):
@@ -586,13 +598,15 @@ def test_a_component_failing_after_asking_for_processes_is_skipped(
 def test_workers_reach_the_constructor_of_a_device_or_a_class_without_processes(
     build: BuildSession,
 ) -> None:
-    """Pass workers to a device, and to a presenter taking it and asking for no ProcessExecutor."""
+    """Pass workers to a device, and to a presenter taking it by name or through **kwargs and asking for no ProcessExecutor."""
     session = build(FitterAndCamera, {"devices": {"camera": {"workers": 2}}})
     assert session.camera.workers == 2
     assert (
         build(ThreadWorkersLab, {"presenters": {"own": {"workers": 3}}}).own.workers
         == 3
     )
+    keywords = build(KeywordWorkersLab, {"presenters": {"own": {"workers": "auto"}}})
+    assert keywords.own.kwargs == {"workers": "auto"}
 
 
 @pytest.mark.parametrize("workers", [0, -1, True, 1.5, "2"])

@@ -244,8 +244,8 @@ class Declaration:
     declaration is refused or not a view.
     A presenter's or view's `workers` keyword is kept here too, the worker
     processes of its pool: `None` when it gives none. It reaches the
-    constructor instead when the class takes `workers` and asks for no
-    `ProcessExecutor`, as a device's always does.
+    constructor instead when the class takes `workers`, by name or through
+    `**kwargs`, and asks for no `ProcessExecutor`, as a device's always does.
     `refusal` is why the class cannot be built in its layer, or `None`; a
     refused declaration is never built. `attribute` is the annotation the
     session class declares it under and `source` the configuration entry its
@@ -464,8 +464,9 @@ def take_view_placement(
 def take_workers(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Move a presenter's or view's `workers` from *kwargs* onto *declaration*.
 
-    A component whose class takes `workers` itself and asks for no
-    `ProcessExecutor` keeps the keyword for its constructor.
+    A component whose class takes `workers` itself, by name or through
+    `**kwargs`, and asks for no `ProcessExecutor` keeps the keyword for its
+    constructor.
 
     Returns the keywords left for the component's constructor.
 
@@ -478,9 +479,13 @@ def take_workers(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, 
     if "workers" not in kwargs:
         return kwargs
     where = f"{declaration.kind} {declaration.name!r}"
-    if "workers" in inspect.signature(declaration.cls).parameters:
-        if ProcessExecutor not in component_kinds(declaration.cls):
-            return kwargs
+    parameters = inspect.signature(declaration.cls).parameters
+    takes_workers = "workers" in parameters or any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()
+    )
+    if takes_workers and ProcessExecutor not in component_kinds(declaration.cls):
+        return kwargs
+    if "workers" in parameters:
         raise TypeError(
             f"{declaration.cls.__name__} ({where}) takes a 'workers' keyword of "
             "its own and asks for a ProcessExecutor, whose 'workers' a "

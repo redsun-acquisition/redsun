@@ -65,7 +65,7 @@ entry.
 | `service` | text | none | devices only: the service whose [prefix](../explanation/glossary.md#prefix) the device gets |
 | `autoconnect` | true or false | `true` | devices only: whether the build connects the device |
 | `placement` | text or mapping | the view's own | views only: where the view goes in the window, as a word or mapping the frontend reads; see [Override a view's default placement](../how-to/place-a-view.md#override-a-views-default-placement) |
-| `workers` | whole number, 1 or more | the `compute` section's | presenters and views asking for a `ProcessExecutor`: the worker processes of the component's process pool. A class that takes `workers` itself and asks for no `ProcessExecutor` gets it as an argument, as a device does; one that does both is refused |
+| `workers` | whole number, 1 or more | the `compute` section's | presenters and views asking for a `ProcessExecutor`: the worker processes of the component's process pool. A class that takes `workers` itself, by name or through `**kwargs`, and asks for no `ProcessExecutor` gets it as an argument, as a device does; one with a `workers` parameter that asks for a `ProcessExecutor` is refused |
 | any other key | | | an argument of the constructor |
 
 An entry for a component the session class declares leaves out `plugin_name`
