@@ -36,6 +36,29 @@ function spends its time in code that lets other threads run meanwhile, as
 every other thread, the window's included, so it runs no faster on a thread
 and slows the window down while it runs.
 
+## Choose an executor
+
+Ask for a [`ThreadExecutor`][redsun.compute.ThreadExecutor] when the work
+lets go of the GIL, as `np.median` does, and for a
+[`ProcessExecutor`][redsun.compute.ProcessExecutor] when it is Python code
+that holds it. A `ProcessExecutor` runs each call in one of the component's
+own [worker processes](../explanation/glossary.md#worker-process), so plain
+Python there runs alongside the window instead of taking turns with it. The
+cost is a copy: the call's arguments and its result travel between the
+processes, which for a stack of camera frames can take longer than the
+computation.
+[Send large arrays through a shared block](#send-large-arrays-through-a-shared-block)
+shows how to avoid most of that copy.
+
+A call sent to a worker process travels by name, so the function must be
+defined at the top level of a module the worker can import. `submit` refuses
+a lambda, a function defined inside another one, a bound method, and a
+function defined in the script you run, which a worker can't import. Keep
+such functions in a module that doesn't import `qtpy`, because every worker
+that imports the module loads Qt too. Both executors take the same calls, so
+the rest of this page applies to either, except for the counts
+[Read what the pool did](#read-what-the-pool-did) describes.
+
 ## Ask for an executor
 
 Annotate a constructor parameter with
@@ -109,6 +132,60 @@ Link the two in the session:
 --8<-- "docs/examples/background_processing.py:session"
 ```
 
+## Start the session under the main guard
+
+A worker process starts by importing the script you ran, so everything at the
+top level of the script runs again in every worker. Only the code under
+`if __name__ == "__main__":` doesn't, so build and run the session there:
+
+```python
+if __name__ == "__main__":
+    MyApp().run()
+```
+
+!!! warning "A script without the guard starts no workers"
+
+    Without the guard, each worker would build a second session while it
+    starts. The session refuses that with `RuntimeError: Session.build ran
+    inside a worker process`, the worker never starts, and the calls of the
+    component fail. Put the session's start under
+    `if __name__ == "__main__":`.
+
+## Send large arrays through a shared block
+
+A `ProcessExecutor` copies a call's arguments into the worker, so a stack of
+frames sent at the end of a run makes `stop` wait for the copy. Write the
+frames into a block of shared memory as they arrive instead, and send the
+worker only the block's name. The function opens the block by name and reads
+the frames where they are:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:function"
+```
+
+The presenter asks for a `ProcessExecutor`:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:presenter"
+```
+
+It makes the block when the run describes its data, with room for the number
+of frames it is given, and fills one frame per event. At `stop` only the
+name, the shape and the type cross to the worker:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:documents"
+```
+
+The block belongs to the presenter, so the presenter closes and unlinks it
+once the result or the error comes back, and before it makes the block of
+the next descriptor. A session shutting down drops the result of a call
+still running, so `shutdown` releases every block it has not released yet:
+
+```{.python}
+--8<-- "docs/examples/shared_block.py:release"
+```
+
 ## Warm up from `setup`
 
 The first call of a function is often slower than the next ones, because a
@@ -154,6 +231,72 @@ Compute: 15 cores, preset balanced
 ThreadPool: 3 threads, 5 native threads each
 ```
 
+The preset sizes the thread pool only. Each component that asks for a
+`ProcessExecutor` gets a pool of worker processes of its own, so one
+component's crash or long queue never reaches another's calls. The session
+shares the compute cores between those pools, at least one worker each, and
+each worker runs its native libraries on one thread. `processes` gives every
+such component the same count instead, and a component's own `workers` key
+wins over both:
+
+```yaml
+compute:
+  processes: 2
+
+presenters:
+  stack:
+    workers: 4
+```
+
+The summary then has one line per pool, such as
+`ProcessPool of stack: 4 processes, priority normal`. When the pools add up
+to more workers than the compute cores, the build logs a warning and keeps
+the counts you asked for.
+
+## Set the priority of the workers
+
+Worker processes run at normal priority, the same as the rest of the session.
+Set `priority` to `low` when their work can wait, so services such as a
+camera's driver keep their share of the CPU during an acquisition, or to
+`high` when the workers must keep up:
+
+```yaml
+compute:
+  priority: low
+```
+
+The priority applies to the worker processes only, never to the threads of
+the thread pool, which run in the session's own process.
+
+!!! warning "`high` needs privileges on Linux and macOS"
+
+    Raising a process above normal priority needs root, or the
+    `CAP_SYS_NICE` capability on Linux. Without it each worker logs a warning
+    and runs at normal priority. Windows lets any user choose `high`.
+
+## Handle a crashed worker
+
+A worker process can die in the middle of a call, from a crash in compiled
+code or an `os._exit`. Python then fails every call of that pool that hadn't
+finished, without saying which one killed the worker, so each of them fails
+with [`WorkerCrashed`][redsun.compute.WorkerCrashed]. The pool starts new
+workers, and the component's next `submit` runs on them. Nothing is sent
+again on its own, because running a call twice could repeat what it did
+before the crash, such as writing a file. Send it again from the error
+callback if that is safe:
+
+```python
+from redsun.compute import WorkerCrashed
+
+def _report(self, error: BaseException) -> None:
+    if isinstance(error, WorkerCrashed):
+        self._executor.submit(median_of, self._frames).then(self.sig_median.emit)
+```
+
+A pool whose workers die more than 3 times within 60 s stops starting new
+ones: its calls fail with [`BrokenPool`][redsun.compute.BrokenPool] from then
+on, and the log says why. The pools of the other components go on.
+
 ## Read what the pool did
 
 [`usage`][redsun.compute.ThreadExecutor.usage] returns the counts of the
@@ -165,6 +308,11 @@ only owner is the `median` presenter:
 ```text
 thread pool: 3 workers, 214 calls (median 214), 2 failed, longest idle 1.4 s
 ```
+
+A `ProcessExecutor` counts a call as running once it hands the call to its
+worker processes, where the call may still wait in a queue for a free worker.
+Its waiting count and longest wait cover only the time before that hand-over,
+for instance while the pool has not started yet.
 
 A call that waited more than a second for a free thread is logged as a
 warning naming its owner when it starts. A thread the session
@@ -187,6 +335,15 @@ a pool with no threads, already started. Each call runs in the test's own
 thread before `submit` returns, and `then` hands its result over at once, so
 the test can check it on the next line.
 
+[`inline_processes`][redsun.testing.inline_processes] does the same for a
+`ProcessExecutor`. Each call still runs in the test's thread, but its
+arguments and its result are pickled and read back first, so a value that
+couldn't reach a real worker fails the call:
+
+```{.python}
+--8<-- "tests/test_doc_examples.py:test-processes"
+```
+
 ## Leave the window's teardown alone
 
 !!! warning "Work started while the window closes fails"
@@ -204,4 +361,10 @@ the test can check it on the next line.
 
     ```{.python}
     --8<-- "docs/examples/background_processing.py"
+    ```
+
+??? example "The shared block"
+
+    ```{.python}
+    --8<-- "docs/examples/shared_block.py"
     ```

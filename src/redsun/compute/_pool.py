@@ -79,8 +79,16 @@ class Call(Generic[R]):
 
     counts: Counts
 
-    def run(self) -> None:
+    def run(
+        self,
+        through: Callable[[Callable[..., R], tuple[Any, ...], dict[str, Any]], R]
+        | None = None,
+    ) -> None:
         """Run the call in this thread and settle its future.
+
+        With *through*, the result is `through(fn, args, kwargs)`, so the
+        function may run elsewhere and is left out of the list of functions
+        this process's pool threads are running.
 
         The call lets go of its future when it starts, and the failing branch
         drops the local too: the exception's traceback reaches this frame and
@@ -96,7 +104,10 @@ class Call(Generic[R]):
         if waited > LONG_WAIT:
             logger.warning(f"A call of {self.owner} waited {waited:.1f} s for a worker")
         try:
-            result = self.invoke()
+            if through is None:
+                result = self.invoke()
+            else:
+                result = through(self.fn, self.args, self.kwargs)
         except BaseException as error:  # noqa: BLE001 - the future carries it to the caller
             self.counts.finished(self.owner, failed=True)
             future.set_exception(error)
@@ -146,6 +157,7 @@ class Pool(Executor, ABC):
         self._state = State.MADE
         self._broken = ""
         self._delivery: Delivery | None = None
+        self._label = "Pool"
 
     @classmethod
     @abstractmethod
@@ -187,11 +199,8 @@ class Pool(Executor, ABC):
             try:
                 self._start()
             except Exception as error:
-                self._state = State.BROKEN
-                self._broken = f"the pool did not start: {error}"
-                logger.error(f"Pool did not start: {trace(error)}")
-                while self._waiting:
-                    self._waiting.popleft().fail(BrokenPool(self._broken))
+                logger.error(f"{self._label} did not start: {trace(error)}")
+                self._break(f"the pool did not start: {error}", log=False)
                 raise BrokenPool(self._broken) from error
             try:
                 while self._waiting:
@@ -205,6 +214,19 @@ class Pool(Executor, ABC):
                         call.fail(error.with_traceback(None))
             finally:
                 self._state = State.STARTED
+
+    def _check(self, fn: Callable[..., Any]) -> None:
+        """Raise before anything is queued if the pool cannot run *fn*."""
+
+    def _break(self, reason: str, *, log: bool = True) -> None:
+        """Mark the pool broken and fail the calls waiting for it, logging *reason* unless *log* is false."""
+        with self._lock:
+            self._state = State.BROKEN
+            self._broken = reason
+            if log:
+                logger.error(f"{self._label} is broken: {reason}")
+            while self._waiting:
+                self._waiting.popleft().fail(BrokenPool(reason))
 
     def _submit(
         self,
@@ -225,6 +247,7 @@ class Pool(Executor, ABC):
         RuntimeError
             If the pool has shut down.
         """
+        self._check(fn)
         future: Future[R] = Future()
         future._bind(owner, self._delivery, released)
         call = Call(owner, fn, args, kwargs, future, time.monotonic(), self._counts)
@@ -325,6 +348,10 @@ class PoolExecutor(Executor, Generic[PoolT]):
             If this executor has shut down.
         BrokenPool
             If the pool broke at start, or its workers broke.
+        TypeError
+            If the pool runs calls in worker processes and *fn* is one a worker
+            cannot import: a lambda, a closure, a bound method or a function
+            defined in the script being run.
         """
         if self._closed:
             raise RuntimeError("cannot schedule new futures after shutdown")

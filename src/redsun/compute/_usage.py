@@ -23,7 +23,14 @@ logger = logging.getLogger("redsun")
 
 @dataclass(frozen=True, slots=True)
 class OwnerUsage:
-    """What one owner's calls did in a pool."""
+    """What one owner's calls did in a pool.
+
+    A `ProcessExecutor` counts a call as `active` once it hands the call to
+    the standard library's pool, which may still hold it in its own queue
+    until a worker is free. Its `queued` counts the calls waiting for the pool
+    to start or for that hand-over, and `longest_idle` covers only the wait
+    before the hand-over.
+    """
 
     queued: int
     """Calls waiting for a worker."""
@@ -39,6 +46,9 @@ class OwnerUsage:
 
     longest_idle: float
     """Seconds a call waited for a worker, the longest so far."""
+
+    crashed: int = 0
+    """Calls that failed because a worker process ended."""
 
 
 EMPTY: Final = OwnerUsage(0, 0, 0, 0, 0.0)
@@ -69,9 +79,17 @@ class Counts:
         """Move a call from waiting to running, after *waited* seconds."""
         self._bump(owner, waited, queued=-1, active=1)
 
+    def unstarted(self, owner: str) -> None:
+        """Move a call that never ran back from running to waiting."""
+        self._bump(owner, queued=1, active=-1)
+
     def finished(self, owner: str, failed: bool) -> None:
         """Move a call from running to completed or failed."""
         self._bump(owner, active=-1, completed=not failed, failed=failed)
+
+    def crashed(self, owner: str) -> None:
+        """Count a call that failed because a worker process ended."""
+        self._bump(owner, crashed=1)
 
     def dropped(self, owner: str) -> None:
         """Remove a waiting call that never ran."""
@@ -93,11 +111,13 @@ class Counts:
             if n
         )
         failed = sum(u.failed for u in owners.values())
+        crashed = sum(u.crashed for u in owners.values())
         longest = max((u.longest_idle for u in owners.values()), default=0.0)
         split = f" ({by_owner})" if by_owner else ""
+        crashes = f", {crashed} crashed" if crashed else ""
         return (
             f"{label}: {pool_size} workers, {sum(calls.values())} calls{split},"
-            f" {failed} failed, longest idle {longest:.1f} s"
+            f" {failed} failed{crashes}, longest idle {longest:.1f} s"
         )
 
 

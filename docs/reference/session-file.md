@@ -65,6 +65,7 @@ entry.
 | `service` | text | none | devices only: the service whose [prefix](../explanation/glossary.md#prefix) the device gets |
 | `autoconnect` | true or false | `true` | devices only: whether the build connects the device |
 | `placement` | text or mapping | the view's own | views only: where the view goes in the window, as a word or mapping the frontend reads; see [Override a view's default placement](../how-to/place-a-view.md#override-a-views-default-placement) |
+| `workers` | whole number, 1 or more | the `compute` section's | presenters and views asking for a `ProcessExecutor`: the worker processes of the component's process pool. A class that takes `workers` itself, by name or through `**kwargs`, and asks for no `ProcessExecutor` gets it as an argument, as a device does; one with a `workers` parameter that asks for a `ProcessExecutor` is refused |
 | any other key | | | an argument of the constructor |
 
 An entry for a component the session class declares leaves out `plugin_name`
@@ -166,6 +167,8 @@ wins over the class, key by key.
 | `cores` | whole number, 1 or more | the physical cores less `reserve` | the most compute cores to use |
 | `reserve` | whole number, 0 or more | `1` | physical cores kept free for the window's thread |
 | `switch_interval_ms` | number above 0 | none | the interpreter's thread switch interval, in milliseconds; absent, it is left alone |
+| `processes` | whole number, 1 or more | the compute cores shared between the process pools, at least 1 and on Windows at most 61 each | the worker processes of each component's process pool |
+| `priority` | `low`, `normal` or `high` | `normal` | the priority of every worker process; `high` needs root or `CAP_SYS_NICE` on Linux and macOS |
 
 `reserve` lowers the [compute cores](../explanation/glossary.md#compute-cores)
 by its count; the session pins no thread to a core. A
@@ -177,6 +180,11 @@ threads each call's native libraries may start:
 | `latency` | 1 | `C` |
 | `balanced` | `max(2, C // 4)` | `C // pool threads`, at least 1 |
 | `throughput` | `C` | 1 |
+
+The preset sizes the thread pool only. Each component asking for a
+`ProcessExecutor` gets a process pool of its own, whose worker processes run
+their native libraries on one thread; a component's `workers` key wins over
+`processes`.
 
 ```yaml
 compute:

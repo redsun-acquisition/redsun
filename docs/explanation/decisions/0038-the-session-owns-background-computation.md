@@ -71,6 +71,47 @@ executor protocol would have been answered with a component, and two
 executor protocols with the same members could not be told apart. A class is
 looked up by its exact key.
 
+Code that holds the GIL needs worker processes rather than threads, and two
+choices came with them. The first was whether every component shares one
+process pool, as it shares the thread pool. A worker process that dies takes
+the calls it held with it, and the standard library's `ProcessPoolExecutor`
+then fails every unfinished call of the pool without saying which call killed
+the worker. With one shared pool, the crash of one component's call fails the
+calls of every other component, and one component's long queue delays them
+all:
+
+```python
+class FitPresenter:
+    def __init__(self, name: str, executor: ProcessExecutor) -> None: ...
+
+class MedianPresenter:
+    def __init__(self, name: str, executor: ProcessExecutor) -> None: ...
+
+# shared pool: a crash in a fit fails the median that waited behind it
+# one pool each: the median's pool never sees the fit's workers
+```
+
+So each component asking for a `ProcessExecutor` gets a pool of its own, and
+the session splits the compute cores between the pools.
+
+The second was whether to start the workers as `redsun`'s own processes,
+with their own protocol for sending calls and data, or to hold a standard
+`ProcessPoolExecutor`. Workers of our own could resend the lost call of a
+crashed worker and move large arrays through rings of shared memory, but
+they put a process protocol, its readiness check and its crash handling into
+`redsun`. The standard pool already starts and feeds workers, so
+`ProcessPool` holds one, started with `spawn`:
+
+```python
+with ProcessPool(2) as pool:
+    executor = ProcessExecutor(pool, "fit")
+    executor.submit(fit_stack, name, shape, dtype).then(show, report)
+```
+
+A component that sends large arrays writes them into a block of shared
+memory it owns and sends the block's name, so the pool needs no data path of
+its own.
+
 ## Decision
 
 - A component gets an executor by annotating a constructor parameter with
@@ -116,6 +157,20 @@ looked up by its exact key.
   Micrometer uses for its executors (`queued`, `active`, `completed`,
   `failed`, `pool_size`, `longest_idle`). An executor reports its owner's
   counts, and the session logs each pool's totals at shutdown.
+- The thread pool is shared by every component. Each component asking for a
+  `ProcessExecutor` gets a `ProcessPool` of its own, under a registry key
+  holding its name, sized from its share of the compute cores unless the
+  session file gives a count.
+- `ProcessPool` holds a `concurrent.futures.ProcessPoolExecutor` started with
+  `spawn`. Each worker sets the pool's priority, limits its native libraries
+  to one thread and sends its log records to the session through a queue as
+  it starts.
+- When a worker dies, every unfinished call of its pool fails with
+  `WorkerCrashed` once the pool has replaced the standard executor. Nothing
+  is sent again on its own. A pool whose workers die more than 3 times within
+  60 s is broken.
+- `submit` on a `ProcessExecutor` refuses a function a worker cannot import
+  by name before anything starts.
 - No new build step: the work fits the registry, presenters, views and setup
   steps.
 
@@ -130,6 +185,12 @@ looked up by its exact key.
   start work from Qt's `closeEvent`.
 - Nothing existing changes. A session whose components ask for no executor
   makes no pool and changes no limit.
-- A later release adds pools of worker processes and of NVIDIA GPU streams as
-  further `Pool` and executor pairs, reusing the same start, counts and
-  shutdown.
+- A crash in one component's worker fails only that component's calls, but
+  it fails all of them, including calls the crash had nothing to do with. A
+  component decides in its error callback whether a call is safe to send
+  again.
+- A script that builds a session with worker processes starts it under
+  `if __name__ == "__main__":`, since `spawn` imports the script in every
+  worker.
+- A later release adds pools of NVIDIA GPU streams as a further `Pool` and
+  executor pair, reusing the same start, counts and shutdown.

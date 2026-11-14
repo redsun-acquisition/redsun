@@ -195,3 +195,17 @@ def test_a_cancelled_queued_future_raises_cancelled_error() -> None:
     future.cancel()
     with pytest.raises(concurrent.futures.CancelledError):
         future.result()
+
+
+def test_a_cancel_is_refused_only_while_the_call_is_handed_over() -> None:
+    """Cancel before the hand-over and after a failed one, and refuse a cancel during it."""
+    early: Future[int] = Future()
+    assert early.cancel()
+    assert not early._hand_over()
+
+    handed: Future[int] = Future()
+    assert handed._hand_over()
+    assert not handed.cancel()
+    assert not handed.cancelled()
+    handed._link(None)
+    assert handed.cancel()

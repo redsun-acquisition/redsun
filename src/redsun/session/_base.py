@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import multiprocessing
 import sys
 import threading
 import weakref
@@ -130,7 +131,7 @@ if TYPE_CHECKING:
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
-    from redsun.compute import ThreadPoolSettings
+    from redsun.compute import ProcessPoolSettings, ThreadPoolSettings
     from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
     from redsun.view import Placement, WindowLayout
@@ -553,8 +554,13 @@ class Session(BuildableSession):
     @property
     def pool_settings(
         self,
-    ) -> Mapping[tuple[type[Pool], str | None], ThreadPoolSettings]:
+    ) -> Mapping[
+        tuple[type[Pool], str | None], ThreadPoolSettings | ProcessPoolSettings
+    ]:
         """The settings of each pool a component asked for, by pool class and group.
+
+        A shared pool has no group; a process pool is grouped under the name of
+        the component it serves.
 
         Empty before the build's registry step, after `shutdown`, and for a
         session no component of which asks for an executor.
@@ -832,7 +838,19 @@ class Session(BuildableSession):
         are not announced. A step that raises stops the build: the exception
         is logged, and `shutdown` gives back what the finished steps took
         before the exception leaves.
+
+        Raises
+        ------
+        RuntimeError
+            If called while a worker process starts, which runs again a script
+            not guarded by `if __name__ == "__main__":`.
         """
+        # shortcut: private _inheriting, what multiprocessing's own check of an unguarded script reads; replace it if the standard library offers a public sign
+        if getattr(multiprocessing.current_process(), "_inheriting", False):
+            raise RuntimeError(
+                "Session.build ran inside a worker process; start the session "
+                "under 'if __name__ == \"__main__\":'"
+            )
         if self._is_built:
             logger.warning("Session already built, skipping rebuild")
             return self
@@ -1285,11 +1303,8 @@ class Session(BuildableSession):
             registry,
         )
         self._compute.register(
-            {
-                kind
-                for declaration in self._components()
-                for kind in component_kinds(declaration.cls)
-            },
+            {d.name: component_kinds(d.cls) for d in self._components()},
+            {d.name: d.workers for d in self._components() if d.workers is not None},
         )
         # registered before the pools' teardown, so it runs after it; it
         # changes nothing when no pool started

@@ -31,15 +31,18 @@ components would each start a thread per core.
 ## Pools and executors
 
 The session keeps two kinds of object apart. A [pool](glossary.md#pool) owns
-the threads, and every component of a session shares it. An
+the threads or worker processes. Every component of a session shares the
+thread pool, while each component asking for a `ProcessExecutor` gets a
+process pool of its own. An
 [executor](glossary.md#executor) is one component's handle on the pool: it
 sends that component's calls to the pool and keeps track of them. The
 component that holds an executor is its [owner](glossary.md#owner), and the
 executor carries the owner's name into every count and log line.
 
 A component asks for an executor by annotating a constructor parameter with
-[`ThreadExecutor`][redsun.compute.ThreadExecutor]. It never sees the
-pool, so it cannot stop the threads that other components use, and it doesn't
+[`ThreadExecutor`][redsun.compute.ThreadExecutor] or
+[`ProcessExecutor`][redsun.compute.ProcessExecutor]. It never sees the
+pool, so it cannot stop the workers that other components use, and it doesn't
 write a `shutdown` for the executor either: the session shuts the executor
 down right after the component's own `shutdown`.
 
@@ -68,7 +71,8 @@ though, since the pool starts only after `setup` returns. That is why
 with a `RuntimeError` while its call waits for the pool to start, instead of
 waiting forever.
 
-A pool whose threads cannot be made is broken: its waiting calls fail with
+A pool whose threads or worker processes cannot be started is broken: its
+waiting calls fail with
 [`BrokenPool`][redsun.compute.BrokenPool], and `submit` raises it for every
 later call. The
 components holding it stay built, because by then every component has been
@@ -129,13 +133,14 @@ parallel work, and limits them with `threadpoolctl`.
 
 So the session limits them, with `threadpoolctl` for BLAS and OpenMP and
 `torch.set_num_threads` when PyTorch is loaded. It sets the limit from the
-main thread when the pools start, and each pool thread sets it again for
+main thread when the thread pool starts, and each of its threads sets it again for
 itself as it starts, because OpenMP keeps a limit per thread. A limit reaches
 only the libraries already imported at that moment; a library imported later
 starts at its own size.
 
-The limits apply only when a built component holds a pool, so a session that
-computes nothing in the background leaves every library as it found it. The
+The limits apply only when a built component holds a thread pool, so a
+session that computes nothing in the background, or only in worker
+processes, leaves every library of its own process as it found it. The
 session puts the old limits back when it shuts down.
 
 ## The GIL
@@ -152,5 +157,88 @@ running at that moment. The `switch_interval_ms` key of the session file
 changes how often Python passes the GIL between threads, and is left alone
 unless you set it.
 
-A later release adds pools of worker processes for code that holds the GIL,
-and pools for NVIDIA GPUs.
+## Worker processes
+
+Code that holds the GIL runs alongside the window only in another process,
+so a [`ProcessExecutor`][redsun.compute.ProcessExecutor] sends its calls to
+[worker processes](glossary.md#worker-process). Each component that asks for
+one gets a pool of its own, a
+[`ProcessPool`][redsun.compute.ProcessPool] holding the standard library's
+`concurrent.futures.ProcessPoolExecutor`. The thread pool is shared because a
+thread cannot take other components' calls down with it. A worker process
+can, as the next section shows, so a pool shared by every component could
+promise neither that one component's crash leaves the others' calls alone,
+nor that one component's long queue doesn't delay them.
+
+The session sizes the pools from one share of the compute cores: the cores
+divided among the components that ask for a `ProcessExecutor`, at least one
+worker each. The `compute` section's `processes` key gives every such pool
+the same count, and a component's `workers` key gives its own pool a count
+of its own. The session warns when the counts add up to more than the compute
+cores and keeps them, since you asked for them. Each worker runs its native
+libraries on one thread, set when the worker starts, so a pool of four
+workers never starts four threads per core.
+
+Workers start with the `spawn` method on every platform, so a worker inherits
+none of the session's threads, Qt objects or open devices. `spawn` starts a
+worker by importing the script the session was started from, which is why the
+script starts its session under `if __name__ == "__main__":`, and why the
+session refuses to build while a worker process is starting.
+
+Only values cross between the processes, never live objects, because each
+call and its result are pickled. A function travels by its module and its
+name, so `submit` refuses a lambda, a function defined inside another one, a
+bound method and a function defined in the script you ran, before anything
+starts. For a large array, a block of shared memory the component fills as
+the data arrives saves most of the copy, as
+[How to run background processing](../how-to/run-background-processing.md#send-large-arrays-through-a-shared-block)
+shows; the pool itself adds no shared memory.
+
+A worker's log records reach the session's log through a queue, the method of
+the `logging` cookbook. The session formats them like its own records, under
+`redsun.workers.<component>`, so the log view shows each component's workers
+as a source of their own. A worker sends nothing below the level the session
+had when its pool started.
+
+A `ProcessPool` starts worker processes on an interpreter running without the
+GIL too; a component that wants threads there asks for a `ThreadExecutor`.
+
+## Crashes
+
+A worker can die in the middle of a call, from a crash in compiled code or an
+`os._exit`. The standard pool then fails every unfinished call of the pool,
+without saying which one killed the worker. So each of them fails with
+[`WorkerCrashed`][redsun.compute.WorkerCrashed], which keeps the standard
+error as its cause, and the pool replaces its workers, so the component's
+next `submit` works. The calls fail only once the new workers are in place,
+which lets an error callback send a call again at once. The pool sends
+nothing again on its own, because a call run twice repeats what it did
+before the crash, such as writing a file.
+
+A pool whose workers die more than 3 times within 60 s stops replacing them:
+it is broken, and its later calls fail with
+[`BrokenPool`][redsun.compute.BrokenPool]. The pools of other components go
+on. The executor's counts span the replacements and add up the crashed
+calls.
+
+When the session shuts down, each process pool cancels the calls no worker
+has taken and waits at most 10 s for the running ones. It then ends the
+workers still running, so a call stuck in a loop cannot keep the session
+from closing; such a call fails with `BrokenPool`.
+
+## Priority
+
+The worker processes run at the priority the `compute` section names: `low`,
+`normal` or `high`, `normal` by default. Priority belongs to a pool rather
+than to a call, because on Linux and macOS a process can lower its own
+priority but never raise it back. Each worker sets it as it starts: on
+Windows through its priority class, on Linux and macOS through its nice
+value, 10 for `low` and -10 for `high`.
+
+Raising a priority there needs root, or the `CAP_SYS_NICE` capability on
+Linux. When that is refused, the worker logs a warning and runs at normal
+priority instead of stopping the build. Priority is the only control
+`redsun` takes over where work runs: no thread or process is tied to
+particular cores.
+
+A later release adds pools for NVIDIA GPUs.

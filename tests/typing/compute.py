@@ -5,16 +5,36 @@ Never imported or executed; checked by the project's normal mypy invocation.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import assert_type
 
 from redsun import Session
-from redsun.compute import Future, ThreadExecutor
+from redsun.compute import (
+    Future,
+    ProcessExecutor,
+    ProcessPoolSettings,
+    ThreadExecutor,
+    ThreadPoolSettings,
+)
 from redsun.compute._pool import Pool
 
 
 def check(executor: ThreadExecutor) -> None:
     assert_type(executor.submit(len, "abc"), Future[int])
     assert_type(executor.pool_type, type[Pool])
+
+
+def check_processes(executor: ProcessExecutor) -> None:
+    assert_type(executor.submit(len, "a"), Future[int])
+
+
+def check_settings(session: Session) -> None:
+    assert_type(
+        session.pool_settings,
+        Mapping[
+            tuple[type[Pool], str | None], ThreadPoolSettings | ProcessPoolSettings
+        ],
+    )
 
 
 async def check_run(executor: ThreadExecutor) -> None:

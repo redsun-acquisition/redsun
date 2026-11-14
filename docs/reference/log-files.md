@@ -22,7 +22,7 @@ session file, or the data folder of the user when it is not set:
 
 | File | Holds |
 | --- | --- |
-| `logs/<session>/app/<run>.log` | the records of the application, none of a service |
+| `logs/<session>/app/<run>.log` | the records of the application and of its worker processes, none of a service |
 | `logs/<session>/services/<run>.<service>.log` | the records of one launched service |
 
 `<session>` is the name of the session, `<run>` the time the run started and

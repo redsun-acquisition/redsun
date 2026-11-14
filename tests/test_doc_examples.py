@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from docs.examples.background_processing import MedianPresenter
+from docs.examples.shared_block import StackPresenter
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from qtpy.QtWidgets import QApplication
 
-    from redsun.compute import ThreadExecutor
+    from redsun.compute import ProcessExecutor, ThreadExecutor
 
 BOX_EXAMPLES = ["box_detector"] if find_spec("sharedbox") else []
 
@@ -66,3 +67,37 @@ def test_the_median_follows_the_run(inline_threads: ThreadExecutor) -> None:
 
 
 # --8<-- [end:test]
+
+
+# --8<-- [start:test-processes]
+def test_the_fit_reads_the_shared_block(inline_processes: ProcessExecutor) -> None:
+    """Publish the fit of a run's frames, read from the shared block by name."""
+    presenter = StackPresenter("fit", inline_processes, source="camera", frames=3)
+    published: list[NDArray[np.float64]] = []
+    presenter.sig_fit.connect(published.append)
+
+    presenter("start", {"uid": "run", "time": 0.0})
+    presenter(
+        "descriptor",
+        {
+            "uid": "d",
+            "run_start": "run",
+            "time": 0.0,
+            "data_keys": {
+                "camera": {
+                    "source": "sim",
+                    "dtype": "array",
+                    "dtype_numpy": "<u2",
+                    "shape": [4, 4],
+                }
+            },
+        },
+    )
+    for value in (1, 2, 9):
+        presenter("event", {"data": {"camera": np.full((4, 4), value)}})
+    presenter("stop", {"run_start": "run", "time": 1.0})
+
+    assert np.array_equal(published[-1], np.full((4, 4), 4.0))
+
+
+# --8<-- [end:test-processes]

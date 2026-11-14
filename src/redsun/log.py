@@ -59,6 +59,9 @@ SERVICE_CAPACITY: Final = 2_000
 SERVICE_LOGGER: Final = "redsun.service"
 """Logger under which each service's records arrive, one child per service."""
 
+WORKERS_LOGGER: Final = "redsun.workers"
+"""Logger under which each process pool's worker records arrive, one child per owner."""
+
 logger = logging.getLogger("redsun")
 
 
@@ -128,11 +131,36 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
 
 
 def service_of(record: logging.LogRecord) -> str | None:
-    """Return the name of the service *record* came from, `None` for the application."""
-    prefix = f"{SERVICE_LOGGER}."
-    if not record.name.startswith(prefix):
-        return None
-    return record.name.removeprefix(prefix).split(".", 1)[0]
+    """Return the name of the source *record* came from, `None` for the application.
+
+    A service's record is named `redsun.service.<name>`, and its source is
+    `<name>`. A worker process's record is named `redsun.workers.<owner>`, and
+    its source is `workers.<owner>`.
+    """
+    for prefix, label in (
+        (f"{SERVICE_LOGGER}.", ""),
+        (f"{WORKERS_LOGGER}.", "workers."),
+    ):
+        if record.name.startswith(prefix):
+            return label + record.name.removeprefix(prefix).split(".", 1)[0]
+    return None
+
+
+def text_copy(record: logging.LogRecord) -> logging.LogRecord:
+    """Return a copy of *record* holding the message and the traceback as text.
+
+    The copy keeps no arguments and no exception, so it can be pickled and
+    retained without keeping what they refer to alive.
+    """
+    kept = copy.copy(record)
+    kept.msg = record.getMessage()
+    kept.args = None
+    if record.exc_info:
+        kept.exc_text = record.exc_text or logging.Formatter().formatException(
+            record.exc_info
+        )
+        kept.exc_info = None
+    return kept
 
 
 class BufferHandler(logging.Handler):
@@ -202,14 +230,7 @@ class BufferHandler(logging.Handler):
         `handleError` and not retained.
         """
         try:
-            kept = copy.copy(record)
-            kept.msg = record.getMessage()
-            kept.args = None
-            if record.exc_info:
-                kept.exc_text = record.exc_text or logging.Formatter().formatException(
-                    record.exc_info
-                )
-                kept.exc_info = None
+            kept = text_copy(record)
         except Exception:  # noqa: BLE001 - reported by handleError
             self.handleError(record)
             return
@@ -288,7 +309,9 @@ class SessionFileHandler(RotatingFileHandler):
             delay=service is not None,
         )
         if service is None:
-            self.addFilter(lambda record: service_of(record) is None)
+            self.addFilter(
+                lambda record: not record.name.startswith(f"{SERVICE_LOGGER}.")
+            )
 
     def _folder(self, root: Path) -> Path:
         return (
