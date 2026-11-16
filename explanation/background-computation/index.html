@@ -3565,6 +3565,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#worker-processes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Worker processes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crashes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Crashes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Priority
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6149,6 +6182,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#worker-processes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Worker processes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crashes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Crashes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Priority
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6291,14 +6357,17 @@ its own pool would size it as if it were alone on the computer, and two such
 components would each start a thread per core.</p>
 <h2 id="pools-and-executors">Pools and executors<a class="headerlink" href="#pools-and-executors" title="Permanent link">&para;</a></h2>
 <p>The session keeps two kinds of object apart. A <a href="../glossary/#pool">pool</a> owns
-the threads, and every component of a session shares it. An
+the threads or worker processes. Every component of a session shares the
+thread pool, while each component asking for a <code>ProcessExecutor</code> gets a
+process pool of its own. An
 <a href="../glossary/#executor">executor</a> is one component's handle on the pool: it
 sends that component's calls to the pool and keeps track of them. The
 component that holds an executor is its <a href="../glossary/#owner">owner</a>, and the
 executor carries the owner's name into every count and log line.</p>
 <p>A component asks for an executor by annotating a constructor parameter with
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ThreadExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ThreadExecutor"><code>ThreadExecutor</code></a>. It never sees the
-pool, so it cannot stop the threads that other components use, and it doesn't
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ThreadExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ThreadExecutor"><code>ThreadExecutor</code></a> or
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ProcessExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ProcessExecutor"><code>ProcessExecutor</code></a>. It never sees the
+pool, so it cannot stop the workers that other components use, and it doesn't
 write a <code>shutdown</code> for the executor either: the session shuts the executor
 down right after the component's own <code>shutdown</code>.</p>
 <p>Splitting the two lets each <code>shutdown</code> mean one thing. An executor's
@@ -6321,7 +6390,8 @@ though, since the pool starts only after <code>setup</code> returns. That is why
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;result&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.Future.result"><code>Future.result</code></a> without a timeout refuses
 with a <code>RuntimeError</code> while its call waits for the pool to start, instead of
 waiting forever.</p>
-<p>A pool whose threads cannot be made is broken: its waiting calls fail with
+<p>A pool whose threads or worker processes cannot be started is broken: its
+waiting calls fail with
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;BrokenPool&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.BrokenPool"><code>BrokenPool</code></a>, and <code>submit</code> raises it for every
 later call. The
 components holding it stay built, because by then every component has been
@@ -6391,12 +6461,13 @@ explains how the threads <code>numpy</code> starts for <abbr title="Basic Linear
 parallel work, and limits them with <code>threadpoolctl</code>.</p>
 <p>So the session limits them, with <code>threadpoolctl</code> for <abbr title="Basic Linear Algebra Subprograms. The library numerical code runs its matrix arithmetic on.">BLAS</abbr> and <abbr title="A standard that compiled code uses to spread a loop over several threads.">OpenMP</abbr> and
 <code>torch.set_num_threads</code> when PyTorch is loaded. It sets the limit from the
-main thread when the pools start, and each pool thread sets it again for
+main thread when the thread pool starts, and each of its threads sets it again for
 itself as it starts, because <abbr title="A standard that compiled code uses to spread a loop over several threads.">OpenMP</abbr> keeps a limit per thread. A limit reaches
 only the libraries already imported at that moment; a library imported later
 starts at its own size.</p>
-<p>The limits apply only when a built component holds a pool, so a session that
-computes nothing in the background leaves every library as it found it. The
+<p>The limits apply only when a built component holds a thread pool, so a
+session that computes nothing in the background, or only in worker
+processes, leaves every library of its own process as it found it. The
 session puts the old limits back when it shuts down.</p>
 <h2 id="the-gil">The <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr><a class="headerlink" href="#the-gil" title="Permanent link">&para;</a></h2>
 <p>A thread helps only when the work lets go of the <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr>, the lock that lets one
@@ -6409,8 +6480,79 @@ it wakes more than 0.2 s late, the session logs the functions the pool was
 running at that moment. The <code>switch_interval_ms</code> key of the session file
 changes how often Python passes the <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr> between threads, and is left alone
 unless you set it.</p>
-<p>A later release adds pools of worker processes for code that holds the <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr>,
-and pools for NVIDIA GPUs.</p>
+<h2 id="worker-processes">Worker processes<a class="headerlink" href="#worker-processes" title="Permanent link">&para;</a></h2>
+<p>Code that holds the <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr> runs alongside the window only in another process,
+so a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ProcessExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ProcessExecutor"><code>ProcessExecutor</code></a> sends its calls to
+<a href="../glossary/#worker-process">worker processes</a>. Each component that asks for
+one gets a pool of its own, a
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ProcessPool&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ProcessPool"><code>ProcessPool</code></a> holding the standard library's
+<code>concurrent.futures.ProcessPoolExecutor</code>. The thread pool is shared because a
+thread cannot take other components' calls down with it. A worker process
+can, as the next section shows, so a pool shared by every component could
+promise neither that one component's crash leaves the others' calls alone,
+nor that one component's long queue doesn't delay them.</p>
+<p>The session sizes the pools from one share of the compute cores: the cores
+divided among the components that ask for a <code>ProcessExecutor</code>, at least one
+worker each. The <code>compute</code> section's <code>processes</code> key gives every such pool
+the same count, and a component's <code>workers</code> key gives its own pool a count
+of its own. The session warns when the counts add up to more than the compute
+cores and keeps them, since you asked for them. Each worker runs its native
+libraries on one thread, set when the worker starts, so a pool of four
+workers never starts four threads per core.</p>
+<p>Workers start with the <code>spawn</code> method on every platform, so a worker inherits
+none of the session's threads, Qt objects or open devices. <code>spawn</code> starts a
+worker by importing the script the session was started from, which is why the
+script starts its session under <code>if __name__ == "__main__":</code>, and why the
+session refuses to build while a worker process is starting.</p>
+<p>Only values cross between the processes, never live objects, because each
+call and its result are pickled. A function travels by its module and its
+name, so <code>submit</code> refuses a lambda, a function defined inside another one
+and a bound method before anything starts. It also refuses a function
+defined in the script you ran, even where a worker could import the script
+again, because a pool belongs to a component and its functions belong in a
+module next to that component. For a large array, a block of shared memory the component fills as
+the data arrives saves most of the copy, as
+<a href="../../how-to/run-background-processing/#send-large-arrays-through-a-shared-block">How to run background processing</a>
+shows; the pool itself adds no shared memory.</p>
+<p>A worker's log records reach the session's log through a queue, the method of
+the <code>logging</code> cookbook. The session formats them like its own records, under
+<code>redsun.workers.&lt;component&gt;</code>, so the log view shows each component's workers
+as a source of their own. A worker sends nothing below the level the session
+had when its pool started.</p>
+<p>A <code>ProcessPool</code> starts worker processes on an interpreter running without the
+<abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr> too; a component that wants threads there asks for a <code>ThreadExecutor</code>.</p>
+<h2 id="crashes">Crashes<a class="headerlink" href="#crashes" title="Permanent link">&para;</a></h2>
+<p>A worker can die in the middle of a call, from a crash in compiled code or an
+<code>os._exit</code>. The standard pool then fails every unfinished call of the pool,
+without saying which one killed the worker. So each of them fails with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;WorkerCrashed&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.WorkerCrashed"><code>WorkerCrashed</code></a>, which keeps the standard
+error as its cause, and the pool replaces its workers, so the component's
+next <code>submit</code> works. The calls fail only once the new workers are in place,
+which lets an error callback send a call again at once. The pool sends
+nothing again on its own, because a call run twice repeats what it did
+before the crash, such as writing a file.</p>
+<p>A pool whose workers die more than 3 times within 60 s stops replacing them:
+it is broken, and its later calls fail with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;BrokenPool&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.BrokenPool"><code>BrokenPool</code></a>. The pools of other components go
+on. The executor's counts span the replacements and add up the crashed
+calls.</p>
+<p>When the session shuts down, each process pool cancels the calls no worker
+has taken and waits at most 10 s for the running ones. It then ends the
+workers still running, so a call stuck in a loop cannot keep the session
+from closing; such a call fails with <code>BrokenPool</code>.</p>
+<h2 id="priority">Priority<a class="headerlink" href="#priority" title="Permanent link">&para;</a></h2>
+<p>The worker processes run at the priority the <code>compute</code> section names: <code>low</code>,
+<code>normal</code> or <code>high</code>, <code>normal</code> by default. Priority belongs to a pool rather
+than to a call, because on Linux and macOS a process can lower its own
+priority but never raise it back. Each worker sets it as it starts: on
+Windows through its priority class, on Linux and macOS through its nice
+value, 10 for <code>low</code> and -10 for <code>high</code>.</p>
+<p>Raising a priority there needs root, or the <code>CAP_SYS_NICE</code> capability on
+Linux. When that is refused, the worker logs a warning and runs at normal
+priority instead of stopping the build. Priority is the only control
+<code>redsun</code> takes over where work runs: no thread or process is tied to
+particular cores.</p>
+<p>A later release adds pools for NVIDIA GPUs.</p>
 
 
 

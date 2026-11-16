@@ -6331,6 +6331,39 @@ matches it (<a href="../0017-questions-read-from-the-annotation/"><abbr title="A
 executor protocol would have been answered with a component, and two
 executor protocols with the same members could not be told apart. A class is
 looked up by its exact key.</p>
+<p>Code that holds the <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr> needs worker processes rather than threads, and two
+choices came with them. The first was whether every component shares one
+process pool, as it shares the thread pool. A worker process that dies takes
+the calls it held with it, and the standard library's <code>ProcessPoolExecutor</code>
+then fails every unfinished call of the pool without saying which call killed
+the worker. With one shared pool, the crash of one component's call fails the
+calls of every other component, and one component's long queue delays them
+all:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">FitPresenter</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">executor</span><span class="p">:</span> <span class="n">ProcessExecutor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MedianPresenter</span><span class="p">:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">executor</span><span class="p">:</span> <span class="n">ProcessExecutor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># shared pool: a crash in a fit fails the median that waited behind it</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># one pool each: the median's pool never sees the fit's workers</span>
+</span></code></pre></div>
+<p>So each component asking for a <code>ProcessExecutor</code> gets a pool of its own, and
+the session splits the compute cores between the pools.</p>
+<p>The second was whether to start the workers as <code>redsun</code>'s own processes,
+with their own protocol for sending calls and data, or to hold a standard
+<code>ProcessPoolExecutor</code>. Workers of our own could resend the lost call of a
+crashed worker and move large arrays through rings of shared memory, but
+they put a process protocol, its readiness check and its crash handling into
+<code>redsun</code>. The standard pool already starts and feeds workers, so
+<code>ProcessPool</code> holds one, started with <code>spawn</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">with</span> <span class="n">ProcessPool</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">executor</span> <span class="o">=</span> <span class="n">ProcessExecutor</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="s2">"fit"</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fit_stack</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">show</span><span class="p">,</span> <span class="n">report</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A component that sends large arrays writes them into a block of shared
+memory it owns and sends the block's name, so the pool needs no data path of
+its own.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A component gets an executor by annotating a constructor parameter with
@@ -6376,6 +6409,21 @@ looked up by its exact key.</p>
   Micrometer uses for its executors (<code>queued</code>, <code>active</code>, <code>completed</code>,
   <code>failed</code>, <code>pool_size</code>, <code>longest_idle</code>). An executor reports its owner's
   counts, and the session logs each pool's totals at shutdown.</li>
+<li>The thread pool is shared by every component. Each component asking for a
+  <code>ProcessExecutor</code> gets a <code>ProcessPool</code> of its own, under a registry key
+  holding its name, sized from its share of the compute cores unless the
+  session file gives a count.</li>
+<li><code>ProcessPool</code> holds a <code>concurrent.futures.ProcessPoolExecutor</code> started with
+  <code>spawn</code>. Each worker sets the pool's priority, limits its native libraries
+  to one thread and sends its log records to the session through a queue as
+  it starts.</li>
+<li>When a worker dies, every unfinished call of its pool fails with
+  <code>WorkerCrashed</code> once the pool has replaced the standard executor. Nothing
+  is sent again on its own. A pool whose workers die more than 3 times within
+  60 s is broken.</li>
+<li><code>submit</code> on a <code>ProcessExecutor</code> refuses a lambda, a closure, a bound
+  method and a function defined in the script being run, before anything
+  starts: a pool's functions live in a module next to its component.</li>
 <li>No new build step: the work fits the registry, presenters, views and setup
   steps.</li>
 </ul>
@@ -6390,9 +6438,15 @@ looked up by its exact key.</p>
   start work from Qt's <code>closeEvent</code>.</li>
 <li>Nothing existing changes. A session whose components ask for no executor
   makes no pool and changes no limit.</li>
-<li>A later release adds pools of worker processes and of NVIDIA GPU streams as
-  further <code>Pool</code> and executor pairs, reusing the same start, counts and
-  shutdown.</li>
+<li>A crash in one component's worker fails only that component's calls, but
+  it fails all of them, including calls the crash had nothing to do with. A
+  component decides in its error callback whether a call is safe to send
+  again.</li>
+<li>A script that builds a session with worker processes starts it under
+  <code>if __name__ == "__main__":</code>, since <code>spawn</code> imports the script in every
+  worker.</li>
+<li>A later release adds pools of NVIDIA GPU streams as a further <code>Pool</code> and
+  executor pair, reusing the same start, counts and shutdown.</li>
 </ul>
 
 

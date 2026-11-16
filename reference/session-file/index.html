@@ -6552,6 +6552,12 @@ entry.</p>
 <td>views only: where the view goes in the window, as a word or mapping the frontend reads; see <a href="../../how-to/place-a-view/#override-a-views-default-placement">Override a view's default placement</a></td>
 </tr>
 <tr>
+<td><code>workers</code></td>
+<td>whole number, 1 or more</td>
+<td>the <code>compute</code> section's</td>
+<td>presenters and views asking for a <code>ProcessExecutor</code>: the worker processes of the component's process pool. A class that takes <code>workers</code> itself, by name or through <code>**kwargs</code>, and asks for no <code>ProcessExecutor</code> gets it as an argument, as a device does; one with a <code>workers</code> parameter that asks for a <code>ProcessExecutor</code> is refused</td>
+</tr>
+<tr>
 <td>any other key</td>
 <td></td>
 <td></td>
@@ -6781,6 +6787,18 @@ wins over the class, key by key.</p>
 <td>none</td>
 <td>the interpreter's thread switch interval, in milliseconds; absent, it is left alone</td>
 </tr>
+<tr>
+<td><code>processes</code></td>
+<td>whole number, 1 or more</td>
+<td>the compute cores shared between the process pools, at least 1 and on Windows at most 61 each</td>
+<td>the worker processes of each component's process pool</td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td><code>low</code>, <code>normal</code> or <code>high</code></td>
+<td><code>normal</code></td>
+<td>the priority of every worker process; <code>high</code> needs root or <code>CAP_SYS_NICE</code> on Linux and macOS</td>
+</tr>
 </tbody>
 </table>
 <p><code>reserve</code> lowers the <a href="../../explanation/glossary/#compute-cores">compute cores</a>
@@ -6813,6 +6831,10 @@ threads each call's native libraries may start:</p>
 </tr>
 </tbody>
 </table>
+<p>The preset sizes the thread pool only. Each component asking for a
+<code>ProcessExecutor</code> gets a process pool of its own, whose worker processes run
+their native libraries on one thread; a component's <code>workers</code> key wins over
+<code>processes</code>.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">compute</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">preset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">latency</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">cores</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>

@@ -7374,7 +7374,9 @@ of them and builds the docs. Run one environment with <code>-e</code>:</p>
 <p>The project environment skips the sync, so it's faster while editing:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/sdk/<span class="w"> </span>-x
 </span></code></pre></div>
-<p>Tests marked <code>@pytest.mark.qt</code> are skipped when there's no display.</p>
+<p>Tests marked <code>@pytest.mark.qt</code> are skipped when there's no display. Tests
+marked <code>@pytest.mark.processes</code> start real worker processes, about a second
+each; leave them out of a quick run with <code>-m "not processes"</code>.</p>
 <p><code>tox</code> and CI split the tests across your CPU cores with <code>pytest-xdist</code>, which
 starts one worker process per core and keeps every test of a file in the same
 worker. A plain <code>uv run pytest</code> runs in one process. Ask <code>tox</code> for one

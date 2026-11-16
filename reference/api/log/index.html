@@ -6776,7 +6776,7 @@
 </tr>
 <tr>
 <td><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;service_of&lt;/span&gt;" href="./#redsun.log.service_of"><code>service_of</code></a></td>
-<td>names the service a record came from</td>
+<td>names the service or the component's worker processes a record came from</td>
 </tr>
 </tbody>
 </table>
@@ -6983,7 +6983,10 @@ everywhere.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Return the name of the service <em>record</em> came from, <code>None</code> for the application.</p>
+        <p>Return the name of the source <em>record</em> came from, <code>None</code> for the application.</p>
+<p>A service's record is named <code>redsun.service.&lt;name&gt;</code>, and its source is
+<code>&lt;name&gt;</code>. A worker process's record is named <code>redsun.workers.&lt;owner&gt;</code>, and
+its source is <code>workers.&lt;owner&gt;</code>.</p>
 
 
     </div>

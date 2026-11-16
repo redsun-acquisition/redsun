@@ -6927,7 +6927,8 @@ unknown name raises <code>ValueError</code>.</p>
 <h2 id="find-a-sessions-log-file">Find a session's log file<a class="headerlink" href="#find-a-sessions-log-file" title="Permanent link">&para;</a></h2>
 <p>A session also writes the records of each run to a file, which it opens when
 the build reads the configuration and closes in <code>shutdown()</code>. Each launched
-service gets a file of its own. For a session named <code>my-lab</code> with a launched
+service gets a file of its own, while the records of worker processes go to the
+application's file. For a session named <code>my-lab</code> with a launched
 service <code>camera_ioc</code>, the files look like this:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>&lt;root&gt;/logs/my-lab/
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>|-- app/

@@ -5792,6 +5792,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.testing.inline_processes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;inline_processes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsuntestingqt" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6411,6 +6422,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;inline_threads
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.testing.inline_processes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;inline_processes
       </span>
     </span>
   </a>
@@ -7097,6 +7119,32 @@ session ends.</p>
 <p>The executor is named after the test and its pool is started, so a call's
 result is there when <code>submit</code> returns, and <code>then</code> callbacks run at once.
 Both are shut down when the test ends.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="redsun.testing.inline_processes" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">inline_processes</span>
+
+
+<a href="#redsun.testing.inline_processes" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">inline_processes</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">request</span><span class="p">:</span> <span class="n">FixtureRequest</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">ProcessExecutor</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ProcessExecutor&lt;/span&gt;" href="../compute/#redsun.compute.ProcessExecutor"><code>ProcessExecutor</code></a> that runs each call where it is submitted.</p>
+<p>The executor is named after the test and its pool is started, so a call's
+result is there when <code>submit</code> returns. Each call and its answer still make
+a pickle round trip, so a value a real worker could not receive fails the
+call. Both are shut down when the test ends.</p>
 
 
     </div>

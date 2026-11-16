@@ -150,6 +150,31 @@
           "default": null,
           "description": "Interpreter thread switch interval in milliseconds; left alone if unset.",
           "title": "Switch Interval Ms"
+        },
+        "processes": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Worker processes of each process pool; the session's share of the compute cores if unset.",
+          "title": "Processes"
+        },
+        "priority": {
+          "default": "normal",
+          "description": "How much processor time worker processes get against the rest of the system.",
+          "enum": [
+            "low",
+            "normal",
+            "high"
+          ],
+          "title": "Priority",
+          "type": "string"
         }
       },
       "title": "ComputeConfig",
@@ -698,7 +723,9 @@
         "preset": "balanced",
         "cores": null,
         "reserve": 1,
-        "switch_interval_ms": null
+        "switch_interval_ms": null,
+        "processes": null,
+        "priority": "normal"
       },
       "description": "Background computation: the preset and the cores it may use."
     },

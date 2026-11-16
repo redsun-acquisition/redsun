@@ -5628,6 +5628,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#worker-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Worker process
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#writer" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7690,6 +7701,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#worker-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Worker process
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#writer" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7930,8 +7952,10 @@ the server allows, sets them. See
 <h3 id="executor">Executor<a class="headerlink" href="#executor" title="Permanent link">&para;</a></h3>
 <p>An executor is a component's own handle on a <a href="#pool">pool</a>, which it asks for
 by annotating a constructor parameter with
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ThreadExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ThreadExecutor"><code>ThreadExecutor</code></a>. The component submits its
-calls through it, and the session shuts it down with the component.</p>
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ThreadExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ThreadExecutor"><code>ThreadExecutor</code></a> for the thread pool every
+component shares, or with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ProcessExecutor&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ProcessExecutor"><code>ProcessExecutor</code></a>
+for a process pool of its own. The component submits its calls through it,
+and the session shuts it down with the component.</p>
 <h3 id="frontend">Frontend<a class="headerlink" href="#frontend" title="Permanent link">&para;</a></h3>
 <p>A frontend is what shows a session on screen, such as the Qt one that
 <code>redsun</code> ships. A session file names it by its registered name (<code>frontend: qt</code>), and a
@@ -8027,9 +8051,11 @@ read from the plan's signature.</p>
 <p>A plugin is an installed package that offers components, services and
 <a href="#provider">providers</a> to sessions through its <a href="#manifest">manifest</a>.</p>
 <h3 id="pool">Pool<a class="headerlink" href="#pool" title="Permanent link">&para;</a></h3>
-<p>A pool is a set of threads the session starts and stops, which every
-component asking for the same kind of <a href="#executor">executor</a> shares. Its size
-comes from the <a href="#compute-cores">compute cores</a>.</p>
+<p>A pool is a set of threads or <a href="#worker-process">worker processes</a> the session
+starts and stops. Every component asking for a thread <a href="#executor">executor</a>
+shares one thread pool, while each component asking for a process executor
+gets a process pool of its own. Their sizes come from the
+<a href="#compute-cores">compute cores</a>.</p>
 <h3 id="port">Port<a class="headerlink" href="#port" title="Permanent link">&para;</a></h3>
 <p>A port is one end of a connection: a <a href="#signal">signal</a> on the sending side, a
 <a href="#slot">slot</a> on the receiving side. A session file names a port as
@@ -8192,6 +8218,11 @@ passes on what the user does, with no application logic of its own.</p>
 The session decides it, in its <code>wire</code> method or in the <code>wiring</code> and <code>pairs</code>
 sections of its file, where each line of <code>pairs</code> is a <a href="#pairing">pairing</a>;
 components only declare their <a href="#port">ports</a>.</p>
+<h3 id="worker-process">Worker process<a class="headerlink" href="#worker-process" title="Permanent link">&para;</a></h3>
+<p>A worker process is a Python process a process <a href="#pool">pool</a> starts to run
+the calls of one component, so code holding the <abbr title="Global interpreter lock. The lock that lets one thread at a time run Python code.">GIL</abbr> runs alongside the
+window. The call's function, its arguments and its result are pickled to
+cross between the processes.</p>
 <h3 id="writer">Writer<a class="headerlink" href="#writer" title="Permanent link">&para;</a></h3>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Writer&lt;/span&gt;" href="../../reference/api/writers/#redsun.writers.Writer"><code>Writer</code></a> is the class that writes the
 <a href="#derived-product">derived products</a> of a component into the stores a run
