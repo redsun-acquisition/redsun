@@ -212,14 +212,17 @@ async def test_an_update_reaches_the_box(
 
 
 async def test_a_long_string_is_cut_to_its_field(
-    served: tuple[BoxController, Service],
+    served: tuple[BoxController, Service], caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Cut a string to the field's capacity in UTF-8 bytes instead of failing."""
+    """Cut a string to the field's capacity in UTF-8 bytes and warn, instead of failing."""
     controller, service = served
     top = service.box_of()
     await controller.label.update("abcééé")
     await until(lambda: top.label__value != "start")
     assert top.label__value == "abcéé"
+    assert messages(caplog, logging.WARNING) == [
+        "'label' holds 8 bytes, so a value of 9 bytes was cut"
+    ]
 
 
 async def test_a_table_attribute_is_refused_at_connect() -> None:
