@@ -220,6 +220,12 @@ during the acquisition, and `bp.count`, `bp.rel_scan` and the loop of the
 table run as they do above. Each of them also writes the frames it reads to
 the HDF5 file, since the camera always writes through `HDF1:`.
 
+`write_frames` records the frames in the HDF5 file only, without `image`.
+`PluginSignalDataLogic` gives one reading per event, so `ophyd-async` leaves
+it out of a plan that prepares several frames at once and logs a warning that
+it "only supports a single collection". The live view still shows every frame,
+because `wire` links `image` to it directly.
+
 !!! warning "A second start stalls the connection"
 
     A Channel Access write that waits for its completion stays open until the
