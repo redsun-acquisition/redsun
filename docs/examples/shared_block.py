@@ -60,6 +60,8 @@ class StackPresenter(DocumentRouter, Loggable):
         return doc
 
     def descriptor(self, doc: EventDescriptor) -> EventDescriptor:
+        if self.source not in doc["data_keys"]:
+            return doc
         if self._block is not None:
             self._stack = None
             self._release(self._block)
@@ -72,7 +74,11 @@ class StackPresenter(DocumentRouter, Loggable):
         return doc
 
     def event(self, doc: Event) -> Event:
-        if self._stack is not None and self._next < self._count:
+        if (
+            self._stack is not None
+            and self._next < self._count
+            and self.source in doc["data"]
+        ):
             self._stack[self._next] = doc["data"][self.source]
             self._next += 1
         return doc

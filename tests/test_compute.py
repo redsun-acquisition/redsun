@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 import threading
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import bluesky.plan_stubs as bps
 import numpy as np
@@ -529,6 +529,21 @@ def test_the_share_stays_within_what_windows_accepts(
     monkeypatch.setattr("redsun.session._compute.physical_cores", lambda: 128)
     session = build(OneFitter, {"compute": {"cores": 100}})
     assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(61)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the limit is Windows's")
+@pytest.mark.parametrize(
+    "config",
+    [{"presenters": {"fit": {"workers": 100}}}, {"compute": {"processes": 100}}],
+)
+def test_a_count_asked_beyond_what_windows_accepts_is_capped(
+    build: BuildSession, caplog: pytest.LogCaptureFixture, config: dict[str, Any]
+) -> None:
+    """Cap an entry's workers or compute.processes above 61 at 61 on Windows, with a warning."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session = build(OneFitter, config)
+    assert session.pool_settings[ProcessPool, "fit"] == ProcessPoolSettings(61)
+    assert "fit asks for 100 worker processes" in caplog.text
 
 
 @pytest.mark.usefixtures("eight_cores")

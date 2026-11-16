@@ -319,17 +319,19 @@ class ProcessPool(Pool):
         if not future._hand_over():
             call.cancel()
             return
-        executor = self._executor
-        try:
-            if executor is None:
-                raise BrokenPool(self._broken or "the pool shut down")
-            executor, standard = self._send(executor, call)
-        except BaseException:
-            future._link(None)
-            raise
+        # under the lock, _stop either sees the call in _inflight or the call sees no executor
+        with self._lock:
+            executor = self._executor
+            try:
+                if executor is None:
+                    raise BrokenPool(self._broken or "the pool shut down")
+                executor, standard = self._send(executor, call)
+            except BaseException:
+                future._link(None)
+                raise
+            with self._inflight_lock:
+                self._inflight.add(standard)
         future._link(standard, partial(self._counts.started, call.owner, waited))
-        with self._inflight_lock:
-            self._inflight.add(standard)
         standard.add_done_callback(partial(self._settle, call, executor))
 
     def _settle(

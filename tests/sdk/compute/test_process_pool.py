@@ -261,11 +261,11 @@ def test_shutdown_returns_once_the_running_calls_are_done() -> None:
     pool.start()
     assert pool.submit(add, 1, 1).result(timeout=30) == 2
     pool.submit(spin_for, 0.5)
-    for _ in range(3):
-        pool.submit(add, 1, 1)
+    waiting = [pool.submit(add, 1, 1) for _ in range(3)]
     started = time.monotonic()
     pool.shutdown()
     assert time.monotonic() - started < 15
+    assert waiting[-1].cancelled()
 
 
 @pytest.mark.processes

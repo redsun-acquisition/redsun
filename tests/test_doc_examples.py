@@ -101,3 +101,30 @@ def test_the_fit_reads_the_shared_block(inline_processes: ProcessExecutor) -> No
 
 
 # --8<-- [end:test-processes]
+
+
+def test_a_second_stream_leaves_the_shared_block_alone(
+    inline_processes: ProcessExecutor,
+) -> None:
+    """Fit the source's frames when another stream's descriptor and events come in between."""
+    presenter = StackPresenter("fit", inline_processes, source="camera", frames=2)
+    published: list[NDArray[np.float64]] = []
+    presenter.sig_fit.connect(published.append)
+    camera = {"source": "sim", "dtype": "array", "dtype_numpy": "<u2", "shape": [2]}
+    motor = {"source": "sim", "dtype": "number", "shape": []}
+
+    presenter("start", {"uid": "run", "time": 0.0})
+    presenter(
+        "descriptor",
+        {"uid": "p", "run_start": "run", "time": 0.0, "data_keys": {"camera": camera}},
+    )
+    presenter("event", {"data": {"camera": np.full(2, 1)}})
+    presenter(
+        "descriptor",
+        {"uid": "b", "run_start": "run", "time": 0.0, "data_keys": {"motor": motor}},
+    )
+    presenter("event", {"data": {"motor": 5.0}})
+    presenter("event", {"data": {"camera": np.full(2, 3)}})
+    presenter("stop", {"run_start": "run", "time": 1.0})
+
+    assert np.array_equal(published[-1], np.full(2, 2.0))
