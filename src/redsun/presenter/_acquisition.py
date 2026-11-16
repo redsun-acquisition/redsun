@@ -218,8 +218,15 @@ class AcquisitionPresenter(Loggable):
         """Run *plan* with the parameter *values*, attaching the callbacks named.
 
         Refused, with a warning, while another plan runs. Values that cannot
-        be turned into the plan's arguments are reported on `sig_plan_failed`.
+        be turned into the plan's arguments, or a plan this presenter does not
+        hold, are reported on `sig_plan_failed`.
         """
+        if plan not in self._specs:
+            self.logger.warning(f"Not launching {plan!r}: no such plan in this session")
+            self.sig_plan_failed.emit(
+                plan, f"{plan!r} is not available in this session"
+            )
+            return
         entry, spec = self._entries[plan], self._specs[plan]
         try:
             self._check_devices(spec, values)
