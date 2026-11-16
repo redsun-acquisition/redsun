@@ -278,6 +278,18 @@ def test_a_value_outside_its_limits_is_refused_before_launch(
     ]
 
 
+def test_a_launch_of_a_plan_not_held_is_reported_failed(
+    presenter: AcquisitionPresenter, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Report a plan the presenter does not hold as failed, with a warning and no traceback."""
+    seen, _ = record(presenter)
+
+    presenter.launch("ghost", {})
+
+    assert seen == [("failed", "ghost", "'ghost' is not available in this session")]
+    assert [r.exc_info for r in caplog.records if r.levelname != "DEBUG"] == [None]
+
+
 def test_a_launch_while_a_plan_runs_is_refused(
     presenter: AcquisitionPresenter, plans: Plans, caplog: pytest.LogCaptureFixture
 ) -> None:
