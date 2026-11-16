@@ -8,6 +8,7 @@ from typing import Annotated
 import numpy as np
 from ophyd_async.core import AsyncStatus, PathProvider, set_and_wait_for_value
 from ophyd_async.epics.adcore import (
+    ADBaseIO,
     ADImageMode,
     ADWriterFactory,
     ContAcqDetector,
@@ -21,7 +22,7 @@ from redsun.qt import QtSession
 
 
 # --8<-- [start:camera]
-class SimCamera(ContAcqDetector):
+class SimCamera(ContAcqDetector[ADBaseIO]):
     """An areaDetector camera that acquires continuously."""
 
     def __init__(

@@ -181,13 +181,6 @@ An areaDetector IOC already does what the service above does, and
 `ophyd-async` drives one in continuous acquisition with `ContAcqDetector`. The
 device is a subclass of it, with two additions.
 
-!!! warning "Needs an `ophyd-async` release after 0.21.3"
-
-    `ophyd-async` 0.21.3 never sends the trigger that lets frames through to
-    the file, so every plan on this section's camera times out. This section
-    was checked against the main branch of `ophyd-async` on 24 October 2026,
-    before a release with the fix was out.
-
 The IOC needs these plugins, under the names `ContAcqDetector` looks for:
 
 - `cam1:`, the driver, which acquires in continuous mode.
@@ -226,6 +219,12 @@ The camera is its own writer, so `write_frames([camera], 5)` writes frames
 during the acquisition, and `bp.count`, `bp.rel_scan` and the loop of the
 table run as they do above. Each of them also writes the frames it reads to
 the HDF5 file, since the camera always writes through `HDF1:`.
+
+`write_frames` records the frames in the HDF5 file only, without `image`.
+`PluginSignalDataLogic` gives one reading per event, so `ophyd-async` leaves
+it out of a plan that prepares several frames at once and logs a warning that
+it "only supports a single collection". The live view still shows every frame,
+because `wire` links `image` to it directly.
 
 !!! warning "A second start stalls the connection"
 
