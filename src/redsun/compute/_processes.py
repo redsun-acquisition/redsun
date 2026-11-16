@@ -41,9 +41,10 @@ logger = logging.getLogger("redsun")
 def check_function(fn: Callable[..., Any]) -> None:
     """Raise `TypeError` if *fn* is a lambda, a closure, a bound method or defined in `__main__`.
 
-    A worker imports a function by its module and name. A worker that cannot
-    find it ends, and its pool breaks, so only a function defined at module
-    level of a module the worker can import is sent.
+    A worker imports a function by its module and name, and the functions of a
+    component's pool belong in a module next to the component. So only a
+    function defined at module level of such a module is sent, even where a
+    worker could import the script being run.
     """
     while isinstance(fn, partial):
         fn = fn.func
@@ -55,8 +56,8 @@ def check_function(fn: Callable[..., Any]) -> None:
         )
     if getattr(fn, "__module__", None) == "__main__":
         raise TypeError(
-            f"{name} is defined in the script being run, which a worker cannot "
-            "import: send a function from a module a worker can import"
+            f"{name} is defined in the script being run: send a function "
+            "from a module next to the component"
         )
 
 

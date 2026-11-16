@@ -349,9 +349,9 @@ class PoolExecutor(Executor, Generic[PoolT]):
         BrokenPool
             If the pool broke at start, or its workers broke.
         TypeError
-            If the pool runs calls in worker processes and *fn* is one a worker
-            cannot import: a lambda, a closure, a bound method or a function
-            defined in the script being run.
+            If the pool runs calls in worker processes and *fn* is a lambda, a
+            closure, a bound method or a function defined in the script being
+            run.
         """
         if self._closed:
             raise RuntimeError("cannot schedule new futures after shutdown")

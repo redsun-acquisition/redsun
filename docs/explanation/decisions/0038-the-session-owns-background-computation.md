@@ -169,8 +169,9 @@ its own.
   `WorkerCrashed` once the pool has replaced the standard executor. Nothing
   is sent again on its own. A pool whose workers die more than 3 times within
   60 s is broken.
-- `submit` on a `ProcessExecutor` refuses a function a worker cannot import
-  by name before anything starts.
+- `submit` on a `ProcessExecutor` refuses a lambda, a closure, a bound
+  method and a function defined in the script being run, before anything
+  starts: a pool's functions live in a module next to its component.
 - No new build step: the work fits the registry, presenters, views and setup
   steps.
 

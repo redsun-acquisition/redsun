@@ -52,9 +52,10 @@ shows how to avoid most of that copy.
 
 A call sent to a worker process travels by name, so the function must be
 defined at the top level of a module the worker can import. `submit` refuses
-a lambda, a function defined inside another one, a bound method, and a
-function defined in the script you run, which a worker can't import. Keep
-such functions in a module that doesn't import `qtpy`, because every worker
+a lambda, a function defined inside another one and a bound method. It
+refuses a function defined in the script you run too, because the functions
+of a component's pool belong in a module next to the component. Keep such
+functions in a module that doesn't import `qtpy`, because every worker
 that imports the module loads Qt too. Both executors take the same calls, so
 the rest of this page applies to either, except for the counts
 [Read what the pool did](#read-what-the-pool-did) describes.

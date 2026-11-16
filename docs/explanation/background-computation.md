@@ -187,9 +187,11 @@ session refuses to build while a worker process is starting.
 
 Only values cross between the processes, never live objects, because each
 call and its result are pickled. A function travels by its module and its
-name, so `submit` refuses a lambda, a function defined inside another one, a
-bound method and a function defined in the script you ran, before anything
-starts. For a large array, a block of shared memory the component fills as
+name, so `submit` refuses a lambda, a function defined inside another one
+and a bound method before anything starts. It also refuses a function
+defined in the script you ran, even where a worker could import the script
+again, because a pool belongs to a component and its functions belong in a
+module next to that component. For a large array, a block of shared memory the component fills as
 the data arrives saves most of the copy, as
 [How to run background processing](../how-to/run-background-processing.md#send-large-arrays-through-a-shared-block)
 shows; the pool itself adds no shared memory.
