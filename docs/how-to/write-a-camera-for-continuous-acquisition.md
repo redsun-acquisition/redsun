@@ -181,13 +181,6 @@ An areaDetector IOC already does what the service above does, and
 `ophyd-async` drives one in continuous acquisition with `ContAcqDetector`. The
 device is a subclass of it, with two additions.
 
-!!! warning "Needs an `ophyd-async` release after 0.21.3"
-
-    `ophyd-async` 0.21.3 never sends the trigger that lets frames through to
-    the file, so every plan on this section's camera times out. This section
-    was checked against the main branch of `ophyd-async` on 24 October 2026,
-    before a release with the fix was out.
-
 The IOC needs these plugins, under the names `ContAcqDetector` looks for:
 
 - `cam1:`, the driver, which acquires in continuous mode.
