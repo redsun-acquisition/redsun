@@ -34,6 +34,10 @@ class BrokenPool(concurrent.futures.BrokenExecutor):
     """Raised by a call whose pool stopped working before it could run."""
 
 
+class WorkerCrashed(Exception):
+    """Raised by a call that was unfinished when a worker process ended."""
+
+
 @dataclass(frozen=True, slots=True)
 class Delivery:
     """Where a future's callbacks run."""
@@ -65,6 +69,43 @@ class Future(concurrent.futures.Future[R]):
         self._delivery: Delivery | None = None
         self._released: Callable[[], bool] = lambda: False
         self._queued = False
+        self._linked: concurrent.futures.Future[Any] | None = None
+        self._handing_over = False
+        self._cancel_asked = False
+
+    def cancel(self) -> bool:
+        """Cancel the call, unless a worker has taken it."""
+        with self._condition:
+            linked = self._linked
+            if linked is None:
+                if self._handing_over:
+                    return False
+                self._cancel_asked = True
+        if linked is not None and not linked.cancel():
+            return False
+        return super().cancel()
+
+    def _hand_over(self) -> bool:
+        """Refuse cancels from now on, unless a cancel came first."""
+        with self._condition:
+            if self._cancel_asked or self.cancelled():
+                return False
+            self._handing_over = True
+            return True
+
+    def _link(
+        self,
+        standard: concurrent.futures.Future[Any] | None,
+        on_link: Callable[[], object] = lambda: None,
+    ) -> None:
+        """End the hand-over: link the future of the worker running the call and call *on_link*.
+
+        With no *standard*, the hand-over failed and cancels work again.
+        """
+        with self._condition:
+            self._linked = standard
+            self._handing_over = False
+            on_link()
 
     def _bind(
         self, owner: str, delivery: Delivery | None, released: Callable[[], bool]

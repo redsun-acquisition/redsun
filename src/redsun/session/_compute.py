@@ -3,22 +3,30 @@
 from __future__ import annotations
 
 import logging
+import sys
 from functools import partial
-from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, get_origin
 
 from redsun.compute import Limits
 
 from .._structural import without_none
 from ..compute._future import BrokenPool
 from ..compute._pool import Pool, PoolExecutor, pool_key
-from ..compute._settings import compute_cores, physical_cores, split
+from ..compute._processes import ProcessExecutor, ProcessPool
+from ..compute._settings import (
+    ProcessPoolSettings,
+    compute_cores,
+    physical_cores,
+    split,
+)
+from ..compute._threads import ThreadPool
 from ..compute._usage import Watchdog
 from ..injection._registry import SESSION
 from ._factories import resolved
 from ._protocols import HasSetup
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Generator
+    from collections.abc import Callable, Collection, Generator, Mapping
 
     from redsun.compute import ThreadPoolSettings
     from redsun.injection import Registry
@@ -27,6 +35,9 @@ if TYPE_CHECKING:
     from ..compute._future import Delivery
 
 E = TypeVar("E", bound=PoolExecutor[Any])
+
+WINDOWS_MAX_WORKERS: Final = 61
+"""Most worker processes `ProcessPoolExecutor` accepts on Windows."""
 
 logger = logging.getLogger("redsun")
 
@@ -84,16 +95,22 @@ def asks_for_pool(owner: str, fn: Callable[..., Any]) -> TypeError | None:
 
 def pool_resource(
     pool_type: type[Pool],
-    settings: ThreadPoolSettings,
+    settings: ThreadPoolSettings | ProcessPoolSettings,
     limits: Limits,
     delivery: Delivery,
+    owner: str | None = None,
 ) -> Callable[[], Generator[Pool, None, None]]:
-    """Return the provider of a pool of *pool_type*, made from *settings* on its first request."""
+    """Return the provider of a pool of *pool_type*, made from *settings* on its first request.
+
+    A process pool is made for *owner*, which its workers' log records are
+    filed under.
+    """
 
     # a generator function of its own: `diwire` reads a provider's source to
     # check its yield sits in a try/finally, which a partial does not have
     def provide() -> Generator[Pool, None, None]:
-        resource = pool_type.resource(settings, limits, delivery)
+        extra = () if owner is None else (owner,)
+        resource = pool_type.resource(settings, limits, delivery, *extra)
         try:
             yield next(resource)
         finally:
@@ -125,15 +142,33 @@ class SessionCompute:
         self.registry = registry
         self.limits = Limits(config.switch_interval_ms)
         self.delivery = delivery
-        self.settings: dict[tuple[type[Pool], str | None], ThreadPoolSettings] = {}
+        self.settings: dict[
+            tuple[type[Pool], str | None], ThreadPoolSettings | ProcessPoolSettings
+        ] = {}
         self.executors: dict[
             tuple[str, type[PoolExecutor[Any]]], PoolExecutor[Any]
         ] = {}
         self.broken: list[tuple[str, str]] = []
         self.watchdog = Watchdog()
 
-    def register(self, kinds: set[type[PoolExecutor[Any]]]) -> None:
-        """Register the pool each of *kinds* submits to, made on its first request."""
+    def register(
+        self,
+        owners: Mapping[str, set[type[PoolExecutor[Any]]]],
+        workers: Mapping[str, int],
+    ) -> None:
+        """Register the pools the executors *owners* ask for submit to, made on their first request.
+
+        A pool other than the process pool is shared. Each owner asking for a
+        `ProcessExecutor` has a process pool of its own, of `workers[owner]`
+        processes, else `compute.processes`, else its share of the compute
+        cores, at most 61 on Windows.
+        """
+        asking = [name for name, held in owners.items() if ProcessExecutor in held]
+        for name in workers.keys() - set(asking):
+            logger.warning(
+                f"{name} gives 'workers' but asks for no ProcessExecutor; ignored"
+            )
+        kinds = set().union(*owners.values())
         if not kinds:
             return
         self.cores = compute_cores(
@@ -141,7 +176,7 @@ class SessionCompute:
         )
         for kind in kinds:
             pool_type = kind.pool_type
-            if (pool_type, None) in self.settings:
+            if pool_type is ProcessPool or (pool_type, None) in self.settings:
                 continue
             settings = split(self.config.preset, self.cores)
             self.settings[pool_type, None] = settings
@@ -150,6 +185,31 @@ class SessionCompute:
                 pool_resource(pool_type, settings, self.limits, self.delivery),
                 owner=SESSION,
                 internal=True,
+            )
+        share = max(1, self.cores // max(len(asking), 1))
+        if sys.platform == "win32":
+            share = min(share, WINDOWS_MAX_WORKERS)
+        for name in asking:
+            count = workers.get(name, self.config.processes or share)
+            process_settings = ProcessPoolSettings(count, priority=self.config.priority)
+            self.settings[ProcessPool, name] = process_settings
+            self.registry.register_resource(
+                pool_key(ProcessPool, name),
+                pool_resource(
+                    ProcessPool, process_settings, self.limits, self.delivery, name
+                ),
+                owner=SESSION,
+                internal=True,
+            )
+        total = sum(
+            s.processes
+            for s in self.settings.values()
+            if isinstance(s, ProcessPoolSettings)
+        )
+        if total > self.cores:
+            logger.warning(
+                f"Process pools have {total} workers in all,"
+                f" more than the {self.cores} compute cores"
             )
 
     def executor(
@@ -161,7 +221,8 @@ class SessionCompute:
         """Return the executor of *cls* for *owner*, making it and its pool on the first request."""
         held = self.executors.get((owner, cls))
         if held is None:
-            provide = next(self.registry.providers(pool_key(cls.pool_type, None)))
+            group = owner if issubclass(cls, ProcessExecutor) else None
+            provide = next(self.registry.providers(pool_key(cls.pool_type, group)))
             pool = cast("Pool", provide())
             held = cls(pool, owner)
             self.executors[owner, cls] = held
@@ -174,24 +235,26 @@ class SessionCompute:
         The limits stay until `limits.restore` runs. A pool that cannot start
         is logged and recorded in `broken`.
         """
-        pools = list(
-            dict.fromkeys(
-                held._pool
-                for (owner, _), held in self.executors.items()
-                if owner in built
-            )
-        )
+        pools: dict[Pool, str] = {}
+        for (owner, _), held in self.executors.items():
+            if owner in built:
+                pools[held._pool] = (
+                    f"ProcessPool of {owner}"
+                    if isinstance(held._pool, ProcessPool)
+                    else type(held._pool).__name__
+                )
         if not pools:
             return
-        # every pool is a shared one, split from the same cores, so any of them
-        # gives the native threads of the shared split
-        self.limits.apply(pools[0].native_threads)
-        self.watchdog.start()
-        for pool in pools:
+        # every thread pool is split from the same cores, so any of them gives
+        # the native threads; process workers apply their own limits
+        threaded = next((p for p in pools if isinstance(p, ThreadPool)), None)
+        if threaded is not None:
+            self.limits.apply(threaded.native_threads)
+            self.watchdog.start()
+        for pool, label in pools.items():
             try:
                 pool.start()
             except BrokenPool as error:
-                label = type(pool).__name__
                 self.broken.append((label, str(error)))
                 logger.error(f"{label} is broken: {error}")
 
@@ -200,10 +263,16 @@ class SessionCompute:
         if not self.settings:
             return []
         lines = [f"Compute: {self.cores} cores, preset {self.config.preset}"]
-        lines.extend(
-            f"{kind.__name__}: {s.threads} threads, {s.native_threads} native threads each"
-            for (kind, _), s in self.settings.items()
-        )
+        for (kind, owner), s in self.settings.items():
+            if isinstance(s, ProcessPoolSettings):
+                lines.append(
+                    f"{kind.__name__} of {owner}: {s.processes} processes,"
+                    f" priority {s.priority}"
+                )
+            else:
+                lines.append(
+                    f"{kind.__name__}: {s.threads} threads, {s.native_threads} native threads each"
+                )
         if self.broken:
             lines.append(
                 "Broken pools: "

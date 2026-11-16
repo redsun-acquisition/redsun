@@ -424,6 +424,7 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "qt: marks tests that require a Qt display (skipped in headless environments)",
     "compose: marks tests that need tests/compose/compose.yaml up (skipped unless REDSUN_COMPOSE is set)",
+    "processes: starts real worker processes (about a second each)",
 ]
 env = [
     "QT_QPA_PLATFORM=offscreen",

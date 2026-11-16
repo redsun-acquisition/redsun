@@ -20,6 +20,7 @@ from typing import (
 from ophyd_async.core import Device
 from psygnal import Signal
 
+from redsun.compute import ProcessExecutor
 from redsun.errors import HookError, PluginError
 from redsun.services import Service
 from redsun.view import Placement
@@ -30,6 +31,7 @@ from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
+from ._compute import component_kinds
 from ._factories import constructor, resolved
 from ._frontend import Frontend
 from ._plugins import resolve, service_entry
@@ -240,10 +242,18 @@ class Declaration:
     A view's `placement` keyword is kept here too, read and checked against
     the frontend: `placement` is where the view attaches, or `None` when the
     declaration is refused or not a view.
+    A presenter's or view's `workers` keyword is kept here too, the worker
+    processes of its pool: `None` when it gives none. It reaches the
+    constructor instead when the class takes `workers`, by name or through
+    `**kwargs`, and asks for no `ProcessExecutor`, as a device's always does.
     `refusal` is why the class cannot be built in its layer, or `None`; a
     refused declaration is never built. `attribute` is the annotation the
     session class declares it under and `source` the configuration entry its
     keywords are read from; both are the name unless a marker says otherwise.
+
+    A `workers` keyword that is not an `int` of at least 1, or that a class
+    asking for a `ProcessExecutor` takes itself, is not raised: it becomes the
+    declaration's `refusal`, like a refused `placement`.
 
     Raises
     ------
@@ -265,6 +275,7 @@ class Declaration:
         "refusal",
         "services",
         "source",
+        "workers",
     )
 
     def __init__(
@@ -287,6 +298,7 @@ class Declaration:
         self.services: dict[str, str] = {}
         self.autoconnect = True
         self.placement: Placement | None = None
+        self.workers: int | None = None
         if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
             refusal = TypeError(
                 f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
@@ -297,6 +309,11 @@ class Declaration:
             try:
                 cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
             except (TypeError, ValueError) as error:
+                refusal = error
+        if kind is not Layer.DEVICE and refusal is None:
+            try:
+                cfg_kwargs = take_workers(self, cfg_kwargs)
+            except TypeError as error:
                 refusal = error
         self.cfg_kwargs = cfg_kwargs
         self.key: Key = NewType(name, cls)
@@ -441,6 +458,48 @@ def take_view_placement(
         )
     frontend.check_placement(declaration.cls, declared, where)
     declaration.placement = declared
+    return rest
+
+
+def take_workers(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Move a presenter's or view's `workers` from *kwargs* onto *declaration*.
+
+    A component whose class takes `workers` itself, by name or through
+    `**kwargs`, and asks for no `ProcessExecutor` keeps the keyword for its
+    constructor.
+
+    Returns the keywords left for the component's constructor.
+
+    Raises
+    ------
+    TypeError
+        If the component's class takes `workers` itself and asks for a
+        `ProcessExecutor`, or the value is not an `int` of at least 1.
+    """
+    if "workers" not in kwargs:
+        return kwargs
+    where = f"{declaration.kind} {declaration.name!r}"
+    parameters = inspect.signature(declaration.cls).parameters
+    takes_workers = "workers" in parameters or any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()
+    )
+    if takes_workers and ProcessExecutor not in component_kinds(declaration.cls):
+        return kwargs
+    if "workers" in parameters:
+        raise TypeError(
+            f"{declaration.cls.__name__} ({where}) takes a 'workers' keyword of "
+            "its own and asks for a ProcessExecutor, whose 'workers' a "
+            "declaration gives"
+        )
+    rest = dict(kwargs)
+    workers = rest.pop("workers")
+    if workers is not None:
+        if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+            raise TypeError(
+                f"{where} gives workers={workers!r}; it takes a whole number of "
+                "at least 1"
+            )
+        declaration.workers = workers
     return rest
 
 

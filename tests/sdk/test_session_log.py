@@ -128,7 +128,7 @@ def test_opening_a_run_deletes_all_but_the_most_recent_runs(
 def test_a_service_writes_a_file_of_its_own_under_services(
     log_directory: Path, redsun_logger: logging.Logger
 ) -> None:
-    """Write each service's records to its own file, created at its first record."""
+    """Write each service's records to its own file, and a worker process's to the application's."""
     application = open_handler("lab")
     camera = SessionFileHandler("lab", "cam", application.run)
     silent = SessionFileHandler("lab", "stage", application.run)
@@ -137,6 +137,7 @@ def test_a_service_writes_a_file_of_its_own_under_services(
 
     redsun_logger.warning("stage homed")
     logging.getLogger("redsun.service.cam.caproto").warning("frame dropped")
+    logging.getLogger("redsun.workers.fit").warning("fit is slow")
     close_handler(application)
     for name, handler in (("cam", camera), ("stage", silent)):
         remove_handler(handler, name)
@@ -153,6 +154,7 @@ def test_a_service_writes_a_file_of_its_own_under_services(
     assert "stage homed" in files[f"{application.run}.log"]
     assert "frame dropped" not in files[f"{application.run}.log"]
     assert "frame dropped" in files[f"{application.run}.cam.log"]
+    assert "fit is slow" in files[f"{application.run}.log"]
 
 
 def test_the_build_opens_the_log_and_shutdown_closes_it(data_directory: Path) -> None:

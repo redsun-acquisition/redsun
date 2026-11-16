@@ -167,7 +167,9 @@ The project environment skips the sync, so it's faster while editing:
 uv run pytest tests/sdk/ -x
 ```
 
-Tests marked `@pytest.mark.qt` are skipped when there's no display.
+Tests marked `@pytest.mark.qt` are skipped when there's no display. Tests
+marked `@pytest.mark.processes` start real worker processes, about a second
+each; leave them out of a quick run with `-m "not processes"`.
 
 `tox` and CI split the tests across your CPU cores with `pytest-xdist`, which
 starts one worker process per core and keeps every test of a file in the same

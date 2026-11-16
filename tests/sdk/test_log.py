@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,7 +13,9 @@ from redsun.log import (
     add_handler,
     logger,
     remove_handler,
+    service_of,
     set_level,
+    text_copy,
 )
 
 if TYPE_CHECKING:
@@ -256,3 +259,28 @@ def test_a_record_carrying_a_stack_shows_it(caplog: LogCaptureFixture) -> None:
 
     formatted = GlobalFormatter(datefmt=DATE_FORMAT).format(caplog.records[-1])
     assert "Stack (most recent call last):" in formatted
+
+
+def test_a_worker_record_is_its_own_source() -> None:
+    """Name redsun.workers.<owner> records after the owner, apart from the application."""
+    record = logging.LogRecord(
+        "redsun.workers.stack", logging.INFO, "", 0, "m", None, None
+    )
+    assert service_of(record) == "workers.stack"
+
+
+def test_text_copy_keeps_the_traceback_as_text() -> None:
+    """Merge the message, keep the traceback as exc_text and clear exc_info."""
+    try:
+        raise ZeroDivisionError("division by zero")
+    except ZeroDivisionError:
+        record = logging.LogRecord(
+            "redsun", logging.ERROR, "", 0, "fit of %s failed", ("A",), sys.exc_info()
+        )
+    kept = text_copy(record)
+    assert kept.msg == "fit of A failed"
+    assert kept.args is None
+    assert kept.exc_info is None
+    assert kept.exc_text is not None
+    assert "ZeroDivisionError: division by zero" in kept.exc_text
+    assert record.exc_info is not None

@@ -120,7 +120,8 @@ unknown name raises `ValueError`.
 
 A session also writes the records of each run to a file, which it opens when
 the build reads the configuration and closes in `shutdown()`. Each launched
-service gets a file of its own. For a session named `my-lab` with a launched
+service gets a file of its own, while the records of worker processes go to the
+application's file. For a session named `my-lab` with a launched
 service `camera_ioc`, the files look like this:
 
 ```text
