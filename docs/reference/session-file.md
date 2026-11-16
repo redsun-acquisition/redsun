@@ -184,7 +184,8 @@ threads each call's native libraries may start:
 The preset sizes the thread pool only. Each component asking for a
 `ProcessExecutor` gets a process pool of its own, whose worker processes run
 their native libraries on one thread; a component's `workers` key wins over
-`processes`.
+`processes`. Windows runs at most 61 worker processes in one pool, so there a
+larger `workers` or `processes` gets 61 and the build logs a warning.
 
 ```yaml
 compute:

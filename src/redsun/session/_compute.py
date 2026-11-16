@@ -161,7 +161,8 @@ class SessionCompute:
         A pool other than the process pool is shared. Each owner asking for a
         `ProcessExecutor` has a process pool of its own, of `workers[owner]`
         processes, else `compute.processes`, else its share of the compute
-        cores, at most 61 on Windows.
+        cores. On Windows a pool gets at most 61, with a warning when the
+        count was asked for.
         """
         asking = [name for name, held in owners.items() if ProcessExecutor in held]
         for name in workers.keys() - set(asking):
@@ -187,10 +188,16 @@ class SessionCompute:
                 internal=True,
             )
         share = max(1, self.cores // max(len(asking), 1))
-        if sys.platform == "win32":
-            share = min(share, WINDOWS_MAX_WORKERS)
         for name in asking:
             count = workers.get(name, self.config.processes or share)
+            if sys.platform == "win32" and count > WINDOWS_MAX_WORKERS:
+                if name in workers or self.config.processes:
+                    logger.warning(
+                        f"{name} asks for {count} worker processes; Windows runs"
+                        f" at most {WINDOWS_MAX_WORKERS} in one pool, so it gets"
+                        f" {WINDOWS_MAX_WORKERS}"
+                    )
+                count = WINDOWS_MAX_WORKERS
             process_settings = ProcessPoolSettings(count, priority=self.config.priority)
             self.settings[ProcessPool, name] = process_settings
             self.registry.register_resource(
