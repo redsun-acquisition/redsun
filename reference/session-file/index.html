@@ -6834,7 +6834,8 @@ threads each call's native libraries may start:</p>
 <p>The preset sizes the thread pool only. Each component asking for a
 <code>ProcessExecutor</code> gets a process pool of its own, whose worker processes run
 their native libraries on one thread; a component's <code>workers</code> key wins over
-<code>processes</code>.</p>
+<code>processes</code>. Windows runs at most 61 worker processes in one pool, so there a
+larger <code>workers</code> or <code>processes</code> gets 61 and the build logs a warning.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">compute</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">preset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">latency</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">cores</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
