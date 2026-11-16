@@ -20,6 +20,8 @@ from sharedbox import (
     SharedBox,
 )
 
+from redsun.log import logger
+
 from ._layout import (
     DESCRIPTION_CAPACITY,
     ERROR_CAPACITY,
@@ -59,9 +61,18 @@ _NUMERIC_KEYS: tuple[Literal["units", "min", "max", "min_alarm", "max_alarm"], .
 _BoxT = TypeVar("_BoxT", bound=SharedBox)
 
 
-def _cut(text: str, capacity: int) -> str:
-    """Return `text` cut to at most `capacity` UTF-8 bytes, on a character boundary."""
-    return text.encode()[:capacity].decode(errors="ignore")
+def _cut(text: str, capacity: int, field: str) -> str:
+    """Return `text` cut to at most `capacity` UTF-8 bytes, on a character boundary.
+
+    A cut is logged as a warning naming `field`.
+    """
+    encoded = text.encode()
+    if len(encoded) <= capacity:
+        return text
+    logger.warning(
+        f"{field!r} holds {capacity} bytes, so a value of {len(encoded)} bytes was cut"
+    )
+    return encoded[:capacity].decode(errors="ignore")
 
 
 def _is_unsigned(datatype: Int) -> bool:
@@ -108,15 +119,17 @@ def _describe_datatype(datatype: DataType[DType_T], where: str) -> DatatypeDescr
     raise ValueError(f"attribute {where!r} has unsupported datatype {datatype!r}")
 
 
-def _to_box(datatype: DataType[DType_T], value: DType_T) -> dict[str, object]:
-    """Return the box fields (without the attribute name) holding `value`."""
+def _to_box(
+    name: str, datatype: DataType[DType_T], value: DType_T
+) -> dict[str, object]:
+    """Return the box fields (without the attribute name) holding `value` of `name`."""
     match datatype:
         case Enum():
             return {"": datatype.index_of(value)}
         case Int() if _is_unsigned(datatype):
             return {"": np.array([value], dtype="uint64")}
         case String():
-            return {"": _cut(value, datatype.length or STRING_CAPACITY)}
+            return {"": _cut(value, datatype.length or STRING_CAPACITY, name)}
         case Waveform():
             return {
                 "": pad(value, datatype.shape, datatype.array_dtype),
@@ -260,7 +273,7 @@ class BoxTransport(Transport):
         """Return the box fields holding the value of the attribute `name`."""
         return {
             f"{name}__{key or 'value'}": field
-            for key, field in _to_box(datatype, value).items()
+            for key, field in _to_box(name, datatype, value).items()
         }
 
     async def serve(self) -> None:
@@ -338,7 +351,7 @@ class BoxTransport(Transport):
                 # error of the previous request.
                 box.update(
                     **{
-                        f"{stem}__error": _cut(error, ERROR_CAPACITY),
+                        f"{stem}__error": _cut(error, ERROR_CAPACITY, f"{stem}__error"),
                         f"{stem}__done": number,
                     }
                 )
