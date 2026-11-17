@@ -273,13 +273,15 @@ async def test_a_declared_signal_missing_from_a_child_fails_connect(
 async def test_devices_on_one_service_fill_only_what_they_declare(
     served: tuple[BoxController, str],
 ) -> None:
-    """Fill each device with its declared children only, sharing the attributes."""
+    """Fill and attach each device with its declared children only, sharing the attributes."""
     controller, prefix = served
     exposer = Exposer(prefix, name="exposer")
     mover = Mover(prefix, name="mover")
     await exposer.connect(timeout=5)
     await mover.connect(timeout=5)
     try:
+        assert sorted(exposer._connector._boxes) == [""]  # type: ignore[attr-defined]
+        assert sorted(mover._connector._boxes) == ["", "axes:0", "axes:1"]  # type: ignore[attr-defined]
         assert sorted(name for name, _ in exposer.children()) == ["exposure", "run"]
         assert sorted(name for name, _ in mover.children()) == ["axes", "exposure"]
         assert sorted(mover.axes.keys()) == [0, 1]

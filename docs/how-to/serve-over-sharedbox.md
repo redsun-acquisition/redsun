@@ -91,7 +91,8 @@ enum, because the index lists only those names.
 One service can also back several devices, each taking a part of it, such as
 a flyer that runs a scan and a detector that records it. Give each of them
 `BoxDeviceConnector(prefix, declared_only=True)`, and its connector fills
-only the signals, commands and children the device declares. A declared
+only the signals, commands and children the device declares, and attaches
+only the boxes of those children. A declared
 child follows the same rule, while a declared `DeviceVector` takes every
 entry the service serves. A declared name the service lacks still fails
 `connect`, and two devices that declare the same attribute both read and
