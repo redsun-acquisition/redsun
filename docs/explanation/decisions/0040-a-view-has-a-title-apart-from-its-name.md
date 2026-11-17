@@ -11,9 +11,8 @@ Accepted
 A view's declared name does two jobs. The session, the wiring and the session
 file find the view by it, and Qt matches a dock to its place in a saved layout
 by the dock's object name, which is the same name. Until now the window also
-showed that name on the view's dock and tab, so a session read
-`scan_commands` and `statistics_view` where a person expects "Commands" and
-"Statistics". Renaming the view to fix the text would break the saved layouts
+showed that name on the view's dock and tab, so a session read `my_view`
+where a person expects "Commands". Renaming the view to fix the text would break the saved layouts
 and every key that names it, and a session cannot rename a view class it
 does not own, such as `redsun`'s own light view, at all.
 
@@ -28,20 +27,21 @@ name:
 ```python
 # before
 class MyApp(QtSession):
-    commands: AsView[ScanCommands]  # the dock reads "commands"
+    my_view: AsView[MyView]  # the dock reads "my_view"
 ```
 
-After, the name stays and the title changes:
+After, the name stays and the title changes, given by the class or by the
+declaration:
 
 ```python
 # after
-class ScanCommands(QWidget):
+class MyView(QWidget):
     placement: Placement = Dock("left")
     title = "Commands"
 
 
 class MyApp(QtSession):
-    lights: Annotated[AsView[LightView], Declare(title="Lasers")]
+    my_view: Annotated[AsView[MyView], Declare(title="Commands")]
 ```
 
 The session keeps `title` from the view's constructor, as it keeps
@@ -65,5 +65,7 @@ must be able to title it in the declaration, without a class of its own.
 - `redsun`'s own views have titles, "Lights", "Log", "Positioner" and
   "Acquisition", so a session that declares them shows those texts.
 - A view whose constructor took a `title` parameter is refused, and has to
-  rename it.
+  rename it. A presenter or device given `title` in its declaration or
+  session-file entry is refused too, where before the keyword reached its
+  constructor.
 - Two views may share a title, since nothing finds a view by it.

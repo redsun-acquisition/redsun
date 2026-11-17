@@ -182,7 +182,7 @@ the session needs the placement before the view exists.
 A view's [title](../explanation/glossary.md#title) is the text the window
 shows for it: on its dock, on its tab in the centre, in the Window menu and in
 the list of keyboard shortcuts. A view with no title shows its name, so a
-session declaring `scan_commands` shows `scan_commands`. Give a title to show
+session declaring `my_view` shows `my_view`. Give a title to show
 something a person reads more easily. The name stays as it is, because the
 saved layout, the wiring and the session file all find the view by it.
 
