@@ -31,7 +31,9 @@ from sharedbox import (
     RequestError,
     RequestSupersededError,
     SegmentNotFoundError,
+    SegmentStatus,
     ServerExitedError,
+    segment_status,
 )
 
 from redsun.aio import cancel_task
@@ -64,6 +66,7 @@ __all__ = [
     "BoxDeviceConnector",
     "BoxPutError",
     "BoxSignalBackend",
+    "ServiceExitedError",
     "stream_name",
 ]
 
@@ -97,6 +100,13 @@ class BoxPutError(Exception):
     def __init__(self, attribute: str, message: str) -> None:
         super().__init__(f"{attribute}: {message}")
         self.attribute = attribute
+
+
+class ServiceExitedError(ConnectionError):
+    """The service that created a box has ended, so its values are no longer current."""
+
+    def __init__(self, box: str) -> None:
+        super().__init__(f"the service that created {box!r} has exited")
 
 
 def _first_difference(
@@ -152,6 +162,15 @@ def _attached_name(boxes: Mapping[str, SharedBox], key: str) -> str:
     return key if box is None else box.name
 
 
+def _check_alive(box: SharedBox) -> None:
+    """Raise `ServiceExitedError` when the process that created `box` has ended.
+
+    A closed box is left to raise `BoxClosedError` on use.
+    """
+    if not box.closed and segment_status(box.name) is SegmentStatus.CREATOR_EXITED:
+        raise ServiceExitedError(box.name)
+
+
 def _limits(datatype: NumberDescription) -> Limits:
     """Return the control and alarm ranges the service gives, each when it sets an end."""
     limits: Limits = {}
@@ -172,20 +191,22 @@ def _service_message(error: RequestError) -> str:
     return str(error)
 
 
-async def _answered(attribute: str, request: RequestFuture[Any]) -> Any:
+async def _answered(box: str, attribute: str, request: RequestFuture[Any]) -> Any:
     """Wait for the answer to `request` and return what the service's handler returned.
 
     Raises
     ------
     BoxPutError
         The service's handler raised, or another writer's request replaced this one.
+    ServiceExitedError
+        The service ended before it answered.
     """
     try:
         return await request
     except RequestSupersededError:
         raise BoxPutError(attribute, "superseded by another writer") from None
     except ServerExitedError:
-        raise
+        raise ServiceExitedError(box) from None
     except RequestError as error:
         raise BoxPutError(attribute, _service_message(error)) from None
 
@@ -339,6 +360,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
 
     def _current(self) -> Reading[SignalDatatypeT]:
         """Return the value the service last published as a reading."""
+        _check_alive(self._box())
         stored = self._box_field().read()
         return Reading(
             value=self._decode(stored["value"]),
@@ -355,11 +377,18 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             `value` is None.
         BoxPutError
             The service refused the value or its put raised.
+        ServiceExitedError
+            The service that created the box has ended.
         """
         if value is None:
             raise TypeError(f"{self._attribute}: a put to a box needs a value")
+        _check_alive(self._box())
         async with self._lock:
-            await _answered(self._attribute, self._box_field().set(self._encode(value)))
+            await _answered(
+                self._box_name(),
+                self._attribute,
+                self._box_field().set(self._encode(value)),
+            )
 
     async def get_datakey(self, source: str) -> DataKey:
         """Return the data key, with the units, precision, limits and choices served."""
@@ -393,6 +422,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """Return the last value written."""
         if "w" not in self._description["access"]:
             return await self.get_value()
+        _check_alive(self._box())
         return self._decode(self._box_field().read()["setpoint"])
 
     def set_callback(self, callback: Callback[Reading[SignalDatatypeT]] | None) -> None:
@@ -467,11 +497,13 @@ class BoxCommandBackend(CommandBackend[[], None]):
         ------
         BoxPutError
             The command raised in the service.
+        ServiceExitedError
+            The service that created the box has ended.
         """
+        box = self._boxes[self._box_key]
+        _check_alive(box)
         async with self._lock:
-            await _answered(
-                self._command, getattr(self._boxes[self._box_key], self._field)()
-            )
+            await _answered(box.name, self._command, getattr(box, self._field)())
 
 
 def _command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:

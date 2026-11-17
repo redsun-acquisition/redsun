@@ -294,9 +294,9 @@ async def test_a_write_from_another_writer_supersedes_with_put_error(
     sent: asyncio.Queue[str] = asyncio.Queue()
     answered = box_device._answered
 
-    async def spy(attribute: str, request: RequestFuture[Any]) -> Any:
+    async def spy(box: str, attribute: str, request: RequestFuture[Any]) -> Any:
         sent.put_nowait(attribute)
-        return await answered(attribute, request)
+        return await answered(box, attribute, request)
 
     monkeypatch.setattr("redsun.device.sharedbox._answered", spy)
     second = MyDetector(prefix, name="second")
