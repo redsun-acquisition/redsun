@@ -158,9 +158,9 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
     )
     window.resize(*size)
     if press is not None:
-        title, _, plan = press.partition(":")
+        name, _, plan = press.partition(":")
         view = next(
-            d for d in window.findChildren(QDockWidget) if d.windowTitle() == title
+            d for d in window.findChildren(QDockWidget) if d.objectName() == name
         )
         view.findChildren(QComboBox)[0].setCurrentText(plan)
         next(
