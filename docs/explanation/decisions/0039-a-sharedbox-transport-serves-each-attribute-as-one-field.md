@@ -12,10 +12,10 @@ its box names and its choice of one box per controller still hold.
 ## Context
 
 ADR 35 built a write out of plain fields, because `sharedbox` had no way to
-send a request and wait for its answer. Each writable attribute took six
+send a request and wait for its answer. A writable attribute took five
 fields of its controller's box: the value, the setpoint, a request number,
-the number the service had served, the service's error and the shape of an
-array. The session and the service each ran their own code to number
+the number the service had served and the service's error. An array took
+two more for the shapes of its value and its setpoint. The session and the service each ran their own code to number
 requests, pair answers with them and pad arrays to a fixed size, and a
 session could not tell a service that had died from one that was quiet.
 
@@ -61,10 +61,10 @@ using the device sees no change.
 The two options weighed were keeping ADR 35's layout on the newer
 `sharedbox` and moving to one field per attribute. Keeping the layout would
 have cost nothing at once, but it kept the request numbers, the padding and
-the six fields per attribute, which the library now does for the transport.
-The case that decided it was liveness: a session that reads a box after its
-service crashed got the last value back with no error, and only the new
-layout can ask `sharedbox` who created the box.
+the extra fields per attribute, all of which the library now does for the
+transport. The case that decided it was a service that dies: under ADR 35 a
+write to it waited for an answer that never came, while a `sharedbox`
+request fails as soon as its server is gone.
 
 ## Consequences
 
@@ -78,8 +78,8 @@ layout can ask `sharedbox` who created the box.
   time the session read it.
 - `sharedbox` lets the newest of several waiting requests win. Writes to one
   signal from one session are each served in order, because the signal holds
-  a lock around its request. A write from another process that is replaced
-  before the service reaches it raises `BoxPutError` with "superseded by
+  a lock around its request. A write from another device or process that
+  is replaced before the service reaches it raises `BoxPutError` with "superseded by
   another writer".
 - An array keeps the shape it was written with, up to the maximum its
   datatype declares, and an unsigned integer is stored as `numpy.uint64`.
@@ -91,5 +91,7 @@ layout can ask `sharedbox` who created the box.
 - The box identity is the same string, but its fields differ, so a session
   and a service of different `redsun` releases refuse each other's boxes
   with `sharedbox.SchemaMismatchError`.
-- The 256-field limit of a box now counts attributes and commands, not six
-  fields per writable attribute.
+- The 256-field limit of a box now counts attributes and commands, not five
+  or seven fields per writable attribute.
+- Two names that would take the same field, such as `name` and `name_`, are
+  refused when the service starts.

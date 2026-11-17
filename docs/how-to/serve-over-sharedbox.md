@@ -109,8 +109,8 @@ write it.
 
 !!! warning "A read after the service stops raises"
 
-    Once the service process ends, or stops serving, a read, a write or a
-    command on the device raises
+    Once the service's process ends, a read, a write or a command on the
+    device raises
     [`ServiceExitedError`][redsun.device.sharedbox.ServiceExitedError]
     instead of returning the last value the service published. A signal you
     observe gets no error: it only stops receiving values. To learn that a
@@ -157,8 +157,8 @@ attribute's name and the service's message:
 A command that raises in the service raises `BoxPutError` in the session too.
 
 Writes from one session to one signal are served one after the other, in the
-order you make them. When another process writes the same attribute at the
-same time, the service serves only the newest of the writes waiting for it,
+order you make them. When another device or another process writes the
+same attribute at the same time, the service serves only the newest of the writes waiting for it,
 and the others raise `BoxPutError` with "superseded by another writer".
 
 ## Name a stream of your own
@@ -195,6 +195,9 @@ Signals you observe keep their subscribers across the reconnect.
 exits with the reason:
 
 - an attribute whose datatype is `Table`;
+- two attributes or commands that would take the same field of the box, such
+  as `name` and `name_`, since an attribute named like a method of a
+  `sharedbox` box is stored under its name with `_` appended;
 - a controller with more attributes and commands than one box can hold, or a
   controller tree whose description is larger than the index can hold;
 - more than one controller given to one `fastcs.control_system.FastCS`, the
