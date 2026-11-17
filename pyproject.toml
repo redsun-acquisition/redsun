@@ -34,7 +34,6 @@ dependencies = [
     "psygnal>=0.16.1",
     "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
-    "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
     "threadpoolctl>=3.7.0",
     "typing-extensions>=4.16.0",
 ]
@@ -62,7 +61,7 @@ dev = [
     "zarr>=3.1.6",
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
-    "sharedbox>=0.8.0 ; sys_platform != 'darwin'",
+    "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
 ]
 docs = [
     "markdown-d2>=0.5.0",
