@@ -44,6 +44,7 @@ from ..services._layout import (
     unpad,
     walk,
 )
+from ..services._transports import SHAREDBOX_TRANSPORT
 
 if TYPE_CHECKING:
     import inspect
@@ -531,6 +532,18 @@ class BoxDeviceConnector(DeviceConnector):
             )
         self._swap_boxes(self._attach_boxes(description))
         self._description = description
+        SHAREDBOX_TRANSPORT.hold(self)
+
+    def close(self) -> None:
+        """Close the boxes this device attached.
+
+        The session closes them when it shuts down, after which a read, a
+        write or a command on the device raises `sharedbox.BoxClosedError`.
+        Connecting the device again with `force_reconnect=True` attaches them
+        anew.
+        """
+        for box in self._boxes.values():
+            box.close()
 
     async def _read_index(self, timeout: float) -> ControllerDescription:
         """Return the description the index box holds, retrying until `timeout`.

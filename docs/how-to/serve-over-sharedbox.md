@@ -97,6 +97,15 @@ entry the service serves. A declared name the service lacks still fails
 `connect`, and two devices that declare the same attribute both read and
 write it.
 
+!!! warning "A read after shutdown raises"
+
+    When the session shuts down, it closes the boxes every device attached,
+    so a read, a write or a command on the device afterwards raises
+    `sharedbox.BoxClosedError`. A task of your component that is still
+    reading a device at that moment gets the same error. Stop such a task in
+    the component's `shutdown` and wait for it to end, because the session
+    calls `shutdown` before it closes the boxes.
+
 ## Declare it
 
 Name the transport in the session's configuration, and declare the service

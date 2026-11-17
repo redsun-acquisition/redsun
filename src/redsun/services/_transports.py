@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import socket
+import weakref
 from typing import TYPE_CHECKING, Final, Protocol
 
 if TYPE_CHECKING:
@@ -151,10 +152,21 @@ class PVAccess:
         """Nothing: a client reaches a restarted service without being told."""
 
 
+class Closable(Protocol):
+    """Something holding handles it can close."""
+
+    def close(self) -> None:
+        """Close the handles held."""
+        ...
+
+
 class SharedboxTransport:
     """The sharedbox transport, which sets nothing in this process's environment."""
 
     name = SHAREDBOX
+
+    def __init__(self) -> None:
+        self.held: weakref.WeakSet[Closable] = weakref.WeakSet()
 
     def reserve(self, service: str) -> Mapping[str, str]:
         """Return no environment for the service."""
@@ -166,14 +178,24 @@ class SharedboxTransport:
     def attach(self, address: str) -> None:
         """Do nothing."""
 
-    async def release(self) -> None:
-        """Do nothing."""
+    def hold(self, connector: Closable) -> None:
+        """Close *connector* on `release`, unless it is freed first."""
+        self.held.add(connector)
 
+    async def release(self) -> None:
+        """Close what every connector held attached, and forget them."""
+        for connector in list(self.held):
+            connector.close()
+        self.held.clear()
+
+
+SHAREDBOX_TRANSPORT = SharedboxTransport()
+"""The sharedbox transport of this process."""
 
 TRANSPORTS: dict[str, Transport] = {
     CHANNEL_ACCESS: ChannelAccess(),
     PV_ACCESS: PVAccess(),
-    SHAREDBOX: SharedboxTransport(),
+    SHAREDBOX: SHAREDBOX_TRANSPORT,
 }
 """The transports a session may name, by the name a session file writes."""
 

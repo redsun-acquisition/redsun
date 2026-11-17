@@ -20,8 +20,10 @@ from ophyd_async.core import (
     TriggerableCommand,
     observe_value,
 )
+from sharedbox import BoxClosedError
 
 from redsun.device.sharedbox import BoxDeviceConnector, BoxPutError, stream_name
+from redsun.services._transports import SHAREDBOX, TRANSPORTS
 from redsun.services.sharedbox import BoxTransport
 
 
@@ -309,6 +311,18 @@ async def test_an_observer_survives_a_reconnect(
             if value == 7.0:
                 break
     assert seen[-1] == 7.0
+
+
+async def test_release_closes_the_boxes_a_device_attached(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Refuse a read after the transport is released, and serve one after a reconnect."""
+    await TRANSPORTS[SHAREDBOX].release()
+
+    with pytest.raises(BoxClosedError):
+        await detector.exposure.get_value()
+    await detector.connect(timeout=5, force_reconnect=True)
+    assert await detector.exposure.get_value() == 0.0
 
 
 async def test_a_device_reconnects_after_the_service_restarts() -> None:
