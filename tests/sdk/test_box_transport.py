@@ -186,16 +186,21 @@ async def test_an_overtaken_request_is_superseded(
 ) -> None:
     """Supersede the earlier of two requests sent while the handler is held, and put the later."""
     controller, service = served
-    controller.put_delay = 0.05
+    gate = asyncio.Event()
+    controller.put_gate = gate
     top = service.box_of()
-    held = top.slow.set(1)
-    await asyncio.sleep(0.01)
-    overtaken = top.slow.set(2)
-    latest = top.slow.set(3)
-    with pytest.raises(RequestSupersededError):
-        await answered(overtaken)
-    await answered(held)
-    await answered(latest)
+    try:
+        held = top.slow.set(1)
+        await asyncio.wait_for(controller.put_started.wait(), 5)
+        overtaken = top.slow.set(2)
+        latest = top.slow.set(3)
+        gate.set()
+        with pytest.raises(RequestSupersededError):
+            await answered(overtaken)
+        await answered(held)
+        await answered(latest)
+    finally:
+        gate.set()
     assert controller.slow_seen == 3
 
 
