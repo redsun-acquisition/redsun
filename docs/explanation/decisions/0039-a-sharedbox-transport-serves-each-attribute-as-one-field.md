@@ -15,9 +15,9 @@ ADR 35 built a write out of plain fields, because `sharedbox` had no way to
 send a request and wait for its answer. A writable attribute took five
 fields of its controller's box: the value, the setpoint, a request number,
 the number the service had served and the service's error. An array took
-two more for the shapes of its value and its setpoint. The session and the service each ran their own code to number
-requests, pair answers with them and pad arrays to a fixed size, and a
-session could not tell a service that had died from one that was quiet.
+two more for the shapes of its value and its setpoint. The session and the
+service each ran their own code to number requests, pair answers with them
+and pad arrays to a fixed size, and a session could not tell a service that had died from one that was quiet.
 
 `sharedbox` 0.10 adds what that code stood in for. An attribute field holds a
 value, a setpoint and the time its writer published them. A field can be
@@ -79,8 +79,8 @@ request fails as soon as its server is gone.
 - `sharedbox` lets the newest of several waiting requests win. Writes to one
   signal from one session are each served in order, because the signal holds
   a lock around its request. A write from another device or process that
-  is replaced before the service reaches it raises `BoxPutError` with "superseded by
-  another writer".
+  is replaced before the service reaches it raises `BoxPutError` with
+  "superseded by another writer".
 - An array keeps the shape it was written with, up to the maximum its
   datatype declares, and an unsigned integer is stored as `numpy.uint64`.
 - An attribute named like a method of `SharedBox`, such as `name` or `close`,

@@ -158,8 +158,8 @@ A command that raises in the service raises `BoxPutError` in the session too.
 
 Writes from one session to one signal are served one after the other, in the
 order you make them. When another device or another process writes the
-same attribute at the same time, the service serves only the newest of the writes waiting for it,
-and the others raise `BoxPutError` with "superseded by another writer".
+same attribute at the same time, the service serves only the newest of the
+writes waiting for it, and the others raise `BoxPutError` with "superseded by another writer".
 
 ## Name a stream of your own
 
