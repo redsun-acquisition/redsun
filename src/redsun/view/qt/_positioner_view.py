@@ -198,6 +198,9 @@ class PositionerView(QtW.QWidget, Loggable):
     placement: Placement = Dock("right")
     """Where the view sits in the main window."""
 
+    title = "Positioner"
+    """The text the window shows for the view."""
+
     group_class: ClassVar[MakesPositionerGroup] = PositionerGroup
     """Widget built for each device; a subclass may name a subclass of its own that takes the same arguments."""
 
