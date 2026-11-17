@@ -7,14 +7,13 @@ from typing import (
     Any,
     Final,
     Literal,
-    NamedTuple,
     Required,
     TypeAlias,
     TypedDict,
 )
 
 import numpy as np
-from sharedbox import Capacity, DType, Shape, SharedBox
+from sharedbox import Attr, Capacity, DType, MaxShape, Setting, SharedBox, attr
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -23,14 +22,12 @@ if TYPE_CHECKING:
 
 __all__ = [
     "DESCRIPTION_CAPACITY",
-    "ERROR_CAPACITY",
     "IDENTITY",
     "RESERVED",
     "STRING_CAPACITY",
     "AttributeDescription",
     "ControllerDescription",
     "DatatypeDescription",
-    "Field",
     "NumberDescription",
     "ServiceIndex",
     "box_class",
@@ -41,14 +38,12 @@ __all__ = [
     "pad",
     "stream_name",
     "unpad",
+    "value_type",
     "walk",
 ]
 
 RESERVED: Final = "fastcs"
 """The name part under which a service publishes its controller boxes."""
-
-ERROR_CAPACITY: Final = 256
-"""Bytes of an `x__error` field."""
 
 STRING_CAPACITY: Final = 256
 """Bytes of a string attribute that gives no capacity."""
@@ -232,74 +227,42 @@ def stream_name(prefix: str, part: str) -> str:
     return check_name(f"{namespace(prefix)}:{part}")
 
 
-class Field(NamedTuple):
-    """The annotation and the default of a box field."""
-
-    annotation: object
-    default: object
-
-
-def datatype_field(datatype: DatatypeDescription) -> Field:
-    """Return the field holding `datatype`."""
+def value_type(datatype: DatatypeDescription) -> object:
+    """Return the type an attribute of `datatype` has in its box."""
     match datatype["kind"]:
         case "int" | "enum":
-            return Field(int, 0)
+            return int
         case "uint":
-            return Field(
-                Annotated[np.ndarray, Shape((1,)), DType("uint64")],
-                np.zeros(1, dtype="uint64"),
-            )
+            return np.uint64
         case "float":
-            return Field(float, 0.0)
+            return float
         case "bool":
-            return Field(bool, False)
+            return bool
         case "str":
-            return Field(Annotated[str, Capacity(datatype["capacity"])], "")
+            return Annotated[str, Capacity(datatype["capacity"])]
         case "waveform":
-            shape, dtype = datatype["shape"], datatype["dtype"]
-            return Field(
-                Annotated[np.ndarray, Shape(tuple(shape)), DType(dtype)],
-                np.zeros(shape, dtype=dtype),
-            )
+            return Annotated[
+                np.ndarray, MaxShape(tuple(datatype["shape"])), DType(datatype["dtype"])
+            ]
 
 
 def box_class(controller: ControllerDescription) -> type[SharedBox]:
-    """Return the box class of one controller, equal for equal descriptions."""
+    """Return the box class of one controller, equal for equal descriptions.
+
+    Each attribute and each command is one field named after it: an `Attr` for
+    a read-only attribute, a `Setting` for a writable one and an `Attr[None]`
+    for a command.
+    """
     if not controller["attributes"] and not controller["commands"]:
         raise ValueError(
             f"controller {controller_label(controller)!r} has no attributes or commands"
         )
     annotations: dict[str, object] = {}
-    body: dict[str, object] = {"__annotations__": annotations}
-
-    def add(name: str, annotation: object, default: object) -> None:
-        annotations[name] = annotation
-        body[name] = default
-
-    def add_request(stem: str) -> None:
-        add(f"{stem}__request", int, 0)
-        add(f"{stem}__done", int, 0)
-        add(f"{stem}__error", Annotated[str, Capacity(ERROR_CAPACITY)], "")
-
     for name, attribute in controller["attributes"].items():
-        if "__" in name:
-            raise ValueError(f"attribute name {name!r} contains '__'")
-        annotation, default = datatype_field(attribute["datatype"])
-        if "r" in attribute["access"]:
-            add(f"{name}__value", annotation, default)
-        if "w" in attribute["access"]:
-            add(f"{name}__setpoint", annotation, default)
-            add_request(name)
-        if attribute["datatype"]["kind"] == "waveform":
-            ndim = len(attribute["datatype"]["shape"])
-            shape_field = Annotated[tuple[int, ...], Capacity(ndim)]
-            add(f"{name}__shape", shape_field, (0,) * ndim)
-            if "w" in attribute["access"]:
-                add(f"{name}__setpoint_shape", shape_field, (0,) * ndim)
+        kind = value_type(attribute["datatype"])
+        annotations[name] = Attr[kind] if attribute["access"] == "r" else Setting[kind]  # type: ignore[valid-type]
     for command in controller["commands"]:
-        if "__" in command:
-            raise ValueError(f"command name {command!r} contains '__'")
-        add_request(command)
+        annotations[command] = Attr[None]
 
     if len(annotations) > MAX_FIELDS:
         raise ValueError(
@@ -309,7 +272,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
     return type(
         "ControllerBox",
         (SharedBox,),
-        body,
+        {"__annotations__": annotations, **{name: attr() for name in annotations}},
         identity=IDENTITY,
         kw_only=True,
     )

@@ -17,6 +17,7 @@ from sharedbox import (
     SchemaMismatchError,
     SegmentExistsError,
     SegmentNotFoundError,
+    Setting,
     SharedBox,
 )
 
@@ -24,7 +25,6 @@ from redsun.log import logger
 
 from ._layout import (
     DESCRIPTION_CAPACITY,
-    ERROR_CAPACITY,
     STRING_CAPACITY,
     AttributeDescription,
     ControllerDescription,
@@ -34,8 +34,6 @@ from ._layout import (
     box_class,
     box_name,
     index_name,
-    pad,
-    unpad,
     walk,
 )
 
@@ -119,36 +117,52 @@ def _describe_datatype(datatype: DataType[DType_T], where: str) -> DatatypeDescr
     raise ValueError(f"attribute {where!r} has unsupported datatype {datatype!r}")
 
 
-def _to_box(
-    name: str, datatype: DataType[DType_T], value: DType_T
-) -> dict[str, object]:
-    """Return the box fields (without the attribute name) holding `value` of `name`."""
+def _to_box(name: str, datatype: DataType[DType_T], value: DType_T) -> object:
+    """Return `value` of the attribute `name` as its box field holds it."""
     match datatype:
         case Enum():
-            return {"": datatype.index_of(value)}
+            return datatype.index_of(value)
         case Int() if _is_unsigned(datatype):
-            return {"": np.array([value], dtype="uint64")}
+            return np.uint64(value)
         case String():
-            return {"": _cut(value, datatype.length or STRING_CAPACITY, name)}
-        case Waveform():
-            return {
-                "": pad(value, datatype.shape, datatype.array_dtype),
-                "shape": tuple(value.shape),
-            }
-    return {"": value}
+            return _cut(value, datatype.length or STRING_CAPACITY, name)
+    return value
 
 
-def _setpoint(box: SharedBox, name: str, datatype: DataType[DType_T]) -> DType_T:
-    """Return the setpoint `box` holds for the attribute `name`, as a FastCS value."""
-    raw = getattr(box, f"{name}__setpoint")
+def _from_box(datatype: DataType[DType_T], raw: Any) -> DType_T:
+    """Return `raw`, as the box field of an attribute holds it, as a FastCS value."""
     match datatype:
         case Enum():
             return datatype.members[raw]
         case Int() if _is_unsigned(datatype):
-            return int(raw[0])
-        case Waveform():
-            return unpad(raw, getattr(box, f"{name}__setpoint_shape"))
+            return int(raw)
     return raw
+
+
+def _put_handler(
+    field: Setting[Any], attribute: AttrW[Any]
+) -> Callable[[object], Awaitable[object]]:
+    """Return the handler of the requests of `field`, which put them to `attribute`."""
+
+    async def put(raw: object) -> object:
+        field.publish(setpoint=raw)
+        await attribute.put(_from_box(attribute.datatype, raw), sync_setpoint=True)
+        if not isinstance(attribute, AttrR):
+            field.publish(value=raw)
+        return raw
+
+    return put
+
+
+def _command_handler(
+    command: Callable[[], Awaitable[object]],
+) -> Callable[[], Awaitable[None]]:
+    """Return the handler of the requests of a command field, which run `command`."""
+
+    async def run() -> None:
+        await command()
+
+    return run
 
 
 @dataclass
@@ -189,13 +203,14 @@ class BoxTransport(Transport):
         try:
             for node_api, node in self._nodes:
                 if node["box"] is not None:
-                    self._boxes[node["box"]] = self._publish(
-                        box_class(node), node["box"], self._initial_values(node_api)
-                    )
+                    box = self._publish(box_class(node), node["box"])
+                    self._publish_initial(box, node_api)
+                    self._boxes[node["box"]] = box
             self._index = self._publish(
                 ServiceIndex,
                 index_name(self._prefix),
-                {"version": 1, "description": description},
+                version=1,
+                description=description,
             )
             self._published.set()
         except BaseException:
@@ -250,7 +265,7 @@ class BoxTransport(Transport):
             old.unlink()
             old.close()
 
-    def _publish(self, cls: type[_BoxT], name: str, values: dict[str, object]) -> _BoxT:
+    def _publish(self, cls: type[_BoxT], name: str, **values: object) -> _BoxT:
         """Create the box `name`, replacing one a stopped service left behind."""
         try:
             return cls.create(name, **values)
@@ -258,50 +273,43 @@ class BoxTransport(Transport):
             cls.unlink(name)
             return cls.create(name, **values)
 
-    def _initial_values(self, api: ControllerAPI) -> dict[str, object]:
-        """Return the box fields holding the current value of each readable attribute."""
-        values: dict[str, object] = {}
+    @staticmethod
+    def _publish_initial(box: SharedBox, api: ControllerAPI) -> None:
+        """Publish the current value of each readable attribute, and its setpoint if writable."""
         for name, attribute in api.attributes.items():
             if isinstance(attribute, AttrR):
-                values.update(self._fields(name, attribute.datatype, attribute.get()))
-        return values
-
-    @staticmethod
-    def _fields(
-        name: str, datatype: DataType[DType_T], value: DType_T
-    ) -> dict[str, Any]:
-        """Return the box fields holding the value of the attribute `name`."""
-        return {
-            f"{name}__{key or 'value'}": field
-            for key, field in _to_box(name, datatype, value).items()
-        }
+                value = _to_box(name, attribute.datatype, attribute.get())
+                field = getattr(box, name)
+                if isinstance(attribute, AttrW):
+                    field.publish(value=value, setpoint=value)
+                else:
+                    field.publish(value=value)
 
     async def serve(self) -> None:
         """Mirror attribute updates into the boxes and answer requests until cancelled."""
         try:
-            async with asyncio.TaskGroup() as group:
-                for api, node in self._nodes:
-                    if node["box"] is not None:
-                        await self._serve_box(group, api, self._boxes[node["box"]])
-                await asyncio.Event().wait()
+            for api, node in self._nodes:
+                if node["box"] is not None:
+                    await self._serve_box(api, self._boxes[node["box"]])
+            await asyncio.Event().wait()
         finally:
             self._close()
 
-    async def _serve_box(
-        self, group: asyncio.TaskGroup, api: ControllerAPI, box: SharedBox
-    ) -> None:
-        """Mirror the attributes of `api` into `box`, and answer its requests in `group`."""
+    async def _serve_box(self, api: ControllerAPI, box: SharedBox) -> None:
+        """Mirror the attributes of `api` into `box`, and answer its requests.
+
+        The servers run until the box closes.
+        """
         for name, attribute in api.attributes.items():
             if isinstance(attribute, AttrR):
                 callback = partial(self._update, box, name, attribute.datatype)
                 attribute.add_on_update_callback(callback)
                 await callback(attribute.get())
             if isinstance(attribute, AttrW):
-                group.create_task(
-                    self._answer(box, name, partial(self._put, box, name, attribute))
-                )
+                field = getattr(box, name)
+                field.serve(_put_handler(field, attribute))
         for name, command in api.command_methods.items():
-            group.create_task(self._answer(box, name, command))
+            getattr(box, name).serve(_command_handler(command))
 
     async def reachable(self) -> None:
         """Return once the index is published."""
@@ -314,52 +322,11 @@ class BoxTransport(Transport):
         if box.closed:
             return
         try:
-            box.update(**self._fields(name, datatype, value))
+            getattr(box, name).publish(value=_to_box(name, datatype, value))
         except (ValueError, TypeError, OverflowError) as exc:
             raise ValueError(
                 f"attribute {name!r} cannot be written to its box: {exc}"
             ) from exc
-
-    @staticmethod
-    async def _put(box: SharedBox, name: str, attribute: AttrW[DType_T]) -> None:
-        """Put the setpoint in the box to the attribute `name`."""
-        await attribute.put(
-            _setpoint(box, name, attribute.datatype), sync_setpoint=True
-        )
-
-    @staticmethod
-    async def _answer(
-        box: SharedBox, stem: str, run: Callable[[], Awaitable[object]]
-    ) -> None:
-        """Run `run` for every request number written to `<stem>__request`.
-
-        A watch skips to the latest write, so after each wake the request
-        number is compared with `<stem>__done` and `run` repeats until they
-        match.
-        """
-
-        async def serve_pending() -> None:
-            while (number := getattr(box, f"{stem}__request")) != getattr(
-                box, f"{stem}__done"
-            ):
-                error = ""
-                try:
-                    await run()
-                except Exception as exc:  # noqa: BLE001
-                    error = str(exc) or type(exc).__name__
-                # One update, so a client woken by `done` never reads the
-                # error of the previous request.
-                box.update(
-                    **{
-                        f"{stem}__error": _cut(error, ERROR_CAPACITY, f"{stem}__error"),
-                        f"{stem}__done": number,
-                    }
-                )
-
-        watch = box.watch(f"{stem}__request")
-        await serve_pending()
-        async for _ in watch:
-            await serve_pending()
 
     def _close(self) -> None:
         """Close and unlink every box and the index."""
