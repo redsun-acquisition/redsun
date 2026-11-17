@@ -1175,7 +1175,7 @@ def test_a_failed_view_shows_its_title(qapp: QApplication, build: BuildSession) 
     labels = [label.text() for label in _widget(dock).findChildren(QLabel)]
 
     assert dock.windowTitle() == "Detector"
-    assert labels == ["Detector could not be built:\nno detector attached"]
+    assert labels == ["Detector (broken) could not be built:\nno detector attached"]
 
 
 def test_a_view_whose_qt_base_has_a_title_method_shows_its_name(
