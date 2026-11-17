@@ -303,17 +303,31 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         Raises
         ------
         ValueError
-            A string is longer than the field holds.
+            A string or a waveform is larger than the field holds, or an enum name is
+        not one the field has.
         """
         datatype = self._description["datatype"]
         match datatype["kind"]:
             case "uint":
                 return np.uint64(value)
             case "enum":
-                name = value.value if isinstance(value, enum.Enum) else value
-                return self._names.index(str(name))
+                name = str(value.value if isinstance(value, enum.Enum) else value)
+                if name not in self._names:
+                    raise ValueError(
+                        f"{self._attribute}: {name!r} is not one of {self._names}"
+                    )
+                return self._names.index(name)
             case "waveform":
-                return np.asarray(value, dtype=datatype["dtype"])
+                array = np.asarray(value, dtype=datatype["dtype"])
+                shape = datatype["shape"]
+                if array.ndim != len(shape) or any(
+                    size > limit for size, limit in zip(array.shape, shape, strict=True)
+                ):
+                    raise ValueError(
+                        f"{self._attribute}: a waveform of shape {array.shape} does "
+                        f"not fit the field's {tuple(shape)}"
+                    )
+                return array
             case "str":
                 size = len(str(value).encode())
                 if size > datatype["capacity"]:

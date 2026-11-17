@@ -43,6 +43,7 @@ class MyDetector(Device):
 class MyTexter(Device):
     text: SignalRW[str]
     refuse: TriggerableCommand
+    refuse_silently: TriggerableCommand
 
     def __init__(self, prefix: str, name: str = "") -> None:
         super().__init__(name=name, connector=BoxDeviceConnector(prefix))
@@ -246,21 +247,55 @@ async def test_a_command_the_service_refuses_raises_its_message(
     assert str(caught.value) == "refuse: busy"
 
 
+async def test_a_command_that_raises_without_a_message_gives_its_type(
+    texter: tuple[TextController, MyTexter],
+) -> None:
+    """Raise BoxPutError with the exception type when the exception has no message."""
+    _, device = texter
+    with pytest.raises(BoxPutError) as caught:
+        await device.refuse_silently.trigger()
+    assert str(caught.value) == "refuse_silently: RuntimeError"
+
+
+async def test_a_waveform_that_does_not_fit_is_refused_before_sending(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Raise ValueError naming the attribute and leave the service's waveform alone."""
+    controller, _ = served
+    before = np.array(controller.trace.get())
+    for value in (np.zeros(11, dtype=np.int32), np.zeros((2, 2), dtype=np.int32)):
+        with pytest.raises(ValueError, match="trace"):
+            await detector.trace.set(value)  # type: ignore[attr-defined]
+    np.testing.assert_array_equal(controller.trace.get(), before)
+
+
+async def test_an_unknown_enum_name_is_refused_naming_the_attribute_and_choices(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Raise ValueError naming the attribute and the names the enum has."""
+    controller, _ = served
+    with pytest.raises(ValueError, match=r"mode.*'FAST'.*IDLE.*RUN"):
+        await detector.mode.set("FAST")  # type: ignore[attr-defined]
+    assert controller.mode.get().name == "IDLE"
+
+
 async def test_a_write_from_another_writer_supersedes_with_put_error(
     served: tuple[BoxController, str], detector: MyDetector
 ) -> None:
     """Raise BoxPutError for a write that another device's write replaces before the service takes it."""
-    _, prefix = served
+    controller, prefix = served
     second = MyDetector(prefix, name="second")
     third = MyDetector(prefix, name="third")
     await second.connect(timeout=5)
     await third.connect(timeout=5)
     try:
-        holding = asyncio.ensure_future(detector.slow.set(1, timeout=5))  # type: ignore[attr-defined]
-        await asyncio.sleep(0.1)
-        replaced = asyncio.ensure_future(second.slow.set(2, timeout=5))  # type: ignore[attr-defined]
-        await asyncio.sleep(0.05)
-        replacing = asyncio.ensure_future(third.slow.set(3, timeout=5))  # type: ignore[attr-defined]
+        controller.put_delay = 2.0
+        holding = asyncio.ensure_future(detector.slow.set(1, timeout=10))  # type: ignore[attr-defined]
+        await asyncio.sleep(0.5)
+        controller.put_delay = 0.0
+        replaced = asyncio.ensure_future(second.slow.set(2, timeout=10))  # type: ignore[attr-defined]
+        await asyncio.sleep(0.2)
+        replacing = asyncio.ensure_future(third.slow.set(3, timeout=10))  # type: ignore[attr-defined]
         results = await asyncio.gather(
             holding, replaced, replacing, return_exceptions=True
         )

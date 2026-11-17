@@ -86,7 +86,7 @@ class NamedController(Controller):
 
 
 class TextController(Controller):
-    """A controller with a short writable string and a command that raises."""
+    """A controller with a short writable string and commands that raise."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -96,3 +96,8 @@ class TextController(Controller):
     async def refuse(self) -> None:
         """Raise `RuntimeError`."""
         raise RuntimeError("busy")
+
+    @command()
+    async def refuse_silently(self) -> None:
+        """Raise `RuntimeError` with no message."""
+        raise RuntimeError
