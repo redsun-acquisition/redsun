@@ -103,7 +103,7 @@ class BoxPutError(Exception):
 
 
 class ServiceExitedError(ConnectionError):
-    """The service that created a box has ended, so its values are no longer current."""
+    """The service that created a box has stopped, so its values are no longer current."""
 
     def __init__(self, box: str) -> None:
         super().__init__(f"the service that created {box!r} has exited")
@@ -163,11 +163,12 @@ def _attached_name(boxes: Mapping[str, SharedBox], key: str) -> str:
 
 
 def _check_alive(box: SharedBox) -> None:
-    """Raise `ServiceExitedError` when the process that created `box` has ended.
+    """Raise `ServiceExitedError` when the service that created `box` has stopped.
 
-    A closed box is left to raise `BoxClosedError` on use.
+    The service has stopped when its process ended or it unlinked the box. A closed
+    box is left to raise `BoxClosedError` on use.
     """
-    if not box.closed and segment_status(box.name) is SegmentStatus.CREATOR_EXITED:
+    if not box.closed and segment_status(box.name) is not SegmentStatus.RUNNING:
         raise ServiceExitedError(box.name)
 
 

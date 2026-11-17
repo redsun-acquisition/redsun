@@ -25,10 +25,15 @@ from ophyd_async.core import (
     TriggerableCommand,
     observe_value,
 )
-from sharedbox import BoxClosedError
+from sharedbox import BoxClosedError, SegmentStatus
 
 from redsun.device import sharedbox as box_device
-from redsun.device.sharedbox import BoxDeviceConnector, BoxPutError, stream_name
+from redsun.device.sharedbox import (
+    BoxDeviceConnector,
+    BoxPutError,
+    ServiceExitedError,
+    stream_name,
+)
 from redsun.services._transports import SHAREDBOX, TRANSPORTS
 from redsun.services.sharedbox import BoxTransport
 
@@ -260,6 +265,17 @@ async def test_a_command_that_raises_without_a_message_gives_its_type(
     with pytest.raises(BoxPutError) as caught:
         await device.refuse_silently.trigger()
     assert str(caught.value) == "refuse_silently: RuntimeError"
+
+
+async def test_a_box_its_service_unlinked_raises_service_exited(
+    detector: MyDetector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Raise ServiceExitedError from a read when the box's segment is missing."""
+    monkeypatch.setattr(
+        "redsun.device.sharedbox.segment_status", lambda name: SegmentStatus.MISSING
+    )
+    with pytest.raises(ServiceExitedError):
+        await detector.exposure.get_value()
 
 
 async def test_a_waveform_that_does_not_fit_is_refused_before_sending(
