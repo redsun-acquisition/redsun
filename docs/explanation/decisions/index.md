@@ -47,3 +47,4 @@ never edited; a later one replaces it.
 - [36. A stack is declared as one entry](0036-a-stack-is-declared-as-one-entry.md)
 - [37. diwire is the session registry](0037-diwire-is-the-session-registry.md)
 - [38. The session owns background computation](0038-the-session-owns-background-computation.md)
+- [40. A view has a title apart from its name](0040-a-view-has-a-title-apart-from-its-name.md)
