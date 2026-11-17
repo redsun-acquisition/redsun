@@ -74,6 +74,9 @@ SERVICE_KEYS = ("service", "services")
 SESSION_KEYWORDS = ("name", "path_provider")
 """Constructor keywords the session fills itself, which no service can."""
 
+VIEW_KEYWORDS: Final = frozenset({"placement", "title"})
+"""Keywords the session keeps from a view's configuration, which no other component takes."""
+
 # not TypeForm: a NewType built at runtime is a type expression only at
 # runtime, which no type checker can model
 Key: TypeAlias = Any
@@ -301,12 +304,12 @@ class Declaration:
         self.placement: Placement | None = None
         self.title = name
         self.workers: int | None = None
-        for keyword in ("placement", "title"):
-            if kind is not Layer.VIEW and keyword in cfg_kwargs and refusal is None:
-                refusal = TypeError(
-                    f"{name!r} is declared as a {kind}, and only a view takes "
-                    f"a {keyword!r}"
-                )
+        given = VIEW_KEYWORDS & cfg_kwargs.keys()
+        if kind is not Layer.VIEW and given and refusal is None:
+            refusal = TypeError(
+                f"{name!r} is declared as a {kind}, and only a view takes "
+                f"a {min(given)!r}"
+            )
         if kind is Layer.DEVICE:
             cfg_kwargs = take_device_keys(self, cfg_kwargs, refused=refusal is not None)
         elif kind is Layer.VIEW and refusal is None:
