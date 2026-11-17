@@ -682,7 +682,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         views = self._with_placeholders()
         self._shown_layout = self.resolve_layout()
-        attach(window, views, self._declared_placements(), self._shown_layout)
+        attach(
+            window,
+            views,
+            self._declared_placements(),
+            self._shown_layout,
+            titles=self._declared_titles(),
+        )
         earlier = set(window.findChildren(QDockWidget, options=DIRECT_CHILDREN))
         # before the hook, so the menus it builds show the actions' keys
         self._bind_shortcuts(views)
@@ -722,7 +728,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
             if name in built:
                 views[name] = built[name]
             elif name in self._failed and isinstance(placement, (Dock, Central)):
-                views[name] = FailedView(name, self._failed[name], placement)
+                views[name] = FailedView(
+                    name, self._failed[name], placement, title=declaration.title
+                )
         return views
 
     def _declared_placements(self) -> dict[str, Placement]:
@@ -732,6 +740,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
             for declaration in self._view_declarations()
             if declaration.placement is not None
         }
+
+    def _declared_titles(self) -> dict[str, str]:
+        """Return, by name, the title each view's declaration resolved."""
+        return {d.name: d.title for d in self._view_declarations()}
 
     def restore_layout(self) -> None:
         """Put the window back where this user last left it.
@@ -1156,6 +1168,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
                 self.set_shortcuts,
                 self.reset_shortcuts,
                 self.main_window,
+                titles=self._declared_titles(),
             )
         self._shortcuts_dialog.show()
         self._shortcuts_dialog.raise_()
@@ -1544,11 +1557,15 @@ def attach(
     views: Mapping[str, AttachableComponent],
     placements: Mapping[str, Placement] | None = None,
     layout: WindowLayout | None = None,
+    *,
+    titles: Mapping[str, str] | None = None,
 ) -> None:
     """Attach every view of *views* to *window*, where *layout* puts it or else where it asks.
 
     *placements* gives, by name, the placement a view's declaration chose;
-    any other view is placed where its `placement` asks. *layout* is a
+    any other view is placed where its `placement` asks. *titles* gives, by
+    name, the text a dock or a central tab shows for a view; any other view
+    shows its name. *layout* is a
     resolved layout, such as
     [`Session.resolve_layout`][redsun.Session.resolve_layout] returns;
     without one the placements alone decide, docks of one edge and group
@@ -1579,7 +1596,7 @@ def attach(
         for name, view in views.items()
         if name in placed
     }
-    docks = place_regions(window, layout, widgets)
+    docks = place_regions(window, layout, widgets, titles or {})
     for name in layout.hidden:
         if name in docks:
             docks[name].hide()
@@ -1624,16 +1641,20 @@ def refuse_mismatch(layout: WindowLayout, asked: Mapping[str, Placement]) -> Non
 
 
 def place_regions(
-    window: QMainWindow, layout: WindowLayout, widgets: Mapping[str, QWidget]
+    window: QMainWindow,
+    layout: WindowLayout,
+    widgets: Mapping[str, QWidget],
+    titles: Mapping[str, str],
 ) -> dict[str, QDockWidget]:
     """Fill the centre and the edges of *window* as *layout* says, and return the docks made, by name."""
     docks: dict[str, QDockWidget] = {}
     for region, node in layout.regions.items():
         if region == "center":
-            window.setCentralWidget(central_widget(node, widgets))
+            window.setCentralWidget(central_widget(node, widgets, titles))
         elif is_area(region):
             made = {
-                name: make_dock(window, name, widgets[name]) for name in names_in(node)
+                name: make_dock(window, name, widgets[name], titles.get(name, name))
+                for name in names_in(node)
             }
             add_docks(window, region, node, made)
             docks.update(made)
@@ -1656,11 +1677,13 @@ def named(name: str, view: object, required: type[T]) -> T:
     return view
 
 
-def make_dock(window: QMainWindow, name: str, widget: QWidget) -> QDockWidget:
-    """Return a dock of *window* holding *widget*, named after the view."""
+def make_dock(
+    window: QMainWindow, name: str, widget: QWidget, title: str
+) -> QDockWidget:
+    """Return a dock of *window* holding *widget*, named after the view and showing *title*."""
     # Qt matches a dock to its saved place by object name, and drops one that
     # has none, so the component's declared name is what carries the layout
-    dock = QDockWidget(name, window)
+    dock = QDockWidget(title, window)
     dock.setObjectName(name)
     dock.setWidget(widget)
     return dock
@@ -1753,7 +1776,9 @@ def add_toolbar_item(
     bar.addAction(action)
 
 
-def central_widget(node: Node, widgets: Mapping[str, QWidget]) -> QWidget:
+def central_widget(
+    node: Node, widgets: Mapping[str, QWidget], titles: Mapping[str, str]
+) -> QWidget:
     """Return what shows *node* in the centre: a view, tabs, or a splitter."""
     match node:
         case str():
@@ -1761,13 +1786,13 @@ def central_widget(node: Node, widgets: Mapping[str, QWidget]) -> QWidget:
         case Tabs(names=names):
             tabs = QTabWidget()
             for name in names:
-                tabs.addTab(widgets[name], name)
+                tabs.addTab(widgets[name], titles.get(name, name))
             tabs.setCurrentIndex(current_index(node))
             return tabs
         case Split(children=children):
             splitter = QSplitter(orientation_of(node))
             for child in children:
-                splitter.addWidget(central_widget(child, widgets))
+                splitter.addWidget(central_widget(child, widgets, titles))
             return splitter
         case _:
             assert_never(node)

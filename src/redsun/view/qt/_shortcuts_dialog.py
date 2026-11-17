@@ -25,7 +25,7 @@ from qtpy.QtWidgets import (
 from ...session._shortcuts import holder
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     from ...session._shortcuts import Binding
 
@@ -46,8 +46,14 @@ def native(key: str) -> str:
     return QKeySequence(key).toString(QKeySequence.SequenceFormat.NativeText)
 
 
-def notes(bindings: Sequence[Binding]) -> dict[str, str]:
-    """Return, by command, what a view key shadowing a window key says, on both sides."""
+def notes(
+    bindings: Sequence[Binding], titles: Mapping[str, str] | None = None
+) -> dict[str, str]:
+    """Return, by command, what a view key shadowing a window key says, on both sides.
+
+    A view is named by its title in *titles*, or by its name.
+    """
+    titles = titles or {}
     window = {key: b for b in bindings if b.view is None for key in b.keys}
     said: dict[str, str] = {}
     for binding in bindings:
@@ -56,7 +62,8 @@ def notes(bindings: Sequence[Binding]) -> dict[str, str]:
         for key in binding.keys:
             if (shadowed := window.get(key)) is not None:
                 said[binding.command] = f"shadows {shadowed.title}"
-                said[shadowed.command] = f"shadowed in {binding.view}"
+                view = titles.get(binding.view, binding.view)
+                said[shadowed.command] = f"shadowed in {view}"
     return said
 
 
@@ -66,7 +73,8 @@ class ShortcutsDialog(QDialog):
     Double-click a key cell and press the new key; Backspace or Delete clears
     it, and Escape leaves it as it was. A key another command holds in the same place is moved after the user
     agrees. *change* receives the new keys by command and raises `ValueError`
-    for a key it refuses; *reset* forgets every change.
+    for a key it refuses; *reset* forgets every change. *titles* gives, by
+    name, the title the list shows for a view; any other view shows its name.
     """
 
     def __init__(
@@ -75,17 +83,22 @@ class ShortcutsDialog(QDialog):
         change: Callable[[dict[str, tuple[str, ...]]], None],
         reset: Callable[[], None],
         parent: QWidget | None = None,
+        *,
+        titles: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Keyboard shortcuts")
+        self._titles = dict(titles or {})
         self._bindings = list(bindings)
-        self._notes = notes(self._bindings)
+        self._notes = notes(self._bindings, self._titles)
         self._change = change
         self._reset = reset
         self._shown: list[Binding] = []
         self._groups = QComboBox()
         views = dict.fromkeys(b.view for b in self._bindings if b.view is not None)
-        self._groups.addItems([WINDOW, *views])
+        self._groups.addItem(WINDOW, WINDOW)
+        for view in views:
+            self._groups.addItem(self._titles.get(view, view), view)
         self._table = QTableWidget(0, len(COLUMNS))
         self._table.setHorizontalHeaderLabels(COLUMNS)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -111,17 +124,19 @@ class ShortcutsDialog(QDialog):
         layout.addWidget(self._table)
         layout.addWidget(self._problem)
         layout.addLayout(bottom)
-        self._groups.currentTextChanged.connect(self._show_group)
+        self._groups.currentIndexChanged.connect(
+            lambda index: self._show_group(self._groups.itemData(index))
+        )
         self._show_group(WINDOW)
 
     def set_bindings(self, bindings: Sequence[Binding]) -> None:
         """Show *bindings* in place of those shown, keeping the group chosen."""
         self._bindings = list(bindings)
-        self._notes = notes(self._bindings)
-        self._show_group(self._groups.currentText())
+        self._notes = notes(self._bindings, self._titles)
+        self._show_group(self._groups.currentData())
 
     def _show_group(self, group: str) -> None:
-        """Fill the table with the bindings of *group*."""
+        """Fill the table with the bindings of *group*, `WINDOW` or a view's name."""
         for row in range(self._table.rowCount()):
             for column in (1, 2):
                 self._table.removeCellWidget(row, column)

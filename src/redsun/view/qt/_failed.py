@@ -40,7 +40,8 @@ def show_failures(
 class FailedView(QWidget):
     """Stands where a view that failed to build would have been.
 
-    It names the view and the reason, and shows the traceback on request.
+    It names the view by *title*, its name when none is given, gives the
+    reason, and shows the traceback on request.
     """
 
     def __init__(
@@ -49,12 +50,15 @@ class FailedView(QWidget):
         error: BaseException,
         placement: Placement,
         parent: QWidget | None = None,
+        *,
+        title: str | None = None,
     ) -> None:
         super().__init__(parent)
         self.name = name
         self.placement = placement
         self.error = error
-        label = QLabel(f"{name} could not be built:\n{error}")
+        self._title = name if title is None else title
+        label = QLabel(f"{self._title} could not be built:\n{error}")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setWordWrap(True)
         button = QPushButton("Show traceback")
@@ -67,7 +71,7 @@ class FailedView(QWidget):
 
     def show_traceback(self) -> None:
         show_failures(
-            self, f"{self.name} could not be built", [(self.name, self.error)]
+            self, f"{self._title} could not be built", [(self._title, self.error)]
         )
 
 
