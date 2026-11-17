@@ -44,10 +44,11 @@ from ..services._layout import (
     unpad,
     walk,
 )
+from ..services._transports import SHAREDBOX_TRANSPORT
 
 if TYPE_CHECKING:
     import inspect
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
 
     from event_model import DataKey, Limits
     from ophyd_async.core import Callback, SignalDatatype
@@ -116,6 +117,23 @@ def _first_difference(
 def _box_key(description: ControllerDescription) -> str:
     """Return the key of the box of `description`, the same across runs of a service."""
     return ":".join(description["path"])
+
+
+def _filled(
+    device: Device, description: ControllerDescription, declared_only: bool
+) -> Iterator[ControllerDescription]:
+    """Yield `description` and the controllers below it that `device` fills, parents first."""
+    if not declared_only or isinstance(device, DeviceVector):
+        # shortcut: a vector's entries are made by the fill, after the boxes are
+        # attached, so everything below it is attached; filter by the entry type
+        # if a vector entry ever leaves out a sub-controller with a box
+        yield from walk(description)
+        return
+    yield description
+    declared = dict(device.children())
+    for key, child in description["children"].items():
+        if key in declared:
+            yield from _filled(declared[key], child, declared_only)
 
 
 def _attached_name(boxes: Mapping[str, SharedBox], key: str) -> str:
@@ -499,7 +517,7 @@ class BoxDeviceConnector(DeviceConnector):
     ) -> None:
         """Attach the boxes of the service, fill the device from them and connect it."""
         if not self._is_child and (self._description is None or force_reconnect):
-            await self._attach(timeout)
+            await self._attach(device, timeout)
         description = self._description
         assert description is not None
         if not self._is_filled:
@@ -517,7 +535,7 @@ class BoxDeviceConnector(DeviceConnector):
         device.set_name(device.name)
         await super().connect_real(device, timeout, force_reconnect)
 
-    async def _attach(self, timeout: float) -> None:
+    async def _attach(self, device: Device, timeout: float) -> None:
         """Attach the index, retrying until `timeout`, then every box it names."""
         description = await self._read_index(timeout)
         if (
@@ -529,8 +547,20 @@ class BoxDeviceConnector(DeviceConnector):
                 f"{difference} differs from what the device was filled from; "
                 f"the device must be built again"
             )
-        self._swap_boxes(self._attach_boxes(description))
+        self._swap_boxes(self._attach_boxes(device, description))
         self._description = description
+        SHAREDBOX_TRANSPORT.hold(self)
+
+    def close(self) -> None:
+        """Close the boxes this device attached.
+
+        The session closes them when it shuts down, after which a read, a
+        write or a command on the device raises `sharedbox.BoxClosedError`.
+        Connecting the device again with `force_reconnect=True` attaches them
+        anew.
+        """
+        for box in self._boxes.values():
+            box.close()
 
     async def _read_index(self, timeout: float) -> ControllerDescription:
         """Return the description the index box holds, retrying until `timeout`.
@@ -557,14 +587,16 @@ class BoxDeviceConnector(DeviceConnector):
             index.close()
         return description
 
-    def _attach_boxes(self, description: ControllerDescription) -> dict[str, SharedBox]:
-        """Attach the box of every controller in `description`, by key.
+    def _attach_boxes(
+        self, device: Device, description: ControllerDescription
+    ) -> dict[str, SharedBox]:
+        """Attach the box of every controller in `description` the device fills, by key.
 
         The boxes attached so far are closed if one cannot be.
         """
         attached: dict[str, SharedBox] = {}
         try:
-            for node in walk(description):
+            for node in _filled(device, description, self._declared_only):
                 if node["box"] is not None:
                     attached[_box_key(node)] = box_class(node).attach(node["box"])
         except BaseException:
