@@ -107,6 +107,17 @@ write it.
     the component's `shutdown` and wait for it to end, because the session
     calls `shutdown` before it closes the boxes.
 
+!!! warning "A read after the service stops raises"
+
+    Once the service process ends, or stops serving, a read, a write or a
+    command on the device raises
+    [`ServiceExitedError`][redsun.device.sharedbox.ServiceExitedError]
+    instead of returning the last value the service published. A signal you
+    observe gets no error: it only stops receiving values. To learn that a
+    service has stopped, read one of its signals now and then, catch
+    `ServiceExitedError`, and connect the device again once the service is
+    back.
+
 ## Declare it
 
 Name the transport in the session's configuration, and declare the service
@@ -145,6 +156,11 @@ attribute's name and the service's message:
 
 A command that raises in the service raises `BoxPutError` in the session too.
 
+Writes from one session to one signal are served one after the other, in the
+order you make them. When another process writes the same attribute at the
+same time, the service serves only the newest of the writes waiting for it,
+and the others raise `BoxPutError` with "superseded by another writer".
+
 ## Name a stream of your own
 
 A service can send data the controller doesn't hold, such as counts, on a
@@ -179,8 +195,6 @@ Signals you observe keep their subscribers across the reconnect.
 exits with the reason:
 
 - an attribute whose datatype is `Table`;
-- an attribute or command whose name contains `__`, which the transport uses
-  for its own fields;
 - a controller with more attributes and commands than one box can hold, or a
   controller tree whose description is larger than the index can hold;
 - more than one controller given to one `fastcs.control_system.FastCS`, the
