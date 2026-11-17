@@ -431,7 +431,7 @@ class DeviceEntry(ComponentEntry):
 
 
 class ViewEntry(ComponentEntry):
-    """A view's entry, with the key the session keeps from its constructor."""
+    """A view's entry, with the keys the session keeps from its constructor."""
 
     placement: str | dict[str, str] | None = None
     """Where the view attaches, as a word or mapping the session's frontend reads."""

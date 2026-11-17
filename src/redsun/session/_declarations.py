@@ -242,9 +242,10 @@ class Declaration:
     `key` is a distinct type per component name, so two instances of one
     class stay separable in a type-keyed graph. A device's `service` and
     `autoconnect` keywords are kept here, not passed to its constructor.
-    A view's `placement` keyword is kept here too, read and checked against
-    the frontend: `placement` is where the view attaches, or `None` when the
-    declaration is refused or not a view.
+    A view's `placement` and `title` keywords are kept here too: `placement`
+    is where the view attaches, read and checked against the frontend, or
+    `None` when the declaration is refused or not a view; `title` is the text
+    the window shows for the view, its name when nothing gives one.
     A presenter's or view's `workers` keyword is kept here too, the worker
     processes of its pool: `None` when it gives none. It reaches the
     constructor instead when the class takes `workers`, by name or through
@@ -1145,8 +1146,8 @@ def is_marked(hint: Any, marker: type) -> bool:
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
     """Return the keywords *entry* gives its component, none for no entry.
 
-    A device's `service` and `autoconnect`, and a view's `placement`, are
-    among them where the entry gives them.
+    A device's `service` and `autoconnect`, and a view's `placement` and
+    `title`, are among them where the entry gives them.
     """
     if entry is None:
         return {}
