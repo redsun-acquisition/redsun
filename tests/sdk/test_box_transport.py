@@ -210,8 +210,8 @@ async def test_an_attribute_named_like_a_box_method_is_served() -> None:
         assert controller.name.get() == 5
         await controller.name.update(6)
         await until(lambda: top.name_.value == 6)
-        service.close()
     finally:
+        service.close()
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
 

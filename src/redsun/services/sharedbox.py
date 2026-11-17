@@ -205,8 +205,8 @@ class BoxTransport(Transport):
             for node_api, node in self._nodes:
                 if node["box"] is not None:
                     box = self._publish(box_class(node), node["box"])
-                    self._publish_initial(box, node_api)
                     self._boxes[node["box"]] = box
+                    self._publish_initial(box, node_api)
             self._index = self._publish(
                 ServiceIndex,
                 index_name(self._prefix),
