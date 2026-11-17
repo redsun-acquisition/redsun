@@ -21,6 +21,7 @@ from qtpy.QtGui import QAction, QCloseEvent
 from qtpy.QtWidgets import (
     QApplication,
     QDockWidget,
+    QGroupBox,
     QLabel,
     QMainWindow,
     QMenu,
@@ -185,6 +186,20 @@ class GroupedBrokenApp(QtSession):
     broken: Annotated[
         AsView[BrokenPanel], Declare(placement=Dock("left", group="tools"))
     ]
+
+
+class Boxed(QGroupBox):
+    """A docked view whose Qt base has a `title` method of its own."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+
+class BoxedApp(QtSession):
+    boxed: AsView[Boxed]
 
 
 class TitledBrokenApp(QtSession):
@@ -1161,6 +1176,18 @@ def test_a_failed_view_shows_its_title(qapp: QApplication, build: BuildSession) 
 
     assert dock.windowTitle() == "Detector"
     assert labels == ["Detector could not be built:\nno detector attached"]
+
+
+def test_a_view_whose_qt_base_has_a_title_method_shows_its_name(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Build a view inheriting Qt's `title` method, and show its name, since a method is no title."""
+    session = build(BoxedApp)
+    dock = session.main_window.findChild(QDockWidget, "boxed")
+
+    assert "boxed" in session.views
+    assert isinstance(dock, QDockWidget)
+    assert dock.windowTitle() == "boxed"
 
 
 def test_a_titled_menu_item_keeps_its_own_text(

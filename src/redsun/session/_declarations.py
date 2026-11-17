@@ -473,7 +473,8 @@ def take_view_title(declaration: Declaration, kwargs: dict[str, Any]) -> dict[st
     """Move a view's `title` from *kwargs* onto *declaration*.
 
     A declared title wins over the class attribute, and a view given neither
-    keeps its name as its title. Returns the keywords left for the view's
+    keeps its name as its title. A method or property named `title`, as a
+    toolkit class may have, is not a class attribute giving one. Returns the keywords left for the view's
     constructor.
 
     Raises
@@ -493,6 +494,10 @@ def take_view_title(declaration: Declaration, kwargs: dict[str, Any]) -> dict[st
     title = rest.pop("title", None)
     if title is None:
         title = inspect.getattr_static(declaration.cls, "title", declaration.name)
+        # a method or property, such as the `title()` of Qt's QGroupBox, is
+        # the toolkit's own and no title the view gives
+        if hasattr(title, "__get__"):
+            title = declaration.name
     if not isinstance(title, str):
         raise TypeError(f"{where} gives title={title!r}, which is not a string")
     if not title:
