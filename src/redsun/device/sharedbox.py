@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar, cast, get_origin
 
 import numpy as np
-from bluesky.protocols import Reading
+from bluesky.protocols import Location, Reading
 from ophyd_async.core import (
     NO_ARG_VOID_SIGNATURE,
     CommandBackend,
@@ -90,6 +90,9 @@ _ERROR_TEXT = re.compile(
 )
 """The text `sharedbox` gives a request whose handler raised."""
 
+_LABEL = re.compile(r"[\w:-]+\.\w+: ")
+"""The box class and field `sharedbox` puts in front of the text of a failed request."""
+
 
 class BoxPutError(Exception):
     """A service refused a write or a command, or it raised while running it."""
@@ -165,8 +168,8 @@ def _attached_name(boxes: Mapping[str, SharedBox], key: str) -> str:
 def _check_alive(box: SharedBox) -> None:
     """Raise `ServiceExitedError` when the service that created `box` has stopped.
 
-    The service has stopped when its process ended or it unlinked the box. A closed
-    box is left to raise `BoxClosedError` on use.
+    The service has stopped when its process ended or, on Linux, when it removed the
+    box. A closed box is left to raise `BoxClosedError` on use.
     """
     if not box.closed and segment_status(box.name) is not SegmentStatus.RUNNING:
         raise ServiceExitedError(box.name)
@@ -185,14 +188,25 @@ def _limits(datatype: NumberDescription) -> Limits:
     return limits
 
 
-def _service_message(error: RequestError) -> str:
-    """Return the message the service's handler raised, or its exception type when empty."""
-    if match := _ERROR_TEXT.fullmatch(str(error)):
+def _service_message(error: RequestError, box: SharedBox) -> str:
+    """Return the message the service's handler raised, or its exception type when empty.
+
+    A request that failed for another reason, such as a stopping service, gives its
+    text without the box class and field.
+
+    Raises
+    ------
+    ServiceExitedError
+        The request failed for another reason and the service has stopped.
+    """
+    text = str(error)
+    if match := _ERROR_TEXT.fullmatch(text):
         return match["message"] or match["type"]
-    return str(error)
+    _check_alive(box)
+    return _LABEL.sub("", text, count=1)
 
 
-async def _answered(box: str, attribute: str, request: RequestFuture[Any]) -> Any:
+async def _answered(box: SharedBox, attribute: str, request: RequestFuture[Any]) -> Any:
     """Wait for the answer to `request` and return what the service's handler returned.
 
     Raises
@@ -207,9 +221,9 @@ async def _answered(box: str, attribute: str, request: RequestFuture[Any]) -> An
     except RequestSupersededError:
         raise BoxPutError(attribute, "superseded by another writer") from None
     except ServerExitedError:
-        raise ServiceExitedError(box) from None
+        raise ServiceExitedError(box.name) from None
     except RequestError as error:
-        raise BoxPutError(attribute, _service_message(error)) from None
+        raise BoxPutError(attribute, _service_message(error, box)) from None
 
 
 class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
@@ -359,15 +373,19 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                     )
         return value
 
-    def _current(self) -> Reading[SignalDatatypeT]:
+    def _reading(self) -> Reading[SignalDatatypeT]:
         """Return the value the service last published as a reading."""
-        _check_alive(self._box())
         stored = self._box_field().read()
         return Reading(
             value=self._decode(stored["value"]),
             timestamp=stored["timestamp_ns"] / 1e9,
             alarm_severity=0,
         )
+
+    def _current(self) -> Reading[SignalDatatypeT]:
+        """Return the reading, refusing it once the service has stopped."""
+        _check_alive(self._box())
+        return self._reading()
 
     async def put(self, value: SignalDatatypeT | None) -> None:
         """Write `value` and wait until the service has put it.
@@ -376,6 +394,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         ------
         TypeError
             `value` is None.
+        ValueError
+            A string or a waveform is larger than the field holds, or an enum name is
+            not one the field has.
         BoxPutError
             The service refused the value or its put raised.
         ServiceExitedError
@@ -383,12 +404,10 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """
         if value is None:
             raise TypeError(f"{self._attribute}: a put to a box needs a value")
-        _check_alive(self._box())
         async with self._lock:
+            _check_alive(self._box())
             await _answered(
-                self._box_name(),
-                self._attribute,
-                self._box_field().set(self._encode(value)),
+                self._box(), self._attribute, self._box_field().set(self._encode(value))
             )
 
     async def get_datakey(self, source: str) -> DataKey:
@@ -419,21 +438,31 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """Return the current value."""
         return self._current()["value"]
 
-    async def get_setpoint(self) -> SignalDatatypeT:
-        """Return the last value written."""
-        if "w" not in self._description["access"]:
-            return await self.get_value()
+    async def get_location(self) -> Location[SignalDatatypeT]:
+        """Return the last value written and the value the service published.
+
+        A read-only attribute has no setpoint, so its setpoint is its value.
+        """
         _check_alive(self._box())
-        return self._decode(self._box_field().read()["setpoint"])
+        stored = self._box_field().read()
+        readback = self._decode(stored["value"])
+        setpoint = (
+            self._decode(stored["setpoint"])
+            if "w" in self._description["access"]
+            else readback
+        )
+        return Location(setpoint=setpoint, readback=readback)
 
     def set_callback(self, callback: Callback[Reading[SignalDatatypeT]] | None) -> None:
         """Call `callback` with the current reading, then with each new one."""
         if callback and self._callback:
             raise RuntimeError("Cannot set a callback when one is already set")
-        self._callback = callback
         if callback:
             self._follow_readback(callback)
-        elif self._follower is not None:
+            self._callback = callback
+            return
+        self._callback = None
+        if self._follower is not None:
             # ophyd-async unsubscribes on the caller's thread, often the GUI's
             cancel_task(self._follower)
             self._follower = None
@@ -443,17 +472,31 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         if self._follower is not None:
             cancel_task(self._follower)
         watch = self._box().watch(self._field)
-        callback(self._current())
-        self._follower = asyncio.create_task(self._follow(watch, callback))
+        reading = self._reading()
+        callback(reading)
+        self._follower = asyncio.create_task(
+            self._follow(watch, callback, reading["timestamp"])
+        )
 
     async def _follow(
-        self, watch: FieldWatch[object], callback: Callback[Reading[SignalDatatypeT]]
+        self,
+        watch: FieldWatch[object],
+        callback: Callback[Reading[SignalDatatypeT]],
+        delivered: float,
     ) -> None:
-        """Call `callback` with the reading after each write to the value."""
+        """Call `callback` with the reading after each write to the value.
+
+        A wake that leaves the timestamp as it was, such as a write to the setpoint
+        only, delivers nothing.
+        """
         try:
             async for _ in watch:
                 try:
-                    callback(self._current())
+                    reading = self._reading()
+                    if reading["timestamp"] == delivered:
+                        continue
+                    delivered = reading["timestamp"]
+                    callback(reading)
                 except BoxClosedError:
                     return
                 except Exception:  # noqa: BLE001
@@ -502,9 +545,9 @@ class BoxCommandBackend(CommandBackend[[], None]):
             The service that created the box has ended.
         """
         box = self._boxes[self._box_key]
-        _check_alive(box)
         async with self._lock:
-            await _answered(box.name, self._command, getattr(box, self._field)())
+            _check_alive(box)
+            await _answered(box, self._command, getattr(box, self._field)())
 
 
 def _command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:

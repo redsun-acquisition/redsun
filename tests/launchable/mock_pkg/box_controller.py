@@ -84,11 +84,12 @@ class TableController(Controller):
 
 
 class NamedController(Controller):
-    """Controller with an attribute named like a `SharedBox` method."""
+    """Controller with attributes named like `SharedBox` methods."""
 
     def __init__(self) -> None:
         super().__init__()
         self.name = AttrRW(Int())
+        self.watch = AttrRW(Int())
 
 
 class TextController(Controller):

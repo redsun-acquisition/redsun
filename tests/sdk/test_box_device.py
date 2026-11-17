@@ -14,6 +14,7 @@ from fastcs.control_system import FastCS
 from mock_pkg.box_controller import (
     BoxController,
     IntExposureController,
+    NamedController,
     TextController,
 )
 from ophyd_async.core import (
@@ -25,7 +26,7 @@ from ophyd_async.core import (
     TriggerableCommand,
     observe_value,
 )
-from sharedbox import BoxClosedError, SegmentStatus
+from sharedbox import BoxClosedError, RequestError, SegmentStatus
 
 from redsun.device import sharedbox as box_device
 from redsun.device.sharedbox import (
@@ -38,7 +39,7 @@ from redsun.services._transports import SHAREDBOX, TRANSPORTS
 from redsun.services.sharedbox import BoxTransport
 
 if TYPE_CHECKING:
-    from sharedbox import RequestFuture
+    from sharedbox import RequestFuture, SharedBox
 
 
 class MyDetector(Device):
@@ -48,6 +49,15 @@ class MyDetector(Device):
 
     def __init__(self, prefix: str, name: str = "") -> None:
         super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+
+
+class Renamed(Device):
+    watch: SignalRW[int]
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(
+            name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+        )
 
 
 class MyTexter(Device):
@@ -278,6 +288,98 @@ async def test_a_box_its_service_unlinked_raises_service_exited(
         await detector.exposure.get_value()
 
 
+async def test_a_command_its_service_unlinked_raises_service_exited(
+    detector: MyDetector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Raise ServiceExitedError from a command when the service has stopped."""
+    monkeypatch.setattr(
+        "redsun.device.sharedbox.segment_status",
+        lambda name: SegmentStatus.CREATOR_EXITED,
+    )
+    with pytest.raises(ServiceExitedError):
+        await detector.run.trigger()
+
+
+async def test_a_subscribe_while_the_service_is_down_leaves_the_signal_subscribable(
+    served: tuple[BoxController, str],
+    detector: MyDetector,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deliver readings to a subscriber made after the service stopped, and subscribe again later."""
+    controller, _ = served
+    while_down: asyncio.Queue[float] = asyncio.Queue()
+    later: asyncio.Queue[float] = asyncio.Queue()
+
+    def collect_while_down(reading: dict[str, Any]) -> None:
+        while_down.put_nowait(next(iter(reading.values()))["value"])
+
+    def collect_later(reading: dict[str, Any]) -> None:
+        later.put_nowait(next(iter(reading.values()))["value"])
+
+    with monkeypatch.context() as down:
+        down.setattr(
+            "redsun.device.sharedbox.segment_status",
+            lambda name: SegmentStatus.CREATOR_EXITED,
+        )
+        detector.exposure.subscribe_reading(collect_while_down)
+        assert await asyncio.wait_for(while_down.get(), 5) == 0.0
+        await controller.exposure.update(5.0)
+        assert await asyncio.wait_for(while_down.get(), 5) == 5.0
+        detector.exposure.clear_sub(collect_while_down)
+    detector.exposure.subscribe_reading(collect_later)
+    assert await asyncio.wait_for(later.get(), 5) == 5.0
+
+
+async def test_a_subscriber_that_raises_leaves_the_signal_subscribable(
+    detector: MyDetector,
+) -> None:
+    """Accept a new callback after the first one raised while taking the current reading."""
+    backend = detector.exposure._connector.backend
+    received: list[Any] = []
+
+    def refuse(reading: Any) -> None:
+        raise ValueError("refused")
+
+    with pytest.raises(ValueError, match="refused"):
+        backend.set_callback(refuse)
+    backend.set_callback(received.append)
+    backend.set_callback(None)
+    assert len(received) == 1
+
+
+async def test_locate_gives_the_setpoint_and_the_readback(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Return the value last set as the setpoint and the service's value as the readback."""
+    controller, _ = served
+    await detector.exposure.set(2.5)
+    await controller.exposure.update(3.0)
+    async with asyncio.timeout(5):
+        while (await detector.exposure.locate())["readback"] != 3.0:
+            await asyncio.sleep(0.005)
+    assert await detector.exposure.locate() == {"setpoint": 2.5, "readback": 3.0}
+    label = detector.label._connector.backend  # type: ignore[attr-defined]
+    assert await label.get_location() == {"setpoint": "start", "readback": "start"}
+
+
+async def test_an_observer_sees_nothing_for_a_refused_set(
+    detector: MyDetector,
+) -> None:
+    """Deliver no reading for a write the service refused, only for the next accepted one."""
+    readings: asyncio.Queue[int] = asyncio.Queue()
+
+    def collect(reading: dict[str, Any]) -> None:
+        readings.put_nowait(next(iter(reading.values()))["value"])
+
+    detector.limited.subscribe_reading(collect)
+    assert await asyncio.wait_for(readings.get(), 5) == 0
+    with pytest.raises(BoxPutError):
+        await detector.limited.set(11)
+    await detector.limited.set(3)
+    assert await asyncio.wait_for(readings.get(), 5) == 3
+    detector.limited.clear_sub(collect)
+
+
 async def test_a_waveform_that_does_not_fit_is_refused_before_sending(
     served: tuple[BoxController, str], detector: MyDetector
 ) -> None:
@@ -310,7 +412,7 @@ async def test_a_write_from_another_writer_supersedes_with_put_error(
     sent: asyncio.Queue[str] = asyncio.Queue()
     answered = box_device._answered
 
-    async def spy(box: str, attribute: str, request: RequestFuture[Any]) -> Any:
+    async def spy(box: SharedBox, attribute: str, request: RequestFuture[Any]) -> Any:
         sent.put_nowait(attribute)
         return await answered(box, attribute, request)
 
@@ -342,6 +444,51 @@ async def test_a_write_from_another_writer_supersedes_with_put_error(
     assert isinstance(results[1], BoxPutError)
     assert "superseded by another writer" in str(results[1])
     assert results[2] is None
+
+
+async def test_an_attribute_named_like_a_box_method_is_read_and_written() -> None:
+    """Write and read an attribute whose box field has a trailing underscore."""
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = NamedController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    device = Renamed(prefix, name="renamed")
+    try:
+        await device.connect(timeout=5)
+        await device.watch.set(5)
+        assert controller.watch.get() == 5
+        await controller.watch.update(6)
+        async with asyncio.timeout(5):
+            async for value in observe_value(device.watch):
+                if value == 6:
+                    break
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+            box.close()
+
+
+async def test_a_request_cut_by_a_stopping_service_reports_the_service_exited(
+    detector: MyDetector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Raise ServiceExitedError, not a BoxPutError naming the box class, for a request the stopping service cut."""
+    box = detector._connector._boxes[""]  # type: ignore[attr-defined]
+
+    async def cut() -> None:
+        raise RequestError("ControllerBox.exposure: the server stopped")
+
+    with pytest.raises(BoxPutError) as running:
+        await box_device._answered(box, "exposure", cut())  # type: ignore[arg-type]
+    assert str(running.value) == "exposure: the server stopped"
+
+    monkeypatch.setattr(
+        "redsun.device.sharedbox.segment_status",
+        lambda name: SegmentStatus.CREATOR_EXITED,
+    )
+    with pytest.raises(ServiceExitedError):
+        await box_device._answered(box, "exposure", cut())  # type: ignore[arg-type]
 
 
 async def test_a_refused_set_raises_with_the_service_message(
