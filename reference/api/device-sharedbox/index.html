@@ -5293,6 +5293,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#redsun.device.sharedbox.BoxDeviceConnector.close" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;close
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6297,6 +6308,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#redsun.device.sharedbox.BoxDeviceConnector.close" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;close
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6830,6 +6852,30 @@ entry the service serves.</p>
     <div class="doc doc-contents ">
 
         <p>Attach the boxes of the service, fill the device from them and connect it.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.device.sharedbox.BoxDeviceConnector.close" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">close</span>
+
+
+<a href="#redsun.device.sharedbox.BoxDeviceConnector.close" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">close</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Close the boxes this device attached.</p>
+<p>The session closes them when it shuts down, after which a read, a
+write or a command on the device raises <code>sharedbox.BoxClosedError</code>.
+Connecting the device again with <code>force_reconnect=True</code> attaches them
+anew.</p>
 
 
     </div>
