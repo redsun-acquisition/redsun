@@ -41,13 +41,13 @@ class MockMotorView:
         name: str,
         *,
         missing: Absent | None = None,
-        title: str = "",
+        caption: str = "",
     ) -> None:
         self.name = name
         self.callbacks: Mapping[str, CallbackType] = {}
         self.readings: Readings = Readings({})
         self.missing = missing
-        self.title = title
+        self.caption = caption
         self.refreshed: tuple[str, float] | None = None
 
     def setup(self, callbacks: Mapping[str, CallbackType], readings: Readings) -> None:
