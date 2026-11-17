@@ -275,6 +275,7 @@ class Declaration:
         "refusal",
         "services",
         "source",
+        "title",
         "workers",
     )
 
@@ -298,16 +299,20 @@ class Declaration:
         self.services: dict[str, str] = {}
         self.autoconnect = True
         self.placement: Placement | None = None
+        self.title = name
         self.workers: int | None = None
-        if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
-            refusal = TypeError(
-                f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
-            )
+        for keyword in ("placement", "title"):
+            if kind is not Layer.VIEW and keyword in cfg_kwargs and refusal is None:
+                refusal = TypeError(
+                    f"{name!r} is declared as a {kind}, and only a view takes "
+                    f"a {keyword!r}"
+                )
         if kind is Layer.DEVICE:
             cfg_kwargs = take_device_keys(self, cfg_kwargs, refused=refusal is not None)
         elif kind is Layer.VIEW and refusal is None:
             try:
                 cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
+                cfg_kwargs = take_view_title(self, cfg_kwargs)
             except (TypeError, ValueError) as error:
                 refusal = error
         if kind is not Layer.DEVICE and refusal is None:
@@ -458,6 +463,38 @@ def take_view_placement(
         )
     frontend.check_placement(declaration.cls, declared, where)
     declaration.placement = declared
+    return rest
+
+
+def take_view_title(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Move a view's `title` from *kwargs* onto *declaration*.
+
+    A declared title wins over the class attribute, and a view given neither
+    keeps its name as its title. Returns the keywords left for the view's
+    constructor.
+
+    Raises
+    ------
+    TypeError
+        If the view's class takes `title` itself, or the title is not a string.
+    ValueError
+        If the title is empty.
+    """
+    where = f"view {declaration.name!r}"
+    if "title" in inspect.signature(declaration.cls).parameters:
+        raise TypeError(
+            f"{declaration.cls.__name__} ({where}) takes a 'title' keyword of "
+            "its own, which a view declaration reserves for the session"
+        )
+    rest = dict(kwargs)
+    title = rest.pop("title", None)
+    if title is None:
+        title = inspect.getattr_static(declaration.cls, "title", declaration.name)
+    if not isinstance(title, str):
+        raise TypeError(f"{where} gives title={title!r}, which is not a string")
+    if not title:
+        raise ValueError(f"{where} gives an empty title")
+    declaration.title = title
     return rest
 
 
@@ -1113,6 +1150,9 @@ def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
             found["services"] = entry.services
         if "autoconnect" in entry.model_fields_set:
             found["autoconnect"] = entry.autoconnect
-    if isinstance(entry, ViewEntry) and "placement" in entry.model_fields_set:
-        found["placement"] = entry.placement
+    if isinstance(entry, ViewEntry):
+        if "placement" in entry.model_fields_set:
+            found["placement"] = entry.placement
+        if "title" in entry.model_fields_set:
+            found["title"] = entry.title
     return found

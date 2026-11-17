@@ -436,6 +436,9 @@ class ViewEntry(ComponentEntry):
     placement: str | dict[str, str] | None = None
     """Where the view attaches, as a word or mapping the session's frontend reads."""
 
+    title: str | None = None
+    """The text the window shows for the view in place of its name."""
+
 
 class StackEntry(ComponentEntry):
     """A stack's entry: the plugin it comes from, and one mapping of keywords per role."""
