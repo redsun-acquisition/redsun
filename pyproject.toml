@@ -34,6 +34,7 @@ dependencies = [
     "psygnal>=0.16.1",
     "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
+    "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
     "threadpoolctl>=3.7.0",
     "typing-extensions>=4.16.0",
 ]
@@ -144,7 +145,7 @@ qlementine-pyside = [
 ]
 sharedbox = [
     "fastcs>=0.14.4",
-    "sharedbox>=0.8.0 ; sys_platform != 'darwin'",
+    "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
 ]
 
 [project.optional-dependencies]
@@ -206,7 +207,7 @@ qlementine-pyside = [
 ]
 sharedbox = [
     "fastcs>=0.14.4",
-    "sharedbox>=0.8.0",
+    "sharedbox>=0.10.0",
 ]
 testing-qt = ["redsun[testing,qt-common]"]
 
