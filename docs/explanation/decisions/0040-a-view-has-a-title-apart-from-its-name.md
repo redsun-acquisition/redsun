@@ -62,8 +62,9 @@ must be able to title it in the declaration, without a class of its own.
   before titles existed keep loading.
 - A view placed in a menu or a toolbar is an action showing its own text, so
   its title changes nothing there.
-- `redsun`'s own views have titles, "Lights", "Log", "Positioner" and
-  "Acquisition", so a session that declares them shows those texts.
+- `redsun`'s own views have no title of their own, so a session declaring
+  two of one kind still tells them apart by name. A session titles them in
+  their declarations.
 - A view whose constructor took a `title` parameter is refused, and has to
   rename it. A presenter or device given `title` in its declaration or
   session-file entry is refused too, where before the keyword reached its

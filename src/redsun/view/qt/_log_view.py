@@ -103,9 +103,6 @@ class LogView(QtW.QWidget):
     placement: Placement = Dock("bottom")
     """Docked at the bottom of the main window."""
 
-    title = "Log"
-    """The text the window shows for the view."""
-
     def __init__(self, name: str, parent: QtW.QWidget) -> None:
         super().__init__(parent)
         self.name = name

@@ -40,9 +40,6 @@ class AcquisitionView(QtW.QWidget, Loggable):
     placement: Placement = Dock("left")
     """Where the view sits in the main window."""
 
-    title = "Acquisition"
-    """The text the window shows for the view."""
-
     sig_launch = Signal(str, dict, tuple)
     """Plan, its parameter values, and the names of the callbacks attached."""
 

@@ -54,9 +54,6 @@ class LightView(QtW.QWidget, Loggable):
     placement: Placement = Dock("right")
     """Where the view sits in the main window."""
 
-    title = "Lights"
-    """The text the window shows for the view."""
-
     group_class: ClassVar[MakesLightGroup] = LightGroup
     """Widget built for each light; a subclass may name a subclass of its own that takes the same arguments."""
 
