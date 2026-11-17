@@ -163,6 +163,38 @@ def test_each_attribute_is_one_field_named_after_it(
     assert not isinstance(box.go, sharedbox.Setting)
 
 
+def test_an_attribute_named_like_a_box_method_gets_a_field_of_its_own(
+    unique_name: str, made: list[SharedBox]
+) -> None:
+    """Add a trailing underscore to the field of an attribute named like a SharedBox method."""
+    description = describe({"kind": "int"}, name="name")
+    description["attributes"]["close"] = {
+        "access": "rw",
+        "datatype": {"kind": "int"},
+        "description": "",
+    }
+    cls = box_class(description)
+    box: Any = cls.create(unique_name)
+    made.append(box)
+
+    assert set(cls.__annotations__) == {"name_", "close_", "go"}
+    box.name_.publish(value=3)
+    assert box.name_.value == 3
+
+
+def test_two_attributes_mapping_to_one_field_are_refused() -> None:
+    """Refuse a controller whose `name` and `name_` attributes share the field `name_`."""
+    description = describe({"kind": "int"}, name="name")
+    description["attributes"]["name_"] = {
+        "access": "rw",
+        "datatype": {"kind": "int"},
+        "description": "",
+    }
+
+    with pytest.raises(ValueError, match=r"root:ctrl.*'name_'"):
+        box_class(description)
+
+
 def test_an_attribute_name_with_double_underscore_is_accepted(
     unique_name: str, made: list[SharedBox]
 ) -> None:

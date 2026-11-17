@@ -33,6 +33,7 @@ __all__ = [
     "box_class",
     "box_name",
     "controller_label",
+    "field_name",
     "index_name",
     "namespace",
     "pad",
@@ -59,6 +60,9 @@ MAX_FIELDS: Final = 256
 
 MAX_NAME: Final = 240
 """Most characters sharedbox allows in a box name."""
+
+BOX_MEMBERS: Final = frozenset(n for n in dir(SharedBox) if not n.startswith("_"))
+"""Public names of a `SharedBox`, which a field cannot take."""
 
 PART: Final = re.compile(r"[A-Za-z0-9_-]+")
 """One part of a box name."""
@@ -246,6 +250,15 @@ def value_type(datatype: DatatypeDescription) -> object:
             ]
 
 
+def field_name(name: str) -> str:
+    """Return the box field of the attribute or command `name`.
+
+    A name that `SharedBox` uses for one of its own members gets a trailing
+    underscore.
+    """
+    return f"{name}_" if name in BOX_MEMBERS else name
+
+
 def box_class(controller: ControllerDescription) -> type[SharedBox]:
     """Return the box class of one controller, equal for equal descriptions.
 
@@ -258,11 +271,21 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
             f"controller {controller_label(controller)!r} has no attributes or commands"
         )
     annotations: dict[str, object] = {}
+
+    def add(name: str, annotation: object) -> None:
+        field = field_name(name)
+        if field in annotations:
+            raise ValueError(
+                f"controller {controller_label(controller)!r} has two attributes or "
+                f"commands that map to the field {field!r}"
+            )
+        annotations[field] = annotation
+
     for name, attribute in controller["attributes"].items():
         kind = value_type(attribute["datatype"])
-        annotations[name] = Attr[kind] if attribute["access"] == "r" else Setting[kind]  # type: ignore[valid-type]
+        add(name, Attr[kind] if attribute["access"] == "r" else Setting[kind])  # type: ignore[valid-type]
     for command in controller["commands"]:
-        annotations[command] = Attr[None]
+        add(command, Attr[None])
 
     if len(annotations) > MAX_FIELDS:
         raise ValueError(

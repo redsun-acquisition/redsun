@@ -33,6 +33,7 @@ from ._layout import (
     ServiceIndex,
     box_class,
     box_name,
+    field_name,
     index_name,
     walk,
 )
@@ -279,7 +280,7 @@ class BoxTransport(Transport):
         for name, attribute in api.attributes.items():
             if isinstance(attribute, AttrR):
                 value = _to_box(name, attribute.datatype, attribute.get())
-                field = getattr(box, name)
+                field = getattr(box, field_name(name))
                 if isinstance(attribute, AttrW):
                     field.publish(value=value, setpoint=value)
                 else:
@@ -306,10 +307,10 @@ class BoxTransport(Transport):
                 attribute.add_on_update_callback(callback)
                 await callback(attribute.get())
             if isinstance(attribute, AttrW):
-                field = getattr(box, name)
+                field = getattr(box, field_name(name))
                 field.serve(_put_handler(field, attribute))
         for name, command in api.command_methods.items():
-            getattr(box, name).serve(_command_handler(command))
+            getattr(box, field_name(name)).serve(_command_handler(command))
 
     async def reachable(self) -> None:
         """Return once the index is published."""
@@ -322,7 +323,7 @@ class BoxTransport(Transport):
         if box.closed:
             return
         try:
-            getattr(box, name).publish(value=_to_box(name, datatype, value))
+            getattr(box, field_name(name)).publish(value=_to_box(name, datatype, value))
         except (ValueError, TypeError, OverflowError) as exc:
             raise ValueError(
                 f"attribute {name!r} cannot be written to its box: {exc}"

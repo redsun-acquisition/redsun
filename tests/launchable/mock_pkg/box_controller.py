@@ -75,3 +75,11 @@ class TableController(Controller):
     def __init__(self) -> None:
         super().__init__()
         self.rows = AttrRW(Table([("a", "int32")]))
+
+
+class NamedController(Controller):
+    """Controller with an attribute named like a `SharedBox` method."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = AttrRW(Int())

@@ -19,7 +19,12 @@ import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
 from fastcs.controllers import Controller
-from mock_pkg.box_controller import BoxController, Mode, TableController
+from mock_pkg.box_controller import (
+    BoxController,
+    Mode,
+    NamedController,
+    TableController,
+)
 from sharedbox import (
     RequestError,
     RequestSupersededError,
@@ -192,6 +197,23 @@ async def test_an_overtaken_request_is_superseded(
     await answered(held)
     await answered(latest)
     assert controller.slow_seen == 3
+
+
+async def test_an_attribute_named_like_a_box_method_is_served() -> None:
+    """Put a request to an attribute called `name` and mirror its update, through the field `name_`."""
+    controller = NamedController()
+    service, task = serving(controller)
+    try:
+        await service.attach()
+        top = service.box_of()
+        await answered(top.name_.set(5))
+        assert controller.name.get() == 5
+        await controller.name.update(6)
+        await until(lambda: top.name_.value == 6)
+        service.close()
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_a_command_runs_on_request(
