@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import numpy as np
@@ -26,9 +27,13 @@ from ophyd_async.core import (
 )
 from sharedbox import BoxClosedError
 
+from redsun.device import sharedbox as box_device
 from redsun.device.sharedbox import BoxDeviceConnector, BoxPutError, stream_name
 from redsun.services._transports import SHAREDBOX, TRANSPORTS
 from redsun.services.sharedbox import BoxTransport
+
+if TYPE_CHECKING:
+    from sharedbox import RequestFuture
 
 
 class MyDetector(Device):
@@ -280,26 +285,40 @@ async def test_an_unknown_enum_name_is_refused_naming_the_attribute_and_choices(
 
 
 async def test_a_write_from_another_writer_supersedes_with_put_error(
-    served: tuple[BoxController, str], detector: MyDetector
+    served: tuple[BoxController, str],
+    detector: MyDetector,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Raise BoxPutError for a write that another device's write replaces before the service takes it."""
     controller, prefix = served
+    sent: asyncio.Queue[str] = asyncio.Queue()
+    answered = box_device._answered
+
+    async def spy(attribute: str, request: RequestFuture[Any]) -> Any:
+        sent.put_nowait(attribute)
+        return await answered(attribute, request)
+
+    monkeypatch.setattr("redsun.device.sharedbox._answered", spy)
     second = MyDetector(prefix, name="second")
     third = MyDetector(prefix, name="third")
     await second.connect(timeout=5)
     await third.connect(timeout=5)
+    gate = asyncio.Event()
+    controller.put_gate = gate
     try:
-        controller.put_delay = 2.0
         holding = asyncio.ensure_future(detector.slow.set(1, timeout=10))  # type: ignore[attr-defined]
-        await asyncio.sleep(0.5)
-        controller.put_delay = 0.0
+        await asyncio.wait_for(sent.get(), 5)
+        await asyncio.wait_for(controller.put_started.wait(), 5)
         replaced = asyncio.ensure_future(second.slow.set(2, timeout=10))  # type: ignore[attr-defined]
-        await asyncio.sleep(0.2)
+        await asyncio.wait_for(sent.get(), 5)
         replacing = asyncio.ensure_future(third.slow.set(3, timeout=10))  # type: ignore[attr-defined]
+        await asyncio.wait_for(sent.get(), 5)
+        gate.set()
         results = await asyncio.gather(
             holding, replaced, replacing, return_exceptions=True
         )
     finally:
+        gate.set()
         for device in (second, third):
             for box in device._connector._boxes.values():  # type: ignore[attr-defined]
                 box.close()

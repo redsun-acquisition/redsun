@@ -304,7 +304,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         ------
         ValueError
             A string or a waveform is larger than the field holds, or an enum name is
-        not one the field has.
+            not one the field has.
         """
         datatype = self._description["datatype"]
         match datatype["kind"]:
