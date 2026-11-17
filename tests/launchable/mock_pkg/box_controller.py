@@ -83,3 +83,16 @@ class NamedController(Controller):
     def __init__(self) -> None:
         super().__init__()
         self.name = AttrRW(Int())
+
+
+class TextController(Controller):
+    """A controller with a short writable string and a command that raises."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.text = AttrRW(String(length=4), initial_value="ab")
+
+    @command()
+    async def refuse(self) -> None:
+        """Raise `RuntimeError`."""
+        raise RuntimeError("busy")

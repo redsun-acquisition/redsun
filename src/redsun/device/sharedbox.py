@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import enum
 import json
-import time
+import re
 from typing import TYPE_CHECKING, Any, ClassVar, cast, get_origin
 
 import numpy as np
@@ -26,7 +26,13 @@ from ophyd_async.core import (
     make_datakey,
 )
 from ophyd_async.core._signal_backend import make_metadata
-from sharedbox import BoxClosedError, SegmentNotFoundError
+from sharedbox import (
+    BoxClosedError,
+    RequestError,
+    RequestSupersededError,
+    SegmentNotFoundError,
+    ServerExitedError,
+)
 
 from redsun.aio import cancel_task
 from redsun.log import logger
@@ -38,10 +44,9 @@ from ..services._layout import (
     ServiceIndex,
     box_class,
     controller_label,
+    field_name,
     index_name,
-    pad,
     stream_name,
-    unpad,
     walk,
 )
 from ..services._transports import SHAREDBOX_TRANSPORT
@@ -52,7 +57,7 @@ if TYPE_CHECKING:
 
     from event_model import DataKey, Limits
     from ophyd_async.core import Callback, SignalDatatype
-    from sharedbox import FieldWatch, SharedBox
+    from sharedbox import FieldWatch, RequestFuture, SharedBox
 
 __all__ = [
     "BoxCommandBackend",
@@ -76,6 +81,11 @@ _DATATYPES: dict[str, type] = {
 """Python type of each datatype kind a description names, enums apart."""
 
 _SIGNALS = {"r": SignalR, "w": SignalW, "rw": SignalRW}
+
+_ERROR_TEXT = re.compile(
+    r"[\w:-]+\.\w+: (?P<type>\w+):(?: (?P<message>.*))?", re.DOTALL
+)
+"""The text `sharedbox` gives a request whose handler raised."""
 
 
 class BoxPutError(Exception):
@@ -155,23 +165,29 @@ def _limits(datatype: NumberDescription) -> Limits:
     return limits
 
 
-async def _request(box: SharedBox, stem: str, name: str, **values: Any) -> None:
-    """Write `values` and a new request number to `box`, then wait for the answer.
+def _service_message(error: RequestError) -> str:
+    """Return the message the service's handler raised, or its exception type when empty."""
+    if match := _ERROR_TEXT.fullmatch(str(error)):
+        return match["message"] or match["type"]
+    return str(error)
+
+
+async def _answered(attribute: str, request: RequestFuture[Any]) -> Any:
+    """Wait for the answer to `request` and return what the service's handler returned.
 
     Raises
     ------
     BoxPutError
-        The service answered with an error message.
+        The service's handler raised, or another writer's request replaced this one.
     """
-    number = getattr(box, f"{stem}__request") + 1
-    box.update(**values, **{f"{stem}__request": number})
-    while True:
-        watch = box.watch(f"{stem}__done")
-        if getattr(box, f"{stem}__done") >= number:
-            break
-        await asyncio.wrap_future(watch.future())
-    if error := getattr(box, f"{stem}__error"):
-        raise BoxPutError(name, error)
+    try:
+        return await request
+    except RequestSupersededError:
+        raise BoxPutError(attribute, "superseded by another writer") from None
+    except ServerExitedError:
+        raise
+    except RequestError as error:
+        raise BoxPutError(attribute, _service_message(error)) from None
 
 
 class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
@@ -185,8 +201,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self._description: AttributeDescription
         self._names: list[str] = []
         self._enum: type[enum.Enum]
-        self._readback = ""
-        self._readback_shape = ""
+        self._field = ""
         self._lock = asyncio.Lock()
         self._callback: Callback[Reading[SignalDatatypeT]] | None = None
         self._follower: asyncio.Task[None] | None = None
@@ -205,12 +220,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         self._description = description
         datatype = description["datatype"]
         self._names = datatype["names"] if datatype["kind"] == "enum" else []
-        if "r" in description["access"]:
-            self._readback = f"{attribute}__value"
-            self._readback_shape = f"{attribute}__shape"
-        else:
-            self._readback = f"{attribute}__setpoint"
-            self._readback_shape = f"{attribute}__setpoint_shape"
+        self._field = field_name(attribute)
 
     def _box_name(self) -> str:
         """Return the name of the attached box, the key before it is attached."""
@@ -219,6 +229,10 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     def _box(self) -> SharedBox:
         """Return the attached box of the attribute."""
         return self._boxes[self._box_key]
+
+    def _box_field(self) -> Any:
+        """Return the `Attr` or `Setting` of the attribute in the attached box."""
+        return getattr(self._box(), self._field)
 
     def source(self, name: str, read: bool) -> str:
         """Return the location of the attribute."""
@@ -271,48 +285,50 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             f"but the service serves {served}"
         )
 
-    def _read(self, field: str, shape_field: str) -> SignalDatatypeT:
-        """Return the value the box field `field` holds, as the signal's datatype.
-
-        A waveform is cut to the shape the field `shape_field` holds.
-        """
-        box = self._box()
-        raw = getattr(box, field)
-        value: object = raw
+    def _decode(self, raw: Any) -> SignalDatatypeT:
+        """Return the value `raw`, as a box holds it, as the signal's datatype."""
+        value = raw
         match self._description["datatype"]["kind"]:
             case "uint":
-                value = int(raw[0])
+                value = int(raw)
             case "enum":
                 value = self._enum(self._names[raw])
-            case "waveform":
-                value = unpad(raw, getattr(box, shape_field))
         # sharedbox builds the box class at runtime, so no checker sees the
         # field's type; connect checked it against the signal's datatype
         return cast("SignalDatatypeT", value)
 
-    def _setpoint_fields(self, value: SignalDatatypeT) -> dict[str, object]:
-        """Return the box fields a write of `value` sets."""
+    def _encode(self, value: Any) -> object:
+        """Return `value` as the box field holds it.
+
+        Raises
+        ------
+        ValueError
+            A string is longer than the field holds.
+        """
         datatype = self._description["datatype"]
-        setpoint = f"{self._attribute}__setpoint"
         match datatype["kind"]:
             case "uint":
-                return {setpoint: np.array([value], dtype="uint64")}
+                return np.uint64(value)
             case "enum":
                 name = value.value if isinstance(value, enum.Enum) else value
-                return {setpoint: self._names.index(str(name))}
+                return self._names.index(str(name))
             case "waveform":
-                array = np.asarray(value)
-                return {
-                    setpoint: pad(array, datatype["shape"], datatype["dtype"]),
-                    f"{setpoint}_shape": array.shape,
-                }
-        return {setpoint: value}
+                return np.asarray(value, dtype=datatype["dtype"])
+            case "str":
+                size = len(str(value).encode())
+                if size > datatype["capacity"]:
+                    raise ValueError(
+                        f"{self._attribute}: a string of {size} bytes does not fit "
+                        f"the field's {datatype['capacity']}"
+                    )
+        return value
 
     def _current(self) -> Reading[SignalDatatypeT]:
-        """Return the current value as a reading."""
+        """Return the value the service last published as a reading."""
+        stored = self._box_field().read()
         return Reading(
-            value=self._read(self._readback, self._readback_shape),
-            timestamp=time.time(),
+            value=self._decode(stored["value"]),
+            timestamp=stored["timestamp_ns"] / 1e9,
             alarm_severity=0,
         )
 
@@ -329,12 +345,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         if value is None:
             raise TypeError(f"{self._attribute}: a put to a box needs a value")
         async with self._lock:
-            await _request(
-                self._box(),
-                self._attribute,
-                self._attribute,
-                **self._setpoint_fields(value),
-            )
+            await _answered(self._attribute, self._box_field().set(self._encode(value)))
 
     async def get_datakey(self, source: str) -> DataKey:
         """Return the data key, with the units, precision, limits and choices served."""
@@ -368,9 +379,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """Return the last value written."""
         if "w" not in self._description["access"]:
             return await self.get_value()
-        return self._read(
-            f"{self._attribute}__setpoint", f"{self._attribute}__setpoint_shape"
-        )
+        return self._decode(self._box_field().read()["setpoint"])
 
     def set_callback(self, callback: Callback[Reading[SignalDatatypeT]] | None) -> None:
         """Call `callback` with the current reading, then with each new one."""
@@ -388,7 +397,7 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         """Call `callback` with the current reading, then follow the box's value."""
         if self._follower is not None:
             cancel_task(self._follower)
-        watch = self._box().watch(self._readback)
+        watch = self._box().watch(self._field)
         callback(self._current())
         self._follower = asyncio.create_task(self._follow(watch, callback))
 
@@ -411,13 +420,14 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
 
 
 class BoxCommandBackend(CommandBackend[[], None]):
-    """A command backed by the request fields of a controller box."""
+    """A command backed by one field of a controller box."""
 
     def __init__(self) -> None:
         super().__init__(NO_ARG_VOID_SIGNATURE)
         self._boxes: Mapping[str, SharedBox] = {}
         self._box_key = ""
         self._command = ""
+        self._field = ""
         self._lock = asyncio.Lock()
 
     def _bind(self, boxes: Mapping[str, SharedBox], box_key: str, command: str) -> None:
@@ -425,6 +435,7 @@ class BoxCommandBackend(CommandBackend[[], None]):
         self._boxes = boxes
         self._box_key = box_key
         self._command = command
+        self._field = field_name(command)
 
     def source(self, name: str) -> str:
         """Return the location of the command."""
@@ -444,7 +455,9 @@ class BoxCommandBackend(CommandBackend[[], None]):
             The command raised in the service.
         """
         async with self._lock:
-            await _request(self._boxes[self._box_key], self._command, self._command)
+            await _answered(
+                self._command, getattr(self._boxes[self._box_key], self._field)()
+            )
 
 
 def _command_backend(signature: inspect.Signature | None) -> BoxCommandBackend:

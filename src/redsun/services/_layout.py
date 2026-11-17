@@ -4,7 +4,6 @@ import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
-    Any,
     Final,
     Literal,
     Required,
@@ -17,8 +16,6 @@ from sharedbox import Attr, Capacity, DType, MaxShape, Setting, SharedBox, attr
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
-
-    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 __all__ = [
     "DESCRIPTION_CAPACITY",
@@ -36,9 +33,7 @@ __all__ = [
     "field_name",
     "index_name",
     "namespace",
-    "pad",
     "stream_name",
-    "unpad",
     "value_type",
     "walk",
 ]
@@ -152,32 +147,6 @@ class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
 
     description: Annotated[bytes, Capacity(DESCRIPTION_CAPACITY)] = b""
     """The service's controllers, as a JSON `ControllerDescription`."""
-
-
-def pad(value: ArrayLike, shape: Sequence[int], dtype: DTypeLike) -> NDArray[Any]:
-    """Return `value` at the start of a zeroed array of the waveform field's `shape`.
-
-    Raises
-    ------
-    ValueError
-        If `value` has another number of dimensions than `shape`, or is longer
-        than `shape` along one of them.
-    """
-    array = np.asarray(value)
-    if array.ndim != len(shape) or any(
-        size > limit for size, limit in zip(array.shape, shape, strict=True)
-    ):
-        raise ValueError(
-            f"a waveform of shape {array.shape} does not fit the field's {tuple(shape)}"
-        )
-    padded = np.zeros(shape, dtype=dtype)
-    padded[tuple(slice(0, size) for size in array.shape)] = array
-    return padded
-
-
-def unpad(raw: NDArray[Any], shape: Sequence[int]) -> NDArray[Any]:
-    """Return the start of the waveform field `raw` that `shape` covers, as a copy."""
-    return np.array(raw[tuple(slice(0, size) for size in shape)])
 
 
 def walk(description: ControllerDescription) -> Iterator[ControllerDescription]:

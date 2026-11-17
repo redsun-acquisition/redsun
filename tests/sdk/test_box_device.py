@@ -10,7 +10,11 @@ import numpy as np
 import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
-from mock_pkg.box_controller import BoxController, IntExposureController
+from mock_pkg.box_controller import (
+    BoxController,
+    IntExposureController,
+    TextController,
+)
 from ophyd_async.core import (
     Device,
     DeviceVector,
@@ -31,6 +35,14 @@ class MyDetector(Device):
     exposure: SignalRW[float]
     limited: SignalRW[int]
     run: TriggerableCommand
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+
+
+class MyTexter(Device):
+    text: SignalRW[str]
+    refuse: TriggerableCommand
 
     def __init__(self, prefix: str, name: str = "") -> None:
         super().__init__(name=name, connector=BoxDeviceConnector(prefix))
@@ -115,6 +127,22 @@ async def served() -> AsyncGenerator[tuple[BoxController, str], None]:
 
 
 @pytest_asyncio.fixture
+async def texter() -> AsyncGenerator[tuple[TextController, MyTexter], None]:
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = TextController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    device = MyTexter(prefix, name="text")
+    await device.connect(timeout=5)
+    yield controller, device
+    for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+        box.close()
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest_asyncio.fixture
 async def detector(
     served: tuple[BoxController, str],
 ) -> AsyncGenerator[MyDetector, None]:
@@ -162,6 +190,88 @@ async def test_a_short_waveform_round_trips(
     await detector.trace.set(sent)  # type: ignore[attr-defined]
     np.testing.assert_array_equal(controller.trace.get(), sent)
     np.testing.assert_array_equal(await detector.trace.get_value(), sent)  # type: ignore[attr-defined]
+
+
+async def test_a_reading_carries_the_time_the_service_published(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Stamp a reading with the box's timestamp, not the session's clock."""
+    controller, _ = served
+    await controller.exposure.update(3.0)
+    reading = (await detector.exposure.read())["det-exposure"]
+    box = detector._connector._boxes[""]  # type: ignore[attr-defined]
+    assert reading["value"] == 3.0
+    assert reading["timestamp"] == box.exposure.timestamp_ns / 1e9
+
+
+async def test_a_short_waveform_set_from_the_session_keeps_its_shape(
+    detector: MyDetector,
+) -> None:
+    """Read a waveform shorter than its maximum back with the shape it was set with."""
+    await detector.trace.set(np.array([4, 5, 6], dtype=np.int32))  # type: ignore[attr-defined]
+    assert (await detector.trace.get_value()).shape == (3,)  # type: ignore[attr-defined]
+    box = detector._connector._boxes[""]  # type: ignore[attr-defined]
+    assert box.trace.read()["setpoint"].shape == (3,)
+
+
+@pytest.mark.parametrize("choice", ["member", "name"])
+async def test_an_enum_is_set_by_member_or_by_name(
+    served: tuple[BoxController, str], detector: MyDetector, choice: str
+) -> None:
+    """Set an enum signal from one of its members or from the name of one."""
+    controller, _ = served
+    member = type(await detector.mode.get_value())("RUN")  # type: ignore[attr-defined]
+    await detector.mode.set(member if choice == "member" else "RUN")  # type: ignore[attr-defined]
+    assert controller.mode.get().name == "RUN"
+
+
+async def test_a_string_longer_than_its_field_is_refused_before_sending(
+    texter: tuple[TextController, MyTexter],
+) -> None:
+    """Raise ValueError naming the attribute and leave the service's value alone."""
+    controller, device = texter
+    with pytest.raises(ValueError, match="text"):
+        await device.text.set("too long for it")
+    assert controller.text.get() == "ab"
+
+
+async def test_a_command_the_service_refuses_raises_its_message(
+    texter: tuple[TextController, MyTexter],
+) -> None:
+    """Raise BoxPutError carrying the message of the exception the command raised."""
+    _, device = texter
+    with pytest.raises(BoxPutError, match="busy") as caught:
+        await device.refuse.trigger()
+    assert caught.value.attribute == "refuse"
+    assert str(caught.value) == "refuse: busy"
+
+
+async def test_a_write_from_another_writer_supersedes_with_put_error(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Raise BoxPutError for a write that another device's write replaces before the service takes it."""
+    _, prefix = served
+    second = MyDetector(prefix, name="second")
+    third = MyDetector(prefix, name="third")
+    await second.connect(timeout=5)
+    await third.connect(timeout=5)
+    try:
+        holding = asyncio.ensure_future(detector.slow.set(1, timeout=5))  # type: ignore[attr-defined]
+        await asyncio.sleep(0.1)
+        replaced = asyncio.ensure_future(second.slow.set(2, timeout=5))  # type: ignore[attr-defined]
+        await asyncio.sleep(0.05)
+        replacing = asyncio.ensure_future(third.slow.set(3, timeout=5))  # type: ignore[attr-defined]
+        results = await asyncio.gather(
+            holding, replaced, replacing, return_exceptions=True
+        )
+    finally:
+        for device in (second, third):
+            for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+                box.close()
+    assert results[0] is None
+    assert isinstance(results[1], BoxPutError)
+    assert "superseded by another writer" in str(results[1])
+    assert results[2] is None
 
 
 async def test_a_refused_set_raises_with_the_service_message(
