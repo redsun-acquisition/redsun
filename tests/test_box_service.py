@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import sys
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
+import pytest
 from ophyd_async.core import Device, SignalRW
 
 from redsun import AsDevice, AsService, Declare, Launch, Session
 from redsun.aio import run_coro
-from redsun.device.sharedbox import BoxDeviceConnector
+from redsun.device.sharedbox import BoxDeviceConnector, ServiceExitedError
 from tests.sdk.helpers import kept_under
 
 if TYPE_CHECKING:
@@ -60,6 +62,29 @@ def test_a_session_builds_a_device_from_a_box_service(
         assert await detector.exposure.get_value() == 2.5
 
     run_coro(round_trip())
+
+
+def test_a_device_raises_once_its_service_exits(
+    build: BuildSession, launchable: None
+) -> None:
+    """Raise ServiceExitedError from a read and a write after the service stops."""
+    app = build(BoxApp)
+    detector = app.devices["detector"]
+    assert isinstance(detector, Detector)
+
+    async def round_trip() -> None:
+        await detector.exposure.set(2.5)
+
+    run_coro(round_trip())
+    app.services["box_service"].stop()
+
+    async def read_and_write() -> None:
+        with pytest.raises(ServiceExitedError):
+            await asyncio.wait_for(detector.exposure.get_value(), 5)
+        with pytest.raises(ServiceExitedError):
+            await asyncio.wait_for(detector.exposure.set(1.0), 5)
+
+    run_coro(read_and_write())
 
 
 def test_a_session_without_sharedbox_loads_neither_sharedbox_nor_fastcs(

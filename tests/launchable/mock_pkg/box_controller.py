@@ -34,6 +34,8 @@ class BoxController(Controller):
     def __init__(self, put_delay: float = 0.0) -> None:
         super().__init__()
         self.put_delay = put_delay
+        self.put_started = asyncio.Event()
+        self.put_gate: asyncio.Event | None = None
         self.runs = 0
         self.exposure = AttrRW(Float(units="ms", min=0.0, prec=2))
         self.label = AttrR(String(length=8), initial_value="start")
@@ -51,8 +53,12 @@ class BoxController(Controller):
         await asyncio.sleep(0)
 
     async def delayed_put(self, attr: AttrW[int], value: int) -> None:
-        """Wait `put_delay` seconds, then store the value in `slow_seen`."""
-        await asyncio.sleep(self.put_delay)
+        """Wait for `put_gate`, or `put_delay` seconds without one, then store the value."""
+        self.put_started.set()
+        if self.put_gate is None:
+            await asyncio.sleep(self.put_delay)
+        else:
+            await self.put_gate.wait()
         self.slow_seen = value
 
     @command()
@@ -75,3 +81,30 @@ class TableController(Controller):
     def __init__(self) -> None:
         super().__init__()
         self.rows = AttrRW(Table([("a", "int32")]))
+
+
+class NamedController(Controller):
+    """Controller with attributes named like `SharedBox` methods."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = AttrRW(Int())
+        self.watch = AttrRW(Int())
+
+
+class TextController(Controller):
+    """A controller with a short writable string and commands that raise."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.text = AttrRW(String(length=4), initial_value="ab")
+
+    @command()
+    async def refuse(self) -> None:
+        """Raise `RuntimeError`."""
+        raise RuntimeError("busy")
+
+    @command()
+    async def refuse_silently(self) -> None:
+        """Raise `RuntimeError` with no message."""
+        raise RuntimeError

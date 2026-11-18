@@ -4,51 +4,42 @@ import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
-    Any,
     Final,
     Literal,
-    NamedTuple,
     Required,
     TypeAlias,
     TypedDict,
 )
 
 import numpy as np
-from sharedbox import Capacity, DType, Shape, SharedBox
+from sharedbox import Attr, Capacity, DType, MaxShape, Setting, SharedBox, attr
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from numpy.typing import ArrayLike, DTypeLike, NDArray
-
 __all__ = [
     "DESCRIPTION_CAPACITY",
-    "ERROR_CAPACITY",
     "IDENTITY",
     "RESERVED",
     "STRING_CAPACITY",
     "AttributeDescription",
     "ControllerDescription",
     "DatatypeDescription",
-    "Field",
     "NumberDescription",
     "ServiceIndex",
     "box_class",
     "box_name",
     "controller_label",
+    "field_name",
     "index_name",
     "namespace",
-    "pad",
     "stream_name",
-    "unpad",
+    "value_type",
     "walk",
 ]
 
 RESERVED: Final = "fastcs"
 """The name part under which a service publishes its controller boxes."""
-
-ERROR_CAPACITY: Final = 256
-"""Bytes of an `x__error` field."""
 
 STRING_CAPACITY: Final = 256
 """Bytes of a string attribute that gives no capacity."""
@@ -64,6 +55,9 @@ MAX_FIELDS: Final = 256
 
 MAX_NAME: Final = 240
 """Most characters sharedbox allows in a box name."""
+
+BOX_MEMBERS: Final = frozenset(n for n in dir(SharedBox) if not n.startswith("_"))
+"""Public names of a `SharedBox`, which a field cannot take."""
 
 PART: Final = re.compile(r"[A-Za-z0-9_-]+")
 """One part of a box name."""
@@ -155,32 +149,6 @@ class ServiceIndex(SharedBox, identity=IDENTITY + ".index", kw_only=True):
     """The service's controllers, as a JSON `ControllerDescription`."""
 
 
-def pad(value: ArrayLike, shape: Sequence[int], dtype: DTypeLike) -> NDArray[Any]:
-    """Return `value` at the start of a zeroed array of the waveform field's `shape`.
-
-    Raises
-    ------
-    ValueError
-        If `value` has another number of dimensions than `shape`, or is longer
-        than `shape` along one of them.
-    """
-    array = np.asarray(value)
-    if array.ndim != len(shape) or any(
-        size > limit for size, limit in zip(array.shape, shape, strict=True)
-    ):
-        raise ValueError(
-            f"a waveform of shape {array.shape} does not fit the field's {tuple(shape)}"
-        )
-    padded = np.zeros(shape, dtype=dtype)
-    padded[tuple(slice(0, size) for size in array.shape)] = array
-    return padded
-
-
-def unpad(raw: NDArray[Any], shape: Sequence[int]) -> NDArray[Any]:
-    """Return the start of the waveform field `raw` that `shape` covers, as a copy."""
-    return np.array(raw[tuple(slice(0, size) for size in shape)])
-
-
 def walk(description: ControllerDescription) -> Iterator[ControllerDescription]:
     """Yield `description` and every controller below it, parents first."""
     yield description
@@ -232,74 +200,61 @@ def stream_name(prefix: str, part: str) -> str:
     return check_name(f"{namespace(prefix)}:{part}")
 
 
-class Field(NamedTuple):
-    """The annotation and the default of a box field."""
-
-    annotation: object
-    default: object
-
-
-def datatype_field(datatype: DatatypeDescription) -> Field:
-    """Return the field holding `datatype`."""
+def value_type(datatype: DatatypeDescription) -> object:
+    """Return the type an attribute of `datatype` has in its box."""
     match datatype["kind"]:
         case "int" | "enum":
-            return Field(int, 0)
+            return int
         case "uint":
-            return Field(
-                Annotated[np.ndarray, Shape((1,)), DType("uint64")],
-                np.zeros(1, dtype="uint64"),
-            )
+            return np.uint64
         case "float":
-            return Field(float, 0.0)
+            return float
         case "bool":
-            return Field(bool, False)
+            return bool
         case "str":
-            return Field(Annotated[str, Capacity(datatype["capacity"])], "")
+            return Annotated[str, Capacity(datatype["capacity"])]
         case "waveform":
-            shape, dtype = datatype["shape"], datatype["dtype"]
-            return Field(
-                Annotated[np.ndarray, Shape(tuple(shape)), DType(dtype)],
-                np.zeros(shape, dtype=dtype),
-            )
+            return Annotated[
+                np.ndarray, MaxShape(tuple(datatype["shape"])), DType(datatype["dtype"])
+            ]
+
+
+def field_name(name: str) -> str:
+    """Return the box field of the attribute or command `name`.
+
+    A name that `SharedBox` uses for one of its own members gets a trailing
+    underscore.
+    """
+    return f"{name}_" if name in BOX_MEMBERS else name
 
 
 def box_class(controller: ControllerDescription) -> type[SharedBox]:
-    """Return the box class of one controller, equal for equal descriptions."""
+    """Return the box class of one controller, equal for equal descriptions.
+
+    Each attribute and each command is one field named after it: an `Attr` for
+    a read-only attribute, a `Setting` for a writable one and an `Attr[None]`
+    for a command.
+    """
     if not controller["attributes"] and not controller["commands"]:
         raise ValueError(
             f"controller {controller_label(controller)!r} has no attributes or commands"
         )
     annotations: dict[str, object] = {}
-    body: dict[str, object] = {"__annotations__": annotations}
 
-    def add(name: str, annotation: object, default: object) -> None:
-        annotations[name] = annotation
-        body[name] = default
-
-    def add_request(stem: str) -> None:
-        add(f"{stem}__request", int, 0)
-        add(f"{stem}__done", int, 0)
-        add(f"{stem}__error", Annotated[str, Capacity(ERROR_CAPACITY)], "")
+    def add(name: str, annotation: object) -> None:
+        field = field_name(name)
+        if field in annotations:
+            raise ValueError(
+                f"controller {controller_label(controller)!r} has two attributes or "
+                f"commands that map to the field {field!r}"
+            )
+        annotations[field] = annotation
 
     for name, attribute in controller["attributes"].items():
-        if "__" in name:
-            raise ValueError(f"attribute name {name!r} contains '__'")
-        annotation, default = datatype_field(attribute["datatype"])
-        if "r" in attribute["access"]:
-            add(f"{name}__value", annotation, default)
-        if "w" in attribute["access"]:
-            add(f"{name}__setpoint", annotation, default)
-            add_request(name)
-        if attribute["datatype"]["kind"] == "waveform":
-            ndim = len(attribute["datatype"]["shape"])
-            shape_field = Annotated[tuple[int, ...], Capacity(ndim)]
-            add(f"{name}__shape", shape_field, (0,) * ndim)
-            if "w" in attribute["access"]:
-                add(f"{name}__setpoint_shape", shape_field, (0,) * ndim)
+        kind = value_type(attribute["datatype"])
+        add(name, Attr[kind] if attribute["access"] == "r" else Setting[kind])  # type: ignore[valid-type]
     for command in controller["commands"]:
-        if "__" in command:
-            raise ValueError(f"command name {command!r} contains '__'")
-        add_request(command)
+        add(command, Attr[None])
 
     if len(annotations) > MAX_FIELDS:
         raise ValueError(
@@ -309,7 +264,7 @@ def box_class(controller: ControllerDescription) -> type[SharedBox]:
     return type(
         "ControllerBox",
         (SharedBox,),
-        body,
+        {"__annotations__": annotations, **{name: attr() for name in annotations}},
         identity=IDENTITY,
         kw_only=True,
     )
