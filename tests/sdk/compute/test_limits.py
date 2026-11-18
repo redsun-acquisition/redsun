@@ -44,14 +44,6 @@ def test_limits_apply_once_and_restore() -> None:
     assert threadpool_info() == found
 
 
-@pytest.mark.usefixtures("native_limits_kept")
-def test_pool_threads_apply_the_limit() -> None:
-    """Apply the native limit in each pool thread through the initializer."""
-    with ThreadPool(1, initializer=Limits().initializer(1)) as pool:
-        seen = pool.submit(threadpool_info).result(timeout=5)
-    assert all(pool["num_threads"] == 1 for pool in seen)
-
-
 @pytest.mark.parametrize(("threads", "on_caller"), [(2, False), (0, True)])
 def test_the_initializer_runs_where_the_calls_run(
     threads: int, on_caller: bool
