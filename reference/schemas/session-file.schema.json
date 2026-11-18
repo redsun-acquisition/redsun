@@ -455,7 +455,7 @@
     },
     "ViewEntry": {
       "additionalProperties": true,
-      "description": "A view's entry, with the key the session keeps from its constructor.",
+      "description": "A view's entry, with the keys the session keeps from its constructor.",
       "properties": {
         "plugin_name": {
           "anyOf": [
@@ -501,6 +501,19 @@
           "default": null,
           "description": "Where the view attaches, as a word or mapping the session's frontend reads.",
           "title": "Placement"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The text the window shows for the view in place of its name.",
+          "title": "Title"
         }
       },
       "title": "ViewEntry",

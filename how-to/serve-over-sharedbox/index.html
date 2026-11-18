@@ -2672,6 +2672,8 @@
       
         
       
+        
+      
     
     
     
@@ -2718,6 +2720,35 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migrate-from-0.17/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right-left" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to migrate from 0.17
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
               
                 
                   
@@ -3625,6 +3656,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -4772,6 +4807,60 @@
     
   
   38. The session owns background computation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  39. A sharedbox transport serves each attribute as one field
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0040-a-view-has-a-title-apart-from-its-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  40. A view has a title apart from its name
 
     
   </span>
@@ -6456,6 +6545,17 @@ reading a device at that moment gets the same error. Stop such a task in
 the component's <code>shutdown</code> and wait for it to end, because the session
 calls <code>shutdown</code> before it closes the boxes.</p>
 </div>
+<div class="admonition warning">
+<p class="admonition-title">A read after the service stops raises</p>
+<p>Once the service's process ends, a read, a write or a command on the
+device raises
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ServiceExitedError&lt;/span&gt;" href="../../reference/api/device-sharedbox/#redsun.device.sharedbox.ServiceExitedError"><code>ServiceExitedError</code></a>
+instead of returning the last value the service published. A signal you
+observe gets no error: it only stops receiving values. To learn that a
+service has stopped, read one of its signals now and then, catch
+<code>ServiceExitedError</code>, and connect the device again once the service is
+back.</p>
+</div>
 <h2 id="declare-it">Declare it<a class="headerlink" href="#declare-it" title="Permanent link">&para;</a></h2>
 <p>Name the transport in the session's configuration, and declare the service
 beside the device:</p>
@@ -6497,6 +6597,10 @@ attribute's name and the service's message:</p>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="k">return</span> <span class="kc">True</span>
 </span></code></pre></div>
 <p>A command that raises in the service raises <code>BoxPutError</code> in the session too.</p>
+<p>Writes from one session to one signal are served one after the other, in the
+order you make them. When another device or another process writes the
+same attribute at the same time, the service serves only the newest of the
+writes waiting for it, and the others raise <code>BoxPutError</code> with "superseded by another writer".</p>
 <h2 id="name-a-stream-of-your-own">Name a stream of your own<a class="headerlink" href="#name-a-stream-of-your-own" title="Permanent link">&para;</a></h2>
 <p>A service can send data the controller doesn't hold, such as counts, on a
 <code>sharedbox</code> <a href="../../explanation/glossary/#sharedbox">stream</a> it makes itself. The device gets the same prefix as the
@@ -6520,8 +6624,9 @@ keeps the old boxes, so connect it again:</p>
 exits with the reason:</p>
 <ul>
 <li>an attribute whose datatype is <code>Table</code>;</li>
-<li>an attribute or command whose name contains <code>__</code>, which the transport uses
-  for its own fields;</li>
+<li>two attributes or commands that would take the same field of the box, such
+  as <code>name</code> and <code>name_</code>, since an attribute named like a method of a
+  <code>sharedbox</code> box is stored under its name with <code>_</code> appended;</li>
 <li>a controller with more attributes and commands than one box can hold, or a
   controller tree whose description is larger than the index can hold;</li>
 <li>more than one controller given to one <code>fastcs.control_system.FastCS</code>, the

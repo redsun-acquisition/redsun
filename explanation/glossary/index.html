@@ -2496,6 +2496,8 @@
       
         
       
+        
+      
     
     
     
@@ -2539,6 +2541,35 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/migrate-from-0.17/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right-left" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to migrate from 0.17
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
               
                 
                   
@@ -3446,6 +3477,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -4605,6 +4640,60 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  39. A sharedbox transport serves each attribute as one field
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0040-a-view-has-a-title-apart-from-its-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  40. A view has a title apart from its name
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -5577,6 +5666,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         tiled
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#title" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Title
       </span>
     </span>
   </a>
@@ -7657,6 +7757,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#title" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Title
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#toolkit" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8198,6 +8309,10 @@ has, not by what it inherits from. A component never has to inherit from a
 <p><code>tiled</code> is the server that keeps a <a href="#catalog">catalog</a>. It serves the runs and
 their data to a program or a browser over the network. See the
 <a href="https://blueskyproject.io/tiled/">documentation of <code>tiled</code></a>.</p>
+<h3 id="title">Title<a class="headerlink" href="#title" title="Permanent link">&para;</a></h3>
+<p>A title is the text the window shows for a <a href="#view">view</a>, on its dock or its
+tab. A view with no title shows its name, which stays what the session finds
+the view by.</p>
 <h3 id="toolkit">Toolkit<a class="headerlink" href="#toolkit" title="Permanent link">&para;</a></h3>
 <p>A toolkit is the library of windows and widgets a <a href="#frontend">frontend</a> shows
 views with, such as Qt. Only the frontend's own package imports it, so a session without a

@@ -2496,6 +2496,8 @@
       
         
       
+        
+      
     
     
     
@@ -2539,6 +2541,35 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/migrate-from-0.17/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right-left" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to migrate from 0.17
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
               
                 
                   
@@ -3446,6 +3477,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -4593,6 +4628,60 @@
     
   
   38. The session owns background computation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  39. A sharedbox transport serves each attribute as one field
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0040-a-view-has-a-title-apart-from-its-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  40. A view has a title apart from its name
 
     
   </span>
@@ -12556,9 +12645,10 @@ spells the three out. A member is its own name in a message, so it needs no
 <p><code>key</code> is a distinct type per component name, so two instances of one
 class stay separable in a type-keyed graph. A device's <code>service</code> and
 <code>autoconnect</code> keywords are kept here, not passed to its constructor.
-A view's <code>placement</code> keyword is kept here too, read and checked against
-the frontend: <code>placement</code> is where the view attaches, or <code>None</code> when the
-declaration is refused or not a view.
+A view's <code>placement</code> and <code>title</code> keywords are kept here too: <code>placement</code>
+is where the view attaches, read and checked against the frontend, or
+<code>None</code> when the declaration is refused or not a view; <code>title</code> is the text
+the window shows for the view, its name when nothing gives one.
 A presenter's or view's <code>workers</code> keyword is kept here too, the worker
 processes of its pool: <code>None</code> when it gives none. It reaches the
 constructor instead when the class takes <code>workers</code>, by name or through

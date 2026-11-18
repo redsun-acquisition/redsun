@@ -2496,6 +2496,8 @@
       
         
       
+        
+      
     
     
     
@@ -2539,6 +2541,35 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/migrate-from-0.17/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right-left" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to migrate from 0.17
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
               
                 
                   
@@ -3446,6 +3477,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -4605,6 +4640,60 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  39. A sharedbox transport serves each attribute as one field
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0040-a-view-has-a-title-apart-from-its-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  40. A view has a title apart from its name
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -5388,10 +5477,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redsun.device.sharedbox.BoxSignalBackend.get_setpoint" class="md-nav__link">
+  <a href="#redsun.device.sharedbox.BoxSignalBackend.get_location" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_setpoint
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_location
       </span>
     </span>
   </a>
@@ -5489,6 +5578,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.device.sharedbox.ServiceExitedError" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ServiceExitedError
+      </span>
+    </span>
+  </a>
   
 </li>
       
@@ -6403,10 +6503,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redsun.device.sharedbox.BoxSignalBackend.get_setpoint" class="md-nav__link">
+  <a href="#redsun.device.sharedbox.BoxSignalBackend.get_location" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_setpoint
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_location
       </span>
     </span>
   </a>
@@ -6504,6 +6604,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.device.sharedbox.ServiceExitedError" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ServiceExitedError
+      </span>
+    </span>
+  </a>
   
 </li>
       
@@ -7039,11 +7150,32 @@ anew.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A string or a waveform is larger than the field holds, or an enum name is
+not one the field has.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                   <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;BoxPutError&lt;/span&gt; (&lt;code&gt;redsun.device.sharedbox.BoxPutError&lt;/code&gt;)" href="./#redsun.device.sharedbox.BoxPutError">BoxPutError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>The service refused the value or its put raised.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ServiceExitedError&lt;/span&gt; (&lt;code&gt;redsun.device.sharedbox.ServiceExitedError&lt;/code&gt;)" href="./#redsun.device.sharedbox.ServiceExitedError">ServiceExitedError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The service that created the box has ended.</p>
               </div>
             </td>
           </tr>
@@ -7130,21 +7262,22 @@ anew.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="redsun.device.sharedbox.BoxSignalBackend.get_setpoint" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_setpoint</span>
+<h3 id="redsun.device.sharedbox.BoxSignalBackend.get_location" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_location</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-async"><code>async</code></small>
   </span>
 
-<a href="#redsun.device.sharedbox.BoxSignalBackend.get_setpoint" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_setpoint</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">SignalDatatypeT</span>
+<a href="#redsun.device.sharedbox.BoxSignalBackend.get_location" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_location</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">[</span><span class="n">SignalDatatypeT</span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return the last value written.</p>
+        <p>Return the last value written and the value the service published.</p>
+<p>A read-only attribute has no setpoint, so its setpoint is its value.</p>
 
 
     </div>
@@ -7199,7 +7332,7 @@ anew.</p>
 
 
 
-        <p>A command backed by the request fields of a controller box.</p>
+        <p>A command backed by one field of a controller box.</p>
 
 
 
@@ -7305,6 +7438,16 @@ anew.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ServiceExitedError&lt;/span&gt; (&lt;code&gt;redsun.device.sharedbox.ServiceExitedError&lt;/code&gt;)" href="./#redsun.device.sharedbox.ServiceExitedError">ServiceExitedError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The service that created the box has ended.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -7382,6 +7525,55 @@ anew.</p>
     </div>
 
 </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="redsun.device.sharedbox.ServiceExitedError" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">ServiceExitedError</span>
+
+
+<a href="#redsun.device.sharedbox.ServiceExitedError" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ServiceExitedError</span><span class="p">(</span><span class="n">box</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ConnectionError">ConnectionError</a></code></p>
+
+
+
+        <p>The service that created a box has stopped, so its values are no longer current.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
 
 
 

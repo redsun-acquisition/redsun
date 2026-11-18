@@ -130,6 +130,12 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0038-the-session-owns-background-computation/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0040-a-view-has-a-title-apart-from-its-name/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
       </url>
       <url>
@@ -215,6 +221,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/migrate-from-0.16/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/migrate-from-0.17/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/move-devices-by-hand/</loc>
