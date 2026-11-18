@@ -31,7 +31,7 @@ conflicts = [[
 ]]
 
 [manifest]
-constraints = [{ name = "pyqt6", specifier = "!=6.12.0" }]
+constraints = [{ name = "pyqt6", specifier = "<6.12" }]
 
 [[package]]
 name = "acquire-zarr"
