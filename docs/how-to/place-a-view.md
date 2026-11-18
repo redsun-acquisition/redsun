@@ -177,6 +177,60 @@ that name for itself. It also refuses a view whose class attribute and
 declaration give no placement. A `placement` property does not count, because
 the session needs the placement before the view exists.
 
+## Give a view a title
+
+A view's [title](../explanation/glossary.md#title) is the text the window
+shows for it: on its dock, on its tab in the centre, in the Window menu and in
+the list of keyboard shortcuts. A view with no title shows its name, so a
+session declaring `my_view` shows `my_view`. Give a title to show
+something a person reads more easily. The name stays as it is, because the
+saved layout, the wiring and the session file all find the view by it.
+
+A view class gives its default title as a class attribute, next to its
+placement:
+
+```python
+from qtpy.QtWidgets import QWidget
+
+from redsun import Placement
+from redsun.qt import Dock
+
+
+class MyView(QWidget):
+    placement: Placement = Dock("left")
+    title = "Commands"
+```
+
+To change the title of a view you declare, including a built-in one, give
+`title` in its declaration, or as a key of its entry in the session file:
+
+```python
+from typing import Annotated
+
+from redsun import AsView, Declare
+from redsun.qt import QtSession
+from redsun.view.qt.builtins import LightView
+
+
+class MyApp(QtSession):
+    lights: Annotated[AsView[LightView], Declare(title="Lasers")]
+```
+
+```yaml
+views:
+  lights:
+    plugin_name: redsun
+    plugin_id: lights
+    title: Lasers
+```
+
+The declaration and the session file both win over the class attribute, and
+when both give a title, the declaration's wins, as for every keyword. The
+session keeps `title` for itself, as it does `placement`, so it refuses a
+view whose constructor has its own `title` parameter, and a title that is not
+a non-empty string. A view placed in a menu or a toolbar is an action that
+shows its own text, so its title changes nothing there.
+
 ## Tab docks together
 
 Docks on the same edge with the same group open as tabs. The tabs follow the

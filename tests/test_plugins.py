@@ -57,14 +57,14 @@ class FrontendReader:
 class HeadlessApp(Session):
     """A class of its own, named against a configuration that fills it out."""
 
-    motor_widget: Annotated[AsView[MockMotorView], Declare(title="from-class")]
+    motor_widget: Annotated[AsView[MockMotorView], Declare(caption="from-class")]
 
 
 class PartlyDeclaredApp(Session):
     """One component is annotated, so `wire` can reach it with a type."""
 
     motor_ctrl: AsPresenter[MockMotorPresenter]
-    motor_widget: Annotated[AsView[MockMotorView], Declare(title="from-class")]
+    motor_widget: Annotated[AsView[MockMotorView], Declare(caption="from-class")]
 
 
 DECLARED = {"stage", "motor_ctrl", "late_ctrl", "motor_widget"}
@@ -106,7 +106,7 @@ def test_config_kwargs_reach_the_constructor(configured: ConfiguredApp) -> None:
     assert isinstance(stage, MockStage)
     assert run_coro(stage.axis.get_value()) == "Z"
     assert built(configured, "motor_ctrl", MockMotorPresenter).step == 4.0
-    assert built(configured, "motor_widget", MockMotorView).title == "from-config"
+    assert built(configured, "motor_widget", MockMotorView).caption == "from-config"
 
 
 def test_plugin_provider_supplies_a_dependency(configured: ConfiguredApp) -> None:
@@ -143,7 +143,7 @@ def test_annotation_and_config_describe_one_component(
     """Merge a class annotation and a file entry for the same component."""
     app = build(PartlyDeclaredApp, str(config_path / SESSION))
 
-    assert app.motor_widget.title == "from-class"
+    assert app.motor_widget.caption == "from-class"
     assert app.motor_ctrl.step == 4.0
     assert set(app.declarations) == DECLARED
 
@@ -238,7 +238,7 @@ def test_the_class_keeps_what_it_declares(
     app = build(HeadlessApp.from_config(str(config_path / "mock_headless.yaml")))
 
     assert isinstance(app, HeadlessApp)
-    assert app.motor_widget.title == "from-class"
+    assert app.motor_widget.caption == "from-class"
 
 
 def test_the_configuration_is_the_instance_alone(

@@ -527,6 +527,12 @@ has, not by what it inherits from. A component never has to inherit from a
 their data to a program or a browser over the network. See the
 [documentation of `tiled`](https://blueskyproject.io/tiled/).
 
+### Title
+
+A title is the text the window shows for a [view](#view), on its dock or its
+tab. A view with no title shows its name, which stays what the session finds
+the view by.
+
 ### Toolkit
 
 A toolkit is the library of windows and widgets a [frontend](#frontend) shows

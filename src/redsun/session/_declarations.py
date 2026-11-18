@@ -74,6 +74,9 @@ SERVICE_KEYS = ("service", "services")
 SESSION_KEYWORDS = ("name", "path_provider")
 """Constructor keywords the session fills itself, which no service can."""
 
+VIEW_KEYWORDS: Final = frozenset({"placement", "title"})
+"""Keywords the session keeps from a view's configuration, which no other component takes."""
+
 # not TypeForm: a NewType built at runtime is a type expression only at
 # runtime, which no type checker can model
 Key: TypeAlias = Any
@@ -239,9 +242,10 @@ class Declaration:
     `key` is a distinct type per component name, so two instances of one
     class stay separable in a type-keyed graph. A device's `service` and
     `autoconnect` keywords are kept here, not passed to its constructor.
-    A view's `placement` keyword is kept here too, read and checked against
-    the frontend: `placement` is where the view attaches, or `None` when the
-    declaration is refused or not a view.
+    A view's `placement` and `title` keywords are kept here too: `placement`
+    is where the view attaches, read and checked against the frontend, or
+    `None` when the declaration is refused or not a view; `title` is the text
+    the window shows for the view, its name when nothing gives one.
     A presenter's or view's `workers` keyword is kept here too, the worker
     processes of its pool: `None` when it gives none. It reaches the
     constructor instead when the class takes `workers`, by name or through
@@ -275,6 +279,7 @@ class Declaration:
         "refusal",
         "services",
         "source",
+        "title",
         "workers",
     )
 
@@ -298,16 +303,20 @@ class Declaration:
         self.services: dict[str, str] = {}
         self.autoconnect = True
         self.placement: Placement | None = None
+        self.title = name
         self.workers: int | None = None
-        if kind is not Layer.VIEW and "placement" in cfg_kwargs and refusal is None:
+        given = VIEW_KEYWORDS & cfg_kwargs.keys()
+        if kind is not Layer.VIEW and given and refusal is None:
             refusal = TypeError(
-                f"{name!r} is declared as a {kind}, and only a view takes a 'placement'"
+                f"{name!r} is declared as a {kind}, and only a view takes "
+                f"a {min(given)!r}"
             )
         if kind is Layer.DEVICE:
             cfg_kwargs = take_device_keys(self, cfg_kwargs, refused=refusal is not None)
         elif kind is Layer.VIEW and refusal is None:
             try:
                 cfg_kwargs = take_view_placement(self, cfg_kwargs, frontend)
+                cfg_kwargs = take_view_title(self, cfg_kwargs)
             except (TypeError, ValueError) as error:
                 refusal = error
         if kind is not Layer.DEVICE and refusal is None:
@@ -458,6 +467,43 @@ def take_view_placement(
         )
     frontend.check_placement(declaration.cls, declared, where)
     declaration.placement = declared
+    return rest
+
+
+def take_view_title(declaration: Declaration, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Move a view's `title` from *kwargs* onto *declaration*.
+
+    A declared title wins over the class attribute, and a view given neither
+    keeps its name as its title. A method or property named `title`, as a
+    toolkit class may have, is not a class attribute giving one. Returns the keywords left for the view's
+    constructor.
+
+    Raises
+    ------
+    TypeError
+        If the view's class takes `title` itself, or the title is not a string.
+    ValueError
+        If the title is empty.
+    """
+    where = f"view {declaration.name!r}"
+    if "title" in inspect.signature(declaration.cls).parameters:
+        raise TypeError(
+            f"{declaration.cls.__name__} ({where}) takes a 'title' keyword of "
+            "its own, which a view declaration reserves for the session"
+        )
+    rest = dict(kwargs)
+    title = rest.pop("title", None)
+    if title is None:
+        title = inspect.getattr_static(declaration.cls, "title", declaration.name)
+        # a method or property, such as the `title()` of Qt's QGroupBox, is
+        # the toolkit's own and no title the view gives
+        if hasattr(title, "__get__"):
+            title = declaration.name
+    if not isinstance(title, str):
+        raise TypeError(f"{where} gives title={title!r}, which is not a string")
+    if not title:
+        raise ValueError(f"{where} gives an empty title")
+    declaration.title = title
     return rest
 
 
@@ -1100,8 +1146,8 @@ def is_marked(hint: Any, marker: type) -> bool:
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
     """Return the keywords *entry* gives its component, none for no entry.
 
-    A device's `service` and `autoconnect`, and a view's `placement`, are
-    among them where the entry gives them.
+    A device's `service` and `autoconnect`, and a view's `placement` and
+    `title`, are among them where the entry gives them.
     """
     if entry is None:
         return {}
@@ -1113,6 +1159,9 @@ def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
             found["services"] = entry.services
         if "autoconnect" in entry.model_fields_set:
             found["autoconnect"] = entry.autoconnect
-    if isinstance(entry, ViewEntry) and "placement" in entry.model_fields_set:
-        found["placement"] = entry.placement
+    if isinstance(entry, ViewEntry):
+        if "placement" in entry.model_fields_set:
+            found["placement"] = entry.placement
+        if "title" in entry.model_fields_set:
+            found["title"] = entry.title
     return found

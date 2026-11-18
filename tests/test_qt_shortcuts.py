@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
 from app_model.backends.qt import QModelMenu
@@ -30,6 +30,7 @@ from redsun import (
     AsPresenter,
     AsView,
     ConfigurationError,
+    Declare,
     Placement,
     provides,
     shortcut,
@@ -163,6 +164,13 @@ class KeysApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "keys-session"}
 
     panel: AsView[Panel]
+    other: AsView[Other]
+
+
+class TitledKeysApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "titled-keys-session"}
+
+    panel: Annotated[AsView[Panel], Declare(title="Controls")]
     other: AsView[Other]
 
 
@@ -483,6 +491,18 @@ def test_the_dialog_lists_every_binding_by_group(
     assert [combo.itemText(i) for i in range(combo.count())] == ["Window", "panel"]
     assert rows(dialog, "Window") == [["Run", native("Ctrl+R"), "", ""]]
     assert rows(dialog, "panel") == [["Refresh", native("F5"), "", ""]]
+
+
+def test_the_dialog_lists_a_view_by_its_title(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """List a view's keys under its title, and show them when the title is chosen."""
+    dialog = opened(build(TitledKeysApp))
+
+    combo = dialog.findChild(QComboBox)
+    assert combo is not None
+    assert [combo.itemText(i) for i in range(combo.count())] == ["Window", "Controls"]
+    assert rows(dialog, "Controls") == [["Refresh", native("F5"), "", ""]]
 
 
 def test_an_unbound_command_is_listed_as_unbound(

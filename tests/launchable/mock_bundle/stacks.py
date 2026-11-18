@@ -13,4 +13,4 @@ class MockMotorStack:
 
     presenter: AsPresenter[MockMotorPresenter]
     view: AsView[MockMotorView]
-    detail: Annotated[AsView[MockMotorView], Declare(title="detail")]
+    detail: Annotated[AsView[MockMotorView], Declare(caption="detail")]

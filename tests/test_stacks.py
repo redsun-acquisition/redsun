@@ -195,17 +195,17 @@ class Declared(Session):
 
 
 class DeclaredOver(Session):
-    motor: Annotated[AsStack[MockMotorStack], Declare(detail={"title": "class"})]
+    motor: Annotated[AsStack[MockMotorStack], Declare(detail={"caption": "class"})]
 
 
 AsAnyStack: Any = AsStack
 
 
-def title_of(session: Session, name: str) -> str:
-    """Return the title of the view built as *name*."""
+def caption_of(session: Session, name: str) -> str:
+    """Return the caption of the view built as *name*."""
     view = session.views[name]
     assert isinstance(view, MockMotorView)
-    return view.title
+    return view.caption
 
 
 PLUGIN_STACK: dict[str, Any] = {
@@ -232,41 +232,41 @@ def test_a_stack_from_a_session_file_declares_its_halves(
 
     assert isinstance(session.presenters["motor"], MockMotorPresenter)
     assert isinstance(session.views["motor_view"], MockMotorView)
-    assert title_of(session, "motor_detail") == "detail"
+    assert caption_of(session, "motor_detail") == "detail"
 
 
 @pytest.mark.parametrize(
-    ("container", "file_role", "title"),
+    ("container", "file_role", "caption"),
     [
         (Declared, {}, "detail"),
-        (Declared, {"detail": {"title": "file"}}, "file"),
-        (DeclaredOver, {"detail": {"title": "file"}}, "class"),
+        (Declared, {"detail": {"caption": "file"}}, "file"),
+        (DeclaredOver, {"detail": {"caption": "file"}}, "class"),
     ],
     ids=["stack-class", "file", "declare"],
 )
 def test_a_halfs_keywords_come_from_the_class_then_the_file_then_declare(
     container: type[Session],
     file_role: dict[str, Any],
-    title: str,
+    caption: str,
     mock_plugin: None,
     build: BuildSession,
 ) -> None:
     """Take a half's keywords from the stack class, then the file, then the session's Declare."""
     session = build(container, {**PLUGIN_STACK, "stacks": {"motor": file_role}})
 
-    assert title_of(session, "motor_detail") == title
+    assert caption_of(session, "motor_detail") == caption
 
 
 def test_a_stack_in_the_class_reads_its_file_entry(
     mock_plugin: None, build: BuildSession
 ) -> None:
     """Make one stack from an annotation and the file entry under its name."""
-    config = {**PLUGIN_STACK, "stacks": {"motor": {"view": {"title": "file"}}}}
+    config = {**PLUGIN_STACK, "stacks": {"motor": {"view": {"caption": "file"}}}}
     session = build(Declared, config)
 
     assert list(session.presenters) == ["motor"]
-    assert title_of(session, "motor_view") == "file"
-    assert title_of(session, "motor_detail") == "detail"
+    assert caption_of(session, "motor_view") == "file"
+    assert caption_of(session, "motor_detail") == "detail"
 
 
 def test_a_role_the_stack_does_not_have_is_refused() -> None:
@@ -383,13 +383,13 @@ def test_a_later_file_replaces_a_stack_entry_whole(
     plugin = {"plugin_name": "mock-bundle", "plugin_id": "mock-motor"}
     earlier = {
         **PLUGIN_STACK,
-        "stacks": {"motor": {**plugin, "view": {"title": "earlier"}}},
+        "stacks": {"motor": {**plugin, "view": {"caption": "earlier"}}},
     }
-    later = {"stacks": {"motor": {**plugin, "detail": {"title": "later"}}}}
+    later = {"stacks": {"motor": {**plugin, "detail": {"caption": "later"}}}}
     session = build(Plugged, [earlier, later])
 
-    assert title_of(session, "motor_view") == ""
-    assert title_of(session, "motor_detail") == "later"
+    assert caption_of(session, "motor_view") == ""
+    assert caption_of(session, "motor_detail") == "later"
 
 
 def test_a_stack_pairs_its_presenter_with_each_view(

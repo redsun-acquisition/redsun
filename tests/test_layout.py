@@ -121,6 +121,31 @@ class AddsItsOwnDock(Panel):
             parent.addDockWidget(RIGHT, QDockWidget("extra", parent))
 
 
+class TitledCharts(Panel):
+    placement: Placement = Dock("right")
+    title = "Charts"
+
+
+class Middle(Panel):
+    placement: Placement = Central()
+
+
+class TitledLayoutApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "titled-session"}
+
+    panel: AsView[Panel]
+    charts: AsView[TitledCharts]
+    first: Annotated[AsView[Middle], Declare(title="First")]
+    second: AsView[Middle]
+
+
+class SameTitleApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "same-title-session"}
+
+    panel: Annotated[AsView[Panel], Declare(title="Tools")]
+    charts: Annotated[AsView[Charts], Declare(title="Tools")]
+
+
 class OwnDocksApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"session": "own-docks-session"}
 
@@ -309,6 +334,35 @@ def _dock(app: QtSession, name: str) -> QDockWidget:
     found = app.main_window.findChild(QDockWidget, name)
     assert isinstance(found, QDockWidget)
     return found
+
+
+def test_a_dock_and_a_tab_show_the_view_title(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Title docks, central tabs and the Window menu with each view's title, keeping each dock named after its view."""
+    app = build(TitledLayoutApp)
+    window = app.main_window
+    tabs = window.findChild(QTabWidget)
+    assert isinstance(tabs, QTabWidget)
+    menu = window.findChild(QModelMenu, WINDOW_MENU)
+    assert isinstance(menu, QModelMenu)
+    menu.aboutToShow.emit()
+
+    docks = {d.objectName(): d.windowTitle() for d in window.findChildren(QDockWidget)}
+    assert docks == {"panel": "panel", "charts": "Charts"}
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["First", "second"]
+    assert [a.text() for a in menu.actions() if a.isCheckable()] == ["panel", "Charts"]
+
+
+def test_two_views_may_share_a_title(qapp: QApplication, build: BuildSession) -> None:
+    """Dock two views that share a title, each under its own name."""
+    app = build(SameTitleApp)
+    docks = app.main_window.findChildren(QDockWidget)
+
+    assert sorted((d.objectName(), d.windowTitle()) for d in docks) == [
+        ("charts", "Tools"),
+        ("panel", "Tools"),
+    ]
 
 
 def test_a_dock_is_named_after_the_view_it_holds(

@@ -332,6 +332,54 @@ class TurningApp(Session):
     turning: Annotated[AsView[Turning], Declare(placement=Panel("left"))]
 
 
+class Titled(Attached):
+    """A view giving its title as a class attribute."""
+
+    title = "From the class"
+
+
+class TakesTitle(Attachable):
+    """A view whose constructor takes a title of its own."""
+
+    placement: Placement = Panel("left")
+
+    def __init__(self, name: str, title: str = "") -> None:
+        self.name = name
+
+
+class TitledApp(Session):
+    frontend = Toy
+
+    by_class: AsView[Titled]
+    by_declaration: Annotated[AsView[Attached], Declare(title="From the declaration")]
+    by_file: AsView[Attached]
+    untitled: AsView[Attached]
+
+
+class BothTitledApp(Session):
+    frontend = Toy
+
+    both: Annotated[AsView[Attached], Declare(title="A")]
+
+
+class NumberTitledApp(Session):
+    frontend = Toy
+
+    numbered: Annotated[AsView[Attached], Declare(title=3)]
+
+
+class TakesTitleApp(Session):
+    frontend = Toy
+
+    taking: AsView[TakesTitle]
+
+
+class TitledPresenterApp(Session):
+    frontend = Toy
+
+    ctrl: Annotated[AsPresenter[Ctrl], Declare(title="A presenter")]
+
+
 @pytest.fixture
 def app() -> Any:
     """Build the base session and shut it down afterwards."""
@@ -1491,6 +1539,81 @@ def test_a_view_with_no_placement_is_skipped(
 
     assert "stray" not in app.views
     assert "view 'stray' has no placement" in caplog.text
+
+
+def test_a_view_takes_its_title_from_the_class_the_declaration_or_the_session_file(
+    build: BuildSession,
+) -> None:
+    """Title each view from its class, its declaration or the session file, and by its name otherwise."""
+    app = build(TitledApp, {"views": {"by_file": {"title": "From the file"}}})
+
+    titles = {d.name: d.title for d in app._view_declarations()}
+    assert titles == {
+        "by_class": "From the class",
+        "by_declaration": "From the declaration",
+        "by_file": "From the file",
+        "untitled": "untitled",
+    }
+    assert set(app.views) == set(titles)
+
+
+def test_a_declared_title_wins_over_the_session_file(build: BuildSession) -> None:
+    """Keep the title the declaration gives over the one the session file gives."""
+    app = build(BothTitledApp, {"views": {"both": {"title": "B"}}})
+
+    assert [d.title for d in app._view_declarations()] == ["A"]
+
+
+@pytest.mark.parametrize(
+    ("container", "config", "name", "message"),
+    [
+        (NumberTitledApp, {}, "numbered", "gives title=3, which is not a string"),
+        (
+            TitledApp,
+            {"views": {"by_file": {"title": ""}}},
+            "by_file",
+            "gives an empty title",
+        ),
+    ],
+)
+def test_a_view_whose_title_is_not_text_is_skipped(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    container: type[Session],
+    config: dict[str, Any],
+    name: str,
+    message: str,
+) -> None:
+    """Skip a view whose title is not a non-empty string, saying why."""
+    app = build(container, config)
+
+    assert name not in app.views
+    assert f"view {name!r} {message}" in caplog.text
+
+
+def test_a_view_whose_constructor_takes_title_is_skipped(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a view whose constructor takes the title keyword the session reserves."""
+    app = build(TakesTitleApp)
+
+    assert "taking" not in app.views
+    assert (
+        "TakesTitle (view 'taking') takes a 'title' keyword of its own, which a "
+        "view declaration reserves for the session"
+    ) in caplog.text
+
+
+def test_a_presenter_given_a_title_is_refused(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Refuse a title given to a presenter, since only a view shows one."""
+    app = build(TitledPresenterApp)
+
+    assert "ctrl" not in app.presenters
+    assert "'ctrl' is declared as a presenter, and only a view takes a 'title'" in (
+        caplog.text
+    )
 
 
 def test_a_declared_placement_replaces_a_property(build: BuildSession) -> None:
