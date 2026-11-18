@@ -4,7 +4,10 @@ Date: 2026-10-28
 
 ## Status
 
-Accepted
+Superseded by
+[39. A sharedbox transport serves each attribute as one field](0039-a-sharedbox-transport-serves-each-attribute-as-one-field.md)
+in how a box is laid out and how a write travels. The index box, the box
+names and one box per controller still hold.
 
 ## Context
 

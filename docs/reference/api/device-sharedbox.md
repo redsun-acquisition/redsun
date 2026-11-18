@@ -11,4 +11,5 @@ icon: lucide/code
         - BoxSignalBackend
         - BoxCommandBackend
         - BoxPutError
+        - ServiceExitedError
         - stream_name

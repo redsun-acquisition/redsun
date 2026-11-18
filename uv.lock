@@ -1999,6 +1999,15 @@ wheels = [
 ]
 
 [[package]]
+name = "frozendict"
+version = "2.5.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ed/45/7335e29396dde7c9ec00c4758c46bb7d4a9f07ca0a351ae58b814ca6b6a4/frozendict-2.5.1.tar.gz", hash = "sha256:b79b0c133220c5976ff05b8bfe3c1215119caa6255f477a309151fd5e2c2c0c3", size = 337443, upload-time = "2026-10-30T20:37:01.879Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/98/0902e074fb777b4064594a3a18773a50d661dbb8d73b7487fdf63ba088cc/frozendict-2.5.1-py3-none-any.whl", hash = "sha256:b6e602e286b912beca1e12615f50eda6c74646b440c8cfde34221adee6c98c5e", size = 18055, upload-time = "2026-10-30T20:37:00.614Z" },
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6338,7 +6347,7 @@ requires-dist = [
     { name = "qtpy", marker = "extra == 'qlementine-pyside'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qt-common'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'testing-qt'", specifier = ">=2.4.3" },
-    { name = "sharedbox", marker = "extra == 'sharedbox'", specifier = ">=0.8.0" },
+    { name = "sharedbox", marker = "extra == 'sharedbox'", specifier = ">=0.10.0" },
     { name = "superqt", marker = "extra == 'pyqt'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'pyside'", specifier = ">=0.9.0" },
     { name = "superqt", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.9.0" },
@@ -6374,7 +6383,7 @@ dev = [
     { name = "pytest-env", specifier = ">=1.7.1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.17.2" },
-    { name = "sharedbox", marker = "sys_platform != 'darwin'", specifier = ">=0.8.0" },
+    { name = "sharedbox", marker = "sys_platform != 'darwin'", specifier = ">=0.10.0" },
     { name = "tiled", extras = ["client", "server"], specifier = ">=0.2.20" },
     { name = "towncrier", specifier = ">=26.9.0" },
     { name = "tox-uv-bare", specifier = ">=1.37.0" },
@@ -6453,7 +6462,7 @@ qt-common = [
 ]
 sharedbox = [
     { name = "fastcs", specifier = ">=0.14.4" },
-    { name = "sharedbox", marker = "sys_platform != 'darwin'", specifier = ">=0.8.0" },
+    { name = "sharedbox", marker = "sys_platform != 'darwin'", specifier = ">=0.10.0" },
 ]
 testing = [{ name = "pytest", specifier = ">=8" }]
 testing-qt = [
@@ -6946,24 +6955,25 @@ wheels = [
 
 [[package]]
 name = "sharedbox"
-version = "0.9.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cbor2" },
+    { name = "frozendict", marker = "python_full_version < '3.15'" },
     { name = "psygnal" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/80/70850dfd22ee7518baf6a048c9527ebe0546605b4b35be383bb84cd7b1c9/sharedbox-0.9.0.tar.gz", hash = "sha256:ceb43377c856ac76ecdd1a5ff8343ae0b7f8c911672889b8b70ea1e8f80f3df5", size = 842577, upload-time = "2026-11-04T19:18:37.699Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/23/49e8eac921323cbbc1f0314a307c719bb05ea52ff060d088b5f0be82ab94/sharedbox-0.10.0.tar.gz", hash = "sha256:92ef0969dcdc2f6e7081cc3f665dcca61ff91184b8bc17af7b9d438317186080", size = 974433, upload-time = "2026-11-16T13:28:00.813Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/a3/e5b74608ab8ec63e7dd328e0ef0054a20975029b22053252809383a50896/sharedbox-0.9.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:18b711151051fefc4a4b20e3c92b0f9f26ea27f265c4d85b8cfe44d6bd5eca2f", size = 700471, upload-time = "2026-11-04T19:18:20.645Z" },
-    { url = "https://files.pythonhosted.org/packages/c7/8f/a76e23260c69db6589cb93173d12eb4f0a6b9986994cc6688218840a4d35/sharedbox-0.9.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:8e0c4fb062bbeae176bf2636bbb328e06d4b949ad69fb1b92ed82fca8dfb6380", size = 800774, upload-time = "2026-11-04T19:18:23.147Z" },
-    { url = "https://files.pythonhosted.org/packages/b3/fd/c53dada46b925d27dbb25167eef80ae81a83a0d71b6d7b0e0efb90111af6/sharedbox-0.9.0-cp311-cp311-win_amd64.whl", hash = "sha256:59e8fe7b11fb03a61eb3f59efd22bb06cf0514d881da8748c9cc34b4f082d816", size = 821415, upload-time = "2026-11-04T19:18:25.125Z" },
-    { url = "https://files.pythonhosted.org/packages/9f/06/bbd07c12a501acc426aa4d156d72dee665577efeb7bd11486b491843288a/sharedbox-0.9.0-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:cc22122f4a25a7d17b57e2cc94dc8eb467e02c25789a543d0950b1a32cc77339", size = 703320, upload-time = "2026-11-04T19:18:26.696Z" },
-    { url = "https://files.pythonhosted.org/packages/97/18/254f807f4835ad56351d0ff2deb27ced601f9fbd65669856e6224a41247a/sharedbox-0.9.0-cp312-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:7365861e3fdf13956252ad348ee25b98d7e3731776520bf4ebb2f2fe5c84fae0", size = 802169, upload-time = "2026-11-04T19:18:28.415Z" },
-    { url = "https://files.pythonhosted.org/packages/95/04/586fb911985e63ceed79748f97fe32ad10f21bd2584192f225d4270d1ec7/sharedbox-0.9.0-cp312-abi3-win_amd64.whl", hash = "sha256:b66d089fff213b7f8f8f9a3e012883baa123f532715951f4dc8a54ce67ad088d", size = 822612, upload-time = "2026-11-04T19:18:30.141Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/ef/778fc420fe3e1812f4f8bb6e9cf707e7e2bc1a1164473fb7115871319756/sharedbox-0.9.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f4609b6de3b1a2e33af86935ea865381551980847b63763a22213afe5a24371e", size = 708893, upload-time = "2026-11-04T19:18:31.752Z" },
-    { url = "https://files.pythonhosted.org/packages/9d/2a/834329f7abd39483f485f6f6d94f7a30ec7ce42b95023151ed588f52e94f/sharedbox-0.9.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:5558ee05d403ea3c4271f34d6b54c3af4ed5a4ed10960c045563391bb9079e90", size = 809253, upload-time = "2026-11-04T19:18:33.841Z" },
-    { url = "https://files.pythonhosted.org/packages/03/1d/b2575950ece86690541d1b69b484b785cb8034f89ad91590a2007fbacc68/sharedbox-0.9.0-cp314-cp314t-win_amd64.whl", hash = "sha256:7b1e662a89882803492bf4dc2ff54da3cba057d0e290cacf7d9b60aae6801686", size = 850798, upload-time = "2026-11-04T19:18:35.512Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/1a/72729257bb8a0eda979620a0c5deb0b733cd9c64d79b99af8bfb0b53ebf5/sharedbox-0.10.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:44eedb1ab4cce0ebb5dd1bd4b62df9da66f89e87525deed6b2ba7f7196359db6", size = 739095, upload-time = "2026-11-16T13:27:42.833Z" },
+    { url = "https://files.pythonhosted.org/packages/97/da/64e3f57543b8e6211f5b627ec3852117e3d09948821450b98362386f7d29/sharedbox-0.10.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:0cbc2d1b12528bd7c4ed477c00186c85173c725c3b47e4c2448e714401efa69e", size = 837307, upload-time = "2026-11-16T13:27:44.545Z" },
+    { url = "https://files.pythonhosted.org/packages/65/9a/3b0edce96137e7091f1b7350c4c8a7d3a4892fd6b044ad4651c7ed775385/sharedbox-0.10.0-cp311-cp311-win_amd64.whl", hash = "sha256:ebafcc7ebc83b79a43f83fb7a3ba3d5ad646b2765be80794f1cd156fee15b585", size = 858808, upload-time = "2026-11-16T13:27:45.993Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/5e/eb258246e446926b73c356017b82145dbf65a1b3f6b88c69787e09c38cc0/sharedbox-0.10.0-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:18e3adbc4e735b483c80d0d66087f19f7644d2b6d07c3b082660e0629d330733", size = 740404, upload-time = "2026-11-16T13:27:47.432Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/ea/a84fb01111a320e9426a249e3cf6e8a018a0063659731827f432077bb432/sharedbox-0.10.0-cp312-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:e1203d95e98ee753a7d77cca13ec96efe11a09370f8319ca357ca165c2a0aa8f", size = 840618, upload-time = "2026-11-16T13:27:48.877Z" },
+    { url = "https://files.pythonhosted.org/packages/83/e7/85189af41813ed2a16b1ac2aa71ebd4cb1e309a2968622ac33cfd42ac2dc/sharedbox-0.10.0-cp312-abi3-win_amd64.whl", hash = "sha256:4ce1cfd3df45d606ce49ceeada3d10e46e32ada2be54589c37fdaed745b1096a", size = 860191, upload-time = "2026-11-16T13:27:52.617Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/fe/4b8335a32f7551aa7f6a8e1235582173c66f8a5a1024cee991af8c74182a/sharedbox-0.10.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a424208a9035f1371a8fb301568c765cf7f317983a1c363b78361874aeb7da3a", size = 744573, upload-time = "2026-11-16T13:27:54.236Z" },
+    { url = "https://files.pythonhosted.org/packages/75/76/f6c598fbcfd65b7e461bfea7c72bb62166dbc895e3058da1e5e6750fe9f6/sharedbox-0.10.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:69228ecad7834d6d9d87bf38698762ebf1e1100d95bba9ced25585b07d054cb7", size = 844571, upload-time = "2026-11-16T13:27:55.844Z" },
+    { url = "https://files.pythonhosted.org/packages/25/62/d3d793b669c3c5ff1f94099b7cd5a63357fb9de3886eccbce0d495251f58/sharedbox-0.10.0-cp314-cp314t-win_amd64.whl", hash = "sha256:9d20a34ff337a3adacb14d5e0dbbbf844a07ca8ac7ad3a7e8984f489a0bbdc0c", size = 888349, upload-time = "2026-11-16T13:27:57.327Z" },
 ]
 
 [[package]]

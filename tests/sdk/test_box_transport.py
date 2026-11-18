@@ -8,7 +8,8 @@ import json
 import logging
 import re
 import sys
-from collections.abc import AsyncGenerator
+import time
+from collections.abc import AsyncGenerator, Awaitable
 from functools import partial
 from typing import Any
 from uuid import uuid4
@@ -18,8 +19,18 @@ import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
 from fastcs.controllers import Controller
-from mock_pkg.box_controller import BoxController, Mode, TableController
-from sharedbox import SegmentNotFoundError, SharedBox
+from mock_pkg.box_controller import (
+    BoxController,
+    Mode,
+    NamedController,
+    TableController,
+)
+from sharedbox import (
+    RequestError,
+    RequestSupersededError,
+    SegmentNotFoundError,
+    SharedBox,
+)
 
 from redsun.services._layout import (
     ControllerDescription,
@@ -80,13 +91,10 @@ def serving(
     return Service(prefix), task
 
 
-async def request(box: Any, stem: str, **values: Any) -> None:
-    """Write the values, bump `<stem>__request` and wait until the service answers."""
-    number = getattr(box, f"{stem}__request") + 1
-    box.update(**values, **{f"{stem}__request": number})
+async def answered(future: Awaitable[Any]) -> Any:
+    """Wait for the answer to a request, at most five seconds."""
     async with asyncio.timeout(5):
-        while getattr(box, f"{stem}__done") < number:
-            await asyncio.sleep(0.005)
+        return await future
 
 
 async def until(condition: Any) -> None:
@@ -142,51 +150,75 @@ async def test_the_index_describes_the_controller_tree(
 async def test_a_request_is_put_and_answered(
     served: tuple[BoxController, Service],
 ) -> None:
-    """Put the setpoint on request, answer without an error and update the readback."""
+    """Put the value of a request to the controller and publish it as the setpoint."""
     controller, service = served
     top = service.box_of()
-    await request(top, "exposure", exposure__setpoint=12.5)
-    assert top.exposure__error == ""
-    assert controller.exposure.get() == 12.5
-    assert top.exposure__value == 12.5
+    await answered(top.exposure.set(2.0))
+    assert controller.exposure.get() == 2.0
+    assert top.exposure.setpoint == 2.0
+    assert top.exposure.value == 2.0
 
-    await request(top, "mode", mode__setpoint=1)
+    await answered(top.mode.set(1))
     assert controller.mode.get() is Mode.RUN
-    assert top.mode__value == 1
+    assert top.mode.value == 1
 
-    await request(top, "big", big__setpoint=np.array([2**63 + 5], dtype="uint64"))
+    await answered(top.big.set(np.uint64(2**63 + 5)))
     assert controller.big.get() == 2**63 + 5
-    assert int(top.big__value[0]) == 2**63 + 5
+    assert int(top.big.value) == 2**63 + 5
 
 
 async def test_a_refused_put_is_answered_with_its_error(
     served: tuple[BoxController, Service],
 ) -> None:
-    """Answer an out-of-range put with FastCS's message, then clear it on success."""
+    """Raise RequestError with FastCS's message for an out-of-range put, then accept a valid one."""
     controller, service = served
     top = service.box_of()
-    await request(top, "limited", limited__setpoint=11)
-    assert "greater than maximum 10" in top.limited__error
+    with pytest.raises(RequestError, match=r"greater than maximum 10\S*$"):
+        await answered(top.limited.set(11))
     assert controller.limited.get() == 0
 
-    await request(top, "limited", limited__setpoint=3)
-    assert top.limited__error == ""
+    await answered(top.limited.set(3))
     assert controller.limited.get() == 3
 
 
-async def test_every_request_up_to_the_latest_is_served(
+async def test_an_overtaken_request_is_superseded(
     served: tuple[BoxController, Service],
 ) -> None:
-    """Serve the latest request when several arrive while a put is running."""
+    """Supersede the earlier of two requests sent while the handler is held, and put the later."""
     controller, service = served
-    controller.put_delay = 0.05
+    gate = asyncio.Event()
+    controller.put_gate = gate
     top = service.box_of()
-    top.update(slow__setpoint=1, slow__request=1)
-    await asyncio.sleep(0.01)
-    top.update(slow__setpoint=2, slow__request=2)
-    top.update(slow__setpoint=3, slow__request=3)
-    await until(lambda: top.slow__done == 3)
+    try:
+        held = top.slow.set(1)
+        await asyncio.wait_for(controller.put_started.wait(), 5)
+        overtaken = top.slow.set(2)
+        latest = top.slow.set(3)
+        gate.set()
+        with pytest.raises(RequestSupersededError):
+            await answered(overtaken)
+        await answered(held)
+        await answered(latest)
+    finally:
+        gate.set()
     assert controller.slow_seen == 3
+
+
+async def test_an_attribute_named_like_a_box_method_is_served() -> None:
+    """Put a request to an attribute called `name` and mirror its update, through the field `name_`."""
+    controller = NamedController()
+    service, task = serving(controller)
+    try:
+        await service.attach()
+        top = service.box_of()
+        await answered(top.name_.set(5))
+        assert controller.name.get() == 5
+        await controller.name.update(6)
+        await until(lambda: top.name_.value == 6)
+    finally:
+        service.close()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_a_command_runs_on_request(
@@ -195,20 +227,35 @@ async def test_a_command_runs_on_request(
     """Run the command once per request."""
     controller, service = served
     top = service.box_of()
-    await request(top, "run")
-    await request(top, "run")
+    await answered(top.run())
+    await answered(top.run())
     assert controller.runs == 2
-    assert top.run__error == ""
 
 
 async def test_an_update_reaches_the_box(
     served: tuple[BoxController, Service],
 ) -> None:
-    """Write a value the controller changes into the box of a vector child."""
+    """Publish a value the controller changes into the box of a vector child, with a later time."""
     controller, service = served
     child = service.box_of("axes", "1")
+    before = time.time_ns()
     await controller.axes[1].position.update(1.25)
-    await until(lambda: child.position__value == 1.25)
+    await until(lambda: child.position.value == 1.25)
+    assert child.position.read()["timestamp_ns"] > before
+
+
+async def test_a_write_only_attribute_publishes_what_it_accepted(
+    served: tuple[BoxController, Service],
+) -> None:
+    """Publish the accepted value of a write-only attribute as its value and its setpoint."""
+    _, service = served
+    top = service.box_of()
+    before = time.time_ns()
+    await answered(top.slow.set(4))
+    reading = top.slow.read()
+    assert reading["value"] == 4
+    assert reading["setpoint"] == 4
+    assert reading["timestamp_ns"] > before
 
 
 async def test_a_long_string_is_cut_to_its_field(
@@ -218,8 +265,8 @@ async def test_a_long_string_is_cut_to_its_field(
     controller, service = served
     top = service.box_of()
     await controller.label.update("abcééé")
-    await until(lambda: top.label__value != "start")
-    assert top.label__value == "abcéé"
+    await until(lambda: top.label.value != "start")
+    assert top.label.value == "abcéé"
     assert messages(caplog, logging.WARNING) == [
         "'label' holds 8 bytes, so a value of 9 bytes was cut"
     ]
