@@ -77,6 +77,7 @@ nav = [
             "how-to/write-a-derived-product.md",
         ]},
         { "Upgrade" = [
+            "how-to/migrate-from-0.17.md",
             "how-to/migrate-from-0.16.md",
             "how-to/migrate-from-0.15.md",
             "how-to/migrate-from-0.14.md",
@@ -147,6 +148,7 @@ nav = [
                 "explanation/decisions/0036-a-stack-is-declared-as-one-entry.md",
                 "explanation/decisions/0037-diwire-is-the-session-registry.md",
                 "explanation/decisions/0038-the-session-owns-background-computation.md",
+                "explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field.md",
                 "explanation/decisions/0040-a-view-has-a-title-apart-from-its-name.md",
         ]},
     ]},

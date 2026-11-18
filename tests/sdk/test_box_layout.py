@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 import numpy as np
 import pytest
+import sharedbox
 from sharedbox import SharedBox
 
 from redsun.services._layout import (
@@ -17,12 +18,8 @@ from redsun.services._layout import (
     box_name,
     index_name,
     namespace,
-    pad,
     stream_name,
 )
-
-if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
 
 
 def describe(
@@ -66,9 +63,9 @@ def test_the_same_description_gives_the_same_box_class(
     attached = box_class(description).attach(unique_name)
     made.append(attached)
 
-    created.update(x__value=5)
+    created.x.publish(value=5)  # type: ignore[attr-defined]
 
-    assert attached.x__value == 5  # type: ignore[attr-defined]
+    assert attached.x.value == 5  # type: ignore[attr-defined]
 
 
 @pytest.mark.parametrize("prefix", ["A:B:", "A:B"])
@@ -83,7 +80,6 @@ def test_a_trailing_colon_is_stripped(prefix: str) -> None:
         (lambda: namespace("MY APP:DET"), "MY APP"),
         (lambda: stream_name("A", "fastcs"), "fastcs"),
         (lambda: stream_name("A", "a.b"), "a.b"),
-        (lambda: box_class(describe({"kind": "int"}, name="x__y")), "x__y"),
     ],
 )
 def test_names_sharedbox_cannot_hold_are_refused(build: Any, text: str) -> None:
@@ -93,30 +89,32 @@ def test_names_sharedbox_cannot_hold_are_refused(build: Any, text: str) -> None:
 
 
 def check_uint(box: Any) -> None:
-    box.x__value = np.array([2**64 - 1], dtype="uint64")
-    assert int(box.x__value[0]) == 2**64 - 1
+    box.x.publish(value=np.uint64(2**64 - 1))
+    assert int(box.x.read()["value"]) == 2**64 - 1
 
 
 def check_int(box: Any) -> None:
     with pytest.raises(OverflowError):
-        box.x__value = 2**63
+        box.x.publish(value=2**63)
 
 
 def check_str(box: Any) -> None:
-    box.x__value = "a" * 1024
+    box.x.publish(value="a" * 1024)
+    assert box.x.value == "a" * 1024
     with pytest.raises(ValueError):
-        box.x__value = "a" * 1025
+        box.x.publish(value="a" * 1025)
 
 
 def check_enum(box: Any) -> None:
-    box.x__setpoint = 1
-    assert box.x__setpoint == 1
+    box.x.publish(value=1)
+    assert box.x.value == 1
 
 
 def check_waveform(box: Any) -> None:
-    assert box.x__value.shape == (4, 2)
-    assert box.x__shape == (0, 0)
-    assert box.x__setpoint_shape == (0, 0)
+    box.x.publish(value=np.ones((3, 2), dtype="uint8"))
+    assert box.x.value.shape == (3, 2)
+    with pytest.raises(ValueError):
+        box.x.publish(value=np.ones((5, 2), dtype="uint8"))
 
 
 @pytest.mark.parametrize(
@@ -136,11 +134,77 @@ def test_fields_follow_the_datatype_table(
     unique_name: str,
     made: list[SharedBox],
 ) -> None:
-    """Give each datatype the field type of the table, and a waveform its shape field."""
+    """Give each datatype the field type of the table, and refuse a value it cannot hold."""
     box = box_class(describe(datatype)).create(unique_name)
     made.append(box)
 
     check(box)
+
+
+def test_each_attribute_is_one_field_named_after_it(
+    unique_name: str, made: list[SharedBox]
+) -> None:
+    """Give a controller one field per attribute and command, a Setting where writable."""
+    description = describe({"kind": "int"}, access="r", name="x")
+    for name, access in (("y", "rw"), ("z", "w")):
+        description["attributes"][name] = {
+            "access": access,  # type: ignore[typeddict-item]
+            "datatype": {"kind": "int"},
+            "description": "",
+        }
+    cls = box_class(description)
+    box: Any = cls.create(unique_name)
+    made.append(box)
+
+    assert set(cls.__annotations__) == {"x", "y", "z", "go"}
+    assert isinstance(box.y, sharedbox.Setting)
+    assert isinstance(box.z, sharedbox.Setting)
+    assert not isinstance(box.x, sharedbox.Setting)
+    assert not isinstance(box.go, sharedbox.Setting)
+
+
+def test_an_attribute_named_like_a_box_method_gets_a_field_of_its_own(
+    unique_name: str, made: list[SharedBox]
+) -> None:
+    """Add a trailing underscore to the field of an attribute named like a SharedBox method."""
+    description = describe({"kind": "int"}, name="name")
+    description["attributes"]["close"] = {
+        "access": "rw",
+        "datatype": {"kind": "int"},
+        "description": "",
+    }
+    cls = box_class(description)
+    box: Any = cls.create(unique_name)
+    made.append(box)
+
+    assert set(cls.__annotations__) == {"name_", "close_", "go"}
+    box.name_.publish(value=3)
+    assert box.name_.value == 3
+
+
+def test_two_attributes_mapping_to_one_field_are_refused() -> None:
+    """Refuse a controller whose `name` and `name_` attributes share the field `name_`."""
+    description = describe({"kind": "int"}, name="name")
+    description["attributes"]["name_"] = {
+        "access": "rw",
+        "datatype": {"kind": "int"},
+        "description": "",
+    }
+
+    with pytest.raises(ValueError, match=r"root:ctrl.*'name_'"):
+        box_class(description)
+
+
+def test_an_attribute_name_with_double_underscore_is_accepted(
+    unique_name: str, made: list[SharedBox]
+) -> None:
+    """Create a box for an attribute named with a double underscore."""
+    box: Any = box_class(describe({"kind": "int"}, name="a__b")).create(unique_name)
+    made.append(box)
+
+    box.a__b.publish(value=3)
+
+    assert box.a__b.value == 3
 
 
 def test_a_controller_without_fields_has_no_box() -> None:
@@ -159,15 +223,15 @@ def test_a_controller_without_fields_has_no_box() -> None:
 
 
 def test_a_controller_with_too_many_fields_is_refused() -> None:
-    """Refuse more than 256 fields, naming the controller and the count."""
+    """Refuse more than 256 attributes and commands, naming the controller and the count."""
     description = describe({"kind": "int"})
     description["attributes"] = {
         f"a{i}": {"access": "r", "datatype": {"kind": "int"}, "description": ""}
-        for i in range(300)
+        for i in range(257)
     }
     description["commands"] = []
 
-    with pytest.raises(ValueError, match=r"root:ctrl.*300"):
+    with pytest.raises(ValueError, match=r"root:ctrl.*257"):
         box_class(description)
 
 
@@ -175,17 +239,3 @@ def test_box_names_sit_under_root() -> None:
     """Name the root box `<prefix>:fastcs:root` and children below it."""
     assert box_name("A:B:", "1a2b3c", []) == "A:B:fastcs:1a2b3c:root"
     assert box_name("A", "1a2b3c", ["axes", "0"]) == "A:fastcs:1a2b3c:root:axes:0"
-
-
-def test_a_short_waveform_is_padded_with_zeros() -> None:
-    """Put a waveform shorter than its field at the start, zeros after it."""
-    padded = pad([[1, 2]], (2, 3), "int32")
-
-    np.testing.assert_array_equal(padded, [[1, 2, 0], [0, 0, 0]])
-
-
-@pytest.mark.parametrize("value", [[1, 2], [[1, 2, 3, 4]], [[[1]]]])
-def test_a_waveform_that_does_not_fit_its_field_is_refused(value: ArrayLike) -> None:
-    """Refuse a waveform with fewer or more dimensions than its field, or longer than it."""
-    with pytest.raises(ValueError, match="does not fit"):
-        pad(value, (2, 3), "int32")

@@ -4,13 +4,19 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import numpy as np
 import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
-from mock_pkg.box_controller import BoxController, IntExposureController
+from mock_pkg.box_controller import (
+    BoxController,
+    IntExposureController,
+    NamedController,
+    TextController,
+)
 from ophyd_async.core import (
     Device,
     DeviceVector,
@@ -20,17 +26,44 @@ from ophyd_async.core import (
     TriggerableCommand,
     observe_value,
 )
-from sharedbox import BoxClosedError
+from sharedbox import BoxClosedError, RequestError, SegmentStatus
 
-from redsun.device.sharedbox import BoxDeviceConnector, BoxPutError, stream_name
+from redsun.device import sharedbox as box_device
+from redsun.device.sharedbox import (
+    BoxDeviceConnector,
+    BoxPutError,
+    ServiceExitedError,
+    stream_name,
+)
 from redsun.services._transports import SHAREDBOX, TRANSPORTS
 from redsun.services.sharedbox import BoxTransport
+
+if TYPE_CHECKING:
+    from sharedbox import RequestFuture, SharedBox
 
 
 class MyDetector(Device):
     exposure: SignalRW[float]
     limited: SignalRW[int]
     run: TriggerableCommand
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(name=name, connector=BoxDeviceConnector(prefix))
+
+
+class Renamed(Device):
+    watch: SignalRW[int]
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(
+            name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+        )
+
+
+class MyTexter(Device):
+    text: SignalRW[str]
+    refuse: TriggerableCommand
+    refuse_silently: TriggerableCommand
 
     def __init__(self, prefix: str, name: str = "") -> None:
         super().__init__(name=name, connector=BoxDeviceConnector(prefix))
@@ -115,6 +148,22 @@ async def served() -> AsyncGenerator[tuple[BoxController, str], None]:
 
 
 @pytest_asyncio.fixture
+async def texter() -> AsyncGenerator[tuple[TextController, MyTexter], None]:
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = TextController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    device = MyTexter(prefix, name="text")
+    await device.connect(timeout=5)
+    yield controller, device
+    for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+        box.close()
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest_asyncio.fixture
 async def detector(
     served: tuple[BoxController, str],
 ) -> AsyncGenerator[MyDetector, None]:
@@ -162,6 +211,284 @@ async def test_a_short_waveform_round_trips(
     await detector.trace.set(sent)  # type: ignore[attr-defined]
     np.testing.assert_array_equal(controller.trace.get(), sent)
     np.testing.assert_array_equal(await detector.trace.get_value(), sent)  # type: ignore[attr-defined]
+
+
+async def test_a_reading_carries_the_time_the_service_published(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Stamp a reading with the box's timestamp, not the session's clock."""
+    controller, _ = served
+    await controller.exposure.update(3.0)
+    reading = (await detector.exposure.read())["det-exposure"]
+    box = detector._connector._boxes[""]  # type: ignore[attr-defined]
+    assert reading["value"] == 3.0
+    assert reading["timestamp"] == box.exposure.timestamp_ns / 1e9
+
+
+async def test_a_short_waveform_set_from_the_session_keeps_its_shape(
+    detector: MyDetector,
+) -> None:
+    """Read a waveform shorter than its maximum back with the shape it was set with."""
+    await detector.trace.set(np.array([4, 5, 6], dtype=np.int32))  # type: ignore[attr-defined]
+    assert (await detector.trace.get_value()).shape == (3,)  # type: ignore[attr-defined]
+    box = detector._connector._boxes[""]  # type: ignore[attr-defined]
+    assert box.trace.read()["setpoint"].shape == (3,)
+
+
+@pytest.mark.parametrize("choice", ["member", "name"])
+async def test_an_enum_is_set_by_member_or_by_name(
+    served: tuple[BoxController, str], detector: MyDetector, choice: str
+) -> None:
+    """Set an enum signal from one of its members or from the name of one."""
+    controller, _ = served
+    member = type(await detector.mode.get_value())("RUN")  # type: ignore[attr-defined]
+    await detector.mode.set(member if choice == "member" else "RUN")  # type: ignore[attr-defined]
+    assert controller.mode.get().name == "RUN"
+
+
+async def test_a_string_longer_than_its_field_is_refused_before_sending(
+    texter: tuple[TextController, MyTexter],
+) -> None:
+    """Raise ValueError naming the attribute and leave the service's value alone."""
+    controller, device = texter
+    with pytest.raises(ValueError, match="text"):
+        await device.text.set("too long for it")
+    assert controller.text.get() == "ab"
+
+
+async def test_a_command_the_service_refuses_raises_its_message(
+    texter: tuple[TextController, MyTexter],
+) -> None:
+    """Raise BoxPutError carrying the message of the exception the command raised."""
+    _, device = texter
+    with pytest.raises(BoxPutError, match="busy") as caught:
+        await device.refuse.trigger()
+    assert caught.value.attribute == "refuse"
+    assert str(caught.value) == "refuse: busy"
+
+
+async def test_a_command_that_raises_without_a_message_gives_its_type(
+    texter: tuple[TextController, MyTexter],
+) -> None:
+    """Raise BoxPutError with the exception type when the exception has no message."""
+    _, device = texter
+    with pytest.raises(BoxPutError) as caught:
+        await device.refuse_silently.trigger()
+    assert str(caught.value) == "refuse_silently: RuntimeError"
+
+
+async def test_a_box_its_service_unlinked_raises_service_exited(
+    detector: MyDetector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Raise ServiceExitedError from a read when the box's segment is missing."""
+    monkeypatch.setattr(
+        "redsun.device.sharedbox.segment_status", lambda name: SegmentStatus.MISSING
+    )
+    with pytest.raises(ServiceExitedError):
+        await detector.exposure.get_value()
+
+
+async def test_a_command_its_service_unlinked_raises_service_exited(
+    detector: MyDetector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Raise ServiceExitedError from a command when the service has stopped."""
+    monkeypatch.setattr(
+        "redsun.device.sharedbox.segment_status",
+        lambda name: SegmentStatus.CREATOR_EXITED,
+    )
+    with pytest.raises(ServiceExitedError):
+        await detector.run.trigger()
+
+
+async def test_a_subscribe_while_the_service_is_down_leaves_the_signal_subscribable(
+    served: tuple[BoxController, str],
+    detector: MyDetector,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deliver readings to a subscriber made after the service stopped, and subscribe again later."""
+    controller, _ = served
+    while_down: asyncio.Queue[float] = asyncio.Queue()
+    later: asyncio.Queue[float] = asyncio.Queue()
+
+    def collect_while_down(reading: dict[str, Any]) -> None:
+        while_down.put_nowait(next(iter(reading.values()))["value"])
+
+    def collect_later(reading: dict[str, Any]) -> None:
+        later.put_nowait(next(iter(reading.values()))["value"])
+
+    with monkeypatch.context() as down:
+        down.setattr(
+            "redsun.device.sharedbox.segment_status",
+            lambda name: SegmentStatus.CREATOR_EXITED,
+        )
+        detector.exposure.subscribe_reading(collect_while_down)
+        assert await asyncio.wait_for(while_down.get(), 5) == 0.0
+        await controller.exposure.update(5.0)
+        assert await asyncio.wait_for(while_down.get(), 5) == 5.0
+        detector.exposure.clear_sub(collect_while_down)
+    detector.exposure.subscribe_reading(collect_later)
+    assert await asyncio.wait_for(later.get(), 5) == 5.0
+
+
+async def test_a_subscriber_that_raises_leaves_the_signal_subscribable(
+    detector: MyDetector,
+) -> None:
+    """Accept a new callback after the first one raised while taking the current reading."""
+    backend = detector.exposure._connector.backend
+    received: list[Any] = []
+
+    def refuse(reading: Any) -> None:
+        raise ValueError("refused")
+
+    with pytest.raises(ValueError, match="refused"):
+        backend.set_callback(refuse)
+    backend.set_callback(received.append)
+    backend.set_callback(None)
+    assert len(received) == 1
+
+
+async def test_locate_gives_the_setpoint_and_the_readback(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Return the value last set as the setpoint and the service's value as the readback."""
+    controller, _ = served
+    await detector.exposure.set(2.5)
+    await controller.exposure.update(3.0)
+    async with asyncio.timeout(5):
+        while (await detector.exposure.locate())["readback"] != 3.0:
+            await asyncio.sleep(0.005)
+    assert await detector.exposure.locate() == {"setpoint": 2.5, "readback": 3.0}
+    label = detector.label._connector.backend  # type: ignore[attr-defined]
+    assert await label.get_location() == {"setpoint": "start", "readback": "start"}
+
+
+async def test_an_observer_sees_nothing_for_a_refused_set(
+    detector: MyDetector,
+) -> None:
+    """Deliver no reading for a write the service refused, only for the next accepted one."""
+    readings: asyncio.Queue[int] = asyncio.Queue()
+
+    def collect(reading: dict[str, Any]) -> None:
+        readings.put_nowait(next(iter(reading.values()))["value"])
+
+    detector.limited.subscribe_reading(collect)
+    assert await asyncio.wait_for(readings.get(), 5) == 0
+    with pytest.raises(BoxPutError):
+        await detector.limited.set(11)
+    await detector.limited.set(3)
+    assert await asyncio.wait_for(readings.get(), 5) == 3
+    detector.limited.clear_sub(collect)
+
+
+async def test_a_waveform_that_does_not_fit_is_refused_before_sending(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Raise ValueError naming the attribute and leave the service's waveform alone."""
+    controller, _ = served
+    before = np.array(controller.trace.get())
+    for value in (np.zeros(11, dtype=np.int32), np.zeros((2, 2), dtype=np.int32)):
+        with pytest.raises(ValueError, match="trace"):
+            await detector.trace.set(value)  # type: ignore[attr-defined]
+    np.testing.assert_array_equal(controller.trace.get(), before)
+
+
+async def test_an_unknown_enum_name_is_refused_naming_the_attribute_and_choices(
+    served: tuple[BoxController, str], detector: MyDetector
+) -> None:
+    """Raise ValueError naming the attribute and the names the enum has."""
+    controller, _ = served
+    with pytest.raises(ValueError, match=r"mode.*'FAST'.*IDLE.*RUN"):
+        await detector.mode.set("FAST")  # type: ignore[attr-defined]
+    assert controller.mode.get().name == "IDLE"
+
+
+async def test_a_write_from_another_writer_supersedes_with_put_error(
+    served: tuple[BoxController, str],
+    detector: MyDetector,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raise BoxPutError for a write that another device's write replaces before the service takes it."""
+    controller, prefix = served
+    sent: asyncio.Queue[str] = asyncio.Queue()
+    answered = box_device._answered
+
+    async def spy(box: SharedBox, attribute: str, request: RequestFuture[Any]) -> Any:
+        sent.put_nowait(attribute)
+        return await answered(box, attribute, request)
+
+    monkeypatch.setattr("redsun.device.sharedbox._answered", spy)
+    second = MyDetector(prefix, name="second")
+    third = MyDetector(prefix, name="third")
+    await second.connect(timeout=5)
+    await third.connect(timeout=5)
+    gate = asyncio.Event()
+    controller.put_gate = gate
+    try:
+        holding = asyncio.ensure_future(detector.slow.set(1, timeout=10))  # type: ignore[attr-defined]
+        await asyncio.wait_for(sent.get(), 5)
+        await asyncio.wait_for(controller.put_started.wait(), 5)
+        replaced = asyncio.ensure_future(second.slow.set(2, timeout=10))  # type: ignore[attr-defined]
+        await asyncio.wait_for(sent.get(), 5)
+        replacing = asyncio.ensure_future(third.slow.set(3, timeout=10))  # type: ignore[attr-defined]
+        await asyncio.wait_for(sent.get(), 5)
+        gate.set()
+        results = await asyncio.gather(
+            holding, replaced, replacing, return_exceptions=True
+        )
+    finally:
+        gate.set()
+        for device in (second, third):
+            for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+                box.close()
+    assert results[0] is None
+    assert isinstance(results[1], BoxPutError)
+    assert "superseded by another writer" in str(results[1])
+    assert results[2] is None
+
+
+async def test_an_attribute_named_like_a_box_method_is_read_and_written() -> None:
+    """Write and read an attribute whose box field has a trailing underscore."""
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = NamedController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    device = Renamed(prefix, name="renamed")
+    try:
+        await device.connect(timeout=5)
+        await device.watch.set(5)
+        assert controller.watch.get() == 5
+        await controller.watch.update(6)
+        async with asyncio.timeout(5):
+            async for value in observe_value(device.watch):
+                if value == 6:
+                    break
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        for box in device._connector._boxes.values():  # type: ignore[attr-defined]
+            box.close()
+
+
+async def test_a_request_cut_by_a_stopping_service_reports_the_service_exited(
+    detector: MyDetector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Raise ServiceExitedError, not a BoxPutError naming the box class, for a request the stopping service cut."""
+    box = detector._connector._boxes[""]  # type: ignore[attr-defined]
+
+    async def cut() -> None:
+        raise RequestError("ControllerBox.exposure: the server stopped")
+
+    with pytest.raises(BoxPutError) as running:
+        await box_device._answered(box, "exposure", cut())  # type: ignore[arg-type]
+    assert str(running.value) == "exposure: the server stopped"
+
+    monkeypatch.setattr(
+        "redsun.device.sharedbox.segment_status",
+        lambda name: SegmentStatus.CREATOR_EXITED,
+    )
+    with pytest.raises(ServiceExitedError):
+        await box_device._answered(box, "exposure", cut())  # type: ignore[arg-type]
 
 
 async def test_a_refused_set_raises_with_the_service_message(
