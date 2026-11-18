@@ -26,16 +26,15 @@ import psygnal._async
 from bluesky.run_engine import _ensure_event_loop_running
 from culsans import Queue, QueueShutDown
 from psygnal import get_async_backend
-from psygnal._async import AsyncioBackend, _AsyncBackend
 
 from redsun.log import Loggable
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
     from concurrent.futures import Future
-    from typing import Literal
+    from typing import Literal, TypeAlias
 
-    from psygnal._async import QueueItem
+    QueueItem: TypeAlias = Callable[[], Awaitable[None]]
 
 __all__ = ["cancel_task", "run_coro"]
 
@@ -114,7 +113,7 @@ async def cancel_tasks() -> None:
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
-class CulsansAsyncioBackend(_AsyncBackend, Loggable):
+class CulsansAsyncioBackend(Loggable):
     """`psygnal` async backend draining a `culsans` queue on the shared loop.
 
     Queued callbacks run as tasks on the loop from `get_shared_loop`, so signals
@@ -122,11 +121,10 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
     """
 
     def __init__(self) -> None:
-        super().__init__("culsans")
         self._queue: Queue[QueueItem] = Queue()
         self._running = AwaitableEvent()
         self._draining = False
-        self._tasks: set[asyncio.Task[None]] = set()
+        self._tasks: set[asyncio.Future[None]] = set()
 
         # the queue holds callbacks from here on, so work queued before the
         # loop thread picks the drain up is still delivered; marking the
@@ -164,7 +162,7 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
             loop = get_shared_loop()
             while True:
                 item = await self._queue.async_get()
-                task = loop.create_task(self.call_back(item))
+                task = asyncio.ensure_future(item(), loop=loop)
                 self._tasks.add(task)
                 task.add_done_callback(self._tasks.discard)
                 task.add_done_callback(self._log_slot_exception)
@@ -177,10 +175,10 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
         finally:
             self._draining = False
             self._running.clear()
-            for task in self._tasks:
-                task.cancel()
+            for pending in self._tasks:
+                pending.cancel()
 
-    def _log_slot_exception(self, task: asyncio.Task[None]) -> None:
+    def _log_slot_exception(self, task: asyncio.Future[None]) -> None:
         """Report an exception raised by a slot, which nothing else awaits."""
         if task.cancelled():
             return
@@ -190,20 +188,14 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
     @property
     def name(self) -> str:
         """Name of the backend, for logging and debugging."""
-        return f"psygnal-{self._backend}"
-
-
-# psygnal discriminates on `isinstance(..., AsyncioBackend)` when tearing a
-# backend down; without this registration `clear_async_backend()` would drop
-# this backend without ever calling `close()`.
-AsyncioBackend.register(CulsansAsyncioBackend)
+        return "psygnal-culsans"
 
 
 def set_async_backend() -> CulsansAsyncioBackend:
     """Install the `culsans` backend as `psygnal`'s async backend, and return it.
 
     Call it before connecting a coroutine to a signal. A second call returns the
-    installed backend; tear it down with `psygnal`'s `clear_async_backend`.
+    installed backend; tear it down with `clear_async_backend`.
 
     Raises
     ------
@@ -214,14 +206,17 @@ def set_async_backend() -> CulsansAsyncioBackend:
     if isinstance(current, CulsansAsyncioBackend):
         return current
     if current is not None:
-        raise RuntimeError(f"Async backend already set to: {current._backend}")
+        raise RuntimeError(f"Async backend already set to: {current!r}")
+    return psygnal.set_async_backend(CulsansAsyncioBackend())
 
-    backend = CulsansAsyncioBackend()
 
-    # psygnal resolves the active backend through its own module global, so
-    # binding a name here is not enough for `get_async_backend()` to find it
-    psygnal._async._ASYNC_BACKEND = backend
-    return backend
+def clear_async_backend() -> None:
+    """Uninstall `psygnal`'s async backend, and close it if it is the `culsans` one."""
+    backend = get_async_backend()
+    # psygnal closes only the backends it ships
+    psygnal._async.clear_async_backend()
+    if isinstance(backend, CulsansAsyncioBackend):
+        backend.close()
 
 
 @overload

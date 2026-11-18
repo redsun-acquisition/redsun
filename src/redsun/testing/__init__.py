@@ -14,11 +14,12 @@ from __future__ import annotations
 import gc
 import logging
 import os
+import threading
 import weakref
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
-from psygnal._queue import QueuedCallback
+from psygnal import clear_queued
 
 from redsun.aio import run_coro
 from redsun.compute import ProcessExecutor, ProcessPool, ThreadExecutor, ThreadPool
@@ -275,10 +276,8 @@ def empty_emission_queue() -> Generator[None, None, None]:
     interpreter.
     """
     yield
-    # psygnal offers no public way to drop queued emissions
-    for queue in QueuedCallback._GLOBAL_QUEUE.values():
-        while not queue.empty():
-            queue.get_nowait()
+    for thread in threading.enumerate():
+        clear_queued(thread)
 
 
 @pytest.fixture

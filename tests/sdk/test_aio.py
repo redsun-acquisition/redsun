@@ -11,12 +11,12 @@ import threading
 import traceback
 from typing import TYPE_CHECKING, Any
 
-import psygnal._async
+import psygnal
 import pytest
 from bluesky.run_engine import _ensure_event_loop_running
 from culsans import QueueShutDown
 from psygnal import Signal, get_async_backend
-from psygnal._async import _AsyncBackend, clear_async_backend
+from psygnal._async import _AsyncCall
 from psygnal._weak_callback import weak_callback
 
 from redsun import aio
@@ -24,6 +24,7 @@ from redsun.aio import (
     AwaitableEvent,
     CulsansAsyncioBackend,
     cancel_task,
+    clear_async_backend,
     get_shared_loop,
     run_coro,
     set_async_backend,
@@ -94,11 +95,10 @@ class Emitter:
     sig_motor_move = Signal(str, str, float)
 
 
-class ForeignBackend(_AsyncBackend):
+class ForeignBackend:
     """Stand-in for a backend redsun did not install."""
 
     def __init__(self) -> None:
-        super().__init__("trio")
         self._running = AwaitableEvent()
 
     @property
@@ -145,8 +145,8 @@ def test_set_async_backend_is_idempotent(backend: CulsansAsyncioBackend) -> None
 
 def test_set_async_backend_refuses_a_foreign_backend() -> None:
     """Refuse to install over an async backend redsun did not install."""
-    psygnal._async._ASYNC_BACKEND = ForeignBackend()
-    with pytest.raises(RuntimeError, match="already set to: trio"):
+    psygnal.set_async_backend(ForeignBackend())
+    with pytest.raises(RuntimeError, match="already set to: .*ForeignBackend"):
         set_async_backend()
 
 
@@ -155,8 +155,8 @@ def test_psygnal_cannot_replace_our_backend(
     backend: CulsansAsyncioBackend, name: SupportedBackend
 ) -> None:
     """Refuse psygnal's own backends once the redsun backend is installed."""
-    with pytest.raises(RuntimeError, match="already set to: culsans"):
-        psygnal._async.set_async_backend(name)
+    with pytest.raises(RuntimeError, match="already set to: .*CulsansAsyncioBackend"):
+        psygnal.set_async_backend(name)
 
 
 def test_clear_async_backend_closes_the_queue(
@@ -345,8 +345,8 @@ def test_dead_weak_callback_is_skipped(
     gc.collect()
     assert dead.dereference() is None
 
-    backend.put((dead, ("stage", "x", 1.0)))
-    backend.put((weak_callback(on_move), ("stage", "x", 2.0)))
+    backend.put(_AsyncCall(dead, ("stage", "x", 1.0)))
+    backend.put(_AsyncCall(weak_callback(on_move), ("stage", "x", 2.0)))
 
     assert alive.wait(TIMEOUT)
     assert not [r for r in caplog.records if r.levelno >= logging.ERROR]

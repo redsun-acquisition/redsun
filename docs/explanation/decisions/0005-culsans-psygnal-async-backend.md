@@ -83,3 +83,17 @@ retrieved" at garbage-collection time, or not at all.
   shuts the queue down and lets the drain's exit path cancel outstanding
   tasks; awaiting their completion would require an async teardown entry
   point, which no caller has asked for yet.
+
+## Amendment: `psygnal` 0.17.0
+
+`psygnal` 0.17.0 made the backend contract public: `set_async_backend()` accepts
+any object matching its `AsyncBackend` protocol. `CulsansAsyncioBackend` therefore
+no longer inherits `_AsyncBackend`, is no longer registered as a subclass of
+`AsyncioBackend`, and is installed through the public setter rather than by
+assigning `_ASYNC_BACKEND`. Each queued item is now a callable taking no
+arguments, so the drain awaits `item()` instead of reaching `call_back`.
+
+`psygnal`'s `clear_async_backend()` closes only the backends `psygnal` ships, so
+`redsun.aio.clear_async_backend()` calls it and then closes the `culsans` queue.
+`psygnal` 0.17.0 does not export that function from the package, so `redsun`
+imports it from `psygnal._async`.

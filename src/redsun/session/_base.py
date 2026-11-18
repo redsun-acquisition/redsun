@@ -32,9 +32,8 @@ from typing import (
 
 import yaml
 from event_model import DocumentRouter
-from psygnal._async import clear_async_backend
 
-from redsun.aio import run_coro, set_async_backend
+from redsun.aio import clear_async_backend, run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
 from redsun.compute import ComputeSettings, Preset  # noqa: TC001
 from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
