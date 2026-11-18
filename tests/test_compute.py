@@ -381,6 +381,20 @@ def test_session_without_executors_changes_nothing(
     assert watchdog_threads() == []
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="numpy uses Accelerate on macOS, which threadpoolctl does not list",
+)
+def test_the_compute_section_limits_native_threads_in_the_pool(
+    build: BuildSession,
+) -> None:
+    """Limit the native threads a pool's calls run with to what the preset gives."""
+    session = build(OneMedian, {"compute": {"preset": "throughput"}})
+    seen = session.median.executor.submit(threadpool_info).result(timeout=5)
+    assert seen
+    assert all(pool["num_threads"] == 1 for pool in seen)
+
+
 def test_the_file_lays_over_the_class(
     build: BuildSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
