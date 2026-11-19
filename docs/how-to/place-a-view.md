@@ -267,8 +267,8 @@ views:
 The declaration and the session file both win over the class attribute, and
 when both give a title, the declaration's wins, as for every keyword. The
 session keeps `title` for itself, as it does `placement`, so it refuses a
-view whose constructor has its own `title` parameter, and a title that is not
-a non-empty string. A view placed in a menu or a toolbar is an action that
+view whose constructor has its own `title` parameter, and a title that is
+empty or not a string. A view placed in a menu or a toolbar is an action that
 shows its own text, so its title changes nothing there.
 
 ## Tab docks together

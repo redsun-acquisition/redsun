@@ -69,8 +69,9 @@ Find a class or a function by the module you import it from.
     - [`redsun.aio`](api/aio.md): run a coroutine on the event loop the
       session shares
     - [`redsun.catalog`](api/catalog.md): the catalog of runs a session keeps
-    - [`redsun.compute`](api/compute.md): the threads a session shares
-      between its components, and the executors they submit calls through
+    - [`redsun.compute`](api/compute.md): the threads and worker
+      processes a session gives its components, and the executors they submit
+      calls through
     - `redsun.device`: devices a session builds from what a service serves
         - [`redsun.device.sharedbox`](api/device-sharedbox.md): a device
           filled from the boxes of a `fastcs` controller

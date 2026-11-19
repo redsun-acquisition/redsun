@@ -156,7 +156,7 @@ class SessionCompute:
         owners: Mapping[str, set[type[PoolExecutor[Any]]]],
         workers: Mapping[str, int],
     ) -> None:
-        """Register the pools the executors *owners* ask for submit to, made on their first request.
+        """Register the pools behind the executors *owners* ask for, each made on its first request.
 
         A pool other than the process pool is shared. Each owner asking for a
         `ProcessExecutor` has a process pool of its own, of `workers[owner]`

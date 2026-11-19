@@ -138,7 +138,7 @@ class Future(concurrent.futures.Future[R]):
     ) -> None:
         """Call `on_result` with the result, or `on_error` with the exception.
 
-        The callback runs on the thread it is marked with `slot`, else on the
+        The callback runs on the thread its `slot` marker names, else on the
         pool's delivery thread. A future of a pool with no delivery, or no
         pool, calls back in the thread that finishes the call. A cancelled
         call calls neither, and a failure with no `on_error` is logged.

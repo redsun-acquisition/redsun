@@ -41,7 +41,7 @@ class FailedView(QWidget):
     """Stands where a view that failed to build would have been.
 
     It names the view by *title* followed by its name, or by its name alone
-    when no other title is given, gives the reason, and shows the traceback
+    when *title* is missing or is the name, gives the reason, and shows the traceback
     on request.
     """
 

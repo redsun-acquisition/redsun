@@ -303,7 +303,7 @@ on, and the log says why. The pools of the other components go on.
 [`usage`][redsun.compute.ThreadExecutor.usage] returns the counts of the
 component's own calls: waiting, running, completed and failed, and the
 longest any call waited for a free thread. The session also logs what each
-pool did when it shuts down, with each owner's calls in brackets; here the
+pool did when it shuts down, with each owner's calls in parentheses; here the
 only owner is the `median` presenter:
 
 ```text
@@ -316,9 +316,9 @@ Its waiting count and longest wait cover only the time before that hand-over,
 for instance while the pool has not started yet.
 
 A call that waited more than a second for a free thread is logged as a
-warning naming its owner when it starts. A thread the session
-keeps for this wakes every 50 ms. If it wakes more than 0.2 s late, something
-held every other thread back, so the session logs the name of each function
+warning naming its owner when it starts. The session also keeps a thread
+that wakes every 50 ms. If it wakes more than 0.2 s late, something held
+every other thread back, so the session logs the name of each function
 the pool was running at that moment, once per function.
 
 ## Test the component

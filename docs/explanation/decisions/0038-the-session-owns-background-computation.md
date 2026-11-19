@@ -193,5 +193,5 @@ its own.
 - A script that builds a session with worker processes starts it under
   `if __name__ == "__main__":`, since `spawn` imports the script in every
   worker.
-- A later release adds pools of NVIDIA GPU streams as a further `Pool` and
-  executor pair, reusing the same start, counts and shutdown.
+- A further kind of pool, such as one for NVIDIA GPU streams, is a new
+  `Pool` and executor pair that reuses the same start, counts and shutdown.

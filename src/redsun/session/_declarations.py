@@ -475,8 +475,9 @@ def take_view_title(declaration: Declaration, kwargs: dict[str, Any]) -> dict[st
 
     A declared title wins over the class attribute, and a view given neither
     keeps its name as its title. A method or property named `title`, as a
-    toolkit class may have, is not a class attribute giving one. Returns the keywords left for the view's
-    constructor.
+    toolkit class may have, is not a class attribute giving one.
+
+    Returns the keywords left for the view's constructor.
 
     Raises
     ------
