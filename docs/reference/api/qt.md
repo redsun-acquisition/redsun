@@ -40,6 +40,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.qt.StatusBarItem
+    options:
+      show_root_heading: true
+
 ::: redsun.qt.attach
     options:
       show_root_heading: true

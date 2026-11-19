@@ -5,13 +5,13 @@ icon: lucide/layout-dashboard
 # How to place a view in the window
 
 This page shows how to choose where a view of a Qt session appears: in a dock,
-in the centre, in a menu or in a toolbar. Point at a part of the main window to
-read what goes there:
+in the centre, in a menu, in a toolbar or in the status bar. Point at a part
+of the main window to read what goes there:
 
 ```d2 title="Where each placement puts a view"
 ...@diagrams/style
 window: "main window" {
-  grid-rows: 5
+  grid-rows: 6
   grid-gap: 10
   menu: "menu bar: MenuItem(\"Acquire\")" {
     class: step
@@ -45,6 +45,11 @@ window: "main window" {
   bottom_dock: "Dock(\"bottom\")" {
     class: step
     width: 520
+  }
+  status_bar: "status bar: StatusBarItem()" {
+    class: step
+    width: 520
+    tooltip: Views asking for the status bar sit at its right, in the order they are declared, before the button listing the components that failed.
   }
 }
 ```
@@ -129,6 +134,40 @@ The session creates the menu or toolbar the first time a view names it, and
 adds every later view naming it to the same one. If the command needs no view
 of its own, see [Add menu actions](add-menu-actions.md).
 
+## Put a widget in the status bar
+
+A view placed as a [`StatusBarItem`][redsun.qt.StatusBarItem] is a `QWidget`
+the session keeps at the right of the status bar, where a message shown there
+never covers it. It suits a row of labels read at a glance, such as a
+position or a device's state:
+
+```python
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QWidget
+
+from redsun import Placement
+from redsun.qt import StatusBarItem
+
+
+class PositionView(QWidget):
+    placement: Placement = StatusBarItem()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.position = QLabel("x: 0.00 um")
+        width = self.position.fontMetrics().horizontalAdvance("x: -0000.00 um")
+        self.position.setFixedWidth(width)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.position)
+```
+
+The widget keeps the width its size hint gives it, so a label whose text
+changes length gets a fixed width, as above, or the widgets to its left move
+at each update. Several views in the status bar sit in the order they are
+declared. The window shows no title for such a view, and the Window menu
+does not list it.
+
 ## Override a view's default placement
 
 Every view class has a default place in the window, its `placement`. To put
@@ -166,6 +205,7 @@ views:
 | `{dock: left, group: tools}` | a dock on that edge, in a tab with the other docks of group `tools` |
 | `{menu: Acquire}` | an entry in the menu `Acquire` |
 | `{toolbar: Acquisition}` | an entry in the toolbar `Acquisition` |
+| `status_bar` | a widget at the right of the status bar |
 
 A view placed in the menu `Window` joins the Window menu the session adds,
 above the entries that show and hide the docks.

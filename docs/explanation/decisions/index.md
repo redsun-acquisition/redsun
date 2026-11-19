@@ -49,3 +49,4 @@ never edited; a later one replaces it.
 - [38. The session owns background computation](0038-the-session-owns-background-computation.md)
 - [39. A sharedbox transport serves each attribute as one field](0039-a-sharedbox-transport-serves-each-attribute-as-one-field.md)
 - [40. A view has a title apart from its name](0040-a-view-has-a-title-apart-from-its-name.md)
+- [41. A view can sit in the status bar](0041-a-view-can-sit-in-the-status-bar.md)

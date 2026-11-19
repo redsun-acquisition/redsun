@@ -19,13 +19,13 @@ toolkit, which a session without a window doesn't install.
 
 A view says where it wants to be shown, and the frontend decides whether it
 can. The core defines only the `Placement` base class; the Qt frontend defines
-docks, the centre, menus and toolbars, and
+docks, the centre, menus, toolbars and the status bar, and
 [How to place a view](../how-to/place-a-view.md) shows where each one puts a
 view.
 
 In `Frontend.requires`, a frontend lists what each placement must hold: Qt asks
-for a `QWidget` in a dock or in the centre, and a `QAction` in a menu or
-toolbar.
+for a `QWidget` in a dock, in the centre or in the status bar, and a
+`QAction` in a menu or toolbar.
 
 A session can also declare the whole first layout of its window: which views
 share an edge, side by side, stacked or as tabs, and how much of the window
@@ -58,11 +58,11 @@ placement: "which placement?" {
 }
 listed: "does the frontend\nshow it?" {
   class: step
-  tooltip: The placement must be one the frontend lists in Frontend.requires. Qt lists Central, Dock, MenuItem and ToolBarItem.
+  tooltip: The placement must be one the frontend lists in Frontend.requires. Qt lists Central, Dock, MenuItem, StatusBarItem and ToolBarItem.
 }
 type: "is the view the\ntype it needs?" {
   class: step
-  tooltip: Qt needs a QWidget in a dock or in the centre, and a QAction in a menu or a toolbar.
+  tooltip: Qt needs a QWidget in a dock, in the centre or in the status bar, and a QAction in a menu or a toolbar.
 }
 gap: {class: gap}
 built: "build the view" {class: current}
@@ -78,7 +78,7 @@ naming what the frontend shows instead:
 
 ```text
 Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
-Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
+Qt does not attach. It attaches: Central, Dock, MenuItem, StatusBarItem, ToolBarItem.
 ```
 
 The session reads the placement from the class attribute or the declaration,
@@ -150,7 +150,7 @@ and `Session.view_arguments`, to add arguments to every view's constructor.
 
 | what | where | the Qt frontend |
 | --- | --- | --- |
-| the placements it shows | `Frontend.requires` | `Central`, `Dock`, `MenuItem`, `ToolBarItem` |
+| the placements it shows | `Frontend.requires` | `Central`, `Dock`, `MenuItem`, `StatusBarItem`, `ToolBarItem` |
 | the regions a window layout fills | `Frontend.regions`, `Frontend.region_of` | `center`, `left`, `right`, `top`, `bottom` |
 | whether a layout may start a view hidden | `Frontend.hides` | yes |
 | which keys it can read, and how it writes them | `Frontend.key_problems`, `Frontend.canonical_key` | `app-model`'s spelling, such as `Ctrl+R` |

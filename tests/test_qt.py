@@ -60,6 +60,7 @@ from redsun.qt import (
     Qt,
     QtHook,
     QtSession,
+    StatusBarItem,
     ToolBarItem,
     attach,
 )
@@ -141,6 +142,30 @@ class Acquire(QAction):
         self.name = name
 
 
+class Readings(QWidget):
+    placement: Placement = StatusBarItem()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+
+class Clock(QWidget):
+    placement: Placement = StatusBarItem()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+
+class StatusAction(QAction):
+    placement: Placement = StatusBarItem()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
+        self.name = name
+
+
 class NotAWidget:
     placement: Placement = Dock("left")
 
@@ -175,6 +200,12 @@ class BrokenApp(QtSession):
     panel: AsView[Panel]
     broken_panel: AsView[BrokenPanel]
     broken_ctrl: AsPresenter[BrokenPresenter]
+
+
+class StatusApp(QtSession):
+    readings: AsView[Readings]
+    broken_panel: AsView[BrokenPanel]
+    clock: AsView[Clock]
 
 
 class GroupedPanel(Panel):
@@ -1095,6 +1126,7 @@ def test_a_dock_on_an_unknown_edge_is_refused() -> None:
         ({"dock": "right", "group": "tools"}, Dock("right", group="tools")),
         ({"menu": "Acquire"}, MenuItem("Acquire")),
         ({"toolbar": "Acquisition"}, ToolBarItem("Acquisition")),
+        ("status_bar", StatusBarItem()),
     ],
 )
 def test_qt_reads_each_placement_a_session_file_writes(
@@ -1127,12 +1159,13 @@ def test_qt_refuses_a_placement_it_cannot_read(value: object) -> None:
         (Central(), ("center", None)),
         (Dock("left", group="tools"), ("left", "tools")),
         (MenuItem("File"), None),
+        (StatusBarItem(), None),
     ],
 )
 def test_qt_names_the_region_a_placement_asks_for(
     placement: Placement, region: tuple[str, str | None] | None
 ) -> None:
-    """Put a central view in the centre, a dock in its edge with its group, and a menu item nowhere."""
+    """Put a central view in the centre, a dock in its edge with its group, and a menu or status bar item nowhere."""
     assert Qt.region_of(placement) == region
 
 
@@ -1237,6 +1270,35 @@ def test_the_status_bar_counts_the_components_that_failed(
     bar = session.main_window.statusBar()
     assert bar is not None
     assert [b.text() for b in bar.findChildren(QPushButton)] == ["2 failed"]
+
+
+def test_status_bar_views_sit_before_the_failures_button_in_declaration_order(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put each status bar view in the status bar, in declaration order, left of the failures button."""
+    window = build(StatusApp).main_window
+    window.show()
+    qapp.processEvents()
+    bar = window.statusBar()
+    assert bar is not None
+
+    shown = [
+        child
+        for child in bar.findChildren(QWidget)
+        if child.objectName() in {"readings", "clock"} or isinstance(child, QPushButton)
+    ]
+    order = [
+        child.text() if isinstance(child, QPushButton) else child.objectName()
+        for child in sorted(shown, key=lambda child: child.x())
+    ]
+
+    assert order == ["readings", "clock", "1 failed"]
+
+
+def test_a_status_bar_item_must_be_a_widget(window: QMainWindow) -> None:
+    """Refuse an action asking for the status bar, which holds widgets only."""
+    with pytest.raises(TypeError, match="needs a QWidget, but StatusAction is not one"):
+        attach(window, {"stray": StatusAction("stray", parent=window)})
 
 
 def test_a_view_slot_runs_on_the_main_thread(

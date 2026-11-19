@@ -15,6 +15,7 @@ from ._session import (
     Qt,
     QtHook,
     QtSession,
+    StatusBarItem,
     ToolBarItem,
     attach,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "Qt",
     "QtHook",
     "QtSession",
+    "StatusBarItem",
     "ToolBarItem",
     "attach",
 ]
