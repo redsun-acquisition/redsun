@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import httpx2
 import pytest
 import stamina
 from tiled.client import from_uri
@@ -123,7 +123,7 @@ def test_shutdown_stops_the_server(build: BuildSession) -> None:
 
     app.shutdown()
 
-    with pytest.raises(httpx.ConnectError):
+    with pytest.raises(httpx2.ConnectError):
         list(client)
 
 
