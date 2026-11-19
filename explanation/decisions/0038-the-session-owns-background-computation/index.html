@@ -6569,8 +6569,8 @@ its own.</p>
 <li>A script that builds a session with worker processes starts it under
   <code>if __name__ == "__main__":</code>, since <code>spawn</code> imports the script in every
   worker.</li>
-<li>A later release adds pools of NVIDIA GPU streams as a further <code>Pool</code> and
-  executor pair, reusing the same start, counts and shutdown.</li>
+<li>A further kind of pool, such as one for NVIDIA GPU streams, is a new
+  <code>Pool</code> and executor pair that reuses the same start, counts and shutdown.</li>
 </ul>
 
 

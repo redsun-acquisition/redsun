@@ -8461,7 +8461,7 @@ not waited for.</p>
     <div class="doc doc-contents ">
 
         <p>Call <code>on_result</code> with the result, or <code>on_error</code> with the exception.</p>
-<p>The callback runs on the thread it is marked with <code>slot</code>, else on the
+<p>The callback runs on the thread its <code>slot</code> marker names, else on the
 pool's delivery thread. A future of a pool with no delivery, or no
 pool, calls back in the thread that finishes the call. A cancelled
 call calls neither, and a failure with no <code>on_error</code> is logged.</p>
@@ -8894,9 +8894,8 @@ and its result still make a pickle round trip.</p>
 be guarded by <code>if __name__ == "__main__":</code>. The workers' log records reach
 the session's log under <em>log_name</em>, from the level the <code>redsun</code> logger had
 when the pool started; a later change of that level does not reach the
-workers. Shutting the pool down waits for
-running calls at most <em>stop_timeout</em> seconds, then ends the workers
-still running, which fails their calls with <code>BrokenPool</code>.</p>
+workers. Shutting the pool down waits for running calls at most
+<em>stop_timeout</em> seconds, then ends the workers still running, which fails their calls with <code>BrokenPool</code>.</p>
 <p>A worker that ends while calls are unfinished fails every one of them
 with <code>WorkerCrashed</code> once the pool has started new workers. Replaced more
 than 3 times within 60 s, the pool breaks instead and refuses later calls

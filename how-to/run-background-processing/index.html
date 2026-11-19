@@ -6980,7 +6980,7 @@ on, and the log says why. The pools of the other components go on.</p>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;usage&lt;/span&gt;" href="../../reference/api/compute/#redsun.compute.ThreadExecutor.usage"><code>usage</code></a> returns the counts of the
 component's own calls: waiting, running, completed and failed, and the
 longest any call waited for a free thread. The session also logs what each
-pool did when it shuts down, with each owner's calls in brackets; here the
+pool did when it shuts down, with each owner's calls in parentheses; here the
 only owner is the <code>median</code> presenter:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>thread pool: 3 workers, 214 calls (median 214), 2 failed, longest idle 1.4 s
 </span></code></pre></div>
@@ -6989,9 +6989,9 @@ worker processes, where the call may still wait in a queue for a free worker.
 Its waiting count and longest wait cover only the time before that hand-over,
 for instance while the pool has not started yet.</p>
 <p>A call that waited more than a second for a free thread is logged as a
-warning naming its owner when it starts. A thread the session
-keeps for this wakes every 50 ms. If it wakes more than 0.2 s late, something
-held every other thread back, so the session logs the name of each function
+warning naming its owner when it starts. The session also keeps a thread
+that wakes every 50 ms. If it wakes more than 0.2 s late, something held
+every other thread back, so the session logs the name of each function
 the pool was running at that moment, once per function.</p>
 <h2 id="test-the-component">Test the component<a class="headerlink" href="#test-the-component" title="Permanent link">&para;</a></h2>
 <p>Load the <code>redsun.testing</code> fixtures as
