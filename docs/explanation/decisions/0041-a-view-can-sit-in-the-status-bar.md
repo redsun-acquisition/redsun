@@ -9,10 +9,10 @@ Accepted
 ## Context
 
 A Qt session places a view in a dock, in the centre, in a menu or in a
-toolbar. Some views belong in none of these: a row of labels showing the
-cursor position, the state of a device or whether a service answers is read
-at a glance while the rest of the window is in use, and the status bar at the
-bottom of the main window is where a person looks for it.
+toolbar. Some views belong in none of these. A row of labels showing the
+cursor position or the state of a device is read at a glance while the rest
+of the window is in use, and a person looks for it in the status bar at the
+bottom of the main window.
 
 Without a placement for the status bar, such a view had to be declared
 somewhere else and reach the status bar itself. A docked view found its main
@@ -59,8 +59,9 @@ The placement has no fields. These options were weighed and left out:
 - Starting hidden, and an entry in the Window menu to show the view again.
   The status bar is not a region of the window layout, so `hidden` would
   need a rule of its own, and no view asked to be hidden.
-- Messages posted through the session. The status bar's message area stays
-  as Qt provides it, and nothing in `redsun` writes to it.
+- Messages posted through the session. No component asked for it, so the
+  status bar's message area stays as Qt provides it, and nothing in `redsun`
+  writes to it.
 
 ## Consequences
 

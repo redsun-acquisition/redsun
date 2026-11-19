@@ -162,9 +162,9 @@ class PositionView(QWidget):
         layout.addWidget(self.position)
 ```
 
-The widget keeps the width its size hint gives it, so a label whose text
-changes length gets a fixed width, as above, or the widgets to its left move
-at each update. Several views in the status bar sit in the order they are
+The widget keeps the width its size hint gives it. A label whose text
+changes length needs a fixed width, as above; otherwise the widgets to its
+left move at each update. Several views in the status bar sit in the order they are
 declared. The window shows no title for such a view, and the Window menu
 does not list it.
 
