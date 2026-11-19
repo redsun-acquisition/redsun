@@ -26,7 +26,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.1.0">
+      <meta name="generator" content="zensical-0.1.2">
     
     
       
@@ -37,7 +37,7 @@
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.ebb7f775.min.css">
       
         
           
@@ -3856,6 +3856,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#amendment-psygnal-0170" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Amendment: <code>psygnal</code> 0.17.0
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6170,6 +6181,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#amendment-psygnal-0170" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Amendment: <code>psygnal</code> 0.17.0
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -6443,6 +6465,17 @@ retrieved" at garbage-collection time, or not at all.</p>
   tasks; awaiting their completion would require an async teardown entry
   point, which no caller has asked for yet.</li>
 </ul>
+<h2 id="amendment-psygnal-0170">Amendment: <code>psygnal</code> 0.17.0<a class="headerlink" href="#amendment-psygnal-0170" title="Permanent link">&para;</a></h2>
+<p><code>psygnal</code> 0.17.0 made the backend contract public: <code>set_async_backend()</code> accepts
+any object matching its <code>AsyncBackend</code> protocol. <code>CulsansAsyncioBackend</code> therefore
+no longer inherits <code>_AsyncBackend</code>, is no longer registered as a subclass of
+<code>AsyncioBackend</code>, and is installed through the public setter rather than by
+assigning <code>_ASYNC_BACKEND</code>. Each queued item is now a callable taking no
+arguments, so the drain awaits <code>item()</code> instead of reaching <code>call_back</code>.</p>
+<p><code>psygnal</code>'s <code>clear_async_backend()</code> closes only the backends <code>psygnal</code> ships, so
+<code>redsun.aio.clear_async_backend()</code> calls it and then closes the <code>culsans</code> queue.
+<code>psygnal</code> 0.17.0 does not export that function from the package, so <code>redsun</code>
+imports it from <code>psygnal._async</code>.</p>
 
 
 
@@ -6578,7 +6611,7 @@ retrieved" at garbage-collection time, or not at all.</p>
       <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":"../../../redirect.json","search":"../../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.d31f0ffa.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.3cb411a8.min.js"></script>
       
         <script src="../../../javascripts/install-table.js"></script>
       
