@@ -59,7 +59,6 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 ### Changed
 
 - `SessionPathProvider.reset_plan` reads the folder of an earlier day only the first time it finds it, then reads only today's folder and date folders it has not seen. ([#260](https://github.com/redsun-acquisition/redsun/pull/260))
-- `redsun` requires `ophyd-async>=0.21.4`. ([#271](https://github.com/redsun-acquisition/redsun/pull/271))
 - A session closes the boxes every `redsun.device.sharedbox.BoxDeviceConnector` attached when it shuts down, so a read, a write or a command on the device afterwards raises `sharedbox.BoxClosedError`. ([#275](https://github.com/redsun-acquisition/redsun/pull/275))
 - A write through `redsun.device.sharedbox.BoxDeviceConnector` that another device or process overtakes before the service serves it raises `redsun.device.sharedbox.BoxPutError` with "superseded by another writer". ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
 - `redsun.services.sharedbox.BoxTransport` serves attributes and commands whose names contain `__`, and stores an array in the shape it was written with, up to its declared maximum. ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
