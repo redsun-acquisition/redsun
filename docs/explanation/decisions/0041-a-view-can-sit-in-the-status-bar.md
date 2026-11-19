@@ -51,7 +51,7 @@ asking for it sit in the order they are declared, followed by what the
 `configure_main_view` hook adds and, last, the button listing the
 components that failed.
 
-The placement has no fields. The options weighed were the following.
+The placement has no fields. These options were weighed and left out:
 
 - A stretch factor, so a view could take the width the status bar has
   spare. No view asked for it, and the spare width is where the status bar
