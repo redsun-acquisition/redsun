@@ -350,6 +350,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/release_notes.py extract "${GITHUB_REF_NAME#v}" > notes.md
+          # GitHub picks the previous release to compare with; if it cannot
+          # answer, the notes are the section alone
+          if compare=$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+              -f tag_name="$GITHUB_REF_NAME" --jq .body | grep '^\*\*Full Changelog\*\*'); then
+            printf '\n%s\n' "$compare" >> notes.md
+          fi
           # a release published from the interface already exists; a tag pushed
           # from a clone has none yet
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
