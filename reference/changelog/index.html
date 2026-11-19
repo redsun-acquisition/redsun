@@ -7089,7 +7089,6 @@ Releases up to 0.13.2 are in the <a href="../previous-changelog/">previous chang
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>SessionPathProvider.reset_plan</code> reads the folder of an earlier day only the first time it finds it, then reads only today's folder and date folders it has not seen. (<a href="https://github.com/redsun-acquisition/redsun/pull/260">#260</a>)</li>
-<li><code>redsun</code> requires <code>ophyd-async&gt;=0.21.4</code>. (<a href="https://github.com/redsun-acquisition/redsun/pull/271">#271</a>)</li>
 <li>A session closes the boxes every <code>redsun.device.sharedbox.BoxDeviceConnector</code> attached when it shuts down, so a read, a write or a command on the device afterwards raises <code>sharedbox.BoxClosedError</code>. (<a href="https://github.com/redsun-acquisition/redsun/pull/275">#275</a>)</li>
 <li>A write through <code>redsun.device.sharedbox.BoxDeviceConnector</code> that another device or process overtakes before the service serves it raises <code>redsun.device.sharedbox.BoxPutError</code> with "superseded by another writer". (<a href="https://github.com/redsun-acquisition/redsun/pull/276">#276</a>)</li>
 <li><code>redsun.services.sharedbox.BoxTransport</code> serves attributes and commands whose names contain <code>__</code>, and stores an array in the shape it was written with, up to its declared maximum. (<a href="https://github.com/redsun-acquisition/redsun/pull/276">#276</a>)</li>
