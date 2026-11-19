@@ -3559,6 +3559,8 @@
       
         
       
+        
+      
     
     
     
@@ -4682,6 +4684,33 @@
     
   
   40. A view has a title apart from its name
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0041-a-view-can-sit-in-the-status-bar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  41. A view can sit in the status bar
 
     
   </span>
@@ -6057,6 +6086,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.qt.StatusBarItem" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StatusBarItem
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.qt.attach" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7382,6 +7422,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.qt.StatusBarItem" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StatusBarItem
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.qt.attach" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8593,7 +8644,7 @@ with its group, <code>{menu: &lt;name&gt;}</code> an entry in that menu and
 
     <div class="doc doc-contents ">
 
-        <p>Return <code>center</code> for <code>Central</code>, a dock's edge and group, and <code>None</code> for a menu or toolbar item.</p>
+        <p>Return <code>center</code> for <code>Central</code>, a dock's edge and group, and <code>None</code> for a menu, toolbar or status bar item.</p>
 
 
     </div>
@@ -9243,6 +9294,66 @@ said three ways.</p>
     </div>
 
 </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="redsun.qt.StatusBarItem" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">StatusBarItem</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#redsun.qt.StatusBarItem" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">StatusBarItem</span><span class="p">()</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Placement&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;redsun.view.Placement&lt;/code&gt;)" href="../view/#redsun.Placement">Placement</a></code></p>
+
+
+
+        <p>A widget kept at the right of the status bar, in declaration order.</p>
+<p>The widget keeps the width its size hint gives it, so a view whose text
+changes length sets its own width.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
 
 
 
