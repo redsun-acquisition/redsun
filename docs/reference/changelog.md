@@ -17,6 +17,67 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.18.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.0) - 19-11-2026
+
+### Breaking
+
+- `redsun.services.sharedbox.BoxTransport` serves each attribute and command as one field of its controller's box, and `redsun.device.sharedbox.BoxDeviceConnector` reads that layout, so a service and a session of different `redsun` releases refuse each other's boxes with `sharedbox.SchemaMismatchError`. Upgrade both together. ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
+- A view whose constructor takes a `title` keyword is refused, a view declaration reserving `title` for the session; rename the keyword. A presenter or device given `title` in its declaration or session-file entry is refused, where before the keyword reached its constructor. ([#277](https://github.com/redsun-acquisition/redsun/pull/277))
+
+### Added
+
+- `redsun.compute` runs a component's calls on threads the session shares between its components. A component asks for a `ThreadExecutor` in its constructor or its `setup`, and `submit` returns a `Future` whose `then` hands the result to the main thread of a Qt session. The module also exports `ThreadPool`, `ThreadPoolSettings`, `BrokenPool`, `OwnerUsage`, `Limits`, `Preset` and `ComputeSettings`. `Session.compute` and the `compute` section of a session file choose how the cores are split, `Session.pool_settings` reports the result, `Frontend.results_thread` names the thread results are handed to, and the `inline_threads` fixture of `redsun.testing` runs each call in the test's thread. `redsun.injection.Registry` gains `register_resource`, which registers a value made on its first request, and `close`, which tears down the values made. `redsun` now depends on `threadpoolctl`. ([#263](https://github.com/redsun-acquisition/redsun/pull/263))
+
+  ```python
+  class MyController:
+      def __init__(self, name: str, executor: ThreadExecutor) -> None:
+          self._executor = executor
+
+      def process(self, frames: list[np.ndarray]) -> None:
+          self._executor.submit(median_of, frames).then(self.sig_median.emit)
+  ```
+- `redsun.compute` runs a component's calls in worker processes. A component asks for a `ProcessExecutor` in its constructor or its `setup` and gets a `ProcessPool` of its own, which holds a `concurrent.futures.ProcessPoolExecutor` started with `spawn`. When a worker dies, the component's unfinished calls fail with `WorkerCrashed` and the pool starts new workers. The module also exports `ProcessPoolSettings` and `Priority`, and `OwnerUsage` gains `crashed`. The `compute` section of a session file gains `processes`, the number of workers of each pool, and `priority`, the priority of the workers (`low`, `normal` or `high`); a presenter's or view's entry gains `workers`, the number of workers of its own pool. The `inline_processes` fixture of `redsun.testing` runs each call in the test's thread after a pickle round trip. `redsun.log.service_of` returns `workers.<owner>` for a record of a worker process. ([#267](https://github.com/redsun-acquisition/redsun/pull/267))
+
+  ```python
+  class MyController:
+      def __init__(self, name: str, executor: ProcessExecutor) -> None:
+          self._executor = executor
+
+      def process(self, frames: list[np.ndarray]) -> None:
+          self._executor.submit(fit, frames).then(self.sig_fit.emit)
+  ```
+- `redsun.device.sharedbox.BoxDeviceConnector.close` closes the boxes the device attached; connecting it again with `force_reconnect=True` attaches them anew. ([#275](https://github.com/redsun-acquisition/redsun/pull/275))
+- `redsun.device.sharedbox.ServiceExitedError`, raised by a read, a write or a command on a device whose box service has stopped. ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
+- A view takes a `title`, the text the window shows for it in place of its name: a class attribute, a `redsun.Declare` keyword or a `title` key of its session-file entry. `redsun.qt.attach` takes the titles as its `titles` keyword. ([#277](https://github.com/redsun-acquisition/redsun/pull/277))
+
+  ```python
+  class MyView(QWidget):
+      placement: Placement = Dock("left")
+      title = "Commands"
+  ```
+
+### Changed
+
+- `SessionPathProvider.reset_plan` reads the folder of an earlier day only the first time it finds it, then reads only today's folder and date folders it has not seen. ([#260](https://github.com/redsun-acquisition/redsun/pull/260))
+- `redsun` requires `ophyd-async>=0.21.4`. ([#271](https://github.com/redsun-acquisition/redsun/pull/271))
+- A session closes the boxes every `redsun.device.sharedbox.BoxDeviceConnector` attached when it shuts down, so a read, a write or a command on the device afterwards raises `sharedbox.BoxClosedError`. ([#275](https://github.com/redsun-acquisition/redsun/pull/275))
+- A write through `redsun.device.sharedbox.BoxDeviceConnector` that another device or process overtakes before the service serves it raises `redsun.device.sharedbox.BoxPutError` with "superseded by another writer". ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
+- `redsun.services.sharedbox.BoxTransport` serves attributes and commands whose names contain `__`, and stores an array in the shape it was written with, up to its declared maximum. ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
+- A reading from `redsun.device.sharedbox.BoxDeviceConnector` carries the time the service published the value. The `sharedbox` extra requires `sharedbox>=0.10.0`. ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
+- `redsun` requires `ophyd-async>=0.21.5`, `platformdirs>=4.14.7`, `psygnal>=0.17.0`, `pydantic>=2.14.3` and `threadpoolctl>=3.8.0`. Its Qt extras require `superqt>=0.9.2`, its `testing` extra requires `pytest>=9.2.0`, and its `profile` extra requires `py-spy>=0.4.3`. ([#283](https://github.com/redsun-acquisition/redsun/pull/283))
+
+### Fixed
+
+- `AcquisitionPresenter.sig_plan_failed` carries the message of the exception a device raised when its status fails, instead of the text of `bluesky`'s `FailedStatus`. ([#265](https://github.com/redsun-acquisition/redsun/pull/265))
+- `redsun.services.sharedbox.BoxTransport` logs a warning naming the field when it cuts a string to the byte capacity of its field in the box. ([#272](https://github.com/redsun-acquisition/redsun/pull/272))
+- `redsun.presenter.AcquisitionPresenter.launch` reports a plan it does not hold on `sig_plan_failed` instead of raising `KeyError`. ([#273](https://github.com/redsun-acquisition/redsun/pull/273))
+- `redsun.device.sharedbox.BoxDeviceConnector` with `declared_only=True` attaches only the boxes of the children the device declares, instead of every box the service serves. ([#275](https://github.com/redsun-acquisition/redsun/pull/275))
+- `locate()` on a signal of `redsun.device.sharedbox.BoxDeviceConnector` returns the setpoint and the readback the service published, instead of `None`. ([#276](https://github.com/redsun-acquisition/redsun/pull/276))
+
+### Security
+
+- `redsun`'s `tiled` extra requires `tiled>=0.2.22`, the release with `tiled`'s security fixes, and `ome-tiled>=0.2.2`. ([#283](https://github.com/redsun-acquisition/redsun/pull/283))
+
 ## [0.17.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.17.0) - 03-11-2026
 
 ### Breaking
