@@ -145,6 +145,7 @@ __all__ = [
     "Qt",
     "QtHook",
     "QtSession",
+    "StatusBarItem",
     "ToolBarItem",
     "attach",
 ]
@@ -229,6 +230,15 @@ class ToolBarItem(Placement):
     """Name of the toolbar."""
 
 
+@dataclass(frozen=True)
+class StatusBarItem(Placement):
+    """A widget kept at the right of the status bar, in declaration order.
+
+    The widget keeps the width its size hint gives it, so a view whose text
+    changes length sets its own width.
+    """
+
+
 class QtHook(StrEnum):
     """The points a Qt session calls a hook at.
 
@@ -261,6 +271,7 @@ class Qt(Frontend):
         Dock: QWidget,
         MenuItem: QAction,
         ToolBarItem: QAction,
+        StatusBarItem: QWidget,
     }
     regions: ClassVar[Mapping[str, type[Row | Column | Tabs]]] = {
         "center": Tabs,
@@ -318,6 +329,8 @@ class Qt(Frontend):
         match value:
             case "central":
                 return Central()
+            case "status_bar":
+                return StatusBarItem()
             case str(edge) if is_area(edge):
                 return Dock(edge)
             case {"dock": str(edge), "group": str(group), **rest} if (
@@ -333,12 +346,12 @@ class Qt(Frontend):
         raise ValueError(
             f"placement {value!r} names nothing Qt attaches; give one of "
             "left, right, top, bottom, central, {dock: <edge>, group: <name>}, "
-            "{menu: <name>} or {toolbar: <name>}"
+            "status_bar, {menu: <name>} or {toolbar: <name>}"
         )
 
     @classmethod
     def region_of(cls, placement: Placement) -> tuple[str, str | None] | None:
-        """Return `center` for `Central`, a dock's edge and group, and `None` for a menu or toolbar item."""
+        """Return `center` for `Central`, a dock's edge and group, and `None` for a menu, toolbar or status bar item."""
         match placement:
             case Central():
                 return "center", None
@@ -1610,6 +1623,10 @@ def attach(
                 add_menu_item(window, named(name, view, QAction), item)
             case ToolBarItem() as item:
                 add_toolbar_item(window, named(name, view, QAction), item)
+            case StatusBarItem():
+                bar = window.statusBar()
+                if bar is not None:
+                    bar.addPermanentWidget(named(name, view, QWidget))
 
 
 def refuse_mismatch(layout: WindowLayout, asked: Mapping[str, Placement]) -> None:
