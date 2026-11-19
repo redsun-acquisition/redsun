@@ -562,7 +562,7 @@ class Session(BuildableSession):
         the component it serves.
 
         Empty before the build's registry step, after `shutdown`, and for a
-        session no component of which asks for an executor.
+        session whose components ask for no executor.
         """
         return {} if self._compute is None else dict(self._compute.settings)
 

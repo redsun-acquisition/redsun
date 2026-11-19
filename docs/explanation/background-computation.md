@@ -242,5 +242,3 @@ Linux. When that is refused, the worker logs a warning and runs at normal
 priority instead of stopping the build. Priority is the only control
 `redsun` takes over where work runs: no thread or process is tied to
 particular cores.
-
-A later release adds pools for NVIDIA GPUs.

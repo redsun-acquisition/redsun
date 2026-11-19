@@ -71,9 +71,9 @@ class ShortcutsDialog(QDialog):
     """Lists the keys a session binds, those of the whole window then each view's own, and edits them.
 
     Double-click a key cell and press the new key; Backspace or Delete clears
-    it, and Escape leaves it as it was. A key another command holds in the same place is moved after the user
-    agrees. *change* receives the new keys by command and raises `ValueError`
-    for a key it refuses; *reset* forgets every change. *titles* gives, by
+    it, and Escape leaves it as it was. A key another command holds in the
+    same place is moved after the user agrees. *change* receives the new keys
+    by command and raises `ValueError` for a key it refuses; *reset* forgets every change. *titles* gives, by
     name, the title the list shows for a view; any other view shows its name.
     """
 

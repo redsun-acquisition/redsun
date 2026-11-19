@@ -172,7 +172,7 @@ class Pool(Executor, ABC):
     @property
     @abstractmethod
     def pool_size(self) -> int:
-        """Threads, processes or devices."""
+        """Workers the pool runs calls on."""
 
     def _start(self) -> None:
         """Make the workers."""

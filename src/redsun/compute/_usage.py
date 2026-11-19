@@ -154,7 +154,7 @@ def listed(fn: Callable[..., Any]) -> Generator[None, None, None]:
 
 @final
 class Watchdog:
-    """Logs the pool calls running while its thread woke later than a limit."""
+    """Logs the pool calls running when its thread wakes later than a limit."""
 
     def __init__(self, *, period: float = 0.05, limit: float = 0.2) -> None:
         self._period = period

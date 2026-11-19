@@ -143,9 +143,8 @@ class ProcessPool(Pool):
     be guarded by `if __name__ == "__main__":`. The workers' log records reach
     the session's log under *log_name*, from the level the `redsun` logger had
     when the pool started; a later change of that level does not reach the
-    workers. Shutting the pool down waits for
-    running calls at most *stop_timeout* seconds, then ends the workers
-    still running, which fails their calls with `BrokenPool`.
+    workers. Shutting the pool down waits for running calls at most
+    *stop_timeout* seconds, then ends the workers still running, which fails their calls with `BrokenPool`.
 
     A worker that ends while calls are unfinished fails every one of them
     with `WorkerCrashed` once the pool has started new workers. Replaced more

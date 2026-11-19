@@ -62,7 +62,7 @@ uv run python -c "import redsun; print(redsun.__version__)"
 The command prints the version you installed:
 
 ```text
-0.17.0
+0.18.0
 ```
 
 ## What you built
