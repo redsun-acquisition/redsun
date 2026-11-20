@@ -288,9 +288,12 @@ A constructor that takes `path_provider` gets the session's
 in one folder, named after the session, the day, the
 [data key](glossary.md#data-key) and the plan.
 [How to choose where acquisition files go](../how-to/choose-where-files-go.md)
-sets the folder and the names, and
+sets the folder and the names. The device writes the data, not `redsun`,
+because its service already chose the format and holds the buffers; passing
+frames back through the session would cost a copy and a format the service
+didn't choose.
 [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) records
-why the device writes the data and not `redsun`.
+the decision.
 
 ### Letting go of hardware
 
