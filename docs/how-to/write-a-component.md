@@ -88,13 +88,46 @@ a class attribute without an annotation. A value that `setup` assigns
 shouldn't be a field: use `field(init=False)` on a dataclass, or a private
 attribute on a model.
 
-!!! warning "A class with `__slots__` and a signal is left out"
+!!! warning "A class with `__slots__` needs `__weakref__` to own a signal"
 
-    `psygnal` refers to the component weakly, so a class with `__slots__`
-    that owns a signal needs `__weakref__` among its slots, or the component
-    is never freed. The session leaves such a class out, and the error names
-    the fix: add `__weakref__` to the slots, or pass `weakref_slot=True` to a
-    dataclass.
+    `psygnal` refers to the component that owns a signal weakly, so that the
+    component can still be freed. A class with `__slots__` accepts no weak
+    reference unless `__weakref__` is one of its slots, and `psygnal` then
+    falls back to a strong reference: the component, and everything it holds,
+    stays in memory until the program ends. The session refuses such a class,
+    leaves it out, and logs the reason:
+
+    ```text
+    Failed to build presenter 'ctrl': MyApp.ctrl owns a signal, but
+    StageController has '__slots__' without '__weakref__', so the signal would
+    keep every instance alive. Add '__weakref__' to its slots, or
+    'weakref_slot=True' to its dataclass decorator.
+    ```
+
+    On a class that declares its slots, add `__weakref__` to them:
+
+    ```python
+    class StageController:
+        __slots__ = ("__weakref__", "name", "step")
+        sig_moved = Signal(float)
+
+        def __init__(self, name: str, *, step: float = 1.0) -> None:
+            self.name = name
+            self.step = step
+    ```
+
+    On a dataclass with `slots=True`, pass `weakref_slot=True` as well:
+
+    ```python
+    @dataclass(slots=True, weakref_slot=True)
+    class StageController:
+        name: str
+        step: float = 1.0
+        sig_moved: ClassVar[Signal] = Signal(float)
+    ```
+
+    A `pydantic` model needs nothing, because it already accepts weak
+    references.
 
 A Qt view can't be a `pydantic` model or a dataclass, because Qt needs its own
 `QWidget.__init__` to run.
