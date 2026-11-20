@@ -827,6 +827,12 @@ class WeaklySlottedSignal:
         self.name = name
 
 
+@dataclass(slots=True)
+class SlottedDataclassSignal:
+    name: str
+    sig_done: ClassVar[Signal] = Signal(str)
+
+
 @dataclass(slots=True, weakref_slot=True)
 class WeakDataclassSignal:
     name: str
@@ -859,6 +865,10 @@ class SlottedSignalApp(Session):
 
 class WeaklySlottedSignalApp(Session):
     ctrl: AsPresenter[WeaklySlottedSignal]
+
+
+class SlottedDataclassSignalApp(Session):
+    ctrl: AsPresenter[SlottedDataclassSignal]
 
 
 class WeakDataclassSignalApp(Session):
@@ -1792,10 +1802,17 @@ def test_the_name_may_follow_inherited_fields() -> None:
     [
         (SlottedSignalApp, False),
         (WeaklySlottedSignalApp, True),
+        (SlottedDataclassSignalApp, False),
         (WeakDataclassSignalApp, True),
         (SignalModelApp, True),
     ],
-    ids=["slots", "slots-with-weakref", "dataclass-weakref-slot", "pydantic"],
+    ids=[
+        "slots",
+        "slots-with-weakref",
+        "dataclass-slots",
+        "dataclass-weakref-slot",
+        "pydantic",
+    ],
 )
 def test_a_component_owning_a_signal_needs_a_weak_reference(
     app: type[Session],
