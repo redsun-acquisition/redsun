@@ -19,12 +19,9 @@ multidimensional acquisition, and the device emits `StreamResource` and
 `StreamDatum` documents pointing at it. Routing frames back through a sink
 costs a copy and a format the service did not choose.
 
-[redsun#116](https://github.com/redsun-acquisition/redsun/issues/116) tested
-that path and concluded, in its reporter's words, that "the rc0 release
-addresses the RedSun service-layer issue for my use case" and that no new
-`redsun` multidimensional storage API is wanted. Formats, OME-Zarr, OME-TIFF
-or a local one, are a service's decision, and a detector owning its store keeps
-buffers, completion and partial failure local to it.
+Formats, OME-Zarr, OME-TIFF or a local one, are a service's decision, and a
+detector owning its store keeps buffers, completion and partial failure local
+to it.
 
 ## Decision
 
