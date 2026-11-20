@@ -519,6 +519,11 @@ what its reader wants:
 Write each fact once, on the page where it belongs, and link to it from the
 others. A wrong API page is fixed in its docstring, not in a `.md` file.
 
+A new page takes two more edits besides its file: an entry in the `nav` list
+of `zensical.toml`, in the order readers should meet it, and a line in its
+section's `index.md`, under the group it belongs to. Start the page with the
+`icon` front matter the other pages of its section use.
+
 ### Headings, terms and wording
 
 Give each section a short heading that names its topic, such as "Devices and
