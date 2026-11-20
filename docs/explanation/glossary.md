@@ -185,6 +185,14 @@ offers values by name, and a program that can reach it reads them and, where
 the server allows, sets them. See
 [epics-controls.org](https://epics-controls.org/).
 
+### Entry point
+
+An entry point is a name an installed Python package registers in its
+metadata, under a group, so another program can find it without importing
+the package first. `redsun` finds a plugin's [manifest](#manifest) through
+the `redsun.plugins` group and a [frontend](#frontend) through
+`redsun.frontends`.
+
 ### Executor
 
 An executor is a component's own handle on a [pool](#pool), which it asks for
@@ -199,6 +207,12 @@ and the session shuts it down with the component.
 A frontend is what shows a session on screen, such as the Qt one that
 `redsun` ships. A session file names it by its registered name (`frontend: qt`), and a
 package can register its own.
+
+### Future
+
+A future is an object standing for a result that isn't ready yet. Calling the
+[`RunEngine`](#runengine) with a plan returns one at once, and it is done when
+the plan ends, so a presenter can start a plan and carry on.
 
 ### Hint
 
@@ -384,7 +398,9 @@ carries structured values, such as an image together with its size.
 ### Qt binding
 
 A Qt binding is the Python package through which Qt is used: `pyqt6` or
-`pyside6`. A session with a window needs one of the two.
+`pyside6`. A session with a window needs one of the two. `redsun` reaches
+either through `qtpy`, which imports the binding that is installed, or the one
+the `QT_API` environment variable names, so its code names neither.
 
 ### Readback
 
@@ -494,6 +510,13 @@ to undo that once the plan ends. A plan stages each device it uses before the
 first reading and unstages it after the last. The plans of `bluesky` stage
 the device at the top of the tree each device belongs to, not the device
 itself. The term comes from [`bluesky`](#bluesky).
+
+### Store
+
+A store is the folder or file a device writes a run's data into, such as a
+Zarr store, named by the URI of its [`StreamResource`](#streamresource)
+documents. A [derived product](#derived-product) is written against the store
+of the data it comes from.
 
 ### StreamDatum
 

@@ -11,3 +11,4 @@
 *[GIL]: Global interpreter lock. The lock that lets one thread at a time run Python code.
 *[BLAS]: Basic Linear Algebra Subprograms. The library numerical code runs its matrix arithmetic on.
 *[OpenMP]: A standard that compiled code uses to spread a loop over several threads.
+*[YAML]: A plain-text format for configuration, which session files and manifests are written in.
