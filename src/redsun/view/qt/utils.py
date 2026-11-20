@@ -65,12 +65,10 @@ class ActionButton(QtW.QPushButton):
         The button's action.
     parent
         The parent widget.
-
-    Attributes
-    ----------
-    action : PlanAction
-        The button's action.
     """
+
+    action: PlanAction
+    """The button's action."""
 
     def __init__(self, action: PlanAction, parent: QtW.QWidget | None = None) -> None:
         self.name_capital = action.name.capitalize()

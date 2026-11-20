@@ -98,7 +98,7 @@ class Service:
     launched as `python -m <module> <args>`; one without is attached to, runs
     elsewhere, and `start` and `stop` do nothing. Each output line is logged
     under `redsun.service.<name>`: as the record it describes if it is a JSON
-    log record, at `DEBUG` otherwise; see `service_record`.
+    log record or a `pvxs` log line, at `DEBUG` otherwise.
 
     Parameters
     ----------
@@ -227,8 +227,8 @@ class Service:
         level this session records at through the functions of
         `redsun.services`, so a module serving several sessions needs no
         arguments for them. The process
-        writes UTF-8, and each output line is logged as `service_record`
-        rebuilds it. An attached service only adds its address to this
+        writes UTF-8, and each output line is logged under
+        `redsun.service.<name>`. An attached service only adds its address to this
         process's list, if it names one.
 
         Raises

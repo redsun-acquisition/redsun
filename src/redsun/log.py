@@ -179,6 +179,7 @@ class BufferHandler(logging.Handler):
     """
 
     sig_record = Signal(logging.LogRecord)
+    """Emits each record the handler receives."""
 
     def __init__(
         self,
