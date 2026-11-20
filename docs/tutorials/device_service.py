@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping  # noqa: TC003
+from collections.abc import Iterator, Mapping
 from functools import cached_property
 from typing import Annotated, Any, Protocol, runtime_checkable
 from urllib.parse import urlsplit
@@ -13,7 +13,7 @@ import bluesky.plans as bp
 import h5py
 import numpy as np
 from bluesky.protocols import Readable, Reading, Triggerable
-from bluesky.utils import MsgGenerator  # noqa: TC002
+from bluesky.utils import MsgGenerator
 from event_model import DocumentRouter, StreamResource
 from ophyd_async.core import (
     MovableLogic,
@@ -23,7 +23,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 from ophyd_async.epics.core import EpicsDevice, PvSuffix
-from ophyd_async.sim import SimBlobDetector  # noqa: TC002
+from ophyd_async.sim import SimBlobDetector
 from psygnal import Signal
 from qtpy.QtGui import QImage, QPixmap
 from qtpy.QtWidgets import (

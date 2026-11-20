@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Annotated, Any, ClassVar

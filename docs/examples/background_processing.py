@@ -10,7 +10,7 @@ from psygnal import Signal
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from redsun import AsPresenter, AsView, Placement, slot
-from redsun.compute import ThreadExecutor  # noqa: TC001
+from redsun.compute import ThreadExecutor
 from redsun.log import Loggable
 from redsun.qt import Dock, QtSession
 

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from functools import cached_property
 
-from bluesky.protocols import Reading  # noqa: TC002
+from bluesky.protocols import Reading
 from ophyd_async.core import (
     MovableLogic,
     StandardMovable,
