@@ -58,7 +58,9 @@ this stage keeps its position in memory. Add it below the imports:
 [`ophyd-async`](../explanation/glossary.md#ophyd-async), the library `redsun`
 uses for devices. `soft_signal_rw` makes a
 [device signal](../explanation/glossary.md#device-signal) that keeps its value
-in memory.
+in memory. A signal made inside `add_children_as_readables` is part of what
+the device reports when it's read, and `super().__init__` hands the device its
+name, which `ophyd-async` also uses to name the signals.
 
 With `StandardReadable` alone, the stage would only be a value you can read and
 write. [`StandardMovable`][ophyd_async.core.StandardMovable] turns it into

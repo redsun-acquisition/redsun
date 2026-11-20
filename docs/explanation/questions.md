@@ -47,8 +47,11 @@ class SessionPresenter:
 Whatever the session file puts in the session, `reset_all` resets all of it,
 and nobody has to keep a list up to date.
 
-[ADR 17](decisions/0017-questions-read-from-the-annotation.md) records why the
-annotation carries the question.
+The annotation alone tells a question from a value: the session's registry
+holds only concrete classes, so a parameter typed by a protocol can only be a
+question, and the shape of its annotation says how many answers it takes.
+[ADR 17](decisions/0017-questions-read-from-the-annotation.md) records the
+markers this replaced.
 
 ## How a component matches
 

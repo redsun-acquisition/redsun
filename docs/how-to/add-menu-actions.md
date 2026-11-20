@@ -4,9 +4,9 @@ icon: lucide/menu
 
 # How to add menu actions to a Qt session
 
-A Qt session can offer commands in its menus and toolbars without a view for
-each, such as "turn on verbose logging" or "open the data folder". You list
-them in the `actions` section of the session file.
+A Qt session can offer commands in its menus without a view for each, such
+as "turn on verbose logging" or "open the data folder". You list them in the
+`actions` section of the session file.
 
 ## Declare an action
 

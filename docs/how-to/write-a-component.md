@@ -58,6 +58,80 @@ class StagePresenter:
 - `nudge` is a [slot](../explanation/glossary.md#slot), so the session can
   connect a signal to it. It may be `async`.
 
+### A presenter as a dataclass or a `pydantic` model
+
+A presenter can also be a dataclass or a `pydantic` model, since `name` may be
+anywhere in the signature:
+
+```python
+from dataclasses import dataclass
+from typing import ClassVar
+
+from psygnal import Signal
+from pydantic import BaseModel
+
+
+@dataclass
+class DataclassController:
+    name: str
+    step: float = 1.0
+
+
+class ModelController(BaseModel):
+    name: str
+    step: float = 1.0
+    sig_moved: ClassVar[Signal] = Signal(str)
+```
+
+On a `pydantic` model, a signal must be a `ClassVar`, since `pydantic` refuses
+a class attribute without an annotation. A value that `setup` assigns
+shouldn't be a field: use `field(init=False)` on a dataclass, or a private
+attribute on a model.
+
+!!! warning "A class with `__slots__` needs `__weakref__` to own a signal"
+
+    `psygnal` refers to the component that owns a signal weakly, so that the
+    component can still be freed. A class with `__slots__` accepts no weak
+    reference unless `__weakref__` is one of its slots, and `psygnal` then
+    falls back to a strong reference: the component, and everything it holds,
+    stays in memory until the program ends. The session refuses such a class,
+    leaves it out, and logs the reason:
+
+    ```text
+    Failed to build presenter 'ctrl': MyApp.ctrl owns a signal, but
+    StageController has '__slots__' without '__weakref__', so the signal would
+    keep every instance alive. Add '__weakref__' to its slots, or
+    'weakref_slot=True' to its dataclass decorator.
+    ```
+
+    On a class that declares its slots, add `__weakref__` to them:
+
+    ```python
+    class StageController:
+        __slots__ = ("__weakref__", "name", "step")
+        sig_moved = Signal(float)
+
+        def __init__(self, name: str, *, step: float = 1.0) -> None:
+            self.name = name
+            self.step = step
+    ```
+
+    On a dataclass with `slots=True`, pass `weakref_slot=True` as well:
+
+    ```python
+    @dataclass(slots=True, weakref_slot=True)
+    class StageController:
+        name: str
+        step: float = 1.0
+        sig_moved: ClassVar[Signal] = Signal(float)
+    ```
+
+    A `pydantic` model needs nothing, because it already accepts weak
+    references.
+
+A Qt view can't be a `pydantic` model or a dataclass, because Qt needs its own
+`QWidget.__init__` to run.
+
 ## A view
 
 A Qt view is a `QWidget` with a
@@ -163,6 +237,21 @@ under and the name a session file wires it by. The attribute you declared it
 under still holds it, and its arguments are still read from the entry named
 after that attribute, here `stage_ctrl`.
 
+### Two of the same class
+
+Two stages, or two copies of one plot, are normal, and each declaration makes
+its own component:
+
+```python
+class MyApp(QtSession):
+    stage_x: AsDevice[MyStage]
+    stage_y: AsDevice[MyStage]
+```
+
+Your code reaches each one by its name, as `self.stage_x`. A component that
+needs every stage, however many there are, asks the session by what they can
+do: see [Questions](../explanation/questions.md).
+
 ## Use another component
 
 A constructor runs before the other components exist, so you ask for another
@@ -196,8 +285,13 @@ down:
 
 ```python
 class StagePresenter:
+    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
+        self.name = name
+        self.stage = devices["stage"]
+        self.moves = open("moves.log", "a")
+
     def shutdown(self) -> None:
-        self._task.cancel()
+        self.moves.close()
 ```
 
 The session waits up to 5 seconds for an `async` `shutdown`. If it hasn't

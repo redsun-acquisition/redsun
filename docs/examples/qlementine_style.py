@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from functools import cached_property
 from typing import Any, ClassVar
 
@@ -16,10 +16,10 @@ from ophyd_async.core import (
 
 from redsun import AsDevice, AsHook, AsPresenter, AsView, Link, links_between
 from redsun.engine import RunEngine
-from redsun.presenter import PositionerPresenter  # noqa: TC001
+from redsun.presenter import PositionerPresenter
 from redsun.qt import QtSession
-from redsun.qt.styles.qlementine import QlementineStyle  # noqa: TC001
-from redsun.view.qt.builtins import PositionerView  # noqa: TC001
+from redsun.qt.styles.qlementine import QlementineStyle
+from redsun.view.qt.builtins import PositionerView
 
 
 class MyAxis(StandardReadable, StandardMovable[float]):

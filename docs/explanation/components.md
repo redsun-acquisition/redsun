@@ -95,6 +95,11 @@ and the default. What the session holds by type includes the
 and a Qt view also gets the main window as its `parent`
 ([Frontends](frontends.md#the-qt-frontend)).
 
+Because every argument is passed by keyword, a component can also be a
+dataclass or a `pydantic` model, as
+[How to write a component](../how-to/write-a-component.md#a-presenter-as-a-dataclass-or-a-pydantic-model)
+shows.
+
 !!! warning "The session can't see types imported under `if TYPE_CHECKING:`"
 
     The session reads the annotations while the program runs, when a type
@@ -288,13 +293,25 @@ A constructor that takes `path_provider` gets the session's
 in one folder, named after the session, the day, the
 [data key](glossary.md#data-key) and the plan.
 [How to choose where acquisition files go](../how-to/choose-where-files-go.md)
-sets the folder and the names, and
+sets the folder and the names. The device writes the data, not `redsun`,
+because its service already chose the format and holds the buffers; passing
+frames back through the session would cost a copy and a format the service
+didn't choose.
 [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) records
-why the device writes the data and not `redsun`.
+the decision.
 
-### Letting go of hardware
+Everything a session leaves on disk has one owner:
 
-A service holding hardware, such as a camera, can let go of it and keep
+| What | Written by | Described in |
+| --- | --- | --- |
+| a run's data | the device or its service, in a format it chooses and names in the `mimetype` of its [`StreamResource`](glossary.md#streamresource) documents | [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) |
+| the folder and the file names | the session's path provider | [How to choose where acquisition files go](../how-to/choose-where-files-go.md) |
+| a product computed from a run | a component, through a [`Writer`][redsun.writers.Writer] | [How derived products are stored](derived-products.md) |
+| a catalog entry for a run | a component that keeps a catalog | [How to keep a catalog of runs](../how-to/keep-a-catalog.md) |
+
+### Releasing hardware resources
+
+A service holding hardware, such as a camera, can release it and keep
 running if it offers a command for that as a
 [process variable](glossary.md#process-variable). When the user asks, your
 presenter triggers that command through the service's devices, which stay
@@ -382,52 +399,3 @@ use its devices and a device can still reach its service.
 [Shutting down](session.md#shutting-down) shows the whole order. A device that
 didn't connect is left out of the session and never shut down, since it would
 write to hardware that never answered.
-
-## Dataclasses and pydantic models
-
-A presenter can be a dataclass or a `pydantic` model, because the session
-passes every argument by keyword, and `name` may be anywhere in the signature:
-
-```python
-@dataclass
-class DataclassController:
-    name: str
-    step: float = 1.0
-
-
-class ModelController(BaseModel):
-    name: str
-    step: float = 1.0
-    sig_moved: ClassVar[Signal] = Signal(str)
-```
-
-On a `pydantic` model, a signal must be a `ClassVar`, since `pydantic` refuses
-a class attribute without an annotation. A value that `setup` assigns
-shouldn't be a field: use `field(init=False)` on a dataclass, or a private
-attribute on a model.
-
-!!! warning "A class with `__slots__` and a signal is left out"
-
-    `psygnal` refers to the component weakly, so a class with `__slots__`
-    that owns a signal needs `__weakref__` among its slots, or the component
-    is never freed. The session leaves such a class out, and the error names
-    the fix: add `__weakref__` to the slots, or pass `weakref_slot=True` to a
-    dataclass.
-
-A Qt view can't be a `pydantic` model or a dataclass, because Qt needs its own
-`QWidget.__init__` to run.
-
-## Two components of the same class
-
-Two stages, or two copies of one plot, are normal, and each declaration makes
-its own component:
-
-```python
-class MyApp(QtSession):
-    stage_x: AsDevice[MyStage]
-    stage_y: AsDevice[MyStage]
-```
-
-Your code reaches each one by its name, as `self.stage_x`. A component that
-needs every stage, however many there are, asks the session by what they can
-do: see [Questions](questions.md).

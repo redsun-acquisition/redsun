@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator, Mapping  # noqa: TC003
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import ClassVar
 
 import psygnal
-from bluesky.protocols import Reading  # noqa: TC002
+from bluesky.protocols import Reading
 from ophyd_async.core import StandardReadable, soft_signal_rw
 
 from redsun import AsDevice, AsView, Frontend, Link, Placement, Session, slot
-from redsun.ports import SlotThread  # noqa: TC001
+from redsun.ports import SlotThread
 
 
 # --8<-- [start:placement]

@@ -213,11 +213,21 @@ Tests marked `@pytest.mark.compose` talk to an
 `tests/compose/compose.yaml`. They're skipped unless `REDSUN_COMPOSE` is set,
 so the rest of the suite needs no container runtime. With Docker running:
 
-```bash
-docker compose -f tests/compose/compose.yaml up --detach --wait
-REDSUN_COMPOSE=1 uv run pytest -m compose
-docker compose -f tests/compose/compose.yaml down
-```
+=== "bash"
+
+    ```bash
+    docker compose -f tests/compose/compose.yaml up --detach --wait
+    REDSUN_COMPOSE=1 uv run pytest -m compose
+    docker compose -f tests/compose/compose.yaml down
+    ```
+
+=== "PowerShell"
+
+    ```powershell
+    docker compose -f tests/compose/compose.yaml up --detach --wait
+    $env:REDSUN_COMPOSE = "1"; uv run pytest -m compose; Remove-Item Env:REDSUN_COMPOSE
+    docker compose -f tests/compose/compose.yaml down
+    ```
 
 The IOC listens on `127.0.0.1` port 5064, the default
 [Channel Access](../explanation/glossary.md#channel-access) port, so stop any
@@ -508,6 +518,11 @@ what its reader wants:
 
 Write each fact once, on the page where it belongs, and link to it from the
 others. A wrong API page is fixed in its docstring, not in a `.md` file.
+
+A new page takes two more edits besides its file: an entry in the `nav` list
+of `zensical.toml`, in the order readers should meet it, and a line in its
+section's `index.md`, under the group it belongs to. Start the page with the
+`icon` front matter the other pages of its section use.
 
 ### Headings, terms and wording
 

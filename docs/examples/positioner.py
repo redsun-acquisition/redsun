@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from functools import cached_property
 from typing import Any, ClassVar
 
@@ -14,10 +14,10 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsPresenter, AsStack, Link  # noqa: TC001
+from redsun import AsDevice, AsPresenter, AsStack, Link
 from redsun.engine import RunEngine
 from redsun.qt import QtSession
-from redsun.view.qt.builtins import PositionerStack  # noqa: TC001
+from redsun.view.qt.builtins import PositionerStack
 
 
 # --8<-- [start:device]

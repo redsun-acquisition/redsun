@@ -1519,7 +1519,7 @@ class Session(BuildableSession):
         Connections go first, so nothing is delivered to a component that is
         already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
-        An async `shutdown` still running after `SHUTDOWN_TIMEOUT` seconds is
+        An async `shutdown` still running after 5 seconds (`SHUTDOWN_TIMEOUT`) is
         cancelled and logged, and the rest go on. Calling it a second time, or
         on a session that was never built, runs nothing: a release is dropped
         as it runs. What the build made is forgotten, so the session can be
@@ -2340,8 +2340,8 @@ class Session(BuildableSession):
         """Connect every autoconnect device at once.
 
         To a simulated backend when the configuration sets `mock`, to what
-        the device names otherwise. A device not connected within
-        `CONNECT_TIMEOUT` is dropped and recorded as failed, like one that
+        the device names otherwise. A device not connected within 10 seconds
+        (`CONNECT_TIMEOUT`) is dropped and recorded as failed, like one that
         fails to build, and its `shutdown` is never called. One that
         connected has its `shutdown` registered as a release.
         """

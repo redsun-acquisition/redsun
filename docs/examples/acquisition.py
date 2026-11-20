@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping  # noqa: TC003
+from collections.abc import Mapping
 from functools import cached_property
 from typing import Any, ClassVar
 
 import bluesky.plan_stubs as bps
-from bluesky.protocols import Movable  # noqa: TC002
-from bluesky.utils import MsgGenerator  # noqa: TC002
+from bluesky.protocols import Movable
+from bluesky.utils import MsgGenerator
 from ophyd_async.core import (
     MovableLogic,
     StandardMovable,
@@ -16,9 +16,9 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsPresenter, AsStack, PlanEntry  # noqa: TC001
+from redsun import AsDevice, AsPresenter, AsStack, PlanEntry
 from redsun.qt import QtSession
-from redsun.view.qt.builtins import AcquisitionStack  # noqa: TC001
+from redsun.view.qt.builtins import AcquisitionStack
 
 
 class MyMotor(StandardReadable, StandardMovable[float]):

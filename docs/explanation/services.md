@@ -172,7 +172,8 @@ can change one side and keep the other:
 - A crashing vendor library takes down its service, not the session; the
   service's devices time out until it is back.
 - An [attached service](glossary.md#attached-service) can run on another
-  machine, since the devices need only its prefix.
+  machine: the devices need its prefix, and its `address` when the network
+  search wouldn't find it.
 
 A device that needs no hardware, such as the soft stage in the
 [tutorial](../tutorials/first-session.md), needs no service.
@@ -516,7 +517,7 @@ how a service writes records the session can read.
 - Restarting a crashed service.
 - Standby, a service releasing its hardware while it stays connected. For now
   the presenter that owns the devices does it, see
-  [Letting go of hardware](components.md#letting-go-of-hardware); the session
+  [Releasing hardware resources](components.md#releasing-hardware-resources); the session
   will take it over once `ophyd-async` can disconnect a device.
 - Launching a service in a container. An attached service covers one you start
   beside the session with `docker compose`.

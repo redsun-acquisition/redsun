@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from typing import Annotated
 
 from ophyd_async.core import NotConnectedError, StandardReadable

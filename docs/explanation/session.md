@@ -371,8 +371,11 @@ stops the build, and a [strict](glossary.md#strict-session) session stops
 whenever something is missing.
 [How to find out why a component is missing](../how-to/find-a-missing-component.md)
 shows how to read the summary and make a session strict.
+The session carries on because it runs against hardware that isn't always
+there: an unplugged instrument, or one panel that won't construct, shouldn't
+leave the user with no window at all.
 [ADR 11](decisions/0011-tolerating-a-component-that-fails-to-build.md) records
-why the session carries on.
+the decision.
 
 A component that shares nothing, asks for nothing and isn't wired to anything
 logs a warning. A shared value no component asks for is logged at debug level
