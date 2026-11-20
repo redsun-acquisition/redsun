@@ -295,6 +295,15 @@ didn't choose.
 [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) records
 the decision.
 
+Everything a session leaves on disk has one owner:
+
+| What | Written by | Described in |
+| --- | --- | --- |
+| a run's data | the device or its service, in a format it chooses and names in the `mimetype` of its [`StreamResource`](glossary.md#streamresource) documents | [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) |
+| the folder and the file names | the session's path provider | [How to choose where acquisition files go](../how-to/choose-where-files-go.md) |
+| a product computed from a run | a component, through a [`Writer`][redsun.writers.Writer] | [How derived products are stored](derived-products.md) |
+| a catalog entry for a run | a component that keeps a catalog | [How to keep a catalog of runs](../how-to/keep-a-catalog.md) |
+
 ### Letting go of hardware
 
 A service holding hardware, such as a camera, can let go of it and keep
