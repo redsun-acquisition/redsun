@@ -9,14 +9,21 @@ Each record states one decision about how `redsun` is built, in the format
 describes: status, context, decision, consequences. An accepted record is
 never edited; a later one replaces it.
 
+Records up to 17 were written before release 0.14 and use the names of that
+time: `AppContainer` and `QtAppContainer` are now `Session` and `QtSession`,
+`redsun.containers` and `redsun.virtual` became the session layer, and
+`redsun.experimental` was the session layer while it was being built.
+[How to migrate from 0.13](../../how-to/migrate-from-0.13.md) lists every
+renamed name.
+
 - [1. Record architecture decisions](0001-record-architecture-decisions.md)
 - [2. Storage dual-context redesign](0002-storage-dual-context-redesign.md) (superseded by 13)
-- [3. Structural subtyping for presenters and views](0003-structural-subtyping-for-presenters-and-views.md)
+- [3. Structural subtyping for presenters and views](0003-structural-subtyping-for-presenters-and-views.md) (superseded in part by 11)
 - [4. Owner-scoped signal lookup](0004-owner-scoped-signal-lookup.md)
 - [5. Culsans-backed psygnal async backend](0005-culsans-psygnal-async-backend.md)
 - [6. Application-declared wiring](0006-application-declared-wiring.md)
 - [7. Typed provider keys](0007-typed-provider-keys.md)
-- [8. Container hooks and the build phase registry](0008-container-hooks-and-the-phase-registry.md)
+- [8. Container hooks and the build phase registry](0008-container-hooks-and-the-phase-registry.md) (superseded in part by 10)
 - [9. Inherited and layered component configuration](0009-inherited-component-configuration.md)
 - [10. Toolkit hook points](0010-toolkit-hook-points.md)
 - [11. Tolerating a component that fails to build](0011-tolerating-a-component-that-fails-to-build.md)
@@ -43,7 +50,7 @@ never edited; a later one replaces it.
 - [32. The qlementine style comes behind one extra per Qt binding](0032-the-qlementine-style-comes-behind-one-extra-per-binding.md)
 - [33. Device trees: one index of every device](0033-device-trees-one-index-of-every-device.md)
 - [34. A root device takes the prefixes of several services](0034-a-root-device-takes-the-prefixes-of-several-services.md)
-- [35. A sharedbox transport answers writes in its boxes](0035-a-sharedbox-transport-answers-writes-in-its-boxes.md)
+- [35. A sharedbox transport answers writes in its boxes](0035-a-sharedbox-transport-answers-writes-in-its-boxes.md) (superseded in part by 39)
 - [36. A stack is declared as one entry](0036-a-stack-is-declared-as-one-entry.md)
 - [37. diwire is the session registry](0037-diwire-is-the-session-registry.md)
 - [38. The session owns background computation](0038-the-session-owns-background-computation.md)
