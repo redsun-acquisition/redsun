@@ -172,7 +172,8 @@ can change one side and keep the other:
 - A crashing vendor library takes down its service, not the session; the
   service's devices time out until it is back.
 - An [attached service](glossary.md#attached-service) can run on another
-  machine, since the devices need only its prefix.
+  machine: the devices need its prefix, and its `address` when the network
+  search wouldn't find it.
 
 A device that needs no hardware, such as the soft stage in the
 [tutorial](../tutorials/first-session.md), needs no service.
