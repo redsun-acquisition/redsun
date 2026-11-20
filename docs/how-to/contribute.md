@@ -213,11 +213,21 @@ Tests marked `@pytest.mark.compose` talk to an
 `tests/compose/compose.yaml`. They're skipped unless `REDSUN_COMPOSE` is set,
 so the rest of the suite needs no container runtime. With Docker running:
 
-```bash
-docker compose -f tests/compose/compose.yaml up --detach --wait
-REDSUN_COMPOSE=1 uv run pytest -m compose
-docker compose -f tests/compose/compose.yaml down
-```
+=== "bash"
+
+    ```bash
+    docker compose -f tests/compose/compose.yaml up --detach --wait
+    REDSUN_COMPOSE=1 uv run pytest -m compose
+    docker compose -f tests/compose/compose.yaml down
+    ```
+
+=== "PowerShell"
+
+    ```powershell
+    docker compose -f tests/compose/compose.yaml up --detach --wait
+    $env:REDSUN_COMPOSE = "1"; uv run pytest -m compose; Remove-Item Env:REDSUN_COMPOSE
+    docker compose -f tests/compose/compose.yaml down
+    ```
 
 The IOC listens on `127.0.0.1` port 5064, the default
 [Channel Access](../explanation/glossary.md#channel-access) port, so stop any
