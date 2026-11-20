@@ -82,6 +82,12 @@ runs alone, `identity` returns `None`, and the service falls back on
 service as ++ctrl+c++ would once the session asks, and does nothing when the
 service runs alone.
 
+The other two lines come from `caproto`. `ioc_arg_parser` reads its usual
+command-line options and splits them in two: `options` builds the stage under
+the prefix, and `run_options` start the server. `run` serves the stage's
+`pvdb`, the table of its process variables, and `interfaces` keeps the server
+on `127.0.0.1`, this machine only.
+
 Try the service on its own:
 
 ```bash
