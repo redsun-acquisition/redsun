@@ -196,8 +196,13 @@ down:
 
 ```python
 class StagePresenter:
+    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
+        self.name = name
+        self.stage = devices["stage"]
+        self.moves = open("moves.log", "a")
+
     def shutdown(self) -> None:
-        self._task.cancel()
+        self.moves.close()
 ```
 
 The session waits up to 5 seconds for an `async` `shutdown`. If it hasn't
