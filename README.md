@@ -25,11 +25,11 @@ When research depends on controlling hardware, one of the hardest problems is ma
 
 That's hard because experiments keep changing. It's next to impossible to predict everything the software will finally need to do, especially when the people using it are scientists with no engineering background.
 
-So rather than shipping one complete program, `redsun` follows the idea of [component-based development](https://en.wikipedia.org/wiki/Component-based_software_engineering): it ships ready-made components, and you assemble and wire them for what you need.
+So `redsun` follows the idea of [component-based development](https://en.wikipedia.org/wiki/Component-based_software_engineering): it ships ready-made components, and you assemble and wire them for what you need.
 
 ## Component-based development (CBD)
 
-In component-based development, what matters most is the interface of each component. A component says what it needs to be built, and offers features that other components can use.
+In component-based development, each component is defined by its interface: it says what it needs to be built, and offers features that other components can use.
 
 You put components together in a session, which builds the application for you, so you can focus on what each component does. In the example below, `mylab` stands for your own package:
 
@@ -116,9 +116,7 @@ Session.from_config("session.yaml").run()
 
 ## Session architecture
 
-Each `redsun` session is a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/session/) (DVP) application with three layers: devices talk to the hardware through [`ophyd-async`](https://github.com/bluesky/ophyd-async), presenters hold the application's logic, and views show it to the user. The layout follows Model-View-Presenter, a common way to keep an interface apart from the logic behind it, with devices in place of the model.
-
-This design makes a clear point: `redsun` is first of all about device control, and tries to do it well.
+Each `redsun` session is a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/session/) (DVP) application with three layers: devices talk to the hardware through [`ophyd-async`](https://github.com/bluesky/ophyd-async), presenters hold the application's logic, and views show it to the user. The layout follows Model-View-Presenter, a common way to keep an interface apart from the logic behind it, with devices in place of the model. Devices form the bottom layer because `redsun` is first of all about device control.
 
 ## Documentation
 
