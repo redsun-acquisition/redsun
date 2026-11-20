@@ -12,9 +12,9 @@
 
 # `redsun`
 
-`redsun` is a [Python] toolkit for building your own modular software for scientific data acquisition. It builds on the [Bluesky] ecosystem and makes no assumptions about your hardware, so each lab can build the control software its experiments need.
+`redsun` is a [Python] toolkit for building your own modular software for scientific data acquisition. You describe your instrument in Python, and `redsun` assembles it into an application with a graphical interface. It builds on the [Bluesky] project, where `bluesky` runs acquisitions as plans and `ophyd-async` describes hardware as devices. `redsun` ships no hardware drivers, so the devices for your instruments come from you or from a plugin.
 
-To learn `redsun`, start with the [tutorials], where you build one application step by step without any hardware.
+To learn `redsun`, start with the [tutorials], where you build one application step by step without any hardware. They assume no knowledge of `bluesky` or `ophyd-async`.
 
 > [!NOTE]
 > `redsun` is usable today, but it's still maturing, so expect breaking changes.
@@ -31,7 +31,7 @@ So rather than shipping one complete program, `redsun` follows the idea of [comp
 
 In component-based development, what matters most is the interface of each component. A component says what it needs to be built, and offers features that other components can use.
 
-You put components together in a session, which builds the application for you, so you can focus on what each component does.
+You put components together in a session, which builds the application for you, so you can focus on what each component does. In the example below, `mylab` stands for your own package:
 
 ```python
 from collections.abc import Iterator
@@ -59,9 +59,9 @@ MyApp({"session": "my-session"}).run()
 
 You declare each component once, with the arguments it needs, and `wire` says which signal reaches which slot. The session then builds everything in order and connects it.
 
-`redsun` provides the shared code that connects components, so you can use it to ship a whole application or a single reusable component. Through [Python entry points](https://packaging.python.org/en/latest/specifications/entry-points/), you can also ship an application as a single YAML configuration file, as long as each package that contributes components includes a `redsun.yaml` manifest.
+`redsun` provides the shared code that connects components, so you can use it to ship a whole application or a single reusable component. A package that contributes components lists them in a `redsun.yaml` manifest, which `redsun` finds through a [Python entry point](https://packaging.python.org/en/latest/specifications/entry-points/) once the package is installed. An application can then be shipped as a single YAML configuration file.
 
-The same application then looks like this:
+As a file, the application above looks like this:
 
 ```yaml
 # session.yaml
@@ -116,7 +116,7 @@ Session.from_config("session.yaml").run()
 
 ## Session architecture
 
-Each `redsun` session is a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/session/) (DVP) application. DVP resembles the Model-View-Presenter (MVP) architecture, except that the bottom layer of the application is the *Device layer*, which uses [`ophyd-async`](https://github.com/bluesky/ophyd-async) to talk to the hardware.
+Each `redsun` session is a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/session/) (DVP) application with three layers: devices talk to the hardware through [`ophyd-async`](https://github.com/bluesky/ophyd-async), presenters hold the application's logic, and views show it to the user. The layout follows Model-View-Presenter, a common way to keep an interface apart from the logic behind it, with devices in place of the model.
 
 This design makes a clear point: `redsun` is first of all about device control, and tries to do it well.
 
