@@ -304,9 +304,9 @@ Everything a session leaves on disk has one owner:
 | a product computed from a run | a component, through a [`Writer`][redsun.writers.Writer] | [How derived products are stored](derived-products.md) |
 | a catalog entry for a run | a component that keeps a catalog | [How to keep a catalog of runs](../how-to/keep-a-catalog.md) |
 
-### Letting go of hardware
+### Releasing hardware resources
 
-A service holding hardware, such as a camera, can let go of it and keep
+A service holding hardware, such as a camera, can release it and keep
 running if it offers a command for that as a
 [process variable](glossary.md#process-variable). When the user asks, your
 presenter triggers that command through the service's devices, which stay

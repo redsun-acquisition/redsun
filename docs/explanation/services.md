@@ -517,7 +517,7 @@ how a service writes records the session can read.
 - Restarting a crashed service.
 - Standby, a service releasing its hardware while it stays connected. For now
   the presenter that owns the devices does it, see
-  [Letting go of hardware](components.md#letting-go-of-hardware); the session
+  [Releasing hardware resources](components.md#releasing-hardware-resources); the session
   will take it over once `ophyd-async` can disconnect a device.
 - Launching a service in a container. An attached service covers one you start
   beside the session with `docker compose`.
