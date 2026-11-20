@@ -17,6 +17,17 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.18.1](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.1) - 20-11-2026
+
+### Added
+
+- `redsun.qt.StatusBarItem` places a view's widget at the right of the main window's status bar, in declaration order; a session file writes it as `placement: status_bar`. ([#286](https://github.com/redsun-acquisition/redsun/pull/286))
+
+  ```python
+  class PositionView(QWidget):
+      placement: Placement = StatusBarItem()
+  ```
+
 ## [0.18.0](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.0) - 19-11-2026
 
 ### Breaking
