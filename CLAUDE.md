@@ -102,8 +102,11 @@ same worker; a plain `uv run pytest` is one process, and so is
 `uv run tox -e tests-pyqt -- -n 0`.
 
 **Run what the change can break, not the whole matrix.** A change confined to
-`docs/` (pages, ADRs, changelogs, `zensical.toml`) or to `changelog.d/` can
-only break the docs build, so validate it with `uv run tox -e docs` alone. A change to docstrings
+the pages under `docs/` (Markdown, ADRs, changelogs, `zensical.toml`) or to
+`changelog.d/` can only break the docs build, so validate it with
+`uv run tox -e docs` alone. The scripts and session files under `docs/` are
+code: the tests import them, so a change to one also runs the tests that use
+it. A change to docstrings
 in `src/` also runs `lint`, since ruff's `D` rules check docstrings and the
 reference pages render them: `uv run tox -e lint,docs`. A change to docstrings
 or comments in `tests/` alone runs `lint`; no test can change with it.
