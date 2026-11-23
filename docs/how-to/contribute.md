@@ -496,6 +496,15 @@ A pull request nobody using `redsun` would notice, such as tests, CI, a
 refactor or docs alone, needs no entry. A maintainer gives it the
 `skip-changelog` label, and CI accepts it without one.
 
+A pull request that changes documentation alone can also take the
+`docs-only` label. CI then builds the docs and runs the lint and type
+checks, but skips the tests. Before it does, CI checks that the label is
+right: every changed file has to be a page or picture under `docs/`, an entry
+in `changelog.d/`, `zensical.toml` or a Markdown file at the top of the
+repository. The scripts and session files under `docs/` don't count, because
+the tests import them. If another file changed, the run fails and names it,
+and the label has to come off.
+
 ## Writing documentation
 
 Write for someone new: picture a reader who knows some Python and nothing about
