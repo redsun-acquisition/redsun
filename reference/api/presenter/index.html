@@ -11327,7 +11327,8 @@ or read back after a write, is reported on <code>sig_changed</code>.</p>
 
         <p>Everything added so far.</p>
 <p>An entry whose signal cannot be written has <code>:readonly</code> appended to
-its source.</p>
+its source. <code>readings</code> holds the last reading of each key, updated at
+every change the device reports.</p>
 
     </div>
 
@@ -11418,7 +11419,9 @@ followed once, and stays with its first owner.</p>
 
         <p>Write <em>value</em> to <em>key</em>, report what it reads back, and return its owner.</p>
 <p>A write to a signal that is held, or that sits below a held device, is
-not made, and the value is still read back and reported.</p>
+not made, and the value is still read back and reported. When reading
+back fails, the last value the device reported for <em>key</em> is reported
+instead, so a view showing the edit goes back to what the device holds.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
