@@ -134,6 +134,45 @@ The session creates the menu or toolbar the first time a view names it, and
 adds every later view naming it to the same one. If the command needs no view
 of its own, see [Add menu actions](add-menu-actions.md).
 
+## Put a widget in a toolbar
+
+A toolbar can also hold controls with live contents, such as a button next to
+a spin box. Make the view a `QWidgetAction`, which is a `QAction` and so may
+be a `ToolBarItem`, and hand it the widget with `setDefaultWidget`. The
+toolbar then shows the widget where an action would show a button:
+
+```python
+from qtpy.QtWidgets import (
+    QHBoxLayout,
+    QPushButton,
+    QSpinBox,
+    QWidget,
+    QWidgetAction,
+)
+
+from redsun import Placement
+from redsun.qt import ToolBarItem
+
+
+class AcquireControls(QWidgetAction):
+    placement: Placement = ToolBarItem("Acquisition")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.acquire = QPushButton("Acquire")
+        self.passes = QSpinBox()
+        controls = QWidget()
+        layout = QHBoxLayout(controls)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.acquire)
+        layout.addWidget(self.passes)
+        self.setDefaultWidget(controls)
+```
+
+The view stays an action, so to move it to a dock later you change the class
+it builds on, not only its placement.
+
 ## Put a widget in the status bar
 
 A view placed as a [`StatusBarItem`][redsun.qt.StatusBarItem] is a `QWidget`
