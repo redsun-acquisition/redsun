@@ -1,8 +1,8 @@
 """The Qt frontend: the placements it attaches, and a container to subclass.
 
 The placements Qt attaches are defined here: a docked panel, the central
-area, a menu entry, a toolbar entry. Each demands a toolkit type of the view
-asking for it.
+area, a menu entry, a toolbar entry and a widget in the status bar. Each
+demands a toolkit type of the view asking for it.
 
 ```python
 from redsun import AsView
@@ -316,10 +316,11 @@ class Qt(Frontend):
     def read_placement(cls, value: object) -> Placement:
         """Return the Qt placement a session file's *value* names.
 
-        `left`, `right`, `top` or `bottom` is a dock against that edge and
-        `central` the main area; `{dock: <edge>, group: <name>}` a dock tabbed
-        with its group, `{menu: <name>}` an entry in that menu and
-        `{toolbar: <name>}` an entry in that toolbar.
+        `left`, `right`, `top` or `bottom` is a dock against that edge,
+        `central` the main area and `status_bar` a widget in the status bar;
+        `{dock: <edge>, group: <name>}` a dock tabbed with its group,
+        `{menu: <name>}` an entry in that menu and `{toolbar: <name>}` an
+        entry in that toolbar.
 
         Raises
         ------

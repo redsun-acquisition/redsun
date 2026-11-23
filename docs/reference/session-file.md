@@ -36,7 +36,7 @@ Every key is optional.
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
 | `pairs` | list | empty | [components linked to each other](#pairs), two names each |
 | `hooks` | mapping | empty | the [hook providers](#hooks), by hook point |
-| `actions` | | none | menu and toolbar commands of a Qt session |
+| `actions` | | none | menu commands of a Qt session; see [Add menu actions](../how-to/add-menu-actions.md) |
 | `color_scheme` | `system`, `light` or `dark` | `system` | the colour scheme a Qt session starts with |
 
 A file given to `Session.from_config` must set `session`.
