@@ -955,3 +955,18 @@ def test_a_new_page_hides_its_progress() -> None:
     widget = create_plan_widget(_simple_spec())
     assert widget.progress_group is not None
     assert widget.progress_group.isHidden()
+
+
+def test_the_parameter_container_goes_with_its_page() -> None:
+    """Keep the emptied parameter container hidden under the page, and delete it with the page."""
+    pw = create_plan_widget(_simple_spec())
+    gone: list[bool] = []
+    pw.container.native.destroyed.connect(lambda *_: gone.append(True))
+    pw.group_box.show()
+    shown = pw.container.native.isVisible()
+
+    pw.group_box.deleteLater()
+    QtW.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+    assert not shown
+    assert gone == [True]

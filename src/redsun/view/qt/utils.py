@@ -772,6 +772,11 @@ def create_plan_widget(
     # a flat list is what keeps `Container.parameters` reachable
     all_widgets = device_widgets + param_widgets
     container = mgw.Container(widgets=all_widgets)
+    # its widgets move into the page's own layout below, which leaves the
+    # container's widget empty; without a parent it outlives the page, and
+    # PyQt6's exit hook crashes on it now and then
+    container.native.setParent(page)
+    container.native.hide()
 
     devices_group = _build_devices_group(device_widgets)
     params_group = _build_params_group(param_widgets)
