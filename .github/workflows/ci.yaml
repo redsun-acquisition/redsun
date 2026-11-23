@@ -6,7 +6,10 @@ on:
       - "v*"
     branches:
       - main
+  # labelled and unlabelled too, so adding or removing docs-only starts a
+  # run that reads the new labels
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 # a newer push to main must not cancel a run that is publishing the docs
 concurrency:
@@ -14,6 +17,51 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # docs_only is true for a pull request labelled docs-only whose changed
+  # files are all documentation; it is false for every push
+  scope:
+    name: Decide what to run
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+    steps:
+      - name: Check a docs-only label against the changed files
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$PR" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # read now rather than from the event: a label given when the pull
+          # request opens arrives a moment after its "opened" event
+          labelled=$(gh pr view "$PR" --repo "$REPO" --json labels --jq 'any(.labels[]; .name == "docs-only")')
+          if [ "$labelled" != "true" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh pr diff "$PR" --repo "$REPO" --name-only)
+          other=""
+          # the scripts and session files under docs/ are code the tests import
+          while IFS= read -r path; do
+            case "$path" in
+              docs/*.py|docs/*.yaml|docs/*.yml) other="$other $path" ;;
+              docs/*|changelog.d/*|zensical.toml) ;;
+              */*) other="$other $path" ;;
+              *.md) ;;
+              *) other="$other $path" ;;
+            esac
+          done <<< "$files"
+          if [ -n "$other" ]; then
+            echo "::error::Labelled docs-only, but these files are not documentation:$other. Remove the label or move them to another pull request."
+            exit 1
+          fi
+          echo "Labelled docs-only and every changed file is documentation: the tests are skipped."
+          echo "docs_only=true" >> "$GITHUB_OUTPUT"
+
   checks:
     name: Lint and type checks
     runs-on: ubuntu-latest
@@ -34,6 +82,7 @@ jobs:
 
   docs:
     name: Check Documentation
+    needs: [scope]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -54,6 +103,11 @@ jobs:
       - name: Build docs and check cross-references
         run: uv run --locked --only-group tox tox -e docs
 
+      # a docs-only pull request skips the test jobs, and these two read pages
+      - name: Run the tests that read documentation pages
+        if: needs.scope.outputs.docs_only == 'true'
+        run: uv run --locked pytest --color=yes tests/test_install_page.py tests/test_reference_pages.py
+
       # the publish job deploys this artifact rather than building again,
       # so what reaches Pages is what was checked
       - name: Store the built site
@@ -66,6 +120,8 @@ jobs:
 
   compose:
     name: Run Compose Tests
+    needs: [scope]
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -102,6 +158,8 @@ jobs:
 
   tests:
     name: ${{ matrix.binding }} ${{ matrix.os }} py${{ matrix.python-version }}
+    needs: [scope]
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -161,6 +219,8 @@ jobs:
   # oldest pyside6 redsun accepts over the lock
   extras:
     name: qlementine style and oldest pyside6
+    needs: [scope]
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -218,8 +278,9 @@ jobs:
 
   coverage:
     name: Upload coverage
-    if: ${{ !cancelled() }}
-    needs: [tests, extras]
+    # nothing to upload when the scope failed or the tests were skipped
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.docs_only != 'true' }}
+    needs: [scope, tests, extras]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -249,15 +310,16 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # the one check the ruleset requires: a job skipped because a dependency
-  # failed counts as passed, so this runs regardless and fails on its own
+  # failed counts as passed, so this runs regardless and fails on its own; a
+  # skipped job passes only where the scope says the tests were skipped
   all_checks:
     name: All Checks Passed
     if: ${{ !cancelled() }}
-    needs: [checks, docs, compose, tests, extras]
+    needs: [scope, checks, docs, compose, tests, extras]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any check did not succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || (contains(needs.*.result, 'skipped') && needs.scope.outputs.docs_only != 'true')
         run: exit 1
 
   # main and final tags only: a release candidate publishes a package and

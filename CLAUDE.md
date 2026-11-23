@@ -121,6 +121,12 @@ the project (a shared fixture in `redsun.testing` or `conftest.py`, a build
 step, a dependency, the Qt binding code), or when CI failed and its log does
 not show why.
 
+A pull request changing documentation alone takes the `docs-only` label, and
+CI then skips the test jobs. Its `scope` job checks the claim: every changed
+file must sit under `docs/` (but not be a `.py` or `.yaml` file there, which
+the tests import), under `changelog.d/`, be `zensical.toml` or a `.md` file at
+the root. Anything else fails the run.
+
 The project `.venv` still works for a quick loop (`uv run pytest -q`), but it
 is not authoritative: it holds every group any `uv sync` has installed, both Qt
 bindings included. One such run reported five `QAction` errors tox does not,
