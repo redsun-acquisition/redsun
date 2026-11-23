@@ -135,6 +135,11 @@ refused and `write` finishes it at once. If a `stream_resource` has a mimetype
 the writer doesn't know, the writer logs it once and skips the product for that
 run.
 
+A run can name a second store for the same source, as when a plan prepares the
+detector again and the path provider hands it a new file. The writer then
+finishes the product's stream on the first store, with its metadata naming
+that store, and the frames appended after it go to the second.
+
 ## What is written with the product
 
 Two mappings land on the product's own group, never on the store's root, which

@@ -195,11 +195,20 @@ class Writer(DocumentRouter):
             run.layouts[source] = ArrayShape.of(shape, dtype)
 
     def stream_resource(self, doc: StreamResource) -> None:
-        """Record the store this resource names for its data key."""
-        self._find(doc["run_start"]).stores[doc["data_key"]] = (
-            doc["uri"],
-            doc["mimetype"],
-        )
+        """Record the store this resource names for its data key.
+
+        A store that replaces an earlier one for the same data key first
+        finishes the streams of the products derived from it, so each
+        product's metadata names the store it went to.
+        """
+        run = self._find(doc["run_start"])
+        source = doc["data_key"]
+        store = (doc["uri"], doc["mimetype"])
+        if run.stores.get(source, store) != store:
+            for path, opened in list(run.open.items()):
+                if any(product.source == source for product in opened.products):
+                    self._finish(run.open.pop(path), run)
+        run.stores[source] = store
 
     def event(self, doc: Event) -> Event:
         """Pass an event through; data arrives by `append` and `write`."""

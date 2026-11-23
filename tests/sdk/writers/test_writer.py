@@ -347,10 +347,10 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
     assert attributes(plain_store / "det_median")["redsun"]["run_start"] == "run-1"
 
 
-def test_a_second_store_for_a_source_leaves_the_first_stream_open(
+def test_a_second_store_for_a_source_finishes_the_first_stream(
     tmp_path: Path, closed: list[Path]
 ) -> None:
-    """Keep a run's streams to two stores open until the run stops."""
+    """Finish a source's stream when a resource names a new store, each product naming its own."""
     writer = Writer()
     writer.derive("det_filtered", source="det")
     first, second = tmp_path / "first.zarr", tmp_path / "second.zarr"
@@ -358,15 +358,16 @@ def test_a_second_store_for_a_source_leaves_the_first_stream_open(
     run(writer, first, "application/x-zarr")
     writer.append("det_filtered", np.ones((4, 4), np.uint16))
     run(writer, second, "application/x-zarr", start=False)
+    after_the_second_resource = list(closed)
     writer.append("det_filtered", np.ones((4, 4), np.uint16))
-    before_the_stop = list(closed)
-
     writer(
         "stop",
         {"uid": "stop-1", "run_start": "run-1", "time": 1.0, "exit_status": "success"},
     )
 
-    assert before_the_stop == []
-    assert set(closed) == {first, second}
-    assert shape_of(first / "det_filtered") == [1, 4, 4]
-    assert shape_of(second / "det_filtered") == [1, 4, 4]
+    assert after_the_second_resource == [first]
+    assert closed == [first, second]
+    for store in (first, second):
+        assert shape_of(store / "det_filtered") == [1, 4, 4]
+        provenance = attributes(store / "det_filtered")["redsun"]
+        assert provenance["resource_uri"] == store.as_uri()
