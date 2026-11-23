@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from ophyd_async.core import Device
+from ophyd_async.core import Device, set_mock_attr
 
 from redsun.presenter import DeviceConfiguration
 from redsun.utils.devices import device_path
@@ -32,6 +32,11 @@ async def rig() -> Rig:
     device = Rig("scope")
     await device.connect(mock=False)
     return device
+
+
+async def stopped(*args: object, **kwargs: object) -> object:
+    """Raise as a signal does when the service behind it has stopped."""
+    raise ConnectionError("service stopped")
 
 
 async def test_a_device_is_read_followed_and_written(axis: SoftAxis) -> None:
@@ -160,3 +165,21 @@ async def test_a_key_added_twice_is_followed_once(rig: Rig) -> None:
 
     assert seen == [("scope-xy-x-velocity", 3.0)]
     assert configuration.configuration.owners["scope-xy-x-velocity"] == "scope-xy"
+
+
+async def test_a_failed_read_back_reports_the_last_value_the_device_gave(
+    axis: SoftAxis,
+) -> None:
+    """Report the last relayed value, not the one written, when the write and its read-back fail."""
+    configuration = DeviceConfiguration("lights")
+    await configuration.add("focus", axis)
+    await axis.velocity.set(3.0)
+    seen: list[tuple[str, object]] = []
+    configuration.sig_changed.connect(lambda *args: seen.append(args))
+    set_mock_attr(axis.velocity, "set", stopped)
+    set_mock_attr(axis.velocity, "get_value", stopped)
+
+    await configuration.configure(axis.velocity.name, 5.0)
+
+    assert seen == [(axis.velocity.name, 3.0)]
+    assert configuration.configuration.readings[axis.velocity.name]["value"] == 3.0
