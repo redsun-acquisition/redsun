@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping  # noqa: TC003
+from collections.abc import Mapping
 from typing import Annotated, Any, ClassVar
 
 from ophyd_async.core import Device, SignalR, SignalRW, TriggerableCommand

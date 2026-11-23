@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from typing import Any, ClassVar
 
 import bluesky.plans as bp
@@ -20,7 +20,7 @@ from redsun import (
     slot,
 )
 from redsun.engine import RunEngine
-from redsun.path_provider import SessionPathProvider  # noqa: TC001
+from redsun.path_provider import SessionPathProvider
 from redsun.qt import Dock, QtSession
 
 

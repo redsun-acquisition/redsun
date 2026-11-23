@@ -6414,12 +6414,9 @@ frames: the service, or the <code>ophyd-async</code> writer beside it, writes a
 multidimensional acquisition, and the device emits <code>StreamResource</code> and
 <code>StreamDatum</code> documents pointing at it. Routing frames back through a sink
 costs a copy and a format the service did not choose.</p>
-<p><a href="https://github.com/redsun-acquisition/redsun/issues/116">redsun#116</a> tested
-that path and concluded, in its reporter's words, that "the rc0 release
-addresses the RedSun service-layer issue for my use case" and that no new
-<code>redsun</code> multidimensional storage API is wanted. Formats, OME-Zarr, OME-TIFF
-or a local one, are a service's decision, and a detector owning its store keeps
-buffers, completion and partial failure local to it.</p>
+<p>Formats, OME-Zarr, OME-TIFF or a local one, are a service's decision, and a
+detector owning its store keeps buffers, completion and partial failure local
+to it.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p><code>redsun</code> writes no acquisition bytes. The layers are:</p>
 <table>

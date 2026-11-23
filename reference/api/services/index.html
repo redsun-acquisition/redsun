@@ -6820,7 +6820,7 @@ identity, readiness, logging, and when to stop.</p>
 launched as <code>python -m &lt;module&gt; &lt;args&gt;</code>; one without is attached to, runs
 elsewhere, and <code>start</code> and <code>stop</code> do nothing. Each output line is logged
 under <code>redsun.service.&lt;name&gt;</code>: as the record it describes if it is a JSON
-log record, at <code>DEBUG</code> otherwise; see <code>service_record</code>.</p>
+log record or a <code>pvxs</code> log line, at <code>DEBUG</code> otherwise.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -7148,8 +7148,8 @@ process. The process learns its name, prefix, ready text and the
 level this session records at through the functions of
 <code>redsun.services</code>, so a module serving several sessions needs no
 arguments for them. The process
-writes UTF-8, and each output line is logged as <code>service_record</code>
-rebuilds it. An attached service only adds its address to this
+writes UTF-8, and each output line is logged under
+<code>redsun.service.&lt;name&gt;</code>. An attached service only adds its address to this
 process's list, if it names one.</p>
 
 

@@ -9672,7 +9672,7 @@ not at all.</p>
     <div class="doc doc-contents ">
 
         <p>The configuration this session is declared with.</p>
-<p>One source or several, each a path to a YAML file or a mapping already in
+<p>One source or several, each a path to a <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> file or a mapping already in
 hand. Several layer in the order given, and a subclass's layer over its
 bases', so a base holds what every session of an instrument shares and a
 subclass holds what makes it that session.</p>
@@ -10876,7 +10876,7 @@ warning. Yields nothing by default.</p>
 <p>Connections go first, so nothing is delivered to a component that is
 already finalizing. The releases follow: the <code>shutdown</code> method of
 every component that has one, then whatever a toolkit put in place.
-An async <code>shutdown</code> still running after <code>SHUTDOWN_TIMEOUT</code> seconds is
+An async <code>shutdown</code> still running after 5 seconds (<code>SHUTDOWN_TIMEOUT</code>) is
 cancelled and logged, and the rest go on. Calling it a second time, or
 on a session that was never built, runs nothing: a release is dropped
 as it runs. What the build made is forgotten, so the session can be
@@ -11193,8 +11193,8 @@ gives no prefix.</p>
 
         <p>Connect every autoconnect device at once.</p>
 <p>To a simulated backend when the configuration sets <code>mock</code>, to what
-the device names otherwise. A device not connected within
-<code>CONNECT_TIMEOUT</code> is dropped and recorded as failed, like one that
+the device names otherwise. A device not connected within 10 seconds
+(<code>CONNECT_TIMEOUT</code>) is dropped and recorded as failed, like one that
 fails to build, and its <code>shutdown</code> is never called. One that
 connected has its <code>shutdown</code> registered as a release.</p>
 

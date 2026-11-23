@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from redsun import AsView  # noqa: TC001
+from redsun import AsView
 from redsun.qt import QtSession
-from redsun.view.qt.builtins import LogView  # noqa: TC001
+from redsun.view.qt.builtins import LogView
 
 
 # --8<-- [start:session]

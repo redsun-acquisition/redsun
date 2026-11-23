@@ -6421,7 +6421,7 @@ runs at one fixed place, and overriding <code>build</code> in a subclass, which 
 compose: two packages that both want to adjust the build cannot both be the
 subclass.</p>
 <p>Whatever mechanism was chosen had to work from a configuration file as well as
-from Python, because a session assembled entirely from YAML is a first-class
+from Python, because a session assembled entirely from <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> is a first-class
 way to run <code>redsun</code> and must not lose a capability that a container class has.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p><strong>The build sequence is a registry, not a straight-line body.</strong> <code>AppContainer</code>
@@ -6494,14 +6494,14 @@ idiom <code>build</code> already uses for <code>IsProvider</code> and <code>IsIn
 class to inherit and no protocol that demands methods a provider does not want,
 so a class defining one method is a complete provider.</p>
 <p><strong>A session names providers in either of two places, keyed the same way in
-both.</strong> A configuration file names them by dotted path, since YAML cannot hold
+both.</strong> A configuration file names them by dotted path, since <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> cannot hold
 a class; a container class declares them with <code>declare_hook</code>, since an author
 writing Python already holds the provider. The two merge, and neither overrides
 the other: silent override would decide behaviour by which of two files the
 reader is not looking at, so a point named in both raises.</p>
 <p><strong>One provider serving several points is expressed by identity, never
 inferred.</strong> A provider holding state between the points it serves is declared
-once and named at each of them - the same instance in Python, a YAML anchor and
+once and named at each of them - the same instance in Python, a <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> anchor and
 its alias in a file, which PyYAML resolves to one object. Two separate entries
 that name the same provider with the same keys are refused rather than guessed
 at: whether they mean one shared provider or two identical ones cannot be read

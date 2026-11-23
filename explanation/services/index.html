@@ -7052,7 +7052,8 @@ can change one side and keep the other:</p>
   service's devices time out until it is back.</p>
 </li>
 <li>An <a href="../glossary/#attached-service">attached service</a> can run on another
-  machine, since the devices need only its prefix.</li>
+  machine: the devices need its prefix, and its <code>address</code> when the network
+  search wouldn't find it.</li>
 </ul>
 <p>A device that needs no hardware, such as the soft stage in the
 <a href="../../tutorials/first-session/">tutorial</a>, needs no service.</p>
@@ -9073,7 +9074,7 @@ how a service writes records the session can read.</p>
 <li>Restarting a crashed service.</li>
 <li>Standby, a service releasing its hardware while it stays connected. For now
   the presenter that owns the devices does it, see
-  <a href="../components/#letting-go-of-hardware">Letting go of hardware</a>; the session
+  <a href="../components/#releasing-hardware-resources">Releasing hardware resources</a>; the session
   will take it over once <code>ophyd-async</code> can disconnect a device.</li>
 <li>Launching a service in a container. An attached service covers one you start
   beside the session with <code>docker compose</code>.</li>

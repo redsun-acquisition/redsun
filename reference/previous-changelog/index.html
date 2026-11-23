@@ -8979,7 +8979,7 @@ Dates are written <code>DD-MM-YYYY</code>.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">container</span> <span class="o">=</span> <span class="n">AppContainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">"session.yaml"</span><span class="p">,</span> <span class="n">log_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
 </span></code></pre></div>
 <ul>
-<li><code>config</code> accepts several YAML files, layered in the order given, and a
+<li><code>config</code> accepts several <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> files, layered in the order given, and a
   container class reads what its bases named before its own. A file common to
   several sessions sits under the one particular to each.</li>
 </ul>
@@ -9101,7 +9101,7 @@ Dates are written <code>DD-MM-YYYY</code>.</p>
 </span></code></pre></div>
 <p>A subclass inherits the points its bases declare. One provider serves several
   points when it is the same object at each: the same instance in Python, a
-  YAML anchor and its alias in a file.</p>
+  <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> anchor and its alias in a file.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">hooks</span><span class="p">:</span>
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">configure_application</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;theme</span>
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mypkg.hooks:DarkTheme"</span>
@@ -9539,7 +9539,7 @@ Dates are written <code>DD-MM-YYYY</code>.</p>
   was Qt-specific and bypassed the base build phase entirely.</li>
 <li>Removed the now-redundant <code>connect_to_virtual()</code> delegator from <code>QtMainView</code>
   and the explicit call to it in <code>QtAppContainer.run()</code>.</li>
-<li>Fixed a spurious warning when a <code>from_config</code> key exists in the YAML but has
+<li>Fixed a spurious warning when a <code>from_config</code> key exists in the <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> but has
   no kwargs (bare key with null value, e.g. <code>camera2:</code> with nothing after it).
   Previously <code>dict.get()</code> returned <code>None</code> for both a missing key and a null
   value, making them indistinguishable. A sentinel is now used so only a
@@ -9583,7 +9583,7 @@ Dates are written <code>DD-MM-YYYY</code>.</p>
 </span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
 </span></code></pre></div></li>
 <li><code>RedSunConfig</code> removed from the public API; it is an internal <code>TypedDict</code> used
-  only for YAML configuration validation.</li>
+  only for <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> configuration validation.</li>
 </ul>
 <h2 id="050-17-02-2026"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.4.0...v0.5.0">0.5.0</a> - 17-02-2026<a class="headerlink" href="#050-17-02-2026" title="Permanent link">&para;</a></h2>
 <h3 id="changed_14">Changed<a class="headerlink" href="#changed_14" title="Permanent link">&para;</a></h3>

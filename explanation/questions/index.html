@@ -6402,8 +6402,11 @@ describing what it looks for.</p>
 </span></code></pre></div>
 <p>Whatever the session file puts in the session, <code>reset_all</code> resets all of it,
 and nobody has to keep a list up to date.</p>
-<p><a href="../decisions/0017-questions-read-from-the-annotation/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 17</a> records why the
-annotation carries the question.</p>
+<p>The annotation alone tells a question from a value: the session's registry
+holds only concrete classes, so a parameter typed by a protocol can only be a
+question, and the shape of its annotation says how many answers it takes.
+<a href="../decisions/0017-questions-read-from-the-annotation/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 17</a> records the
+markers this replaced.</p>
 <h2 id="how-a-component-matches">How a component matches<a class="headerlink" href="#how-a-component-matches" title="Permanent link">&para;</a></h2>
 <p>A component matches when it has every member the protocol lists and each
 method accepts every call the protocol allows. Point at a component to read

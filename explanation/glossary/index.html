@@ -5163,6 +5163,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Entry point
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#executor" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5178,6 +5189,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Frontend
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Future
       </span>
     </span>
   </a>
@@ -5640,6 +5662,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Stage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#store" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Store
       </span>
     </span>
   </a>
@@ -7247,6 +7280,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Entry point
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#executor" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7262,6 +7306,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Frontend
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Future
       </span>
     </span>
   </a>
@@ -7731,6 +7786,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#store" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Store
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#streamdatum" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8089,6 +8155,12 @@ of the model. Devices reach the hardware directly or, preferably, through
 offers values by name, and a program that can reach it reads them and, where
 the server allows, sets them. See
 <a href="https://epics-controls.org/">epics-controls.org</a>.</p>
+<h3 id="entry-point">Entry point<a class="headerlink" href="#entry-point" title="Permanent link">&para;</a></h3>
+<p>An entry point is a name an installed Python package registers in its
+metadata, under a group, so another program can find it without importing
+the package first. <code>redsun</code> finds a plugin's <a href="#manifest">manifest</a> through
+the <code>redsun.plugins</code> group and a <a href="#frontend">frontend</a> through
+<code>redsun.frontends</code>.</p>
 <h3 id="executor">Executor<a class="headerlink" href="#executor" title="Permanent link">&para;</a></h3>
 <p>An executor is a component's own handle on a <a href="#pool">pool</a>, which it asks for
 by annotating a constructor parameter with
@@ -8100,6 +8172,10 @@ and the session shuts it down with the component.</p>
 <p>A frontend is what shows a session on screen, such as the Qt one that
 <code>redsun</code> ships. A session file names it by its registered name (<code>frontend: qt</code>), and a
 package can register its own.</p>
+<h3 id="future">Future<a class="headerlink" href="#future" title="Permanent link">&para;</a></h3>
+<p>A future is an object standing for a result that isn't ready yet. Calling the
+<a href="#runengine"><code>RunEngine</code></a> with a plan returns one at once, and it is done when
+the plan ends, so a presenter can start a plan and carry on.</p>
 <h3 id="hint">Hint<a class="headerlink" href="#hint" title="Permanent link">&para;</a></h3>
 <p>A hint is a <a href="#data-key">data key</a> a device marks as the one worth showing,
 such as the image of a camera rather than its exposure time. The device lists
@@ -8137,7 +8213,7 @@ layers in either direction.</p>
 <a href="#slot">slot</a> that receives. What sends is a <a href="#signal">signal</a> or a
 <a href="#device-signal">device signal</a>.</p>
 <h3 id="manifest">Manifest<a class="headerlink" href="#manifest" title="Permanent link">&para;</a></h3>
-<p>A manifest is a YAML file, of any name, that a <a href="#plugin">plugin</a> ships and
+<p>A manifest is a <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> file, of any name, that a <a href="#plugin">plugin</a> ships and
 registers under the <code>redsun.plugins</code> entry point of its package; <code>redsun</code>
 registers its own as <code>plugins.yaml</code>. It lists the devices, presenters, views
 and services of the plugin, and its <a href="#provider">providers</a>, under ids that a
@@ -8236,7 +8312,9 @@ See the <a href="https://psygnal.readthedocs.io/">documentation of <code>psygnal
 carries structured values, such as an image together with its size.</p>
 <h3 id="qt-binding">Qt binding<a class="headerlink" href="#qt-binding" title="Permanent link">&para;</a></h3>
 <p>A Qt binding is the Python package through which Qt is used: <code>pyqt6</code> or
-<code>pyside6</code>. A session with a window needs one of the two.</p>
+<code>pyside6</code>. A session with a window needs one of the two. <code>redsun</code> reaches
+either through <code>qtpy</code>, which imports the binding that is installed, or the one
+the <code>QT_API</code> environment variable names, so its code names neither.</p>
 <h3 id="readback">Readback<a class="headerlink" href="#readback" title="Permanent link">&para;</a></h3>
 <p>The readback is the <a href="#device-signal">device signal</a> that says where a movable
 device is, such as the position a stage reports. <code>ophyd-async</code> names it,
@@ -8266,7 +8344,7 @@ stops the services it launched when it shuts down.</p>
 the connections between them. <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Session&lt;/span&gt;" href="../../reference/api/session/#redsun.Session"><code>Session</code></a> is the class you
 subclass to write one.</p>
 <h3 id="session-file">Session file<a class="headerlink" href="#session-file" title="Permanent link">&para;</a></h3>
-<p>A session file is a YAML file that holds all or part of the
+<p>A session file is a <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> file that holds all or part of the
 <a href="#configuration">configuration</a> of a session. Its <code>services</code>, <code>devices</code>,
 <code>presenters</code> and <code>views</code> sections declare the components, <code>wiring</code> and
 <code>pairs</code> connect them, and keys such as <code>frontend</code>, <code>strict</code> and <code>storage</code> set
@@ -8316,6 +8394,11 @@ to undo that once the plan ends. A plan stages each device it uses before the
 first reading and unstages it after the last. The plans of <code>bluesky</code> stage
 the device at the top of the tree each device belongs to, not the device
 itself. The term comes from <a href="#bluesky"><code>bluesky</code></a>.</p>
+<h3 id="store">Store<a class="headerlink" href="#store" title="Permanent link">&para;</a></h3>
+<p>A store is the folder or file a device writes a run's data into, such as a
+Zarr store, named by the URI of its <a href="#streamresource"><code>StreamResource</code></a>
+documents. A <a href="#derived-product">derived product</a> is written against the store
+of the data it comes from.</p>
 <h3 id="streamdatum">StreamDatum<a class="headerlink" href="#streamdatum" title="Permanent link">&para;</a></h3>
 <p>A <code>StreamDatum</code> is a <a href="#document">document</a> that follows a
 <a href="#streamresource"><code>StreamResource</code></a> and says which part of the data it names

@@ -6425,7 +6425,7 @@ entries, so a mistake in it surfaced only when a user hit it.</p>
    file owning a component entry whole and the identity keys having to agree.
    Validation runs once, on the merged result, so a layered file may be a
    fragment. The container keeps the mapping it validated, not a copy of the
-   model, so entries a YAML anchor shares stay one object.</li>
+   model, so entries a <abbr title="A plain-text format for configuration, which session files and manifests are written in.">YAML</abbr> anchor shares stay one object.</li>
 <li>A class path is validated as text, <code>module:ClassName</code>, and imported only
    when a session uses it, so reading a manifest imports no plugin code.</li>
 <li>A session file that does not validate raises <code>ConfigurationError</code>, a

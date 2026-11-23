@@ -6257,15 +6257,21 @@
 <a href="http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions">Michael Nygard</a>
 describes: status, context, decision, consequences. An accepted record is
 never edited; a later one replaces it.</p>
+<p>Records up to 17 were written before release 0.14 and use the names of that
+time: <code>AppContainer</code> and <code>QtAppContainer</code> are now <code>Session</code> and <code>QtSession</code>,
+<code>redsun.containers</code> and <code>redsun.virtual</code> became the session layer, and
+<code>redsun.experimental</code> was the session layer while it was being built.
+<a href="../../how-to/migrate-from-0.13/">How to migrate from 0.13</a> lists every
+renamed name.</p>
 <ul>
 <li><a href="0001-record-architecture-decisions/">1. Record architecture decisions</a></li>
 <li><a href="0002-storage-dual-context-redesign/">2. Storage dual-context redesign</a> (superseded by 13)</li>
-<li><a href="0003-structural-subtyping-for-presenters-and-views/">3. Structural subtyping for presenters and views</a></li>
+<li><a href="0003-structural-subtyping-for-presenters-and-views/">3. Structural subtyping for presenters and views</a> (superseded in part by 11)</li>
 <li><a href="0004-owner-scoped-signal-lookup/">4. Owner-scoped signal lookup</a></li>
 <li><a href="0005-culsans-psygnal-async-backend/">5. Culsans-backed psygnal async backend</a></li>
 <li><a href="0006-application-declared-wiring/">6. Application-declared wiring</a></li>
 <li><a href="0007-typed-provider-keys/">7. Typed provider keys</a></li>
-<li><a href="0008-container-hooks-and-the-phase-registry/">8. Container hooks and the build phase registry</a></li>
+<li><a href="0008-container-hooks-and-the-phase-registry/">8. Container hooks and the build phase registry</a> (superseded in part by 10)</li>
 <li><a href="0009-inherited-component-configuration/">9. Inherited and layered component configuration</a></li>
 <li><a href="0010-toolkit-hook-points/">10. Toolkit hook points</a></li>
 <li><a href="0011-tolerating-a-component-that-fails-to-build/">11. Tolerating a component that fails to build</a></li>
@@ -6292,7 +6298,7 @@ never edited; a later one replaces it.</p>
 <li><a href="0032-the-qlementine-style-comes-behind-one-extra-per-binding/">32. The qlementine style comes behind one extra per Qt binding</a></li>
 <li><a href="0033-device-trees-one-index-of-every-device/">33. Device trees: one index of every device</a></li>
 <li><a href="0034-a-root-device-takes-the-prefixes-of-several-services/">34. A root device takes the prefixes of several services</a></li>
-<li><a href="0035-a-sharedbox-transport-answers-writes-in-its-boxes/">35. A sharedbox transport answers writes in its boxes</a></li>
+<li><a href="0035-a-sharedbox-transport-answers-writes-in-its-boxes/">35. A sharedbox transport answers writes in its boxes</a> (superseded in part by 39)</li>
 <li><a href="0036-a-stack-is-declared-as-one-entry/">36. A stack is declared as one entry</a></li>
 <li><a href="0037-diwire-is-the-session-registry/">37. diwire is the session registry</a></li>
 <li><a href="0038-the-session-owns-background-computation/">38. The session owns background computation</a></li>

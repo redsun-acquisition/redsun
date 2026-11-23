@@ -12,9 +12,9 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun import AsDevice, AsStack  # noqa: TC001
+from redsun import AsDevice, AsStack
 from redsun.qt import QtSession
-from redsun.view.qt.builtins import LightStack  # noqa: TC001
+from redsun.view.qt.builtins import LightStack
 
 if TYPE_CHECKING:
     from event_model import DataKey

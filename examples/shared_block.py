@@ -11,7 +11,7 @@ import numpy as np
 from event_model import DocumentRouter
 from psygnal import Signal
 
-from redsun.compute import ProcessExecutor  # noqa: TC001
+from redsun.compute import ProcessExecutor
 from redsun.log import Loggable
 
 if TYPE_CHECKING:

@@ -3158,10 +3158,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#letting-go-of-hardware" class="md-nav__link">
+  <a href="#releasing-hardware-resources" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Letting go of hardware
+        Releasing hardware resources
       </span>
     </span>
   </a>
@@ -3211,28 +3211,6 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Cleaning up
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dataclasses-and-pydantic-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Dataclasses and pydantic models
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#two-components-of-the-same-class" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Two components of the same class
       </span>
     </span>
   </a>
@@ -6408,10 +6386,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#letting-go-of-hardware" class="md-nav__link">
+  <a href="#releasing-hardware-resources" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Letting go of hardware
+        Releasing hardware resources
       </span>
     </span>
   </a>
@@ -6461,28 +6439,6 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Cleaning up
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dataclasses-and-pydantic-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Dataclasses and pydantic models
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#two-components-of-the-same-class" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Two components of the same class
       </span>
     </span>
   </a>
@@ -7157,6 +7113,10 @@ and the default. What the session holds by type includes the
 (<a href="../../how-to/share-a-value/#share-a-value-no-component-owns">Share a value no component owns</a>),
 and a Qt view also gets the main window as its <code>parent</code>
 (<a href="../frontends/#the-qt-frontend">Frontends</a>).</p>
+<p>Because every argument is passed by keyword, a component can also be a
+dataclass or a <code>pydantic</code> model, as
+<a href="../../how-to/write-a-component/#a-presenter-as-a-dataclass-or-a-pydantic-model">How to write a component</a>
+shows.</p>
 <div class="admonition warning">
 <p class="admonition-title">The session can't see types imported under <code>if TYPE_CHECKING:</code></p>
 <p>The session reads the annotations while the program runs, when a type
@@ -8072,11 +8032,46 @@ A constructor that takes <code>path_provider</code> gets the session's
 in one folder, named after the session, the day, the
 <a href="../glossary/#data-key">data key</a> and the plan.
 <a href="../../how-to/choose-where-files-go/">How to choose where acquisition files go</a>
-sets the folder and the names, and
+sets the folder and the names. The device writes the data, not <code>redsun</code>,
+because its service already chose the format and holds the buffers; passing
+frames back through the session would cost a copy and a format the service
+didn't choose.
 <a href="../decisions/0013-acquisition-storage-belongs-to-the-device/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 13</a> records
-why the device writes the data and not <code>redsun</code>.</p>
-<h3 id="letting-go-of-hardware">Letting go of hardware<a class="headerlink" href="#letting-go-of-hardware" title="Permanent link">&para;</a></h3>
-<p>A service holding hardware, such as a camera, can let go of it and keep
+the decision.</p>
+<p>Everything a session leaves on disk has one owner:</p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Written by</th>
+<th>Described in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a run's data</td>
+<td>the device or its service, in a format it chooses and names in the <code>mimetype</code> of its <a href="../glossary/#streamresource"><code>StreamResource</code></a> documents</td>
+<td><a href="../decisions/0013-acquisition-storage-belongs-to-the-device/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 13</a></td>
+</tr>
+<tr>
+<td>the folder and the file names</td>
+<td>the session's path provider</td>
+<td><a href="../../how-to/choose-where-files-go/">How to choose where acquisition files go</a></td>
+</tr>
+<tr>
+<td>a product computed from a run</td>
+<td>a component, through a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Writer&lt;/span&gt;" href="../../reference/api/writers/#redsun.writers.Writer"><code>Writer</code></a></td>
+<td><a href="../derived-products/">How derived products are stored</a></td>
+</tr>
+<tr>
+<td>a catalog entry for a run</td>
+<td>a component that keeps a catalog</td>
+<td><a href="../../how-to/keep-a-catalog/">How to keep a catalog of runs</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="releasing-hardware-resources">Releasing hardware resources<a class="headerlink" href="#releasing-hardware-resources" title="Permanent link">&para;</a></h3>
+<p>A service holding hardware, such as a camera, can release it and keep
 running if it offers a command for that as a
 <a href="../glossary/#process-variable">process variable</a>. When the user asks, your
 presenter triggers that command through the service's devices, which stay
@@ -8242,44 +8237,6 @@ use its devices and a device can still reach its service.
 <a href="../session/#shutting-down">Shutting down</a> shows the whole order. A device that
 didn't connect is left out of the session and never shut down, since it would
 write to hardware that never answered.</p>
-<h2 id="dataclasses-and-pydantic-models">Dataclasses and pydantic models<a class="headerlink" href="#dataclasses-and-pydantic-models" title="Permanent link">&para;</a></h2>
-<p>A presenter can be a dataclass or a <code>pydantic</code> model, because the session
-passes every argument by keyword, and <code>name</code> may be anywhere in the signature:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@dataclass</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">DataclassController</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelController</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="n">sig_moved</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Signal</span><span class="p">]</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
-</span></code></pre></div>
-<p>On a <code>pydantic</code> model, a signal must be a <code>ClassVar</code>, since <code>pydantic</code> refuses
-a class attribute without an annotation. A value that <code>setup</code> assigns
-shouldn't be a field: use <code>field(init=False)</code> on a dataclass, or a private
-attribute on a model.</p>
-<div class="admonition warning">
-<p class="admonition-title">A class with <code>__slots__</code> and a signal is left out</p>
-<p><code>psygnal</code> refers to the component weakly, so a class with <code>__slots__</code>
-that owns a signal needs <code>__weakref__</code> among its slots, or the component
-is never freed. The session leaves such a class out, and the error names
-the fix: add <code>__weakref__</code> to the slots, or pass <code>weakref_slot=True</code> to a
-dataclass.</p>
-</div>
-<p>A Qt view can't be a <code>pydantic</code> model or a dataclass, because Qt needs its own
-<code>QWidget.__init__</code> to run.</p>
-<h2 id="two-components-of-the-same-class">Two components of the same class<a class="headerlink" href="#two-components-of-the-same-class" title="Permanent link">&para;</a></h2>
-<p>Two stages, or two copies of one plot, are normal, and each declaration makes
-its own component:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">stage_x</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyStage</span><span class="p">]</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">stage_y</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyStage</span><span class="p">]</span>
-</span></code></pre></div>
-<p>Your code reaches each one by its name, as <code>self.stage_x</code>. A component that
-needs every stage, however many there are, asks the session by what they can
-do: see <a href="../questions/">Questions</a>.</p>
 
 
 
