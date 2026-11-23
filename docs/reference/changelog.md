@@ -17,6 +17,13 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.18.2](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.2) - 23-11-2026
+
+### Fixed
+
+- `redsun.writers.Writer` finishes a derived product's stream when a second `stream_resource` in the same run names a new store for its source, so the product's `resource_uri` names the store it was written to instead of the new one. ([#291](https://github.com/redsun-acquisition/redsun/pull/291))
+- `redsun.presenter.DeviceConfiguration.configure` reports the last value the device gave for a key when reading it back after a write fails, so the configuration views stop showing a value the device never took. ([#295](https://github.com/redsun-acquisition/redsun/pull/295))
+
 ## [0.18.1](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.1) - 20-11-2026
 
 ### Added
