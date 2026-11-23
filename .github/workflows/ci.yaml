@@ -25,42 +25,15 @@ jobs:
     outputs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
     steps:
+      - uses: actions/checkout@v7
+
       - name: Check a docs-only label against the changed files
         id: scope
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
-        run: |
-          if [ -z "$PR" ]; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # read now rather than from the event: a label given when the pull
-          # request opens arrives a moment after its "opened" event
-          labelled=$(gh pr view "$PR" --repo "$REPO" --json labels --jq 'any(.labels[]; .name == "docs-only")')
-          if [ "$labelled" != "true" ]; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          files=$(gh pr diff "$PR" --repo "$REPO" --name-only)
-          other=""
-          # the scripts and session files under docs/ are code the tests import
-          while IFS= read -r path; do
-            case "$path" in
-              docs/*.py|docs/*.yaml|docs/*.yml) other="$other $path" ;;
-              docs/*|changelog.d/*|zensical.toml) ;;
-              */*) other="$other $path" ;;
-              *.md) ;;
-              *) other="$other $path" ;;
-            esac
-          done <<< "$files"
-          if [ -n "$other" ]; then
-            echo "::error::Labelled docs-only, but these files are not documentation:$other. Remove the label or move them to another pull request."
-            exit 1
-          fi
-          echo "Labelled docs-only and every changed file is documentation: the tests are skipped."
-          echo "docs_only=true" >> "$GITHUB_OUTPUT"
+        run: python3 scripts/docs_only.py
 
   checks:
     name: Lint and type checks
