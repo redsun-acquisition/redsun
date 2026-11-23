@@ -261,15 +261,19 @@ def main(arguments: list[str]) -> None:
     """Photograph the script named in *arguments*, the parameter widgets with `--widgets`, or everything, each in a process."""
     if arguments == ["--widgets"]:
         photograph_widgets()
-        return
-    if arguments:
+    elif arguments:
         script = Path(arguments[0])
         target, size, press = SCREENSHOTS[script]
         capture(script, target, size, press)
+    else:
+        for script in SCREENSHOTS:
+            subprocess.run([sys.executable, __file__, script.as_posix()], check=True)
+        subprocess.run([sys.executable, __file__, "--widgets"], check=True)
         return
-    for script in SCREENSHOTS:
-        subprocess.run([sys.executable, __file__, script.as_posix()], check=True)
-    subprocess.run([sys.executable, __file__, "--widgets"], check=True)
+    # the picture is written; PyQt6's exit hook, which destroys the Qt objects
+    # magicgui keeps alive, crashes now and then, so a child skips it
+    sys.stdout.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":
