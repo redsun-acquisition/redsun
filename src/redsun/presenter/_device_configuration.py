@@ -46,7 +46,8 @@ class DeviceConfiguration(Loggable):
         """Everything added so far.
 
         An entry whose signal cannot be written has `:readonly` appended to
-        its source.
+        its source. `readings` holds the last reading of each key, updated at
+        every change the device reports.
         """
         return self._configuration
 
@@ -96,7 +97,9 @@ class DeviceConfiguration(Loggable):
         """Write *value* to *key*, report what it reads back, and return its owner.
 
         A write to a signal that is held, or that sits below a held device, is
-        not made, and the value is still read back and reported.
+        not made, and the value is still read back and reported. When reading
+        back fails, the last value the device reported for *key* is reported
+        instead, so a view showing the edit goes back to what the device holds.
 
         Raises
         ------
@@ -116,7 +119,7 @@ class DeviceConfiguration(Loggable):
             current = await signal.get_value()
         except Exception:
             self.logger.exception(f"Reading {key} back failed")
-            return owner
+            current = self._configuration.readings[key]["value"]
         self.sig_changed.emit(key, current)
         return owner
 
@@ -134,6 +137,7 @@ class DeviceConfiguration(Loggable):
         # a receiver that raises would reach whatever set the device's signal
         try:
             for key, entry in reading.items():
+                self._configuration.readings[key] = entry
                 self.sig_changed.emit(key, entry["value"])
         except Exception:
             self.logger.exception("Relaying a configuration value failed")
