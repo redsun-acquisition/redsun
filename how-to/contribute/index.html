@@ -7781,6 +7781,14 @@ entry that added it instead, so the release says what users get.</p>
 <p>A pull request nobody using <code>redsun</code> would notice, such as tests, CI, a
 refactor or docs alone, needs no entry. A maintainer gives it the
 <code>skip-changelog</code> label, and CI accepts it without one.</p>
+<p>A pull request that changes documentation alone can also take the
+<code>docs-only</code> label. CI then builds the docs and runs the lint and type
+checks, but skips the tests. Before it does, CI checks that the label is
+right: every changed file has to be a page or picture under <code>docs/</code>, an entry
+in <code>changelog.d/</code>, <code>zensical.toml</code> or a Markdown file at the top of the
+repository. The scripts and session files under <code>docs/</code> don't count, because
+the tests import them. If another file changed, the run fails and names it,
+and the label has to come off.</p>
 <h2 id="writing-documentation">Writing documentation<a class="headerlink" href="#writing-documentation" title="Permanent link">&para;</a></h2>
 <p>Write for someone new: picture a reader who knows some Python and nothing about
 <code>redsun</code> or lab hardware, and explain things the way you would in person. Talk
