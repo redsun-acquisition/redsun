@@ -88,6 +88,12 @@ sub-devices. A `fastcs` command becomes a `TriggerableCommand`.
 The values of a declared enum must be the names of the members of the `fastcs`
 enum, because the index lists only those names.
 
+A signal's `describe()` carries what the service served for its attribute:
+the units, precision and limits of a number, the choices of an enum, and the
+text given to the attribute's `description=`, under the key `description`.
+That text is how a view can say what a setting does, so give it to the
+attributes a person will edit.
+
 One service can also back several devices, each taking a part of it, such as
 a flyer that runs a scan and a detector that records it. Give each of them
 `BoxDeviceConnector(prefix, declared_only=True)`, and its connector fills
