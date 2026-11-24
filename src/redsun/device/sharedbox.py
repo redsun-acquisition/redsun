@@ -411,7 +411,11 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
             )
 
     async def get_datakey(self, source: str) -> DataKey:
-        """Return the data key, with the units, precision, limits and choices served."""
+        """Return the data key, with the units, precision, limits and choices served.
+
+        A description the service served for the attribute is added as
+        `description`; an attribute served without one gets no such key.
+        """
         datatype = self._description["datatype"]
         # TODO: ask ophyd-async to export make_metadata from ophyd_async.core
         match datatype["kind"]:
@@ -423,12 +427,16 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
                     metadata["limits"] = limits
             case _:
                 metadata = make_metadata(self.datatype)
-        return make_datakey(
+        datakey = make_datakey(
             self.datatype,  # type: ignore[arg-type]
             self._current()["value"],
             source,
             metadata,
         )
+        if text := self._description["description"]:
+            # event-model's DataKey takes keys beyond those its TypedDict names
+            datakey["description"] = text  # type: ignore[typeddict-unknown-key]
+        return datakey
 
     async def get_reading(self) -> Reading[SignalDatatypeT]:
         """Return the current value."""
