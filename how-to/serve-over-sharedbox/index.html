@@ -6556,6 +6556,11 @@ sub-controllers, becomes an <code>ophyd-async</code> <code>DeviceVector</code>, 
 sub-devices. A <code>fastcs</code> command becomes a <code>TriggerableCommand</code>.</p>
 <p>The values of a declared enum must be the names of the members of the <code>fastcs</code>
 enum, because the index lists only those names.</p>
+<p>A signal's <code>describe()</code> carries what the service served for its attribute:
+the units, precision and limits of a number, the choices of an enum, and the
+text given to the attribute's <code>description=</code>, under the key <code>description</code>.
+That text is how a view can say what a setting does, so give it to the
+attributes a person will edit.</p>
 <p>One service can also back several devices, each taking a part of it, such as
 a flyer that runs a scan and a detector that records it. Give each of them
 <code>BoxDeviceConnector(prefix, declared_only=True)</code>, and its connector fills
