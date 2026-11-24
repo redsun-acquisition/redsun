@@ -560,6 +560,16 @@ async def test_describe_carries_units_and_limits(detector: MyDetector) -> None:
     assert choices == ["IDLE", "RUN"]
 
 
+async def test_describe_carries_the_served_description_only_when_given(
+    detector: MyDetector,
+) -> None:
+    """Put the description the service served in the data key, and no key when it served none."""
+    exposure = (await detector.exposure.describe())["det-exposure"]
+    mode = (await detector.mode.describe())["det-mode"]  # type: ignore[attr-defined]
+    assert exposure.get("description") == "How long each frame collects light."
+    assert "description" not in mode
+
+
 @pytest.mark.parametrize("declared_only", [False, True])
 async def test_a_declared_child_missing_from_the_index_fails_connect(
     served: tuple[BoxController, str], declared_only: bool

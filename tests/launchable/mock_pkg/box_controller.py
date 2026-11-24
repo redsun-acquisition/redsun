@@ -37,7 +37,10 @@ class BoxController(Controller):
         self.put_started = asyncio.Event()
         self.put_gate: asyncio.Event | None = None
         self.runs = 0
-        self.exposure = AttrRW(Float(units="ms", min=0.0, prec=2))
+        self.exposure = AttrRW(
+            Float(units="ms", min=0.0, prec=2),
+            description="How long each frame collects light.",
+        )
         self.label = AttrR(String(length=8), initial_value="start")
         self.limited = AttrRW(Int(max=10))
         self.mode = AttrRW(Enum(Mode))
