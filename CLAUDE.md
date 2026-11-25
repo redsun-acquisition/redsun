@@ -53,6 +53,7 @@ redsun/
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
 |-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
+|                              generate_asyncapi_models.py (src/redsun/fastapi/_asyncapi.py),
 |                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)

@@ -12,11 +12,12 @@ from pydantic.errors import PydanticUserError
 from redsun import __version__
 
 from ._asyncapi import (
+    Action,
+    AsyncAPI,
     Channel,
     Components,
-    Document,
     Info,
-    Message,
+    MessageObject,
     Operation,
     Reference,
 )
@@ -144,7 +145,7 @@ def asyncapi_document(
         by_alias=False,
         ref_template="#/components/schemas/{model}",
     )
-    messages: dict[str, Message] = {}
+    messages: dict[str, Reference | MessageObject] = {}
     for presenter, by_signal in signals.items():
         for signal, adapters in by_signal.items():
             arguments = [
@@ -154,7 +155,7 @@ def asyncapi_document(
             title_case = "".join(
                 word.capitalize() for word in f"{presenter}_{signal}".split("_")
             )
-            messages[f"{presenter}.{signal}"] = Message(
+            messages[f"{presenter}.{signal}"] = MessageObject(
                 name=f"{presenter}.{signal}",
                 title=title_case,
                 content_type="application/json",
@@ -176,23 +177,24 @@ def asyncapi_document(
                     "additionalProperties": False,
                 },
             )
-    document = Document(
+    document = AsyncAPI(
+        asyncapi="3.0.0",
         info=Info(title=title, version=__version__),
         channels={
             "events": Channel(
                 address="/api/events",
                 messages={
-                    name: Reference(ref=f"#/components/messages/{name}")
+                    name: Reference(field_ref=f"#/components/messages/{name}")
                     for name in messages
                 },
             )
         },
         operations={
             "sendEvents": Operation(
-                action="send",
-                channel=Reference(ref="#/channels/events"),
+                action=Action.send,
+                channel=Reference(field_ref="#/channels/events"),
                 messages=[
-                    Reference(ref=f"#/channels/events/messages/{name}")
+                    Reference(field_ref=f"#/channels/events/messages/{name}")
                     for name in messages
                 ],
             )
