@@ -114,7 +114,8 @@ def asyncapi_document(
     *signals* holds the adapter of each argument of each signal, by presenter
     and signal name. Each signal is a message named `{presenter}.{signal}`,
     and every type a message refers to is in `components.schemas`. The
-    schemas are JSON Schema draft-07, the dialect AsyncAPI 3.0.0 reads.
+    schemas are JSON Schema draft-07, the dialect AsyncAPI 3.0.0 reads, and
+    name a model's properties by field name, as the socket sends them.
     """
     schemas, top = TypeAdapter.json_schemas(
         (
@@ -123,6 +124,7 @@ def asyncapi_document(
             for signal, adapters in by_signal.items()
             for i, adapter in enumerate(adapters)
         ),
+        by_alias=False,
         ref_template="#/components/schemas/{model}",
     )
     messages: dict[str, dict[str, Any]] = {}

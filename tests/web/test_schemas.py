@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from fastapi.testclient import TestClient
 from psygnal import Signal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from redsun import AsPresenter, BuildError, remote, slot
 from redsun.fastapi import FastAPISession
@@ -88,9 +88,29 @@ class EmitsReading:
     async def go(self) -> None: ...
 
 
+class Aliased(BaseModel):
+    value: float = Field(alias="Value")
+
+
+class EmitsAliased:
+    sig_aliased = Signal(Aliased)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @slot
+    @remote
+    async def go(self) -> None:
+        self.sig_aliased.emit(Aliased(Value=1.0))
+
+
 class WithPlain(FastAPISession):
     taking: AsPresenter[TakesPlain]
     untyped: AsPresenter[Untyped]
+
+
+class WithAliased(FastAPISession):
+    aliased: AsPresenter[EmitsAliased]
 
 
 def walk(schema: Any) -> list[tuple[str, Any]]:
@@ -107,11 +127,14 @@ def walk(schema: Any) -> list[tuple[str, Any]]:
     return []
 
 
-def document_of(presenter: object) -> dict[str, Any]:
-    """Return the AsyncAPI document of *presenter* served alone, as `probe`."""
-    serving = served(presenter)
-    assert serving is not None
-    return asyncapi_document("x", {"probe": check_schemas(presenter, serving, {})})
+def document_of(**presenters: object) -> dict[str, Any]:
+    """Return the AsyncAPI document of *presenters*, served under their keyword."""
+    signals = {}
+    for name, presenter in presenters.items():
+        serving = served(presenter)
+        assert serving is not None
+        signals[name] = check_schemas(presenter, serving, {})
+    return asyncapi_document("x", signals)
 
 
 @pytest.mark.parametrize(
@@ -134,7 +157,7 @@ def test_a_type_with_no_json_schema_is_refused(cls: type, message: str) -> None:
 
 def test_an_object_argument_is_published_untyped() -> None:
     """Describe an object-typed signal argument with an empty schema."""
-    message = document_of(Untyped())["components"]["messages"]["probe.sig_any"]
+    message = document_of(probe=Untyped())["components"]["messages"]["probe.sig_any"]
     assert message["payload"]["properties"]["args"]["items"] == [
         {"type": "string"},
         {},
@@ -143,7 +166,7 @@ def test_an_object_argument_is_published_untyped() -> None:
 
 def test_nested_models_are_components_written_as_draft_07() -> None:
     """Put a signal's model and the model inside it in the components, with draft-07 tuples."""
-    document = document_of(EmitsReading())
+    document = document_of(probe=EmitsReading())
     schemas = document["components"]["schemas"]
     assert set(schemas) == {"Reading", "Units"}
     pairs = walk(document)
@@ -155,6 +178,21 @@ def test_nested_models_are_components_written_as_draft_07() -> None:
         {"type": "number"},
         {"type": "number"},
     ]
+
+
+def test_the_document_names_a_property_as_the_socket_sends_it(
+    build: BuildSession,
+) -> None:
+    """Name an aliased field's property by the key the WebSocket message carries."""
+    session = build(WithAliased)
+    with (
+        TestClient(session.app) as client,
+        client.websocket_connect("/api/events") as events,
+    ):
+        document = client.get("/asyncapi.json").json()
+        client.post("/api/aliased/go")
+        (sent,) = events.receive_json()["args"]
+    assert set(document["components"]["schemas"]["Aliased"]["properties"]) == set(sent)
 
 
 def test_a_presenter_left_out_has_no_messages(build: BuildSession) -> None:
