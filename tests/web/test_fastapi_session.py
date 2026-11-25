@@ -474,9 +474,11 @@ def test_serve_on_a_port_in_use_raises_and_shuts_the_session_down(
 
 
 def test_serve_answers_until_interrupted(
-    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Answer a request and send an event while serving, then exit with 0 and shut down."""
+    """Log the address, answer a request and send an event, then log Ctrl+C, exit with 0 and shut down."""
     port = free_port()
     session = build(OnWeb, {"remote": {"port": port}})
     answers: list[httpx.Response] = []
@@ -489,9 +491,14 @@ def test_serve_answers_until_interrupted(
             events.append(client.recv(timeout=5))
 
     monkeypatch.setattr("redsun.fastapi._session.until_interrupted", interrupted)
-    with pytest.raises(SystemExit) as exit_:
+    with (
+        caplog.at_level(logging.INFO, logger="redsun"),
+        pytest.raises(SystemExit) as exit_,
+    ):
         session.serve()
     assert exit_.value.code == 0
+    assert f"Serving the API on 127.0.0.1 port {port}" in caplog.text
+    assert "Ctrl+C: stopping the server" in caplog.text
     assert [(a.status_code, a.json()) for a in answers] == [(200, 0.0)]
     assert [json.loads(e) for e in events] == [
         {"presenter": "mover", "signal": "sig_moved", "args": [0.5]}

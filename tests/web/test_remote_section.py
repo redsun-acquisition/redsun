@@ -42,12 +42,14 @@ class Served:
 
 @pytest.fixture
 def addresses(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
-    """Return the addresses `serve` binds, with no socket bound and no server run."""
+    """Return the addresses `serve` binds, binding a free port instead and running no server."""
     seen: list[tuple[str, int]] = []
 
     def bind(address: tuple[str, int], **kwargs: object) -> socket.socket:
         seen.append(address)
-        return socket.socket()
+        sock = socket.socket()
+        sock.bind(("127.0.0.1", 0))
+        return sock
 
     monkeypatch.setattr(socket, "create_server", bind)
     monkeypatch.setattr(uvicorn, "Server", Served)

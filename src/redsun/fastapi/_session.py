@@ -177,7 +177,9 @@ class FastAPISession(WebSession[FastAPI], Session):
             )
             running = run_coro(serve_until_stopped(server, sock), return_future=True)
             self.on_release(partial(stop, server, running))
+            logger.info("Serving the API on %s port %d", *sock.getsockname()[:2])
             until_interrupted()
+            logger.info("Ctrl+C: stopping the server")
         finally:
             self.shutdown()
         sys.exit(0)
