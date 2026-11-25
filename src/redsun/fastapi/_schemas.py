@@ -11,6 +11,16 @@ from pydantic.errors import PydanticUserError
 
 from redsun import __version__
 
+from ._asyncapi import (
+    Channel,
+    Components,
+    Document,
+    Info,
+    Message,
+    Operation,
+    Reference,
+)
+
 if TYPE_CHECKING:
     from psygnal import SignalInstance
 
@@ -134,7 +144,7 @@ def asyncapi_document(
         by_alias=False,
         ref_template="#/components/schemas/{model}",
     )
-    messages: dict[str, dict[str, Any]] = {}
+    messages: dict[str, Message] = {}
     for presenter, by_signal in signals.items():
         for signal, adapters in by_signal.items():
             arguments = [
@@ -144,11 +154,11 @@ def asyncapi_document(
             title_case = "".join(
                 word.capitalize() for word in f"{presenter}_{signal}".split("_")
             )
-            messages[f"{presenter}.{signal}"] = {
-                "name": f"{presenter}.{signal}",
-                "title": title_case,
-                "contentType": "application/json",
-                "payload": {
+            messages[f"{presenter}.{signal}"] = Message(
+                name=f"{presenter}.{signal}",
+                title=title_case,
+                content_type="application/json",
+                payload={
                     "title": title_case,
                     "type": "object",
                     "properties": {
@@ -165,32 +175,31 @@ def asyncapi_document(
                     "required": ["presenter", "signal", "args"],
                     "additionalProperties": False,
                 },
-            }
-    return {
-        "asyncapi": "3.0.0",
-        "info": {"title": title, "version": __version__},
-        "channels": {
-            "events": {
-                "address": "/api/events",
-                "messages": {
-                    name: {"$ref": f"#/components/messages/{name}"} for name in messages
+            )
+    document = Document(
+        info=Info(title=title, version=__version__),
+        channels={
+            "events": Channel(
+                address="/api/events",
+                messages={
+                    name: Reference(ref=f"#/components/messages/{name}")
+                    for name in messages
                 },
-            }
+            )
         },
-        "operations": {
-            "sendEvents": {
-                "action": "send",
-                "channel": {"$ref": "#/channels/events"},
-                "messages": [
-                    {"$ref": f"#/channels/events/messages/{name}"} for name in messages
+        operations={
+            "sendEvents": Operation(
+                action="send",
+                channel=Reference(ref="#/channels/events"),
+                messages=[
+                    Reference(ref=f"#/channels/events/messages/{name}")
+                    for name in messages
                 ],
-            }
+            )
         },
-        "components": {
-            "messages": messages,
-            "schemas": draft07(top.get("$defs", {})),
-        },
-    }
+        components=Components(messages=messages, schemas=draft07(top.get("$defs", {}))),
+    )
+    return document.model_dump(mode="json", by_alias=True, exclude_none=True)
 
 
 def draft07(schema: Any) -> Any:
