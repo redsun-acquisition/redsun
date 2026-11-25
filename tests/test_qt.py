@@ -9,7 +9,7 @@ import subprocess
 import sys
 import threading
 import weakref
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Protocol, runtime_checkable
 
 import pytest
 import yaml
@@ -127,8 +127,16 @@ class Stage:
         return delta
 
 
+@runtime_checkable
+class Positioned(Protocol):
+    """Something reporting a position."""
+
+    @property
+    def position(self) -> float: ...
+
+
 class StageView(QWidget):
-    """A view reading the stage's position and asking it to move."""
+    """A view reading a position and asking for moves."""
 
     placement: Placement = Dock("left")
     sig_move = Signal(float)
@@ -136,10 +144,10 @@ class StageView(QWidget):
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
         self.name = name
-        self.position: float | None = None
+        self.shown: float | None = None
 
-    def setup(self, stage: Stage) -> None:
-        self.position = stage.position
+    def setup(self, stage: Positioned) -> None:
+        self.shown = stage.position
 
 
 class RemoteApp(QtSession):
@@ -1397,9 +1405,12 @@ def test_a_qt_view_drives_a_remote_presenter(
 
     assert set(session.presenters) == {"stage"}
     assert set(session.views) == {"view"}
-    assert session.view.position == 1.5
+    assert session.view.shown == 1.5
 
     session.view.sig_move.emit(2.0)
-
     assert wait_until(lambda: session.stage.moves == [2.0], timeout=5.0)
-    assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+    # dispatched after the first call's done callbacks, so once the second
+    # move runs, the first call's returned value has been dropped
+    session.view.sig_move.emit(3.0)
+    assert wait_until(lambda: session.stage.moves == [2.0, 3.0], timeout=5.0)
+    assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
