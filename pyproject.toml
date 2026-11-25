@@ -62,7 +62,7 @@ dev = [
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
     "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
-    "datamodel-code-generator[black,isort]>=0.102.0",
+    "datamodel-code-generator>=0.102.0",
 ]
 docs = [
     "markdown-d2>=0.5.0",

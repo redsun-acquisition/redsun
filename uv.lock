@@ -1644,14 +1644,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/f4/372168159af2ea65492e571b6f280431f2b0be2eebb32ed96d943c1e4ebb/datamodel_code_generator-0.102.0-py3-none-any.whl", hash = "sha256:d6b7fad258ba81d30fbef689feb16587033d07c225cef3d94c8fc6164af7e828", size = 2611183, upload-time = "2026-11-25T00:45:16.17Z" },
 ]
 
-[package.optional-dependencies]
-black = [
-    { name = "black", marker = "sys_platform != 'emscripten'" },
-]
-isort = [
-    { name = "isort", marker = "sys_platform != 'emscripten'" },
-]
-
 [[package]]
 name = "detect-installer"
 version = "0.2.1"
@@ -6508,7 +6500,7 @@ dev = [
     { name = "acquire-zarr" },
     { name = "caproto" },
     { name = "coverage" },
-    { name = "datamodel-code-generator", extra = ["black", "isort"] },
+    { name = "datamodel-code-generator" },
     { name = "fastcs", extra = ["epicspva"] },
     { name = "griffe-fieldz" },
     { name = "jsonschema" },
@@ -6718,7 +6710,7 @@ dev = [
     { name = "acquire-zarr", specifier = ">=0.10.0" },
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "coverage", specifier = ">=7.17.3" },
-    { name = "datamodel-code-generator", extras = ["black", "isort"], specifier = ">=0.102.0" },
+    { name = "datamodel-code-generator", specifier = ">=0.102.0" },
     { name = "fastcs", extras = ["epicspva"], specifier = ">=0.14.4" },
     { name = "griffe-fieldz", specifier = ">=0.5.0" },
     { name = "jsonschema", specifier = ">=4.26.0" },

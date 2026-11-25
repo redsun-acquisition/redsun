@@ -6,7 +6,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Info(BaseModel):
@@ -73,11 +73,7 @@ class Components(BaseModel):
     )
     schemas: dict[str, dict[str, Any]] | None = None
     messages: Annotated[
-        dict[
-            Annotated[str, StringConstraints(pattern=r'^[\w\d\.\-_]+$')],
-            Reference | MessageObject,
-        ]
-        | None,
+        dict[str, Reference | MessageObject] | None,
         Field(description='An object to hold reusable Message Objects.'),
     ] = None
 

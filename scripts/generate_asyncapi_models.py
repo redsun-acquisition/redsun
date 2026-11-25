@@ -39,12 +39,8 @@ OPTIONS = [
     "--input-file-type=jsonschema",
     "--output-model-type=pydantic_v2.BaseModel",
     "--preset=standard-py311-20261124",
-    "--target-python-version=3.11",
     "--class-name=AsyncAPI",
     "--disable-timestamp",
-    "--formatters",
-    "black",
-    "isort",
 ]
 
 
@@ -81,7 +77,8 @@ def subset(schema: dict[str, Any]) -> dict[str, Any]:
     """Return *schema* cut down to what the document of the event socket uses.
 
     A message's payload and the schemas of the components are JSON Schema, not
-    document structure, so they become plain JSON objects.
+    document structure, so they become plain JSON objects. The names of the
+    components' messages are not checked against the key pattern.
     """
     definitions = schema["definitions"]
     for name, names in KEEP.items():
@@ -90,6 +87,9 @@ def subset(schema: dict[str, Any]) -> dict[str, Any]:
         "type": "object",
         "description": "JSON Schema of the payload.",
     }
+    messages = definitions["components"]["properties"]["messages"]
+    # a typed dict cannot hold the key pattern, so any key is accepted
+    (messages["additionalProperties"],) = messages.pop("patternProperties").values()
     definitions["components"]["properties"]["schemas"] = {
         "type": "object",
         "additionalProperties": {"type": "object"},
