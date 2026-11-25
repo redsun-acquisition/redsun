@@ -1,0 +1,36 @@
+"""Write the OpenAPI document of the example session served over the web.
+
+The document is the one `session.app.openapi()` gives, with the arguments of
+each presenter's signals under the top-level key `x-redsun-signals`.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+from redsun.examples._web import ExampleWeb
+from redsun.ports._remote import served, signal_schema
+
+
+def main(argv: list[str]) -> None:
+    """Build the example headless, write its OpenAPI document to the path in *argv*, and shut it down."""
+    (target,) = argv
+    session = ExampleWeb()
+    session.build()
+    try:
+        document = session.app.openapi()
+        document["x-redsun-signals"] = {
+            name: signal_schema(what)
+            for name, presenter in session.presenters.items()
+            if (what := served(presenter)) is not None
+        }
+        Path(target).write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    finally:
+        session.shutdown()
+    print(f"wrote {target}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

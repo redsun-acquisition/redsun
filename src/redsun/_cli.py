@@ -59,7 +59,35 @@ def parser() -> argparse.ArgumentParser:
             "or in the platform's look when no style is named"
         ),
     )
+    made.add_argument(
+        "--web",
+        action="store_true",
+        help="with --example, serve the example over HTTP instead of opening a window",
+    )
     return made
+
+
+def run_web() -> int:
+    """Serve the example session over HTTP.
+
+    A session that starts runs until Ctrl+C, so this returns only when the
+    session could not start, with the exit code.
+    """
+    try:
+        # the web frontend comes with an extra, and the command exists without one
+        from redsun.examples._web import ExampleWeb  # noqa: PLC0415
+    except ImportError as e:
+        print(
+            f"Serving the example needs the web frontend, which could not be loaded ({e}). "
+            "If it is not installed, install 'redsun[fastapi]'.",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        ExampleWeb().serve()
+    except (BuildError, HookError, OSError, RuntimeError, TimeoutError) as e:
+        print(f"The example could not start. {e}", file=sys.stderr)
+        return 1
 
 
 def run_example(style: str) -> int:
@@ -89,7 +117,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the `redsun` command with *argv*, the process's arguments for `None`, and return the exit code."""
     made = parser()
     arguments = made.parse_args(argv)
+    if arguments.web and arguments.example is None:
+        made.error("--web needs --example")
     if arguments.example is None:
         made.print_help()
         return 0
+    if arguments.web:
+        if arguments.example:
+            made.error("--web serves the example without a style")
+        return run_web()
     return run_example(arguments.example)
