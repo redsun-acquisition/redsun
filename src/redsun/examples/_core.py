@@ -16,12 +16,7 @@ from ._devices import Axis, Laser, Led, Plans, Stage  # noqa: TC001
 
 
 class ExampleCore(Session):
-    """The devices and presenters of the example, and the links between presenters.
-
-    A stage with two axes, a focus axis, a laser and an LED stand in for
-    hardware, so nothing outside the process moves. One plan sends the focus
-    to a few positions in turn, and holds it locked while it runs.
-    """
+    """The devices and presenters of the example, and the links between presenters."""
 
     config: ClassVar[dict[str, Any]] = {"session": "redsun-example", "strict": True}
 
