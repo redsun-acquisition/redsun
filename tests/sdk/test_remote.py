@@ -85,6 +85,24 @@ class NoSchema:
     async def go(self, value: Plain) -> None: ...
 
 
+class VarArgs:
+    @slot
+    @remote
+    async def go(self, *args: int) -> None: ...
+
+
+class VarKeywords:
+    @slot
+    @remote
+    async def go(self, **kwargs: int) -> None: ...
+
+
+class PositionalOnly:
+    @slot
+    @remote
+    async def go(self, x: int, /) -> None: ...
+
+
 class Unmarked:
     sig_value = Signal(int)
 
@@ -173,6 +191,9 @@ def test_a_component_with_nothing_remote_is_not_served() -> None:
         (AsyncGetter, "'state' is a remote property with an async getter"),
         (Unresolvable, "'go' has annotations that do not resolve"),
         (NoSchema, "'go' takes a type with no JSON Schema"),
+        (VarArgs, "'go' has a variadic positional parameter (args)"),
+        (VarKeywords, "'go' has a variadic keyword parameter (kwargs)"),
+        (PositionalOnly, "'go' has a positional-only parameter (x)"),
     ],
 )
 def test_served_refuses_each_rule_naming_the_member(cls: type, message: str) -> None:
@@ -186,3 +207,17 @@ def test_an_object_argument_is_published_untyped() -> None:
     s = served(Good())
     assert s is not None
     assert signal_schema(s)["sig_any"] == [{"type": "string"}, {}]
+
+
+def test_served_lists_every_problem_in_one_error() -> None:
+    """Report problems of different members together in one error."""
+
+    class Both(NotASlot):
+        @slot
+        @remote
+        async def other(self, *args: int) -> None: ...
+
+    with pytest.raises(TypeError) as info:
+        served(Both())
+    assert "'go' is @remote but not a @slot" in str(info.value)
+    assert "'other' has a variadic positional parameter (args)" in str(info.value)

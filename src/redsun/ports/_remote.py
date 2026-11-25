@@ -31,6 +31,12 @@ F = TypeVar("F", bound="Callable[..., Any]")
 
 REMOTE_ATTR = "__redsun_remote__"
 
+UNNAMEABLE = (
+    inspect.Parameter.POSITIONAL_ONLY,
+    inspect.Parameter.VAR_POSITIONAL,
+    inspect.Parameter.VAR_KEYWORD,
+)
+
 
 def remote(fn: F, /) -> F:
     """Mark a method as reachable from outside the process.
@@ -170,12 +176,23 @@ def read_command(
     hints = resolve_hints(function, attr, problems)
     if hints is None:
         return None
-    names = list(inspect.signature(function).parameters)[1:]
-    parameters = {name: hints.get(name, Any) for name in names}
+    parameters: dict[str, Any] = {}
+    refused = False
+    for p in list(inspect.signature(function).parameters.values())[1:]:
+        if p.kind in UNNAMEABLE:
+            problems.append(
+                f"{attr!r} has a {p.kind.description} parameter ({p.name}), "
+                "which a remote call cannot pass by name"
+            )
+            refused = True
+        else:
+            parameters[p.name] = hints.get(p.name, Any)
     returns = hints.get("return", Any)
     for name, t in parameters.items():
         check_schema(t, f"{attr!r} takes a type", problems, name)
     check_schema(returns, f"{attr!r} returns a type", problems)
+    if refused:
+        return None
     method = getattr(component, attr)
     return Command(port_name(method), method, parameters, returns)
 
