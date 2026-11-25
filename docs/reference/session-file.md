@@ -19,7 +19,7 @@ Every key is optional.
 | --- | --- | --- | --- |
 | `schema_version` | number | `1.0` | the format of the file; `1.0` is the only one |
 | `session` | text | the name of the session class | the name of the session |
-| `frontend` | `qt` | the frontend of the session class | the registered frontend to build on |
+| `frontend` | `qt` or `fastapi` | the frontend of the session class | the registered frontend to build on |
 | `strict` | true or false | `false` | whether a component that fails to build or to set up stops the session |
 | `mock` | true or false | `false` | whether devices connect to simulated backends, and no service is launched |
 | `metadata` | mapping | empty | anything to record with the session |
@@ -200,8 +200,9 @@ The section changes nothing in a session whose components ask for no
 
 ## Remote
 
-`remote` is read by a web session such as `redsun.fastapi.FastAPISession`; a
-Qt session refuses it. A web session class may declare the same keys in its
+`remote` says where a web session, such as
+[`FastAPISession`][redsun.fastapi.FastAPISession], serves its API, and every
+other session refuses it. A web session class may declare the same keys in its
 `remote` attribute; the file wins over the class, key by key.
 
 | Key | Type | Default | Holds |
@@ -217,8 +218,23 @@ remote:
   origins: ["http://localhost:5173"]
 ```
 
-A web session refuses the sections only a Qt session reads: `views`,
-`shortcuts`, `actions` and `color_scheme`.
+A file with `frontend: fastapi` describes a web session whole, with no session
+class of your own.
+
+### Sections each frontend refuses
+
+A section that the session's frontend does not read is refused with a
+`ConfigurationError` naming it, before anything is built:
+
+| Section | Refused by |
+| --- | --- |
+| `remote` | every session that is not a web session, such as a Qt session or one with no frontend |
+| `views`, `shortcuts`, `actions`, `color_scheme` | a web session |
+| `layout` | a web session, and any other session whose frontend lays out no window |
+
+A file shared by a Qt session and a web session is therefore split in
+layers: a base file with the devices and presenters, and one file per
+frontend naming `frontend:` and the sections that frontend reads.
 
 ## Storage
 

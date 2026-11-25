@@ -14,6 +14,12 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Remote members
+
+::: redsun.remote
+    options:
+      show_root_heading: true
+
 ## Connections
 
 ::: redsun.Link

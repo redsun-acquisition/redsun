@@ -93,6 +93,10 @@ are described above, with [`Session`][redsun.Session].
     options:
       show_root_heading: true
 
+::: redsun.WebSession
+    options:
+      show_root_heading: true
+
 ## Declaring components
 
 ::: redsun.AsDevice

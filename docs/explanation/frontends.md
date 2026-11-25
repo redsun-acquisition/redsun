@@ -5,8 +5,8 @@ icon: lucide/monitor
 # How a frontend shows a session on screen
 
 A [frontend](glossary.md#frontend) is what shows your session to a person: a
-desktop window today, and perhaps a web page in the future. `redsun` ships one
-frontend, for Qt.
+desktop window, or an API a web page calls. `redsun` ships two frontends: one
+for Qt, and one that serves the presenters over HTTP with `fastapi`.
 
 The core of `redsun` knows nothing about windows. A frontend adds a session
 class to subclass, such as [`QtSession`][redsun.qt.QtSession], which starts
@@ -116,6 +116,22 @@ answering whether the window may close.
 what each receives and when it runs. A session with no frontend calls no hook
 points, so it refuses a hook declared on it.
 
+## The web frontend
+
+[`FastAPISession`][redsun.fastapi.FastAPISession] shows no views. It serves
+each presenter member marked with [`remote`][redsun.remote] as a route under
+`/api`, and every public signal of those presenters on a WebSocket, so a page
+in a browser takes the place of the window. Its frontend,
+[`FastAPIFrontend`][redsun.fastapi.FastAPIFrontend], refuses every view at
+declaration and lays out no window, and it refuses the session file sections
+that act on a window. Because one process runs one frontend, an application
+offering both a window and a web API declares its components in one class and
+builds each frontend's session on top of it.
+[ADR 42](decisions/0042-presenters-publish-a-remote-api.md) says why the API
+is made of presenters, and
+[How to serve a session over the web](../how-to/serve-a-session-over-the-web.md)
+shows how to write one.
+
 ## Choosing the frontend from a file
 
 A session file names its frontend by the name the frontend is registered
@@ -133,6 +149,7 @@ package announces what it offers, in the `redsun.frontends` group:
 ```toml
 [project.entry-points."redsun.frontends"]
 qt = "redsun.qt:QtSession"
+fastapi = "redsun.fastapi:FastAPISession"
 ```
 
 Another package registers its session class the same way, with no change to
@@ -155,6 +172,8 @@ and `Session.view_arguments`, to add arguments to every view's constructor.
 | whether a layout may start a view hidden | `Frontend.hides` | yes |
 | which keys it can read, and how it writes them | `Frontend.key_problems`, `Frontend.canonical_key` | `app-model`'s spelling, such as `Ctrl+R` |
 | whether a key can run a view's coroutine method | `Frontend.view_coroutines` | no |
+| whether a view may declare an `async` slot | `Frontend.async_view_slots` | no |
+| the session file sections it refuses | `Frontend.foreign_sections` | `remote` |
 | the thread its views' slots run on | [`Frontend.thread_of`][redsun.Frontend.thread_of] | the main thread, for a `QWidget` |
 | the delivery of the calls held for that thread | the session's `run` | `psygnal.qt.start_emitting_from_queue` |
 

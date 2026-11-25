@@ -142,6 +142,7 @@ leaves it to the first session you start, which then takes several seconds
 longer.
 
 The guides for the optional parts are
+[serving a session over the web](serve-a-session-over-the-web.md),
 [writing a derived product](write-a-derived-product.md),
 [keeping a catalog of runs](keep-a-catalog.md),
 [testing a plugin](test-a-plugin.md) and
