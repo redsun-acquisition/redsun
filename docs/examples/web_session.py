@@ -39,7 +39,7 @@ class MyController:
     @remote
     async def move_to(self, motor: str, position: float) -> float:
         await self.motors[motor].position.set(position)
-        reached = await self.motors[motor].position.get_value()
+        reached: float = await self.motors[motor].position.get_value()
         self.sig_moved.emit(motor, reached)
         return reached
 
