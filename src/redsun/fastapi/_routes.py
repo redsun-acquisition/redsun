@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections import Counter
+from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from fastapi import WebSocket  # noqa: TC002
+from fastapi import APIRouter, WebSocket
 from fastapi.responses import JSONResponse
-from pydantic import TypeAdapter, create_model
+from pydantic import BaseModel, TypeAdapter, create_model
 from pydantic_core import PydanticSerializationError
 
 from ..ports._remote import served, signal_schema
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
 
     from fastapi import FastAPI
-    from pydantic import BaseModel
 
     from ..ports._remote import Command, Query, Served
 
@@ -36,35 +36,38 @@ def build_api(
 ) -> list[Callable[[], None]]:
     """Add to *app* the routes of every presenter with a remote member.
 
-    A presenter breaking a rule of `served` is left out, logged and recorded in
-    *refused* under its name. The callables returned disconnect what the API
-    connected and close the sockets still open.
+    A presenter whose routes cannot be built, for breaking a rule of `served`
+    or any other reason, is left out, logged and recorded in *refused* under
+    its name. The callables returned disconnect what the API connected and
+    close the sockets still open.
     """
     listeners: Listeners = {}
-    releases: list[Callable[[], None]] = [lambda: close_all(listeners)]
+    releases: list[Callable[[], None]] = [partial(close_all, listeners)]
     schemas: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    operations: set[str] = set()
     for name, presenter in presenters.items():
         try:
             serving = served(presenter)
-            if serving is not None:
-                refuse_shared_ports(serving)
+            if serving is None:
+                continue
+            router = routes_of(name, serving, operations)
+            schema = signal_schema(serving)
         except TypeError as error:
             logger.error("Presenter '%s' is left out of the API: %s", name, error)
             refused[name] = error
             continue
-        if serving is None:
+        except Exception as error:
+            logger.exception("Presenter '%s' is left out of the API", name)
+            refused[name] = error
             continue
-        for command in serving.commands:
-            add_command(app, name, command)
-        for query in serving.queries:
-            add_query(app, name, query)
+        app.include_router(router)
+        schemas[name] = schema
         for signal_name, signal in serving.signals.items():
             relay = relay_for(
                 listeners, name, signal_name, serving.signal_types[signal_name]
             )
             signal.connect(relay)
             releases.append(partial(signal.disconnect, relay))
-        schemas[name] = signal_schema(serving)
 
     async def signals() -> dict[str, dict[str, list[dict[str, Any]]]]:
         return schemas
@@ -73,28 +76,58 @@ def build_api(
     async def events(websocket: WebSocket) -> None:
         await relay_events(websocket, listeners)
 
-    app.add_api_route("/api/signals", signals, methods=["GET"])
+    app.add_api_route(
+        "/api/signals", signals, methods=["GET"], operation_id="get_signals"
+    )
     app.add_api_websocket_route("/api/events", events)
     return releases
 
 
-def refuse_shared_ports(serving: Served) -> None:
-    """Refuse two remote slots answering to one port name, which one path cannot serve.
+def routes_of(presenter: str, serving: Served, operations: set[str]) -> APIRouter:
+    """Return the routes of *presenter*, and add their operation ids to *operations*.
 
     Raises
     ------
     TypeError
-        Naming each port name taken twice.
+        Listing every route that cannot be served: two remote slots on one
+        port, a parameter a request body cannot carry, or an operation id
+        another presenter took.
     """
+    commands = [(c, f"{presenter}__{c.name}") for c in serving.commands]
+    queries = [(q, f"get_{presenter}__{q.name}") for q in serving.queries]
     counted = Counter(command.name for command in serving.commands)
-    shared = [name for name, count in counted.items() if count > 1]
-    if shared:
-        raise TypeError(
-            "\n".join(f"- two remote slots answer to the port {n!r}" for n in shared)
-        )
+    problems = [
+        f"two remote slots answer to the port {port!r}"
+        for port, count in counted.items()
+        if count > 1
+    ]
+    problems.extend(
+        f"{command.name!r} has a parameter {p!r}, which a request body cannot "
+        "carry: it starts with '_' or is a name pydantic models use"
+        for command in serving.commands
+        for p in command.parameters
+        if p.startswith("_") or hasattr(BaseModel, p)
+    )
+    ids = [operation for _, operation in [*commands, *queries]]
+    problems.extend(
+        f"the operation id {i!r} is taken by another presenter"
+        for i in ids
+        if i in operations
+    )
+    if problems:
+        raise TypeError("\n".join(f"- {p}" for p in problems))
+    router = APIRouter()
+    for command, operation in commands:
+        add_command(router, presenter, command, operation)
+    for query, operation in queries:
+        add_query(router, presenter, query, operation)
+    operations.update(ids)
+    return router
 
 
-def add_command(app: FastAPI, presenter: str, command: Command) -> None:
+def add_command(
+    router: APIRouter, presenter: str, command: Command, operation: str
+) -> None:
     """Add the POST route calling *command* with the body's fields."""
 
     async def endpoint(body: BaseModel) -> object:
@@ -106,18 +139,17 @@ def add_command(app: FastAPI, presenter: str, command: Command) -> None:
 
     fields: dict[str, Any] = {p: (t, ...) for p, t in command.parameters.items()}
     # the body type is the command's own, which no annotation written here can name
-    endpoint.__annotations__["body"] = create_model(
-        f"{presenter}_{command.name}", **fields
-    )
-    app.add_api_route(
+    endpoint.__annotations__["body"] = create_model(operation, **fields)
+    router.add_api_route(
         f"/api/{presenter}/{command.name}",
         endpoint,
         methods=["POST"],
         response_model=command.returns,
+        operation_id=operation,
     )
 
 
-def add_query(app: FastAPI, presenter: str, query: Query) -> None:
+def add_query(router: APIRouter, presenter: str, query: Query, operation: str) -> None:
     """Add the GET route reading *query*."""
 
     async def endpoint() -> object:
@@ -127,11 +159,12 @@ def add_query(app: FastAPI, presenter: str, query: Query) -> None:
             logger.exception("Remote read %s.%s failed", presenter, query.name)
             return JSONResponse({"error": str(error)}, 500)
 
-    app.add_api_route(
+    router.add_api_route(
         f"/api/{presenter}/{query.name}",
         endpoint,
         methods=["GET"],
         response_model=query.returns,
+        operation_id=operation,
     )
 
 
@@ -140,11 +173,14 @@ def relay_for(
 ) -> Callable[..., None]:
     """Return a callback putting an emission of *signal* on every open socket's queue.
 
-    An emission that cannot be serialised is logged and dropped.
+    Nothing is done while no socket is open. An emission that cannot be
+    serialised is logged and dropped.
     """
     adapters = [TypeAdapter[Any](t) for t in types]
 
     def relay(*args: object) -> None:
+        if not listeners:
+            return
         # an exception reaching the signal would fail the slot that emitted it
         try:
             values = [
@@ -155,8 +191,7 @@ def relay_for(
             logger.warning("Signal %s.%s not sent: %s", presenter, signal, error)
             return
         message: Message = {"presenter": presenter, "signal": signal, "args": values}
-        for queue, loop in tuple(listeners.items()):
-            loop.call_soon_threadsafe(queue.put_nowait, message)
+        put_on_all(listeners, message)
 
     return relay
 
@@ -191,7 +226,14 @@ async def send_queued(
     await websocket.close()
 
 
+def put_on_all(listeners: Listeners, message: Message | None) -> None:
+    """Put *message* on every open socket's queue, skipping a queue whose loop has closed."""
+    for queue, loop in tuple(listeners.items()):
+        # a loop can close before its socket's handler removes the queue
+        with suppress(RuntimeError):
+            loop.call_soon_threadsafe(queue.put_nowait, message)
+
+
 def close_all(listeners: Listeners) -> None:
     """Close every open socket."""
-    for queue, loop in tuple(listeners.items()):
-        loop.call_soon_threadsafe(queue.put_nowait, None)
+    put_on_all(listeners, None)

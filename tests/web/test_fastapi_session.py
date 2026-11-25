@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import TYPE_CHECKING
+import socket
+from contextlib import suppress
+from typing import TYPE_CHECKING, Any, TypeVarTuple
 
 import pytest
 from fastapi import WebSocketDisconnect
@@ -23,7 +26,12 @@ from redsun import (
 from redsun.fastapi import FastAPISession
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, MutableMapping
+    from contextvars import Context
+
     from redsun.testing import BuildSession
+
+Ts = TypeVarTuple("Ts")
 
 
 class Mover:
@@ -83,6 +91,55 @@ class Twice:
     async def second(self) -> None: ...
 
 
+class Misnamed:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @slot
+    @remote
+    async def configure(self, model_config: float) -> None: ...
+
+    @slot
+    @remote
+    async def nudge(self, _delta: float) -> None: ...
+
+
+class Ending:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @slot
+    @remote
+    async def c(self) -> None: ...
+
+
+class Starting:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @slot
+    @remote
+    async def b_c(self) -> None: ...
+
+
+class ClosedLoop(asyncio.SelectorEventLoop):
+    """A loop refusing work from other threads, as a closed one does, while `refusing` is set."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.refusing = False
+
+    def call_soon_threadsafe(
+        self,
+        callback: Callable[[*Ts], object],
+        *args: *Ts,
+        context: Context | None = None,
+    ) -> asyncio.Handle:
+        if self.refusing:
+            raise RuntimeError("Event loop is closed")
+        return super().call_soon_threadsafe(callback, *args, context=context)
+
+
 class MyView:
     placement = Placement()
 
@@ -105,6 +162,15 @@ class WithView(OnWeb):
 
 class Doubled(FastAPISession):
     twice: AsPresenter[Twice]
+
+
+class WithMisnamed(FastAPISession):
+    misnamed: AsPresenter[Misnamed]
+
+
+class Joined(FastAPISession):
+    a_b: AsPresenter[Ending]
+    a: AsPresenter[Starting]
 
 
 def test_a_command_answers_and_its_signal_reaches_the_websocket(
@@ -279,3 +345,90 @@ def test_a_getter_that_raises_answers_500(build: BuildSession) -> None:
         r = client.get("/api/mover/broken")
     assert r.status_code == 500
     assert "no reading" in r.json()["error"]
+
+
+def test_serve_on_a_port_in_use_raises_and_shuts_the_session_down(
+    build: BuildSession,
+) -> None:
+    """Raise when the server cannot start, leaving the session shut down."""
+    session = build(OnWeb)
+    with socket.socket() as taken:
+        # another process holding the port already makes the same case
+        with suppress(OSError):
+            taken.bind(("127.0.0.1", 8000))
+            taken.listen()
+        with pytest.raises(RuntimeError, match="could not start"):
+            session.serve()
+    assert not session.is_built
+
+
+def test_a_parameter_a_body_cannot_carry_leaves_the_presenter_out(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Leave out a presenter with a parameter named like a model attribute or starting with '_'."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        session = build(WithMisnamed)
+    assert "misnamed" in session.presenters
+    paths = session.app.openapi()["paths"]
+    assert not [path for path in paths if path.startswith("/api/misnamed/")]
+    assert "'model_config'" in caplog.text
+    assert "'_delta'" in caplog.text
+
+
+def test_paths_joining_to_one_name_get_distinct_operation_ids(
+    build: BuildSession,
+) -> None:
+    """Give /api/a_b/c and /api/a/b_c operation ids of their own."""
+    session = build(Joined)
+    paths = session.app.openapi()["paths"]
+    ids = {paths[p]["post"]["operationId"] for p in ("/api/a_b/c", "/api/a/b_c")}
+    assert len(ids) == 2
+
+
+def test_an_emission_with_no_client_is_not_serialised(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log nothing for an emission no client would receive."""
+    session = build(OnWeb)
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        session.mover.sig_any.emit(object())
+    assert "sig_any" not in caplog.text
+
+
+def test_an_emission_reaching_a_closed_loop_does_not_reach_the_emitter(
+    build: BuildSession,
+) -> None:
+    """Emit without raising while a connected socket's loop refuses work."""
+    session = build(OnWeb)
+    loop = ClosedLoop()
+    inbox: asyncio.Queue[MutableMapping[str, Any]] = asyncio.Queue()
+    accepted = loop.create_future()
+    scope: dict[str, Any] = {
+        "type": "websocket",
+        "asgi": {"version": "3.0"},
+        "scheme": "ws",
+        "path": "/api/events",
+        "raw_path": b"/api/events",
+        "root_path": "",
+        "query_string": b"",
+        "headers": [],
+        "client": ("test", 1),
+        "server": ("test", 80),
+        "subprotocols": [],
+    }
+
+    async def send(message: MutableMapping[str, Any]) -> None:
+        if message["type"] == "websocket.accept":
+            accepted.set_result(None)
+
+    inbox.put_nowait({"type": "websocket.connect"})
+    handler = loop.create_task(session.app(scope, inbox.get, send))
+    try:
+        loop.run_until_complete(accepted)
+        loop.refusing = True
+        session.mover.sig_moved.emit(1.0)
+    finally:
+        loop.refusing = False
+        inbox.put_nowait({"type": "websocket.disconnect", "code": 1000})
+        loop.run_until_complete(handler)
+        loop.close()

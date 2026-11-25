@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import time
+from concurrent.futures import wait
 from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING, NoReturn
@@ -28,6 +29,8 @@ if TYPE_CHECKING:
 
 HOST = "127.0.0.1"
 PORT = 8000
+START_TIMEOUT = 10.0
+"""Seconds `serve` waits for the server to start."""
 STOP_TIMEOUT = 10.0
 """Seconds `shutdown` waits for the server to stop."""
 
@@ -112,26 +115,28 @@ class FastAPISession(WebSession[FastAPI], Session):
     def serve(self) -> NoReturn:
         """Build, serve the API on `127.0.0.1:8000`, and block until Ctrl+C.
 
-        Ctrl+C stops the server, shuts the session down and exits.
+        Ctrl+C stops the server, shuts the session down and exits. The session
+        is also shut down when the server fails to start, and when Ctrl+C
+        comes before it has.
 
         Raises
         ------
         RuntimeError
             If the server stops before it starts, such as on a port in use.
+        TimeoutError
+            If the server neither starts nor stops within `START_TIMEOUT`.
         """
         self.build()
-        server = uvicorn.Server(
-            uvicorn.Config(self.app, host=HOST, port=PORT, log_level="warning")
-        )
-        running = run_coro(serve_until_stopped(server), return_future=True)
-        self.on_release(partial(stop, server, running))
-        while not server.started:
-            if running.done():
-                running.result()
-                raise RuntimeError("the server stopped before it started")
-            time.sleep(0.01)
-        until_interrupted()
-        self.shutdown()
+        try:
+            server = uvicorn.Server(
+                uvicorn.Config(self.app, host=HOST, port=PORT, log_level="warning")
+            )
+            running = run_coro(serve_until_stopped(server), return_future=True)
+            self.on_release(partial(stop, server, running))
+            wait_until_started(server, running)
+            until_interrupted()
+        finally:
+            self.shutdown()
         sys.exit(0)
 
 
@@ -150,10 +155,33 @@ async def serve_until_stopped(server: uvicorn.Server) -> None:
         raise RuntimeError(f"the server could not start on {HOST}:{PORT}") from e
 
 
+def wait_until_started(server: uvicorn.Server, running: Future[None]) -> None:
+    """Block until *server* has started.
+
+    Raises
+    ------
+    RuntimeError
+        If the server stops first.
+    TimeoutError
+        If it neither starts nor stops within `START_TIMEOUT`.
+    """
+    deadline = time.monotonic() + START_TIMEOUT
+    while not server.started:
+        if running.done():
+            running.result()
+            raise RuntimeError("the server stopped before it started")
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"the server did not start in {START_TIMEOUT} s")
+        time.sleep(0.01)
+
+
 def stop(server: uvicorn.Server, running: Future[None]) -> None:
-    """Ask *server* to exit and wait until it has."""
+    """Ask *server* to exit and wait until it has, at most `STOP_TIMEOUT` seconds.
+
+    A server that failed has stopped already; why is raised where it failed.
+    """
     server.should_exit = True
-    running.result(STOP_TIMEOUT)
+    wait([running], STOP_TIMEOUT)
 
 
 def until_interrupted() -> None:
