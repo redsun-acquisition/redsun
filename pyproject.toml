@@ -324,6 +324,7 @@ ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public
 [tool.ruff.lint.flake8-type-checking]
 # pydantic reads a model's field annotations at runtime
 runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["redsun.remote", "redsun.ports.remote"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

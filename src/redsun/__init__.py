@@ -42,6 +42,7 @@ from redsun.ports import (
     Link,
     WiringError,
     links_between,
+    remote,
     slot,
 )
 from redsun.registry import (
@@ -153,6 +154,7 @@ __all__ = [
     "links_between",
     "provides",
     "rejected",
+    "remote",
     "satisfies",
     "satisfying",
     "shortcut",

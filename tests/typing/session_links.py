@@ -1,8 +1,6 @@
-"""A link's slot returns nothing, or is a coroutine function returning nothing.
+"""A link's slot is a function or a coroutine function, returning a value or not.
 
 Never imported or executed; checked by the project's normal mypy invocation.
-A slot returning a value is refused, so the `type: ignore` below is needed:
-mypy's `warn_unused_ignores` fails this module if `Link` ever accepts it.
 """
 
 from __future__ import annotations
@@ -43,4 +41,4 @@ class App(Session):
     def wire(self) -> Iterator[Link]:
         yield self.talker.sig_said, self.listener.hear
         yield self.talker.sig_said, self.listener.hear_later
-        yield self.talker.sig_said, self.listener.answer  # type: ignore[misc]
+        yield self.talker.sig_said, self.listener.answer
