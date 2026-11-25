@@ -19,6 +19,7 @@ from redsun.qt import QtHook
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
+    import argparse
     from pathlib import Path
 
     from qtpy.QtWidgets import QApplication
@@ -43,6 +44,17 @@ from redsun._cli import main
 
 sys.exit(main([]))
 """
+
+
+def greet(arguments: argparse.Namespace) -> int:
+    print(f"hello {arguments.name}")
+    return 3
+
+
+def add_greet(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    made = commands.add_parser("greet", help="greet somebody by name")
+    made.add_argument("name")
+    made.set_defaults(run=greet)
 
 
 @pytest.mark.qt
@@ -136,6 +148,28 @@ def test_no_argument_prints_the_help(capsys: pytest.CaptureFixture[str]) -> None
     """Print the help and succeed when the command is given nothing to do."""
     assert main([]) == 0
     assert "--example" in capsys.readouterr().out
+
+
+def test_a_registered_command_runs_with_its_arguments(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Parse a registered command's own arguments, run it and return its exit code."""
+    monkeypatch.setattr("redsun._cli.COMMANDS", (add_greet,))
+
+    assert main(["greet", "Ada"]) == 3
+    assert "hello Ada" in capsys.readouterr().out
+
+
+def test_a_registered_command_is_listed_in_the_help(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """List a registered command beside the options when the command is given nothing to do."""
+    monkeypatch.setattr("redsun._cli.COMMANDS", (add_greet,))
+
+    assert main([]) == 0
+    printed = capsys.readouterr().out
+    assert "greet somebody by name" in printed
+    assert "--example" in printed
 
 
 def test_the_command_loads_without_a_qt_binding() -> None:

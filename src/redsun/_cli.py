@@ -14,7 +14,17 @@ from redsun import __version__
 from redsun.errors import BuildError, HookError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+    from typing import TypeAlias
+
+    SubParsers: TypeAlias = "argparse._SubParsersAction[argparse.ArgumentParser]"
+    """What a subcommand adds its own parser to."""
+
+COMMANDS: tuple[Callable[[SubParsers], None], ...] = ()
+"""The subcommands, each a function adding its parser and setting `run` on it.
+
+`run` takes the parsed arguments and returns the exit code.
+"""
 
 
 def styles() -> list[str]:
@@ -59,6 +69,11 @@ def parser() -> argparse.ArgumentParser:
             "or in the platform's look when no style is named"
         ),
     )
+    if COMMANDS:
+        # with none, argparse would list an empty set of commands in the help
+        added = made.add_subparsers(title="commands")
+        for add in COMMANDS:
+            add(added)
     return made
 
 
@@ -89,6 +104,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the `redsun` command with *argv*, the process's arguments for `None`, and return the exit code."""
     made = parser()
     arguments = made.parse_args(argv)
+    run: Callable[[argparse.Namespace], int] | None = getattr(arguments, "run", None)
+    if run is not None:
+        return run(arguments)
     if arguments.example is None:
         made.print_help()
         return 0
