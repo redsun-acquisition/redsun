@@ -148,7 +148,10 @@ def served(component: object) -> Served | None:
 def read_command(
     component: object, attr: str, function: Callable[..., Any]
 ) -> tuple[Command | None, list[str]]:
-    """Return the command for a remote method, `None` when it breaks a rule, and the rules it breaks."""
+    """Return the command for a remote method, and the rules it breaks.
+
+    The command is `None` when the method breaks a rule.
+    """
     if marker_of(function) is None:
         return None, [f"{attr!r} is @remote but not a @slot"]
     if not inspect.iscoroutinefunction(function):
@@ -176,7 +179,10 @@ def read_command(
 def read_query(
     component: object, attr: str, declared: property
 ) -> tuple[Query | None, list[str]]:
-    """Return the query for a remote property, `None` when it breaks a rule, and the rules it breaks."""
+    """Return the query for a remote property, and the rules it breaks.
+
+    The query is `None` when the getter breaks a rule.
+    """
     getter = declared.fget
     if getter is None:
         return None, []
@@ -194,7 +200,7 @@ def read_query(
 
 
 def resolve_hints(function: Callable[..., Any], attr: str) -> dict[str, Any] | str:
-    """Return the resolved annotations of *function*, or the problem when a name does not resolve."""
+    """Return the resolved annotations of *function*, or why a name does not resolve."""
     try:
         return get_type_hints(function, include_extras=True)
     except NameError as error:
