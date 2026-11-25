@@ -77,6 +77,7 @@ nav = [
             "how-to/write-a-derived-product.md",
         ]},
         { "Upgrade" = [
+            "how-to/migrate-from-0.18.md",
             "how-to/migrate-from-0.17.md",
             "how-to/migrate-from-0.16.md",
             "how-to/migrate-from-0.15.md",
