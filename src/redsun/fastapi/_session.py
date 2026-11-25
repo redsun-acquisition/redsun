@@ -153,10 +153,10 @@ class FastAPISession(WebSession[FastAPI], Session):
         sets `remote`. The server's warnings and errors are logged with the
         session's records.
 
-        The address is bound before the server starts, so a client may
-        connect as soon as `serve` is called. Ctrl+C stops the server, shuts
-        the session down and exits. The session is also shut down when the
-        address cannot be bound.
+        The address is bound before the server starts, and a client that
+        connects in between waits until the server answers. Ctrl+C stops the
+        server, shuts the session down and exits. The session is also shut
+        down when the address cannot be bound.
 
         Raises
         ------
