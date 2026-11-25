@@ -258,7 +258,12 @@ async def relay_events(websocket: WebSocket, listeners: set[Listener]) -> None:
     makes once connected cannot emit before it.
     """
     send, receive = anyio.create_memory_object_stream[Message](EVENT_BUFFER)
-    listener = Listener(asyncio.get_running_loop(), send)
+    client = websocket.client
+    listener = Listener(
+        asyncio.get_running_loop(),
+        send,
+        f"{client.host}:{client.port}" if client else "unknown",
+    )
     with send, receive:
         listeners.add(listener)
         try:
@@ -293,8 +298,11 @@ class Listener:
     stream: MemoryObjectSendStream[Message]
     """The messages waiting to be sent, `EVENT_BUFFER` at most."""
 
+    client: str
+    """The client's address, for the log."""
+
     full: bool = False
-    """Whether the last message was dropped for want of room."""
+    """Whether a message was dropped since the stream was last under half full."""
 
     def hand_over(self, message: Message) -> None:
         """Pass *message* to the socket's loop, from any thread."""
@@ -305,15 +313,17 @@ class Listener:
     def put(self, message: Message) -> None:
         """Add *message* to the stream, or drop it while the stream is full.
 
-        One warning is logged each time the stream fills up.
+        A warning is logged when the stream fills up, and again only after it
+        has drained below half its room and filled up once more.
         """
         try:
             self.stream.send_nowait(message)
         except anyio.WouldBlock:
             if not self.full:
                 logger.warning(
-                    "A client of /api/events reads too slowly: %d events wait for "
+                    "Client %s of /api/events reads too slowly: %d events wait for "
                     "it, and newer ones are dropped until it takes some",
+                    self.client,
                     EVENT_BUFFER,
                 )
             self.full = True
@@ -321,7 +331,9 @@ class Listener:
         except (anyio.ClosedResourceError, anyio.BrokenResourceError):
             pass
         else:
-            self.full = False
+            waiting = self.stream.statistics()
+            if waiting.current_buffer_used < waiting.max_buffer_size / 2:
+                self.full = False
 
     def close(self) -> None:
         """Close the stream from any thread, so the socket closes once it is sent."""

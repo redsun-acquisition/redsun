@@ -659,3 +659,55 @@ def test_a_stalled_client_loses_events_while_another_gets_every_one(
         loop.close()
     assert received == [[0.0], [1.0], [2.0], [3.0], [4.0]]
     assert caplog.text.count("reads too slowly") == 1
+
+
+def test_a_client_reading_behind_is_warned_about_once_until_it_catches_up(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Warn once, naming the client, while a reading client stays behind, and again after it catches up and falls behind."""
+    monkeypatch.setattr("redsun.fastapi._routes.EVENT_BUFFER", 4)
+    session = build(OnWeb)
+    loop = asyncio.new_event_loop()
+    accepted = loop.create_future()
+    permits: asyncio.Queue[None] = asyncio.Queue()
+    inbox: asyncio.Queue[MutableMapping[str, Any]] = asyncio.Queue()
+
+    async def slow(message: MutableMapping[str, Any]) -> None:
+        if message["type"] == "websocket.accept":
+            accepted.set_result(None)
+        else:
+            await permits.get()
+
+    def settle() -> None:
+        for _ in range(20):
+            loop.run_until_complete(asyncio.sleep(0))
+
+    def emit(count: int) -> None:
+        for _ in range(count):
+            session.mover.sig_moved.emit(1.0)
+            settle()
+
+    def read(count: int) -> None:
+        for _ in range(count):
+            permits.put_nowait(None)
+        settle()
+
+    inbox.put_nowait({"type": "websocket.connect"})
+    handler = loop.create_task(session.app(events_scope(), inbox.get, slow))
+    try:
+        loop.run_until_complete(accepted)
+        with caplog.at_level(logging.WARNING, logger="redsun"):
+            emit(6)
+            read(1)
+            emit(2)
+            behind = caplog.text.count("reads too slowly")
+            read(4)
+            emit(5)
+    finally:
+        inbox.put_nowait({"type": "websocket.disconnect", "code": 1000})
+        loop.run_until_complete(handler)
+        loop.close()
+    assert behind == 1
+    assert caplog.text.count("Client test:1 of /api/events reads too slowly") == 2
