@@ -68,7 +68,8 @@ class Frontend:
     """The session file sections this frontend does not read.
 
     A configuration setting one is refused. `remote` here: only a web frontend
-    reads it.
+    reads it, so a subclass that does not override this refuses `remote`,
+    which suits any frontend that does not serve over the network.
     """
 
     @classmethod
