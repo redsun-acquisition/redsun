@@ -369,12 +369,12 @@ dependency_groups = ["lint"]
 commands = [["prek", "run", "--all-files", "--show-diff-on-failure"]]
 
 [tool.tox.env.mypy-pyqt]
-dependency_groups = ["dev", "pyqt"]
+dependency_groups = ["dev", "pyqt", "fastapi"]
 set_env = { QT_API = "pyqt6" }
 commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 
 [tool.tox.env.mypy-pyside]
-dependency_groups = ["dev", "pyside"]
+dependency_groups = ["dev", "pyside", "fastapi"]
 set_env = { QT_API = "pyside6" }
 commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 

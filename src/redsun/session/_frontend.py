@@ -64,6 +64,13 @@ class Frontend:
     view declaring an `async` slot is refused.
     """
 
+    foreign_sections: ClassVar[frozenset[str]] = frozenset({"remote"})
+    """The session file sections this frontend does not read.
+
+    A configuration setting one is refused. `remote` here: only a web frontend
+    reads it.
+    """
+
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
         """Refuse a view class this frontend cannot build.

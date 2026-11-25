@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 import time
 from concurrent.futures import wait
 from contextlib import suppress
 from functools import partial
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, ClassVar, NoReturn, TypedDict
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from redsun.aio import run_coro
 
+from .._config import RemoteConfig
 from ..session._base import Session
 from ..session._frontend import Frontend
 from ..session._protocols import WebSession
@@ -27,16 +30,31 @@ if TYPE_CHECKING:
     from .._config import Source
     from ..session._profile import ProfileKind
 
-HOST = "127.0.0.1"
-PORT = 8000
+logger = logging.getLogger("redsun")
+
 START_TIMEOUT = 10.0
 """Seconds `serve` waits for the server to start."""
 STOP_TIMEOUT = 10.0
 """Seconds `shutdown` waits for the server to stop."""
 
 
+class RemoteSettings(TypedDict, total=False):
+    """The keys of the `remote` section, for a session class to declare."""
+
+    host: str
+    """The address the session listens on."""
+
+    port: int
+    """The port the session listens on."""
+
+    origins: list[str]
+    """The origins a browser may call the API from."""
+
+
 class FastAPIFrontend(Frontend):
     """The frontend of a session served by FastAPI, which has no views."""
+
+    foreign_sections = frozenset({"views", "shortcuts", "actions", "color_scheme"})
 
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
@@ -71,6 +89,12 @@ class FastAPISession(WebSession[FastAPI], Session):
     __slots__ = ("_app",)
 
     frontend = FastAPIFrontend
+
+    remote: ClassVar[RemoteSettings | None] = None
+    """The `remote` section of this session: where it serves.
+
+    The session file's `remote` section wins over it, key by key.
+    """
 
     def __init__(
         self,
@@ -108,12 +132,32 @@ class FastAPISession(WebSession[FastAPI], Session):
         A presenter breaking a rule of the API is left out of it and counted
         with the build's other problems, but stays built.
         """
+        remote = self._remote()
         self._app = FastAPI(title=self.name)
-        for release in build_api(self._app, self.presenters, self._not_set_up):
+        self.on_release(self._release_app)
+        if remote.origins:
+            self._app.add_middleware(
+                CORSMiddleware,
+                allow_origins=remote.origins,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+        for release in build_api(self._app, self.presenters, self._not_served):
             self.on_release(release)
 
+    def _remote(self) -> RemoteConfig:
+        """Return the `remote` section, with its defaults where nothing sets it."""
+        return self._configuration().remote or RemoteConfig()
+
+    def _release_app(self) -> None:
+        """Drop the app, whose routes hold the presenters."""
+        self._app = None
+
     def serve(self) -> NoReturn:
-        """Build, serve the API on `127.0.0.1:8000`, and block until Ctrl+C.
+        """Build, serve the API where `remote` says, and block until Ctrl+C.
+
+        The address is `127.0.0.1:8000` unless the class or the session file
+        sets `remote`.
 
         Ctrl+C stops the server, shuts the session down and exits. The session
         is also shut down when the server fails to start, and when Ctrl+C
@@ -128,8 +172,11 @@ class FastAPISession(WebSession[FastAPI], Session):
         """
         self.build()
         try:
+            remote = self._remote()
             server = uvicorn.Server(
-                uvicorn.Config(self.app, host=HOST, port=PORT, log_level="warning")
+                uvicorn.Config(
+                    self.app, host=remote.host, port=remote.port, log_level="warning"
+                )
             )
             running = run_coro(serve_until_stopped(server), return_future=True)
             self.on_release(partial(stop, server, running))
@@ -152,7 +199,10 @@ async def serve_until_stopped(server: uvicorn.Server) -> None:
         await server.serve()
     # on the shared loop, uvicorn's sys.exit would stop the loop itself
     except SystemExit as e:
-        raise RuntimeError(f"the server could not start on {HOST}:{PORT}") from e
+        config = server.config
+        raise RuntimeError(
+            f"the server could not start on {config.host}:{config.port}"
+        ) from e
 
 
 def wait_until_started(server: uvicorn.Server, running: Future[None]) -> None:
@@ -181,7 +231,11 @@ def stop(server: uvicorn.Server, running: Future[None]) -> None:
     A server that failed has stopped already; why is raised where it failed.
     """
     server.should_exit = True
-    wait([running], STOP_TIMEOUT)
+    _, pending = wait([running], STOP_TIMEOUT)
+    if pending:
+        logger.warning(
+            "The server is still running %g s after it was asked to stop", STOP_TIMEOUT
+        )
 
 
 def until_interrupted() -> None:

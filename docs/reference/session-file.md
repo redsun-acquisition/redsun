@@ -33,6 +33,7 @@ Every key is optional.
 | `providers` | mapping | empty | classes that share values with the components, by name |
 | `compute` | mapping or preset | the defaults below | [the cores background calls may use](#compute) |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
+| `remote` | mapping | the defaults below | [where a web session serves](#remote) its API |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
 | `pairs` | list | empty | [components linked to each other](#pairs), two names each |
 | `hooks` | mapping | empty | the [hook providers](#hooks), by hook point |
@@ -196,6 +197,28 @@ compute:
 
 The section changes nothing in a session whose components ask for no
 [executor](../explanation/glossary.md#executor).
+
+## Remote
+
+`remote` is read by a web session such as `redsun.fastapi.FastAPISession`; a
+Qt session refuses it. A web session class may declare the same keys in its
+`remote` attribute; the file wins over the class, key by key.
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `host` | text | `127.0.0.1` | the address the session listens on |
+| `port` | whole number, 0 to 65535 | `8000` | the port the session listens on |
+| `origins` | list of text | empty | the origins a browser may call the API from; none is allowed if empty |
+
+```yaml
+remote:
+  host: 0.0.0.0
+  port: 8080
+  origins: ["http://localhost:5173"]
+```
+
+A web session refuses the sections only a Qt session reads: `views`,
+`shortcuts`, `actions` and `color_scheme`.
 
 ## Storage
 

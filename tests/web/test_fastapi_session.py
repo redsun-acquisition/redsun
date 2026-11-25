@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import socket
-from contextlib import suppress
+from concurrent.futures import Future
 from typing import TYPE_CHECKING, Any, TypeVarTuple
 
+import httpx
 import pytest
+import uvicorn
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from psygnal import Signal
@@ -24,6 +26,7 @@ from redsun import (
     slot,
 )
 from redsun.fastapi import FastAPISession
+from redsun.fastapi._session import stop
 
 if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
@@ -120,6 +123,13 @@ class Starting:
     @slot
     @remote
     async def b_c(self) -> None: ...
+
+
+def free_port() -> int:
+    """Return a port nothing listens on."""
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
 
 
 class ClosedLoop(asyncio.SelectorEventLoop):
@@ -351,15 +361,62 @@ def test_serve_on_a_port_in_use_raises_and_shuts_the_session_down(
     build: BuildSession,
 ) -> None:
     """Raise when the server cannot start, leaving the session shut down."""
-    session = build(OnWeb)
     with socket.socket() as taken:
-        # another process holding the port already makes the same case
-        with suppress(OSError):
-            taken.bind(("127.0.0.1", 8000))
-            taken.listen()
-        with pytest.raises(RuntimeError, match="could not start"):
+        taken.bind(("127.0.0.1", 0))
+        taken.listen()
+        port = taken.getsockname()[1]
+        session = build(OnWeb, {"remote": {"port": port}})
+        with pytest.raises(RuntimeError, match=f"could not start on 127.0.0.1:{port}"):
             session.serve()
     assert not session.is_built
+
+
+def test_serve_answers_until_interrupted(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Answer a request while serving, then exit with 0 and shut the session down."""
+    port = free_port()
+    session = build(OnWeb, {"remote": {"port": port}})
+    answers: list[httpx.Response] = []
+
+    def interrupted() -> None:
+        answers.append(httpx.get(f"http://127.0.0.1:{port}/api/mover/position"))
+
+    monkeypatch.setattr("redsun.fastapi._session.until_interrupted", interrupted)
+    with pytest.raises(SystemExit) as exit_:
+        session.serve()
+    assert exit_.value.code == 0
+    assert [(a.status_code, a.json()) for a in answers] == [(200, 0.0)]
+    assert not session.is_built
+
+
+def test_the_app_is_released_on_shutdown(build: BuildSession) -> None:
+    """Drop the app when the session shuts down, so its routes do not hold presenters."""
+    session = build(OnWeb)
+    session.shutdown()
+    with pytest.raises(RuntimeError, match="build"):
+        _ = session.app
+
+
+def test_a_presenter_left_out_of_the_api_is_not_served(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Summarise a presenter left out of the API as not served, not as not set up."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        build(OnWeb)
+    assert "Not served: broken (presenter)" in caplog.text
+    assert "Not set up" not in caplog.text
+
+
+def test_stop_warns_when_the_server_is_still_running(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log a warning when the server has not stopped within the timeout."""
+    monkeypatch.setattr("redsun.fastapi._session.STOP_TIMEOUT", 0.01)
+    server = uvicorn.Server(uvicorn.Config("none:app"))
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        stop(server, Future())
+    assert "still running" in caplog.text
 
 
 def test_a_parameter_a_body_cannot_carry_leaves_the_presenter_out(

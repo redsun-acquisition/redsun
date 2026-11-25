@@ -4,6 +4,7 @@ devices:
 presenters:
   mock-motor: mock_bundle.presenters:MockMotorPresenter
   mock-late: mock_bundle.presenters:MockLatePresenter
+  mock-web: mock_bundle.presenters:MockWebPresenter
 
 views:
   mock-motor-view: mock_bundle.views:MockMotorView
