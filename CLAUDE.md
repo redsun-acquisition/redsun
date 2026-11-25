@@ -53,7 +53,7 @@ redsun/
 |   |-- examples/              whole scripts of the how-to guides, built by a test
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
-|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
+|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs, schemas/),
 |                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)

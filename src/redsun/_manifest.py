@@ -19,6 +19,7 @@ from .services._service import ArgValue
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from importlib.metadata import EntryPoint
 
     from pydantic_core import ErrorDetails
 
@@ -181,17 +182,31 @@ def survey() -> list[Found]:
     found = []
     for plugin in entry_points(group=ENTRY_POINT_GROUP):
         manifest, problem = read_manifest(plugin.name, plugin.value)
-        dist = plugin.dist
+        distribution, version = installed_as(plugin)
         found.append(
             Found(
                 name=plugin.name,
-                distribution=None if dist is None else dist.name,
-                version=None if dist is None else dist.version,
+                distribution=distribution,
+                version=version,
                 manifest=manifest,
                 problem=problem,
             )
         )
     return found
+
+
+def installed_as(plugin: EntryPoint) -> tuple[str | None, str | None]:
+    """Return the name and version of the distribution registering *plugin*.
+
+    Both are `None` when the entry point names no distribution, or when its
+    metadata cannot be read: a session still builds with such a plugin.
+    """
+    if plugin.dist is None:
+        return None, None
+    try:
+        return plugin.dist.name, plugin.dist.version
+    except (KeyError, TypeError, OSError):
+        return None, None
 
 
 def read_manifest(name: str, value: str) -> tuple[PluginManifest | None, str]:

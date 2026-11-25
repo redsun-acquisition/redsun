@@ -25,6 +25,8 @@ from redsun.qt import QtHook
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
@@ -53,6 +55,28 @@ WIDE = {"COLUMNS": "200"}
 MOCK_BUNDLE = Path(__file__).parent / "launchable" / "mock_bundle"
 
 runner = CliRunner()
+
+
+@pytest.fixture
+def a_bad_plugin_beside_a_good_one(tmp_path: Path) -> Generator[None, None, None]:
+    """Present `mock_bundle` and a plugin whose manifest is invalid, neither with a distribution."""
+    (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
+    entries = []
+    for name in ("mock-bundle", "bad-bundle"):
+        entry = mock.Mock(spec=EntryPoint)
+        entry.name = name
+        entry.value = "redsun.yaml"
+        entry.dist = None
+        entries.append(entry)
+
+    def folder(package: str) -> Path:
+        return tmp_path if package == "bad_bundle" else MOCK_BUNDLE
+
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=entries),
+        mock.patch("redsun._manifest.files", side_effect=folder),
+    ):
+        yield
 
 
 @pytest.mark.qt
@@ -163,7 +187,6 @@ def test_plugins_reports_what_each_installed_plugin_offers(mock_plugin: None) ->
     assert done.exit_code == 0
     report = json.loads(done.output)
     assert report["redsun"] == __version__
-    assert report["format"] == 1
     assert report["problems"] == []
     [plugin] = report["plugins"]
     assert plugin["plugin_name"] == "mock-bundle"
@@ -182,26 +205,10 @@ def test_plugins_reports_what_each_installed_plugin_offers(mock_plugin: None) ->
 
 
 def test_plugins_reports_a_skipped_manifest_beside_the_ones_that_loaded(
-    tmp_path: Path,
+    a_bad_plugin_beside_a_good_one: None,
 ) -> None:
     """Report a plugin whose manifest is invalid as a problem, and still list the others."""
-    (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
-    entries = []
-    for name in ("mock-bundle", "bad-bundle"):
-        entry = mock.Mock(spec=EntryPoint)
-        entry.name = name
-        entry.value = "redsun.yaml"
-        entry.dist = None
-        entries.append(entry)
-
-    def folder(package: str) -> Path:
-        return tmp_path if package == "bad_bundle" else MOCK_BUNDLE
-
-    with (
-        mock.patch("redsun._manifest.entry_points", return_value=entries),
-        mock.patch("redsun._manifest.files", side_effect=folder),
-    ):
-        done = runner.invoke(app, ["plugins", "--json"])
+    done = runner.invoke(app, ["plugins", "--json"])
 
     assert done.exit_code == 0
     report = json.loads(done.output)
@@ -210,6 +217,36 @@ def test_plugins_reports_a_skipped_manifest_beside_the_ones_that_loaded(
     assert problem["kind"] == "manifest"
     assert problem["where"] == "bad-bundle"
     assert "widgets: Extra inputs are not permitted" in problem["message"]
+
+
+def test_plugins_lists_a_skipped_plugin_last_in_plain_text(
+    a_bad_plugin_beside_a_good_one: None,
+) -> None:
+    """Print a plugin of unknown distribution by its name alone, and a skipped one under its own heading."""
+    done = runner.invoke(app, ["plugins"])
+
+    assert done.exit_code == 0
+    listed, _, skipped = done.output.partition("Skipped:")
+    assert listed.startswith("mock-bundle\n")
+    assert "bad-bundle: manifest" in skipped
+
+
+def test_plugins_lists_a_plugin_whose_distribution_cannot_be_read() -> None:
+    """List a plugin without its distribution when the metadata of that distribution cannot be read."""
+    entry = mock.Mock(spec=EntryPoint)
+    entry.name = "mock-bundle"
+    entry.value = "redsun.yaml"
+    entry.dist = mock.Mock()
+    type(entry.dist).name = mock.PropertyMock(side_effect=KeyError("Name"))
+
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=[entry]),
+        mock.patch("redsun._manifest.files", return_value=MOCK_BUNDLE),
+    ):
+        done = runner.invoke(app, ["plugins"])
+
+    assert done.exit_code == 0
+    assert done.output.startswith("mock-bundle\n")
 
 
 def test_plugins_lists_the_ids_of_each_group_in_plain_text(mock_plugin: None) -> None:

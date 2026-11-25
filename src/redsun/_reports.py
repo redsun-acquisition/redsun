@@ -22,9 +22,10 @@ Group = Literal[
 """A group of a plugin manifest."""
 
 GROUPS: Final = get_args(Group)
+"""The groups, in the order a report lists them."""
 
 
-class Problem(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
+class Problem(BaseModel, frozen=True, use_attribute_docstrings=True):
     """Something a command found wrong."""
 
     kind: Literal["manifest"]
@@ -37,7 +38,7 @@ class Problem(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=T
     """What is wrong, as `redsun` logs it."""
 
 
-class Entry(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
+class Entry(BaseModel, frozen=True, use_attribute_docstrings=True):
     """One entry of a plugin manifest."""
 
     group: Group
@@ -53,7 +54,7 @@ class Entry(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=Tru
     """The module a service is run from; absent for every other group."""
 
 
-class Plugin(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
+class Plugin(BaseModel, frozen=True, use_attribute_docstrings=True):
     """An installed plugin whose manifest loaded."""
 
     plugin_name: str
@@ -69,14 +70,14 @@ class Plugin(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=Tr
     """What the manifest lists, by group and then by id."""
 
 
-class Report(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
+class Report(BaseModel, frozen=True, use_attribute_docstrings=True):
     """What every report of the `redsun` command starts with."""
 
     redsun: str
     """The version of `redsun` that wrote the report."""
 
     format: int
-    """The format of the report, raised when a key is removed or changes meaning."""
+    """The value of `FORMAT` when the report was written."""
 
     problems: list[Problem]
     """What the command found wrong, empty when nothing is."""

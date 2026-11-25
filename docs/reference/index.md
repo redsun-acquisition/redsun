@@ -26,7 +26,7 @@ release notes.
 
 ### Command line
 
-- [The `redsun` command](command-line.md): its commands, the example session
+- [The `redsun` command](command-line.md): its subcommands, the example session
   it opens, the reports it prints and its exit codes
 
 ### Environment

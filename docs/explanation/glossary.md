@@ -417,9 +417,9 @@ reverse order, so the last one registered runs first.
 
 ### Report
 
-A report is what a command of `redsun` prints when you give it `--json`: one
-JSON object written for a program to read, where the same command without
-`--json` prints text for you. Every report starts with the same keys, which
+A report is what a subcommand of the `redsun` command prints when you give it
+`--json`: one JSON object written for a program to read, where the same
+subcommand without `--json` prints text for you. Every report starts with the same keys, which
 [The `redsun` command](../reference/command-line.md#reports) lists.
 
 ### Run

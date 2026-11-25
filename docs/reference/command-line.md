@@ -4,25 +4,25 @@ icon: lucide/terminal
 
 # The `redsun` command
 
-When you install `redsun`, you also get a program to run from a terminal,
-called `redsun` too. You give it a command, such as `example`, to say what it
-should do. `python -m redsun` runs the same program, for an environment whose
+When you install `redsun`, you also get the `redsun` command, a program you
+run from a terminal. You tell it what to do with a subcommand, such as
+`example`. `python -m redsun` runs the same command, for an environment whose
 scripts are not on the path.
 
 ```bash
-redsun [--version] [COMMAND]
+redsun [--version] [SUBCOMMAND]
 ```
 
-| Option or command | What it does |
+| Option or subcommand | What it does |
 | --- | --- |
 | `--version` | prints the installed version |
 | `example` | opens the example session in your platform's look |
 | `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
 | `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
 | `plugins --json` | prints the same list as a [report](#reports) |
-| none | prints the help, which lists the commands |
+| none | prints the help, which lists the subcommands |
 
-Each command has a help of its own, such as `redsun example --help`.
+Each subcommand has a help of its own, such as `redsun example --help`.
 
 ## The example session
 
@@ -82,9 +82,9 @@ session file names.
 
 ## Reports
 
-A [report](../explanation/glossary.md#report) is what a command prints when
-you give it `--json`, so that a program can read the answer where you would
-read the text. Every report is one JSON object, and it starts with the same
+A [report](../explanation/glossary.md#report) is what a subcommand prints
+when you give it `--json`, so that a program can read the answer where you
+would read the text. Every report is one JSON object, and it starts with the same
 three keys:
 
 | Key | Holds |

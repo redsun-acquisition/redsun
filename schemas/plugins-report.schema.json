@@ -2,7 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "Entry": {
-      "additionalProperties": false,
       "description": "One entry of a plugin manifest.",
       "properties": {
         "group": {
@@ -59,7 +58,6 @@
       "type": "object"
     },
     "Plugin": {
-      "additionalProperties": false,
       "description": "An installed plugin whose manifest loaded.",
       "properties": {
         "plugin_name": {
@@ -110,7 +108,6 @@
       "type": "object"
     },
     "Problem": {
-      "additionalProperties": false,
       "description": "Something a command found wrong.",
       "properties": {
         "kind": {
@@ -139,7 +136,6 @@
       "type": "object"
     }
   },
-  "additionalProperties": false,
   "description": "The installed plugins and what each one offers.",
   "properties": {
     "redsun": {
@@ -148,7 +144,7 @@
       "type": "string"
     },
     "format": {
-      "description": "The format of the report, raised when a key is removed or changes meaning.",
+      "description": "The value of `FORMAT` when the report was written.",
       "title": "Format",
       "type": "integer"
     },

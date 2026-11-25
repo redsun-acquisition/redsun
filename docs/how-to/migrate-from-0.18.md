@@ -9,11 +9,11 @@ page gives the change your scripts or your notes may need. The
 [changelog](../reference/changelog.md) lists everything else the release
 changed.
 
-## The example is a command
+## The example is a subcommand
 
-The [`redsun` program](../reference/command-line.md) you run from a terminal
-now takes a command that says what it should do, and opening the example
-session is the first of them. The option `--example` is gone, so write
+The [`redsun` command](../reference/command-line.md) now takes a subcommand
+that says what it should do, and opening the example session is the first of
+them. The option `--example` is gone, so write
 `example` in its place, with the [style](choose-a-style.md) after it as
 before:
 
@@ -28,4 +28,4 @@ redsun example napari
 ```
 
 `redsun --version` is unchanged, and `redsun` with nothing after it still
-prints the help, which now lists the commands.
+prints the help, which now lists the subcommands.
