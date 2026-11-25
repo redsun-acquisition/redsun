@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import logging
 import re
 import subprocess
 import sys
@@ -33,7 +34,7 @@ from qtpy.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator, Iterator
     from pathlib import Path
 
     from redsun.testing import BuildSession
@@ -46,9 +47,11 @@ from redsun import (
     AsView,
     AttachableComponent,
     Declare,
+    Link,
     Placement,
     Session,
     WindowLayout,
+    remote,
     slot,
 )
 from redsun.qt import (
@@ -100,6 +103,51 @@ class Wired(QtSession):
 
     mover: AsPresenter[Mover]
     readout: AsView[Readout]
+
+
+class Stage:
+    """A presenter serving a move and a position, as a web frontend would reach them."""
+
+    sig_moved = Signal(float)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.moves: list[float] = []
+
+    @property
+    @remote
+    def position(self) -> float:
+        return 1.5
+
+    @slot
+    @remote
+    async def move(self, delta: float) -> float:
+        self.moves.append(delta)
+        self.sig_moved.emit(delta)
+        return delta
+
+
+class StageView(QWidget):
+    """A view reading the stage's position and asking it to move."""
+
+    placement: Placement = Dock("left")
+    sig_move = Signal(float)
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.position: float | None = None
+
+    def setup(self, stage: Stage) -> None:
+        self.position = stage.position
+
+
+class RemoteApp(QtSession):
+    stage: AsPresenter[Stage]
+    view: AsView[StageView]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.view.sig_move, self.stage.move
 
 
 class Canvas(QWidget):
@@ -1336,3 +1384,22 @@ def test_a_qt_session_writes_its_start_profile(
     build(QtApp(profile="start", profile_dir=tmp_path)).shutdown()
 
     assert len(list(tmp_path.glob("*.html"))) == 1
+
+
+def test_a_qt_view_drives_a_remote_presenter(
+    qapp: QApplication,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Read a remote property in a view's setup and reach a remote slot from its signal."""
+    session = build(RemoteApp)
+
+    assert set(session.presenters) == {"stage"}
+    assert set(session.views) == {"view"}
+    assert session.view.position == 1.5
+
+    session.view.sig_move.emit(2.0)
+
+    assert wait_until(lambda: session.stage.moves == [2.0], timeout=5.0)
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
