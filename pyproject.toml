@@ -149,6 +149,7 @@ sharedbox = [
 fastapi = [
     "fastapi>=0.164.0",
     "uvicorn>=0.54.0",
+    "websockets>=17.4",
 ]
 
 [project.optional-dependencies]
@@ -216,6 +217,7 @@ testing-qt = ["redsun[testing,qt-common]"]
 fastapi = [
     "fastapi>=0.164.0",
     "uvicorn>=0.54.0",
+    "websockets>=17.4",
 ]
 
 [project.scripts]

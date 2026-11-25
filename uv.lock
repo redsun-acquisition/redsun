@@ -6257,6 +6257,7 @@ dependencies = [
 fastapi = [
     { name = "fastapi" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 ome-zarr = [
     { name = "ome-writers", extra = ["acquire-zarr"] },
@@ -6381,6 +6382,7 @@ epics = [
 fastapi = [
     { name = "fastapi" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 lint = [
     { name = "prek" },
@@ -6541,6 +6543,7 @@ requires-dist = [
     { name = "tiled", extras = ["client", "server"], marker = "extra == 'tiled'", specifier = ">=0.2.22" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
     { name = "uvicorn", marker = "extra == 'fastapi'", specifier = ">=0.54.0" },
+    { name = "websockets", marker = "extra == 'fastapi'", specifier = ">=17.4" },
 ]
 provides-extras = ["fastapi", "ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "sharedbox", "testing", "testing-qt", "tiled", "zarr"]
 
@@ -6586,6 +6589,7 @@ epics = [
 fastapi = [
     { name = "fastapi", specifier = ">=0.164.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
+    { name = "websockets", specifier = ">=17.4" },
 ]
 lint = [
     { name = "prek", specifier = ">=0.5.11" },

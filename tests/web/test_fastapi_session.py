@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import socket
 from concurrent.futures import Future
@@ -15,6 +16,7 @@ from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from psygnal import Signal
 from pydantic import Field
+from websockets.sync.client import connect
 
 from redsun import (
     AsPresenter,
@@ -402,19 +404,26 @@ def test_serve_on_a_port_in_use_raises_and_shuts_the_session_down(
 def test_serve_answers_until_interrupted(
     build: BuildSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Answer a request while serving, then exit with 0 and shut the session down."""
+    """Answer a request and send an event while serving, then exit with 0 and shut down."""
     port = free_port()
     session = build(OnWeb, {"remote": {"port": port}})
     answers: list[httpx.Response] = []
+    events: list[str | bytes] = []
 
     def interrupted() -> None:
         answers.append(httpx.get(f"http://127.0.0.1:{port}/api/mover/position"))
+        with connect(f"ws://127.0.0.1:{port}/api/events", open_timeout=5) as client:
+            httpx.post(f"http://127.0.0.1:{port}/api/mover/move", json={"delta": 0.5})
+            events.append(client.recv(timeout=5))
 
     monkeypatch.setattr("redsun.fastapi._session.until_interrupted", interrupted)
     with pytest.raises(SystemExit) as exit_:
         session.serve()
     assert exit_.value.code == 0
     assert [(a.status_code, a.json()) for a in answers] == [(200, 0.0)]
+    assert [json.loads(e) for e in events] == [
+        {"presenter": "mover", "signal": "sig_moved", "args": [0.5]}
+    ]
     assert not session.is_built
 
 
