@@ -11,17 +11,20 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, WebSocket
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, TypeAdapter, create_model
+from pydantic import BaseModel, create_model
 from pydantic_core import PydanticSerializationError
 
-from ..ports._remote import served, signal_schema
+from ..ports._remote import served
+from ._schemas import signal_adapters, signal_schema
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
 
     from fastapi import FastAPI
+    from pydantic import TypeAdapter
 
     from ..ports._remote import Command, Query, Served
+    from ._schemas import Adapters
 
 Message = dict[str, object]
 Listeners = dict[asyncio.Queue[Message | None], asyncio.AbstractEventLoop]
@@ -36,22 +39,23 @@ def build_api(
 ) -> list[Callable[[], None]]:
     """Add to *app* the routes of every presenter with a remote member.
 
-    A presenter whose routes cannot be built, for breaking a rule of `served`
-    or any other reason, is left out, logged and recorded in *refused* under
-    its name. The callables returned disconnect what the API connected and
+    A presenter whose routes cannot be built, for breaking a rule of `served`,
+    serving a type with no JSON Schema or any other reason, is left out,
+    logged and recorded in *refused* under its name. The callables returned disconnect what the API connected and
     close the sockets still open.
     """
     listeners: Listeners = {}
     releases: list[Callable[[], None]] = [partial(close_all, listeners)]
     schemas: dict[str, dict[str, list[dict[str, Any]]]] = {}
     operations: set[str] = set()
+    adapters: Adapters = {}
     for name, presenter in presenters.items():
         try:
             serving = served(presenter)
             if serving is None:
                 continue
+            arguments = signal_adapters(presenter, serving, adapters)
             router = routes_of(name, serving, operations)
-            schema = signal_schema(serving)
         except TypeError as error:
             logger.error("Presenter '%s' is left out of the API: %s", name, error)
             refused[name] = error
@@ -61,11 +65,9 @@ def build_api(
             refused[name] = error
             continue
         app.include_router(router)
-        schemas[name] = schema
+        schemas[name] = signal_schema(arguments)
         for signal_name, signal in serving.signals.items():
-            relay = relay_for(
-                listeners, name, signal_name, serving.signal_types[signal_name]
-            )
+            relay = relay_for(listeners, name, signal_name, arguments[signal_name])
             signal.connect(relay)
             releases.append(partial(signal.disconnect, relay))
 
@@ -169,14 +171,16 @@ def add_query(router: APIRouter, presenter: str, query: Query, operation: str) -
 
 
 def relay_for(
-    listeners: Listeners, presenter: str, signal: str, types: tuple[Any, ...]
+    listeners: Listeners,
+    presenter: str,
+    signal: str,
+    adapters: list[TypeAdapter[Any]],
 ) -> Callable[..., None]:
     """Return a callback putting an emission of *signal* on every open socket's queue.
 
     Nothing is done while no socket is open. An emission that cannot be
     serialised is logged and dropped.
     """
-    adapters = [TypeAdapter[Any](t) for t in types]
 
     def relay(*args: object) -> None:
         if not listeners:
