@@ -44,10 +44,15 @@ def remote(fn: F, /) -> F:
     TypeError
         If the target is not a plain function, or already carries `@slot`.
     """
-    if not inspect.isfunction(fn) or marker_of(fn) is not None:
+    if not inspect.isfunction(fn):
         raise TypeError(
-            f"cannot mark {fn!r} as remote: @remote goes directly on the def, "
-            "below @slot or @property"
+            "@remote takes a plain function: write it directly on the def, "
+            f"under @slot or @property (got {fn!r})"
+        )
+    if marker_of(fn) is not None:
+        raise TypeError(
+            "@remote is above @slot: put it below, directly on the def "
+            f"(on {fn.__qualname__})"
         )
     setattr(fn, REMOTE_ATTR, True)
     return fn

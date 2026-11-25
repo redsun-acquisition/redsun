@@ -128,7 +128,7 @@ def test_remote_marks_the_function_and_returns_it() -> None:
 )
 def test_remote_refuses_what_is_not_a_plain_function(target: object) -> None:
     """Refuse a property, a staticmethod or a builtin, naming where @remote goes."""
-    with pytest.raises(TypeError, match="directly on the def"):
+    with pytest.raises(TypeError, match="@remote takes a plain function"):
         remote(target)  # type: ignore[type-var]
 
 
@@ -137,7 +137,7 @@ def test_remote_refuses_a_function_already_marked_as_a_slot() -> None:
 
     async def move(self: object) -> None: ...
 
-    with pytest.raises(TypeError, match="below @slot"):
+    with pytest.raises(TypeError, match="@remote is above @slot"):
         remote(slot(move))
 
 
