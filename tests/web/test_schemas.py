@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from fastapi.testclient import TestClient
 from psygnal import Signal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
 
 from redsun import AsPresenter, BuildError, remote, slot
 from redsun.fastapi import FastAPISession
@@ -104,6 +104,32 @@ class EmitsAliased:
         self.sig_aliased.emit(Aliased(Value=1.0))
 
 
+def reading_model(unit: str) -> type[BaseModel]:
+    """Return a model named `Reading` holding a model named `Units` with the field *unit*."""
+    units = create_model("Units", **{unit: (float, ...)})
+    return create_model("Reading", units=(units, ...))
+
+
+MicronReading = reading_model("um")
+InchReading = reading_model("inch")
+
+
+class EmitsMicrons:
+    sig_reading = Signal(MicronReading)
+
+    @slot
+    @remote
+    async def go(self) -> None: ...
+
+
+class EmitsInches:
+    sig_reading = Signal(InchReading)
+
+    @slot
+    @remote
+    async def go(self) -> None: ...
+
+
 class WithPlain(FastAPISession):
     taking: AsPresenter[TakesPlain]
     untyped: AsPresenter[Untyped]
@@ -135,6 +161,14 @@ def document_of(**presenters: object) -> dict[str, Any]:
         assert serving is not None
         signals[name] = check_schemas(presenter, serving, {})
     return asyncapi_document("x", signals)
+
+
+def resolve(document: dict[str, Any], ref: str) -> dict[str, Any]:
+    """Return the part of *document* the local reference *ref* points at."""
+    found = document
+    for part in ref.removeprefix("#/").split("/"):
+        found = found[part]
+    return found
 
 
 @pytest.mark.parametrize(
@@ -178,6 +212,18 @@ def test_nested_models_are_components_written_as_draft_07() -> None:
         {"type": "number"},
         {"type": "number"},
     ]
+
+
+def test_models_sharing_a_name_get_distinct_components() -> None:
+    """Keep two presenters' models named alike apart, each reference reaching its own."""
+    document = document_of(microns=EmitsMicrons(), inches=EmitsInches())
+    assert len(document["components"]["schemas"]) == 4
+    for presenter, unit in [("microns", "um"), ("inches", "inch")]:
+        message = document["components"]["messages"][f"{presenter}.sig_reading"]
+        (argument,) = message["payload"]["properties"]["args"]["items"]
+        reading = resolve(document, argument["$ref"])
+        units = resolve(document, reading["properties"]["units"]["$ref"])
+        assert list(units["properties"]) == [unit]
 
 
 def test_the_document_names_a_property_as_the_socket_sends_it(
