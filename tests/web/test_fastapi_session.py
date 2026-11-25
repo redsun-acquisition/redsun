@@ -6,7 +6,7 @@ import asyncio
 import logging
 import socket
 from concurrent.futures import Future
-from typing import TYPE_CHECKING, Any, TypeVarTuple
+from typing import TYPE_CHECKING, Annotated, Any, TypeVarTuple
 
 import httpx
 import pytest
@@ -14,6 +14,7 @@ import uvicorn
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from psygnal import Signal
+from pydantic import Field
 
 from redsun import (
     AsPresenter,
@@ -107,6 +108,18 @@ class Misnamed:
     async def nudge(self, _delta: float) -> None: ...
 
 
+class Bounded:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.at = 0.0
+
+    @slot
+    @remote
+    async def move(self, delta: Annotated[float, Field(ge=0)]) -> float:
+        self.at += delta
+        return self.at
+
+
 class Ending:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -178,6 +191,10 @@ class WithMisnamed(FastAPISession):
     misnamed: AsPresenter[Misnamed]
 
 
+class WithBounded(FastAPISession):
+    bounded: AsPresenter[Bounded]
+
+
 class Joined(FastAPISession):
     a_b: AsPresenter[Ending]
     a: AsPresenter[Starting]
@@ -218,6 +235,17 @@ def test_a_body_of_the_wrong_type_is_refused_before_the_slot_runs(
         r = client.post("/api/mover/move", json={"delta": "far"})
     assert r.status_code == 422
     assert session.mover.position == 0.0
+
+
+def test_a_body_breaking_a_parameter_constraint_is_refused(
+    build: BuildSession,
+) -> None:
+    """Answer 422 to a value outside an `Annotated` parameter's bounds."""
+    session = build(WithBounded)
+    with TestClient(session.app) as client:
+        r = client.post("/api/bounded/move", json={"delta": -1.0})
+    assert r.status_code == 422
+    assert session.bounded.at == 0.0
 
 
 def test_an_unmarked_slot_has_no_route(build: BuildSession) -> None:
