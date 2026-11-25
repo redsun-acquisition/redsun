@@ -124,13 +124,14 @@ def served(component: object) -> Served | None:
 
     for attr in dir(cls):
         declared = getattr(cls, attr, None)
-        if isinstance(declared, property):
-            if is_remote(declared.fget):
-                query = read_query(component, attr, declared, problems)
-                if query is not None:
-                    queries.append(query)
+        if isinstance(declared, property) and is_remote(declared.fget):
+            query, found = read_query(component, attr, declared)
+            problems += found
+            if query is not None:
+                queries.append(query)
         elif inspect.isfunction(declared) and is_remote(declared):
-            command = read_command(component, attr, declared, problems)
+            command, found = read_command(component, attr, declared)
+            problems += found
             if command is not None:
                 commands.append(command)
 
@@ -145,67 +146,56 @@ def served(component: object) -> Served | None:
 
 
 def read_command(
-    component: object,
-    attr: str,
-    function: Callable[..., Any],
-    problems: list[str],
-) -> Command | None:
-    """Return the command for a remote method, or `None` after recording what is wrong."""
-    marker = marker_of(function)
-    if marker is None:
-        problems.append(f"{attr!r} is @remote but not a @slot")
-        return None
+    component: object, attr: str, function: Callable[..., Any]
+) -> tuple[Command | None, list[str]]:
+    """Return the command for a remote method, `None` when it breaks a rule, and the rules it breaks."""
+    if marker_of(function) is None:
+        return None, [f"{attr!r} is @remote but not a @slot"]
     if not inspect.iscoroutinefunction(function):
-        problems.append(f"{attr!r} is a remote slot and must be async def")
-        return None
-    hints = resolve_hints(function, attr, problems)
-    if hints is None:
-        return None
+        return None, [f"{attr!r} is a remote slot and must be async def"]
+    hints = resolve_hints(function, attr)
+    if isinstance(hints, str):
+        return None, [hints]
     parameters: dict[str, Any] = {}
-    refused = False
+    problems: list[str] = []
     for p in list(inspect.signature(function).parameters.values())[1:]:
         if p.kind in UNNAMEABLE:
             problems.append(
                 f"{attr!r} has a {p.kind.description} parameter ({p.name}), "
                 "which a remote call cannot pass by name"
             )
-            refused = True
         else:
             parameters[p.name] = hints.get(p.name, Any)
-    if refused:
-        return None
+    if problems:
+        return None, problems
     method = getattr(component, attr)
-    return Command(port_name(method), method, parameters, hints.get("return", Any))
+    command = Command(port_name(method), method, parameters, hints.get("return", Any))
+    return command, []
 
 
 def read_query(
-    component: object,
-    attr: str,
-    declared: property,
-    problems: list[str],
-) -> Query | None:
-    """Return the query for a remote property, or `None` after recording what is wrong."""
+    component: object, attr: str, declared: property
+) -> tuple[Query | None, list[str]]:
+    """Return the query for a remote property, `None` when it breaks a rule, and the rules it breaks."""
     getter = declared.fget
     if getter is None:
-        return None
+        return None, []
     if inspect.iscoroutinefunction(getter):
-        problems.append(
+        problem = (
             f"{attr!r} is a remote property with an async getter: "
             "use an async remote slot that returns the value"
         )
-        return None
-    hints = resolve_hints(getter, attr, problems)
-    if hints is None:
-        return None
-    return Query(attr, lambda: getattr(component, attr), hints.get("return", Any))
+        return None, [problem]
+    hints = resolve_hints(getter, attr)
+    if isinstance(hints, str):
+        return None, [hints]
+    query = Query(attr, lambda: getattr(component, attr), hints.get("return", Any))
+    return query, []
 
 
-def resolve_hints(
-    function: Callable[..., Any], attr: str, problems: list[str]
-) -> dict[str, Any] | None:
-    """Return the resolved annotations of *function*, or `None` after recording the unresolved name."""
+def resolve_hints(function: Callable[..., Any], attr: str) -> dict[str, Any] | str:
+    """Return the resolved annotations of *function*, or the problem when a name does not resolve."""
     try:
         return get_type_hints(function, include_extras=True)
     except NameError as error:
-        problems.append(f"{attr!r} has annotations that do not resolve: {error}")
-        return None
+        return f"{attr!r} has annotations that do not resolve: {error}"
