@@ -7,12 +7,9 @@ directory given.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import sys
 from pathlib import Path
-
-from fastapi.routing import APIRoute
 
 from redsun.examples._web import ExampleWeb
 
@@ -23,14 +20,9 @@ def main(argv: list[str]) -> None:
     session = ExampleWeb()
     session.build()
     try:
-        asyncapi = next(
-            route.endpoint
-            for route in session.app.routes
-            if isinstance(route, APIRoute) and route.path == "/asyncapi.json"
-        )
         documents = {
             "openapi.json": session.app.openapi(),
-            "asyncapi.json": asyncio.run(asyncapi()),
+            "asyncapi.json": session.app.state.asyncapi,
         }
         for name, document in documents.items():
             path = Path(target, name)
