@@ -106,7 +106,8 @@ class EmitsAliased:
 
 def reading_model(unit: str) -> type[BaseModel]:
     """Return a model named `Reading` holding a model named `Units` with the field *unit*."""
-    units = create_model("Units", **{unit: (float, ...)})
+    fields: dict[str, Any] = {unit: (float, ...)}
+    units = create_model("Units", **fields)
     return create_model("Reading", units=(units, ...))
 
 
