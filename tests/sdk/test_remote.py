@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import Generator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 import pytest
 from psygnal import Signal
+from pydantic import Field, TypeAdapter
 
 from redsun import remote, slot
 from redsun.aio import clear_async_backend, set_async_backend
@@ -48,6 +49,12 @@ class Good:
 
     @slot
     async def hidden(self) -> None: ...
+
+
+class Bounded:
+    @slot
+    @remote
+    async def move(self, delta: Annotated[float, Field(ge=0)]) -> None: ...
 
 
 class NotASlot:
@@ -168,6 +175,14 @@ def test_served_lists_remote_members_and_every_public_signal() -> None:
     assert set(s.signals) == {"sig_moved", "sig_any"}
     assert s.commands[0].parameters == {"axis": str, "delta": float}
     assert s.commands[0].returns is float
+
+
+def test_served_keeps_annotated_metadata_on_parameters() -> None:
+    """Keep the metadata of an `Annotated` parameter in the command's types."""
+    s = served(Bounded())
+    assert s is not None
+    delta = s.commands[0].parameters["delta"]
+    assert TypeAdapter(delta).json_schema() == {"minimum": 0, "type": "number"}
 
 
 async def test_served_binds_the_command_and_the_query_to_the_instance() -> None:

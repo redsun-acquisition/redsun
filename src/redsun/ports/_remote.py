@@ -226,7 +226,7 @@ def resolve_hints(
 ) -> dict[str, Any] | None:
     """Return the resolved annotations of *function*, or `None` after recording the unresolved name."""
     try:
-        return get_type_hints(function)
+        return get_type_hints(function, include_extras=True)
     except NameError as error:
         problems.append(f"{attr!r} has annotations that do not resolve: {error}")
         return None
