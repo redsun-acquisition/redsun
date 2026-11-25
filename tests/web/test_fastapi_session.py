@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
     from contextvars import Context
 
+    from fastapi import FastAPI
+
     from redsun.testing import BuildSession
 
 Ts = TypeVarTuple("Ts")
@@ -229,6 +231,26 @@ class WithBounded(FastAPISession):
 class Joined(FastAPISession):
     a_b: AsPresenter[Ending]
     a: AsPresenter[Starting]
+
+
+class RefuseToStart:
+    """A lifespan whose startup fails."""
+
+    def __init__(self, app: FastAPI) -> None:
+        self.app = app
+
+    async def __aenter__(self) -> None:
+        """Fail the startup."""
+        raise RuntimeError("no start")
+
+    async def __aexit__(self, *args: object) -> None:
+        """Do nothing, as nothing started."""
+
+
+class FailingStart(OnWeb):
+    def present(self) -> None:
+        super().present()
+        self.app.router.lifespan_context = RefuseToStart
 
 
 def test_a_command_answers_and_its_signal_reaches_the_websocket(
@@ -484,7 +506,7 @@ def test_serve_answers_until_interrupted(
     answers: list[httpx.Response] = []
     events: list[str | bytes] = []
 
-    def interrupted() -> None:
+    def interrupted(running: Future[None]) -> None:
         answers.append(httpx.get(f"http://127.0.0.1:{port}/api/mover/position"))
         with connect(f"ws://127.0.0.1:{port}/api/events", open_timeout=5) as client:
             httpx.post(f"http://127.0.0.1:{port}/api/mover/move", json={"delta": 0.5})
@@ -513,7 +535,7 @@ def test_the_server_logs_through_the_session(
     port = free_port()
     session = build(OnWeb, {"remote": {"port": port}})
 
-    def interrupted() -> None:
+    def interrupted(running: Future[None]) -> None:
         with socket.create_connection(("127.0.0.1", port)) as client:
             client.sendall(b"NOT HTTP\r\n\r\n")
             client.recv(100)
@@ -523,6 +545,17 @@ def test_the_server_logs_through_the_session(
         session.serve()
     messages = [r.getMessage() for r in log_buffer().records]
     assert messages.count("Invalid HTTP request received.") == 1
+
+
+def test_an_application_failing_to_start_stops_serve(build: BuildSession) -> None:
+    """Raise when the application fails to start, leaving the session shut down and the port free."""
+    port = free_port()
+    session = build(FailingStart, {"remote": {"port": port}})
+    with pytest.raises(RuntimeError, match="the application failed to start"):
+        session.serve()
+    assert not session.is_built
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", port))
 
 
 def test_the_app_is_released_on_shutdown(build: BuildSession) -> None:

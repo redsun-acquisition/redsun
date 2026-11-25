@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import socket
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -30,14 +31,16 @@ class Placed(FastAPISession):
 
 
 class Served:
-    """Stands in for `uvicorn.Server`, a server that stops at once."""
+    """Stands in for `uvicorn.Server`, a server that answers nothing until asked to exit."""
 
     def __init__(self, config: uvicorn.Config) -> None:
         self.config = config
         self.should_exit = False
 
     async def serve(self, sockets: list[socket.socket]) -> None:
-        """Return at once, as a server that has stopped."""
+        """Return once `should_exit` is set, which uvicorn's own loop also polls."""
+        while not self.should_exit:
+            await asyncio.sleep(0.01)
 
 
 @pytest.fixture
@@ -53,7 +56,9 @@ def addresses(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
 
     monkeypatch.setattr(socket, "create_server", bind)
     monkeypatch.setattr(uvicorn, "Server", Served)
-    monkeypatch.setattr("redsun.fastapi._session.until_interrupted", lambda: None)
+    monkeypatch.setattr(
+        "redsun.fastapi._session.until_interrupted", lambda running: None
+    )
     return seen
 
 

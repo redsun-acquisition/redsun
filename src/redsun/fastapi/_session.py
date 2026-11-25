@@ -156,12 +156,16 @@ class FastAPISession(WebSession[FastAPI], Session):
         The address is bound before the server starts, and a client that
         connects in between waits until the server answers. Ctrl+C stops the
         server, shuts the session down and exits. The session is also shut
-        down when the address cannot be bound.
+        down when the address cannot be bound and when the server stops
+        before Ctrl+C.
 
         Raises
         ------
         OSError
             If the address cannot be bound, such as on a port in use.
+        RuntimeError
+            If the application fails to start, or the server stops before
+            Ctrl+C. An exception the server raised is raised as it is.
         """
         self.build()
         try:
@@ -178,7 +182,10 @@ class FastAPISession(WebSession[FastAPI], Session):
             running = run_coro(serve_until_stopped(server, sock), return_future=True)
             self.on_release(partial(stop, server, running))
             logger.info("Serving the API on %s port %d", *sock.getsockname()[:2])
-            until_interrupted()
+            until_interrupted(running)
+            if running.done():
+                running.result()
+                raise RuntimeError("the server stopped")
             logger.info("Ctrl+C: stopping the server")
         finally:
             self.shutdown()
@@ -213,12 +220,18 @@ def log_server_to_session() -> Callable[[], None]:
 
 
 async def serve_until_stopped(server: uvicorn.Server, sock: socket.socket) -> None:
-    """Run *server* on *sock*, logging its exit when the application fails to start."""
+    """Run *server* on *sock*.
+
+    Raises
+    ------
+    RuntimeError
+        If the application fails to start.
+    """
     try:
         await server.serve(sockets=[sock])
     # on the shared loop, uvicorn's sys.exit would stop the loop itself
-    except SystemExit:
-        logger.error("The server stopped: the application failed to start")
+    except SystemExit as e:
+        raise RuntimeError("the application failed to start") from e
 
 
 def stop(server: uvicorn.Server, running: Future[None]) -> None:
@@ -234,9 +247,9 @@ def stop(server: uvicorn.Server, running: Future[None]) -> None:
         )
 
 
-def until_interrupted() -> None:
-    """Block the calling thread until Ctrl+C."""
-    # a short sleep rather than a wait on an event, which Ctrl+C cannot end on Windows
+def until_interrupted(running: Future[None]) -> None:
+    """Block the calling thread until Ctrl+C, or until *running* is done."""
+    # short sleeps let Ctrl+C through: on Windows before Python 3.14 it cannot end Future.result()
     with suppress(KeyboardInterrupt):
-        while True:
+        while not running.done():
             time.sleep(0.5)
