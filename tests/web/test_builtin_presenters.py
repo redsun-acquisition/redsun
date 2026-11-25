@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Any
 
 from fastapi.testclient import TestClient
 
@@ -13,6 +14,12 @@ from redsun.presenter import LightPresenter, PositionerPresenter
 
 if TYPE_CHECKING:
     from redsun.testing import BuildSession
+
+
+def receive(events: Any, reader: ThreadPoolExecutor) -> dict[str, Any]:
+    """Return the next WebSocket message, failing instead of waiting past 5 seconds."""
+    message: dict[str, Any] = reader.submit(events.receive_json).result(timeout=5)
+    return message
 
 
 class Core(Session):
@@ -30,6 +37,7 @@ def test_a_move_reports_its_readback(build: BuildSession) -> None:
     """Deliver the signals of a move, readback included, to the WebSocket."""
     session = build(OnWeb)
     with (
+        ThreadPoolExecutor(max_workers=1) as reader,
         TestClient(session.app) as client,
         client.websocket_connect("/api/events") as events,
     ):
@@ -39,7 +47,7 @@ def test_a_move_reports_its_readback(build: BuildSession) -> None:
         assert r.status_code == 200
         seen: list[tuple[str, list[object]]] = []
         for _ in range(20):
-            message = events.receive_json()
+            message = receive(events, reader)
             seen.append((message["signal"], message["args"]))
             if [name for name, _ in seen].count("sig_moving") == 2:
                 break
