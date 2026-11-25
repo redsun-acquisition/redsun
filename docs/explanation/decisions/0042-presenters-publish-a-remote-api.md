@@ -98,7 +98,7 @@ function when it is given anything else, including a function `@slot` has
 already marked:
 
 ```python
-@remote  # TypeError: @remote goes directly on the def
+@remote  # TypeError: @remote is above @slot: put it below, directly on the def
 @slot
 async def move_to(self, motor: str, position: float) -> float: ...
 ```
@@ -126,18 +126,23 @@ async def position(self, motor: str) -> float:
     return await self.motors[motor].position.get_value()
 ```
 
-A slot may now return a value, which becomes the answer to the request. A
-signal connected to the slot drops it, so a slot that returns a value can
-still be linked in `wire()`.
+An `async` slot may now return a value, which becomes the answer to the
+request. A signal connected to the slot drops it, so a remote slot that
+returns a value can still be linked in `wire()`. A plain `def` slot still
+returns nothing.
 
 Every route the session builds is an `async def` endpoint, the one reading a
 property included. `fastapi` runs an endpoint written as a plain `def` on a
 thread of its own, which would read a presenter's state while the presenter's
 coroutines change it on the loop.
 
-A presenter breaking one of these rules, or naming a type with no JSON Schema
-in a remote member's annotations, is left out of the API with a log line
-naming the member, and it is still built and still runs.
+These rules hold for any frontend serving a presenter, so `remote` and the
+code reading a presenter's remote members check them. Only the `fastapi`
+frontend needs each type to have a JSON Schema, so it checks every parameter
+and return type of a remote member, and every argument type of a published
+signal, when it builds the API. A presenter breaking a rule, or naming a
+type with no JSON Schema, is left out of the API with a log line naming the
+member, and it is still built and still runs.
 
 ### Views keep sync slots
 
