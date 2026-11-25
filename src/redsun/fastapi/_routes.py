@@ -314,7 +314,7 @@ class Listener:
         """Add *message* to the stream, or drop it while the stream is full.
 
         A warning is logged when the stream fills up, and again only after it
-        has drained below half its room and filled up once more.
+        has drained below half its size and filled up once more.
         """
         try:
             self.stream.send_nowait(message)
