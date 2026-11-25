@@ -30,6 +30,7 @@ from redsun import (
 )
 from redsun.fastapi import FastAPISession
 from redsun.fastapi._session import stop
+from redsun.log import log_buffer
 
 if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
@@ -496,6 +497,25 @@ def test_serve_answers_until_interrupted(
         {"presenter": "mover", "signal": "sig_moved", "args": [0.5]}
     ]
     assert not session.is_built
+
+
+def test_the_server_logs_through_the_session(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Send the server's warning on a malformed request to the session's handlers."""
+    port = free_port()
+    session = build(OnWeb, {"remote": {"port": port}})
+
+    def interrupted() -> None:
+        with socket.create_connection(("127.0.0.1", port)) as client:
+            client.sendall(b"NOT HTTP\r\n\r\n")
+            client.recv(100)
+
+    monkeypatch.setattr("redsun.fastapi._session.until_interrupted", interrupted)
+    with pytest.raises(SystemExit):
+        session.serve()
+    messages = [r.getMessage() for r in log_buffer().records]
+    assert messages.count("Invalid HTTP request received.") == 1
 
 
 def test_the_app_is_released_on_shutdown(build: BuildSession) -> None:

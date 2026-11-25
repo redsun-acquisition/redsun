@@ -23,7 +23,7 @@ from ..session._protocols import WebSession
 from ._routes import build_api
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from concurrent.futures import Future
     from pathlib import Path
 
@@ -151,7 +151,8 @@ class FastAPISession(WebSession[FastAPI], Session):
         """Build, serve the API where `remote` says, and block until Ctrl+C.
 
         The address is `127.0.0.1:8000` unless the class or the session file
-        sets `remote`.
+        sets `remote`. The server's warnings and errors are logged with the
+        session's records.
 
         Ctrl+C stops the server, shuts the session down and exits. The session
         is also shut down when the server fails to start, and when Ctrl+C
@@ -171,9 +172,11 @@ class FastAPISession(WebSession[FastAPI], Session):
                     self.app,
                     host=self._remote.host,
                     port=self._remote.port,
+                    log_config=None,
                     log_level="warning",
                 )
             )
+            self.on_release(log_server_to_session())
             running = run_coro(serve_until_stopped(server), return_future=True)
             self.on_release(partial(stop, server, running))
             wait_until_started(server, running)
@@ -181,6 +184,33 @@ class FastAPISession(WebSession[FastAPI], Session):
         finally:
             self.shutdown()
         sys.exit(0)
+
+
+class ToSession(logging.Handler):
+    """Pass each record to the handlers of the `redsun` logger."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Hand *record* to the `redsun` logger."""
+        logger.handle(record)
+
+
+def log_server_to_session() -> Callable[[], None]:
+    """Send the `uvicorn` logger's records to the session's handlers, and return how to undo it.
+
+    The records stop at the `uvicorn` logger meanwhile, so a handler on the
+    root logger receives each of them once, through `redsun`.
+    """
+    server_logger = logging.getLogger("uvicorn")
+    handler = ToSession()
+    propagate = server_logger.propagate
+    server_logger.addHandler(handler)
+    server_logger.propagate = False
+
+    def undo() -> None:
+        server_logger.removeHandler(handler)
+        server_logger.propagate = propagate
+
+    return undo
 
 
 async def serve_until_stopped(server: uvicorn.Server) -> None:
