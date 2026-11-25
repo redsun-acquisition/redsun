@@ -9,8 +9,7 @@ from typing import assert_type
 
 from psygnal import Signal
 
-from redsun import remote
-from redsun.ports._wiring import Link
+from redsun import Link, remote
 
 
 @remote
