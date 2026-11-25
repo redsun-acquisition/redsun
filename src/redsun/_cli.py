@@ -85,7 +85,7 @@ def run_web() -> int:
         return 1
     try:
         ExampleWeb().serve()
-    except (BuildError, HookError, OSError, RuntimeError, TimeoutError) as e:
+    except (BuildError, HookError, OSError, RuntimeError) as e:
         print(f"The example could not start. {e}", file=sys.stderr)
         return 1
 
