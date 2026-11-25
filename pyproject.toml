@@ -303,8 +303,6 @@ exclude = ["sketches/"]
 docstring-code-format = true
 
 [tool.ruff.lint]
-# generated; the formatter still checks it
-exclude = ["src/redsun/fastapi/_asyncapi.py"]
 extend-select = [
     "D", # enable docstring checks
     "I", # enable imports checks
