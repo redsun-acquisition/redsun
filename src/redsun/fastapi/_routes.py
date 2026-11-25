@@ -41,8 +41,8 @@ def build_api(
 
     A presenter whose routes cannot be built, for breaking a rule of `served`,
     serving a type with no JSON Schema or any other reason, is left out,
-    logged and recorded in *refused* under its name. The callables returned disconnect what the API connected and
-    close the sockets still open.
+    logged and recorded in *refused* under its name. The callables returned
+    disconnect what the API connected and close the sockets still open.
     """
     listeners: Listeners = {}
     releases: list[Callable[[], None]] = [partial(close_all, listeners)]
