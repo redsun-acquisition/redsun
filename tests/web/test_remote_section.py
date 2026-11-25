@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from redsun import ConfigurationError, Session
 from redsun._config import RemoteConfig
+from redsun.examples._web import ExampleWeb
 from redsun.fastapi import FastAPISession, RemoteSettings
 from tests.sdk.compute.test_settings import mirrored
 from tests.web.test_fastapi_session import OnWeb
@@ -135,3 +136,16 @@ def test_an_origin_is_allowed_by_cors(
             headers={"Origin": ORIGIN, "Access-Control-Request-Method": "GET"},
         )
     assert r.headers.get("access-control-allow-origin") == allowed
+
+
+def test_the_example_allows_the_client_development_server(
+    build: BuildSession,
+) -> None:
+    """Answer a preflight from the TypeScript client's development server to the example."""
+    session = build(ExampleWeb)
+    with TestClient(session.app) as client:
+        r = client.options(
+            "/api/signals",
+            headers={"Origin": ORIGIN, "Access-Control-Request-Method": "GET"},
+        )
+    assert r.headers.get("access-control-allow-origin") == ORIGIN
