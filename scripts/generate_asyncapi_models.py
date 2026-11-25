@@ -15,8 +15,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-SCHEMA = Path(__file__).parent / "asyncapi" / "asyncapi-3.0.0.json"
-TARGET = Path(__file__).parent.parent / "src" / "redsun" / "fastapi" / "_asyncapi.py"
+ROOT = Path(__file__).parent.parent
+SCHEMA = ROOT / "scripts" / "asyncapi" / "asyncapi-3.0.0.json"
+TARGET = ROOT / "src" / "redsun" / "fastapi" / "_asyncapi.py"
 
 KEEP = {
     "": ["asyncapi", "info", "channels", "operations", "components"],
@@ -41,6 +42,9 @@ OPTIONS = [
     "--preset=standard-py311-20261124",
     "--class-name=AsyncAPI",
     "--disable-timestamp",
+    "--formatters",
+    "ruff-check",
+    "ruff-format",
 ]
 
 
@@ -121,7 +125,7 @@ def generate() -> str:
                 *OPTIONS,
             ],
             check=True,
-            cwd=folder,
+            cwd=ROOT,
         )
         return output.read_text(encoding="utf-8")
 
