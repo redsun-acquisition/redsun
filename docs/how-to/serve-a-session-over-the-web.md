@@ -106,6 +106,10 @@ body with a wrong type is answered with 422 before the slot runs. A slot that
 raises answers 500 with `{"error": "..."}`, and the session logs the
 exception.
 
+The session holds up to 1000 messages for each client of `/api/events`. When
+a client falls that far behind, the newer messages are dropped for that client
+alone and the session logs a warning.
+
 ## Serve the session
 
 Call `serve()`. It builds the session, starts serving, and blocks until you
@@ -117,7 +121,9 @@ MyApp().serve()
 
 The session listens on `127.0.0.1:8000` unless you say otherwise. Open
 `http://127.0.0.1:8000/docs` in a browser to see every route with its types,
-and to call each one by hand.
+and to call each one by hand. If another program already listens on that
+port, `serve()` shuts the session down and raises `OSError`. The server's own
+warnings, such as one for a malformed request, go to the session's log.
 
 ## Choose where it listens
 
