@@ -77,6 +77,7 @@ from redsun.session import (
     Serializable,
     Serves,
     Session,
+    WebSession,
 )
 from redsun.view import Column, Placement, Row, Shortcut, Tabs, WindowLayout, shortcut
 
@@ -147,6 +148,7 @@ __all__ = [
     "Settings",
     "Shortcut",
     "Tabs",
+    "WebSession",
     "WindowLayout",
     "WiringError",
     "WrapsBuild",

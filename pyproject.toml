@@ -146,6 +146,10 @@ sharedbox = [
     "fastcs>=0.14.4",
     "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
 ]
+fastapi = [
+    "fastapi>=0.164.0",
+    "uvicorn>=0.54.0",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -209,6 +213,10 @@ sharedbox = [
     "sharedbox>=0.10.0",
 ]
 testing-qt = ["redsun[testing,qt-common]"]
+fastapi = [
+    "fastapi>=0.164.0",
+    "uvicorn>=0.54.0",
+]
 
 [project.scripts]
 redsun = "redsun._cli:main"
@@ -218,6 +226,7 @@ redsun = "plugins.yaml"
 
 [project.entry-points."redsun.frontends"]
 qt = "redsun.qt:QtSession"
+fastapi = "redsun.fastapi:FastAPISession"
 
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
@@ -370,12 +379,12 @@ set_env = { QT_API = "pyside6" }
 commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 
 [tool.tox.env.tests-pyqt]
-dependency_groups = ["dev", "pyqt"]
+dependency_groups = ["dev", "pyqt", "fastapi"]
 set_env = { QT_API = "pyqt6" }
 commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-pyside]
-dependency_groups = ["dev", "pyside"]
+dependency_groups = ["dev", "pyside", "fastapi"]
 set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
