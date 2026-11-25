@@ -86,7 +86,7 @@ class FastAPISession(WebSession[FastAPI], Session):
     ```
     """
 
-    __slots__ = ("_app",)
+    __slots__ = ("_app", "_remote")
 
     frontend = FastAPIFrontend
 
@@ -112,6 +112,7 @@ class FastAPISession(WebSession[FastAPI], Session):
             config, log_level=log_level, profile=profile, profile_dir=profile_dir
         )
         self._app: FastAPI | None = None
+        self._remote = RemoteConfig()
 
     @property
     def app(self) -> FastAPI:
@@ -132,26 +133,19 @@ class FastAPISession(WebSession[FastAPI], Session):
         A presenter breaking a rule of the API is left out of it and counted
         with the build's other problems, but stays built.
         """
-        remote = self._remote()
+        self._remote = self._configuration().remote or RemoteConfig()
         self._app = FastAPI(title=self.name)
-        self.on_release(self._release_app)
-        if remote.origins:
+        # the app's routes hold the presenters
+        self.on_release(partial(setattr, self, "_app", None))
+        if self._remote.origins:
             self._app.add_middleware(
                 CORSMiddleware,
-                allow_origins=remote.origins,
+                allow_origins=self._remote.origins,
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
         for release in build_api(self._app, self.presenters, self._not_served):
             self.on_release(release)
-
-    def _remote(self) -> RemoteConfig:
-        """Return the `remote` section, with its defaults where nothing sets it."""
-        return self._configuration().remote or RemoteConfig()
-
-    def _release_app(self) -> None:
-        """Drop the app, whose routes hold the presenters."""
-        self._app = None
 
     def serve(self) -> NoReturn:
         """Build, serve the API where `remote` says, and block until Ctrl+C.
@@ -172,10 +166,12 @@ class FastAPISession(WebSession[FastAPI], Session):
         """
         self.build()
         try:
-            remote = self._remote()
             server = uvicorn.Server(
                 uvicorn.Config(
-                    self.app, host=remote.host, port=remote.port, log_level="warning"
+                    self.app,
+                    host=self._remote.host,
+                    port=self._remote.port,
+                    log_level="warning",
                 )
             )
             running = run_coro(serve_until_stopped(server), return_future=True)
