@@ -1,4 +1,4 @@
-"""`remote` keeps a function's type, and slots may return values.
+"""`remote` keeps a function's type, and async slots may return values.
 
 Never imported or executed; checked by the project's normal mypy invocation.
 """
