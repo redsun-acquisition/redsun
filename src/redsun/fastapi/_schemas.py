@@ -39,6 +39,7 @@ def check_schemas(
         If a type has no JSON Schema. The message lists every such type, one
         per line, each naming the member.
     """
+    # each type a command or query names, with the line reporting it if it has no schema
     members = [
         *(
             (f"{c.name!r} takes a type with no JSON Schema ({p})", t)
@@ -94,8 +95,14 @@ def adapter_of(t: Any, adapters: Adapters) -> TypeAdapter[Any] | str:
     An adapter is built once for a type that can be a dictionary key, and kept
     in *adapters*.
     """
-    with suppress(KeyError, TypeError):
+    try:
         return adapters[t]
+    # not cached yet
+    except KeyError:
+        pass
+    # a type that cannot be a dictionary key is not cached
+    except TypeError:
+        pass
     try:
         adapter = TypeAdapter[Any](t)
         adapter.json_schema()
@@ -191,6 +198,9 @@ def draft07(schema: Any) -> Any:
 
     JSON Schema 2020-12 lists a tuple's items in `prefixItems` and the rest in
     `items`; draft-07 lists them in `items` and the rest in `additionalItems`.
+    The recursion follows the schema tree, where pydantic refers to a model by
+    `$ref`, so a recursive model ends at its `$ref` and the depth is the
+    nesting depth of the types.
     """
     match schema:
         case list():
