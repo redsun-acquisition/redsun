@@ -10,7 +10,7 @@ from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, Body, WebSocket
+from fastapi import APIRouter, Body, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -24,7 +24,7 @@ from ._schemas import asyncapi_document, check_schemas
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Mapping, MutableMapping
 
-    from fastapi import FastAPI, Request, Response
+    from fastapi import FastAPI, Response
     from pydantic import TypeAdapter
 
     from ..ports._remote import Command, Query, Served
@@ -77,20 +77,26 @@ def build_api(
             signal.connect(relay)
             releases.append(partial(signal.disconnect, relay))
 
-    document = asyncapi_document(app.title, signals)
-
-    async def asyncapi() -> dict[str, Any]:
-        return document
-
-    # WebSocket is imported at runtime: FastAPI reads this annotation to pass the socket
-    async def events(websocket: WebSocket) -> None:
-        await relay_events(websocket, listeners)
-
+    app.state.asyncapi = asyncapi_document(app.title, signals)
+    app.state.listeners = listeners
     app.add_api_route(
         "/asyncapi.json", asyncapi, methods=["GET"], operation_id="get_asyncapi"
     )
     app.add_api_websocket_route("/api/events", events)
     return releases
+
+
+# Request is imported at runtime: FastAPI reads this annotation to pass the request
+async def asyncapi(request: Request) -> dict[str, Any]:
+    """Return the AsyncAPI document of the app's event socket."""
+    document: dict[str, Any] = request.app.state.asyncapi
+    return document
+
+
+# WebSocket is imported at runtime: FastAPI reads this annotation to pass the socket
+async def events(websocket: WebSocket) -> None:
+    """Send the client every emission of a served signal, until it leaves."""
+    await relay_events(websocket, websocket.app.state.listeners)
 
 
 def routes_of(presenter: str, serving: Served, operations: set[str]) -> APIRouter:
