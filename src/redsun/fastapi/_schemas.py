@@ -17,14 +17,15 @@ if TYPE_CHECKING:
 Adapters = dict[Any, TypeAdapter[Any]]
 
 
-def signal_adapters(
+def check_schemas(
     presenter: object, serving: Served, adapters: Adapters
 ) -> dict[str, list[TypeAdapter[Any]]]:
-    """Return the adapter of each argument of each signal *serving* lists, by signal name.
+    """Check that every type *serving* names has a JSON Schema.
 
     Every parameter and return type of a command, the return type of a query
-    and every argument type of a signal must have a JSON Schema. *adapters*
-    holds the adapter already built for a type, and takes each new one.
+    and every argument type of a signal must have one. Return the adapter of
+    each argument of each signal, by signal name. *adapters* holds the adapter
+    already built for a type, and takes each new one.
 
     Raises
     ------

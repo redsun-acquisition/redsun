@@ -11,7 +11,7 @@ from psygnal import Signal
 
 from redsun import AsPresenter, BuildError, remote, slot
 from redsun.fastapi import FastAPISession
-from redsun.fastapi._schemas import signal_adapters, signal_schema
+from redsun.fastapi._schemas import check_schemas, signal_schema
 from redsun.ports._remote import served
 
 if TYPE_CHECKING:
@@ -85,7 +85,7 @@ def test_a_type_with_no_json_schema_is_refused(cls: type, message: str) -> None:
     serving = served(presenter)
     assert serving is not None
     with pytest.raises(TypeError, match=re.escape(message)):
-        signal_adapters(presenter, serving, {})
+        check_schemas(presenter, serving, {})
 
 
 def test_an_object_argument_is_published_untyped() -> None:
@@ -93,7 +93,7 @@ def test_an_object_argument_is_published_untyped() -> None:
     presenter = Untyped()
     serving = served(presenter)
     assert serving is not None
-    schema = signal_schema(signal_adapters(presenter, serving, {}))
+    schema = signal_schema(check_schemas(presenter, serving, {}))
     assert schema["sig_any"] == [{"type": "string"}, {}]
 
 

@@ -15,7 +15,7 @@ from pydantic import BaseModel, create_model
 from pydantic_core import PydanticSerializationError
 
 from ..ports._remote import served
-from ._schemas import signal_adapters, signal_schema
+from ._schemas import check_schemas, signal_schema
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
@@ -54,7 +54,7 @@ def build_api(
             serving = served(presenter)
             if serving is None:
                 continue
-            arguments = signal_adapters(presenter, serving, adapters)
+            arguments = check_schemas(presenter, serving, adapters)
             router = routes_of(name, serving, operations)
         except TypeError as error:
             logger.error("Presenter '%s' is left out of the API: %s", name, error)
