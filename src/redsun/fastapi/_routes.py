@@ -26,7 +26,10 @@ from ._schemas import asyncapi_document, check_schemas
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Mapping, MutableMapping
 
-    from anyio.abc import ObjectReceiveStream, ObjectSendStream
+    from anyio.streams.memory import (
+        MemoryObjectReceiveStream,
+        MemoryObjectSendStream,
+    )
     from fastapi import FastAPI, Response
     from pydantic import TypeAdapter
 
@@ -272,7 +275,7 @@ async def relay_events(websocket: WebSocket, listeners: set[Listener]) -> None:
 
 
 async def send_received(
-    websocket: WebSocket, receive: ObjectReceiveStream[Message]
+    websocket: WebSocket, receive: MemoryObjectReceiveStream[Message]
 ) -> None:
     """Send each message of *receive*, and close *websocket* once the stream is closed."""
     async for message in receive:
@@ -287,7 +290,7 @@ class Listener:
     loop: asyncio.AbstractEventLoop
     """The loop serving the socket."""
 
-    stream: ObjectSendStream[Message]
+    stream: MemoryObjectSendStream[Message]
     """The messages waiting to be sent, `EVENT_BUFFER` at most."""
 
     full: bool = False
