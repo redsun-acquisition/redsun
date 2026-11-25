@@ -116,14 +116,14 @@ def asyncapi_document(
     and every type a message refers to is in `components.schemas`. The
     schemas are JSON Schema draft-07, the dialect AsyncAPI 3.0.0 reads.
     """
-    keyed = [
-        ((presenter, signal, i), "serialization", adapter)
-        for presenter, by_signal in signals.items()
-        for signal, adapters in by_signal.items()
-        for i, adapter in enumerate(adapters)
-    ]
     schemas, top = TypeAdapter.json_schemas(
-        keyed, ref_template="#/components/schemas/{model}"
+        (
+            ((presenter, signal, i), "serialization", adapter)
+            for presenter, by_signal in signals.items()
+            for signal, adapters in by_signal.items()
+            for i, adapter in enumerate(adapters)
+        ),
+        ref_template="#/components/schemas/{model}",
     )
     messages: dict[str, dict[str, Any]] = {}
     for presenter, by_signal in signals.items():
