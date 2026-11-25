@@ -20,3 +20,15 @@ def test_the_script_writes_the_served_paths(tmp_path: Path) -> None:
     document = json.loads(target.read_text(encoding="utf-8"))
     assert {"/api/positioner/move", "/api/lights/lights"} <= set(document["paths"])
     assert set(document["x-redsun-signals"]) == {"positioner", "lights"}
+    events = document["components"]["schemas"]["RedsunEvent"]["oneOf"]
+    readback = next(
+        e
+        for e in events
+        if e["properties"]["presenter"] == {"const": "positioner"}
+        and e["properties"]["signal"] == {"const": "sig_readback"}
+    )
+    assert [a["type"] for a in readback["properties"]["args"]["prefixItems"]] == [
+        "string",
+        "string",
+        "number",
+    ]
