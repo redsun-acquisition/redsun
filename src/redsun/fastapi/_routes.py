@@ -10,18 +10,20 @@ from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, WebSocket
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, create_model
 from pydantic_core import PydanticSerializationError
+from starlette.exceptions import HTTPException
 
 from ..ports._remote import served
 from ._schemas import check_schemas, signal_schema
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, MutableMapping
+    from collections.abc import Callable, Coroutine, Mapping, MutableMapping
 
-    from fastapi import FastAPI
+    from fastapi import FastAPI, Request, Response
     from pydantic import TypeAdapter
 
     from ..ports._remote import Command, Query, Served
@@ -112,7 +114,11 @@ def routes_of(presenter: str, serving: Served, operations: set[str]) -> APIRoute
     )
     if problems:
         raise TypeError("\n".join(f"- {p}" for p in problems))
-    router = APIRouter(tags=[presenter], generate_unique_id_function=operation_id)
+    router = APIRouter(
+        tags=[presenter],
+        generate_unique_id_function=operation_id,
+        route_class=RemoteRoute,
+    )
     for command in serving.commands:
         add_command(router, presenter, command)
     for query in serving.queries:
@@ -139,11 +145,7 @@ def add_command(router: APIRouter, presenter: str, command: Command) -> None:
     """Add the POST route calling *command* with the body's fields."""
 
     async def endpoint(body: BaseModel) -> object:
-        try:
-            return await command.call(**body.model_dump())
-        except Exception as error:
-            logger.exception("Remote call %s.%s failed", presenter, command.name)
-            return JSONResponse({"error": str(error)}, 500)
+        return await command.call(**body.model_dump())
 
     fields: dict[str, Any] = {p: (t, ...) for p, t in command.parameters.items()}
     # the body type is the command's own, which no annotation written here can name
@@ -163,11 +165,7 @@ def add_query(router: APIRouter, presenter: str, query: Query) -> None:
     """Add the GET route reading *query*."""
 
     async def endpoint() -> object:
-        try:
-            return query.read()
-        except Exception as error:
-            logger.exception("Remote read %s.%s failed", presenter, query.name)
-            return JSONResponse({"error": str(error)}, 500)
+        return query.read()
 
     router.add_api_route(
         f"/api/{presenter}/{query.name}",
@@ -176,6 +174,26 @@ def add_query(router: APIRouter, presenter: str, query: Query) -> None:
         response_model=query.returns,
         name=query.name,
     )
+
+
+class RemoteRoute(APIRoute):
+    """A route of a presenter, answering 500 with the error's text when its member raises."""
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        """Return FastAPI's handler, with a failure of the member logged and answered."""
+        handler = super().get_route_handler()
+
+        async def answer(request: Request) -> Response:
+            try:
+                return await handler(request)
+            except (HTTPException, RequestValidationError):
+                raise
+            # an app-wide Exception handler runs outside CORS and Starlette re-raises after it
+            except Exception as error:
+                logger.exception("Remote call %s.%s failed", self.tags[0], self.name)
+                return JSONResponse({"error": str(error)}, 500)
+
+        return answer
 
 
 def relay_for(
