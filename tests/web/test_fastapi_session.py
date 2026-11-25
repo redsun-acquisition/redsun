@@ -320,23 +320,48 @@ def test_two_remote_slots_on_one_port_leave_the_presenter_out(
 def test_the_openapi_document_lists_exactly_the_remote_members(
     build: BuildSession,
 ) -> None:
-    """List a route for each remote member and the signals route, nothing else."""
+    """List a route for each remote member and the AsyncAPI route, nothing else."""
     session = build(OnWeb)
     assert set(session.app.openapi()["paths"]) == {
         "/api/mover/move",
         "/api/mover/fail",
         "/api/mover/position",
         "/api/mover/broken",
-        "/api/signals",
+        "/asyncapi.json",
     }
 
 
-def test_the_signals_route_describes_each_signal(build: BuildSession) -> None:
-    """Describe each published signal's arguments as JSON Schema."""
+def test_the_asyncapi_document_describes_each_signal(build: BuildSession) -> None:
+    """Describe the event socket as one channel sending a message per served signal."""
     session = build(OnWeb)
     with TestClient(session.app) as client:
-        r = client.get("/api/signals")
-    assert r.json() == {"mover": {"sig_moved": [{"type": "number"}], "sig_any": [{}]}}
+        document = client.get("/asyncapi.json").json()
+    names = {"mover.sig_moved", "mover.sig_any"}
+    channel = document["channels"]["events"]
+    operation = document["operations"]["sendEvents"]
+    assert document["asyncapi"] == "3.0.0"
+    assert document["info"]["title"] == session.name
+    assert channel["address"] == "/api/events"
+    assert set(channel["messages"]) == names
+    assert (operation["action"], operation["channel"]) == (
+        "send",
+        {"$ref": "#/channels/events"},
+    )
+    assert {m["$ref"] for m in operation["messages"]} == {
+        f"#/channels/events/messages/{n}" for n in names
+    }
+    moved = document["components"]["messages"]["mover.sig_moved"]
+    assert moved["payload"]["properties"] == {
+        "presenter": {"type": "string", "const": "mover"},
+        "signal": {"type": "string", "const": "sig_moved"},
+        "args": {
+            "type": "array",
+            "items": [{"type": "number"}],
+            "additionalItems": False,
+            "minItems": 1,
+            "maxItems": 1,
+        },
+    }
 
 
 def test_a_fastapi_session_is_a_web_session(build: BuildSession) -> None:

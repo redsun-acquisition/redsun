@@ -74,8 +74,8 @@ class FastAPISession(WebSession[FastAPI], Session):
     Each presenter with a member marked `remote` gets a route per remote slot
     (`POST /api/{presenter}/{port}`) and per remote property
     (`GET /api/{presenter}/{name}`). Every public signal of those presenters
-    is sent on the WebSocket `/api/events`, and `GET /api/signals` describes
-    the arguments of each.
+    is sent on the WebSocket `/api/events`, which the AsyncAPI document at
+    `GET /asyncapi.json` describes.
 
     ```python
     class OnWeb(FastAPISession, Core):

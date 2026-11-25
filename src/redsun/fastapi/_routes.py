@@ -19,7 +19,7 @@ from pydantic_core import PydanticSerializationError
 from starlette.exceptions import HTTPException
 
 from ..ports._remote import served
-from ._schemas import check_schemas, signal_schema
+from ._schemas import asyncapi_document, check_schemas
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Mapping, MutableMapping
@@ -43,14 +43,16 @@ def build_api(
 ) -> list[Callable[[], None]]:
     """Add to *app* the routes of every presenter with a remote member.
 
-    A presenter whose routes cannot be built, for breaking a rule of `served`,
-    serving a type with no JSON Schema or any other reason, is left out,
-    logged and recorded in *refused* under its name. The callables returned
-    disconnect what the API connected and close the sockets still open.
+    Their signals are sent on the WebSocket `/api/events`, which the AsyncAPI
+    document at `GET /asyncapi.json` describes. A presenter whose routes cannot
+    be built, for breaking a rule of `served`, serving a type with no JSON
+    Schema or any other reason, is left out, logged and recorded in *refused*
+    under its name. The callables returned disconnect what the API connected
+    and close the sockets still open.
     """
     listeners: Listeners = {}
     releases: list[Callable[[], None]] = [partial(close_all, listeners)]
-    schemas: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    signals: dict[str, dict[str, list[TypeAdapter[Any]]]] = {}
     operations: set[str] = set()
     adapters: Adapters = {}
     for name, presenter in presenters.items():
@@ -69,21 +71,23 @@ def build_api(
             refused[name] = error
             continue
         app.include_router(router)
-        schemas[name] = signal_schema(arguments)
+        signals[name] = arguments
         for signal_name, signal in serving.signals.items():
             relay = relay_for(listeners, name, signal_name, arguments[signal_name])
             signal.connect(relay)
             releases.append(partial(signal.disconnect, relay))
 
-    async def signals() -> dict[str, dict[str, list[dict[str, Any]]]]:
-        return schemas
+    document = asyncapi_document(app.title, signals)
+
+    async def asyncapi() -> dict[str, Any]:
+        return document
 
     # WebSocket is imported at runtime: FastAPI reads this annotation to pass the socket
     async def events(websocket: WebSocket) -> None:
         await relay_events(websocket, listeners)
 
     app.add_api_route(
-        "/api/signals", signals, methods=["GET"], operation_id="get_signals"
+        "/asyncapi.json", asyncapi, methods=["GET"], operation_id="get_asyncapi"
     )
     app.add_api_websocket_route("/api/events", events)
     return releases
