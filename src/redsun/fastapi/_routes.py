@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, WebSocket
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, create_model
 from pydantic_core import PydanticSerializationError
 
@@ -95,14 +96,13 @@ def routes_of(presenter: str, serving: Served, operations: set[str]) -> APIRoute
         port, a parameter a request body cannot carry, or an operation id
         another presenter took.
     """
-    commands = [(c, f"{presenter}__{c.name}") for c in serving.commands]
-    queries = [(q, f"get_{presenter}__{q.name}") for q in serving.queries]
     counted = Counter(command.name for command in serving.commands)
     problems = [
         f"two remote slots answer to the port {port!r}"
         for port, count in counted.items()
         if count > 1
     ]
+    # FastAPI's own errors for these names do not say which parameter is wrong
     problems.extend(
         f"{command.name!r} has a parameter {p!r}, which a request body cannot "
         "carry: it starts with '_' or is a name pydantic models use"
@@ -110,26 +110,32 @@ def routes_of(presenter: str, serving: Served, operations: set[str]) -> APIRoute
         for p in command.parameters
         if p.startswith("_") or hasattr(BaseModel, p)
     )
-    ids = [operation for _, operation in [*commands, *queries]]
-    problems.extend(
-        f"the operation id {i!r} is taken by another presenter"
-        for i in ids
-        if i in operations
-    )
     if problems:
         raise TypeError("\n".join(f"- {p}" for p in problems))
-    router = APIRouter()
-    for command, operation in commands:
-        add_command(router, presenter, command, operation)
-    for query, operation in queries:
-        add_query(router, presenter, query, operation)
+    router = APIRouter(tags=[presenter], generate_unique_id_function=operation_id)
+    for command in serving.commands:
+        add_command(router, presenter, command)
+    for query in serving.queries:
+        add_query(router, presenter, query)
+    ids = [route.unique_id for route in router.routes if isinstance(route, APIRoute)]
+    taken = [
+        f"- the operation id {i!r} is taken by another presenter"
+        for i in ids
+        if i in operations
+    ]
+    if taken:
+        raise TypeError("\n".join(taken))
     operations.update(ids)
     return router
 
 
-def add_command(
-    router: APIRouter, presenter: str, command: Command, operation: str
-) -> None:
+def operation_id(route: APIRoute) -> str:
+    """Return `{presenter}__{name}` for a command, `get_{presenter}__{name}` for a query."""
+    prefix = "get_" if route.methods == {"GET"} else ""
+    return f"{prefix}{route.tags[0]}__{route.name}"
+
+
+def add_command(router: APIRouter, presenter: str, command: Command) -> None:
     """Add the POST route calling *command* with the body's fields."""
 
     async def endpoint(body: BaseModel) -> object:
@@ -141,17 +147,19 @@ def add_command(
 
     fields: dict[str, Any] = {p: (t, ...) for p, t in command.parameters.items()}
     # the body type is the command's own, which no annotation written here can name
-    endpoint.__annotations__["body"] = create_model(operation, **fields)
+    endpoint.__annotations__["body"] = create_model(
+        f"{presenter}__{command.name}", **fields
+    )
     router.add_api_route(
         f"/api/{presenter}/{command.name}",
         endpoint,
         methods=["POST"],
         response_model=command.returns,
-        operation_id=operation,
+        name=command.name,
     )
 
 
-def add_query(router: APIRouter, presenter: str, query: Query, operation: str) -> None:
+def add_query(router: APIRouter, presenter: str, query: Query) -> None:
     """Add the GET route reading *query*."""
 
     async def endpoint() -> object:
@@ -166,7 +174,7 @@ def add_query(router: APIRouter, presenter: str, query: Query, operation: str) -
         endpoint,
         methods=["GET"],
         response_model=query.returns,
-        operation_id=operation,
+        name=query.name,
     )
 
 
