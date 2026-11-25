@@ -10,8 +10,10 @@ from typing import TYPE_CHECKING
 import pytest
 from qtpy import API
 from qtpy.QtWidgets import QTabWidget
+from typer.testing import CliRunner
 
-from redsun._cli import main, styles
+from redsun import __version__
+from redsun._cli import app, styles
 from redsun.errors import BuildError, HookError
 from redsun.examples import ExampleApp, example_config
 from redsun.examples._devices import Axis, Plans
@@ -19,7 +21,6 @@ from redsun.qt import QtHook
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
-    import argparse
     from pathlib import Path
 
     from qtpy.QtWidgets import QApplication
@@ -40,21 +41,14 @@ WITHOUT_QT = """
 import sys
 
 sys.modules["qtpy"] = None
-from redsun._cli import main
+from redsun._cli import app
 
-sys.exit(main([]))
+app([])
 """
 
+WIDE = {"COLUMNS": "200"}
 
-def greet(arguments: argparse.Namespace) -> int:
-    print(f"hello {arguments.name}")
-    return 3
-
-
-def add_greet(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    made = commands.add_parser("greet", help="greet somebody by name")
-    made.add_argument("name")
-    made.set_defaults(run=greet)
+runner = CliRunner()
 
 
 @pytest.mark.qt
@@ -109,7 +103,7 @@ def test_the_plan_locks_its_motor_and_pauses_after_each_move() -> None:
 @pytest.mark.qt
 @pytest.mark.parametrize(
     ("arguments", "installed"),
-    [(["--example"], []), (["--example", "napari"], ["NapariStyle"])],
+    [(["example"], []), (["example", "napari"], ["NapariStyle"])],
     ids=["platform", "napari"],
 )
 def test_the_command_runs_the_example_in_the_style_named(
@@ -126,50 +120,36 @@ def test_the_command_runs_the_example_in_the_style_named(
 
     monkeypatch.setattr(ExampleApp, "run", record)
 
-    with pytest.raises(SystemExit) as stopped:
-        main(arguments)
+    done = runner.invoke(app, arguments)
 
-    assert stopped.value.code == 0
+    assert done.exit_code == 0
     assert ran == [installed]
 
 
-def test_an_unknown_style_is_refused(capsys: pytest.CaptureFixture[str]) -> None:
+def test_an_unknown_style_is_refused() -> None:
     """Refuse a style that does not exist, listing the ones that do."""
-    with pytest.raises(SystemExit) as stopped:
-        main(["--example", "no-such-style"])
+    done = runner.invoke(app, ["example", "no-such-style"], env=WIDE)
 
-    assert stopped.value.code == 2
+    assert done.exit_code == 2
     assert "no style named 'no-such-style'; choose from napari, qlementine" in (
-        capsys.readouterr().err
+        done.output
     )
 
 
-def test_no_argument_prints_the_help(capsys: pytest.CaptureFixture[str]) -> None:
-    """Print the help and succeed when the command is given nothing to do."""
-    assert main([]) == 0
-    assert "--example" in capsys.readouterr().out
+def test_no_argument_prints_the_help() -> None:
+    """Print the help, listing the commands, when the command is given nothing to do."""
+    done = runner.invoke(app, [])
+
+    assert done.exit_code == 0
+    assert "example" in done.output
 
 
-def test_a_registered_command_runs_with_its_arguments(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """Parse a registered command's own arguments, run it and return its exit code."""
-    monkeypatch.setattr("redsun._cli.COMMANDS", (add_greet,))
+def test_the_version_option_prints_the_installed_version() -> None:
+    """Print the version of the installed package and succeed."""
+    done = runner.invoke(app, ["--version"])
 
-    assert main(["greet", "Ada"]) == 3
-    assert "hello Ada" in capsys.readouterr().out
-
-
-def test_a_registered_command_is_listed_in_the_help(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """List a registered command beside the options when the command is given nothing to do."""
-    monkeypatch.setattr("redsun._cli.COMMANDS", (add_greet,))
-
-    assert main([]) == 0
-    printed = capsys.readouterr().out
-    assert "greet somebody by name" in printed
-    assert "--example" in printed
+    assert done.exit_code == 0
+    assert done.output.strip() == __version__
 
 
 def test_the_command_loads_without_a_qt_binding() -> None:
@@ -179,17 +159,19 @@ def test_the_command_loads_without_a_qt_binding() -> None:
     )
 
     assert done.returncode == 0, done.stderr
-    assert "--example" in done.stdout
+    assert "example" in done.stdout
 
 
 def test_the_example_without_a_qt_binding_names_the_extras(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Exit with 1 and name the extras to install when the example cannot be imported."""
     monkeypatch.setitem(sys.modules, "redsun.examples", None)
 
-    assert main(["--example"]) == 1
-    assert "redsun[pyqt]" in capsys.readouterr().err
+    done = runner.invoke(app, ["example"])
+
+    assert done.exit_code == 1
+    assert "redsun[pyqt]" in done.output
 
 
 @pytest.mark.qt
@@ -205,7 +187,6 @@ def test_the_example_without_a_qt_binding_names_the_extras(
 def test_a_session_that_cannot_start_is_reported_without_a_traceback(
     error: Exception,
     monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Exit with 1 and print the reason when the example's session cannot be built."""
 
@@ -214,5 +195,7 @@ def test_a_session_that_cannot_start_is_reported_without_a_traceback(
 
     monkeypatch.setattr(ExampleApp, "run", refuse)
 
-    assert main(["--example"]) == 1
-    assert str(error) in capsys.readouterr().err
+    done = runner.invoke(app, ["example"])
+
+    assert done.exit_code == 1
+    assert str(error) in done.output

@@ -15,7 +15,7 @@ the style your platform gives every window. You can give it another look:
 To see the style before you write a session, run the example with it:
 
 ```bash
-redsun --example napari
+redsun example napari
 ```
 
 ## Prerequisites
@@ -152,7 +152,7 @@ Then install `QlementineStyle` at the same hook point:
       configure_application: qlementine
     ```
 
-To see it first, run `redsun --example qlementine`.
+To see it first, run `redsun example qlementine`.
 
 The style follows the colour scheme as the `napari` style does. It changes
 the application's font as well as its colours. When the session shuts down
