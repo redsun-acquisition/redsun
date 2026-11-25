@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>redsun</title>
+    <style>
+      body { font-family: sans-serif; margin: 1rem; }
+      section { margin-bottom: 1.5rem; }
+      .row { display: flex; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
+      .row .name { min-width: 10rem; }
+      .error { color: #b00020; }
+    </style>
+  </head>
+  <body>
+    <p id="error" class="error"></p>
+    <section>
+      <h2>Stage</h2>
+      <div id="axes"></div>
+    </section>
+    <section>
+      <h2>Lights</h2>
+      <div id="lights"></div>
+    </section>
+    <script type="module" src="/src/page.ts"></script>
+  </body>
+</html>

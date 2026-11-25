@@ -394,12 +394,12 @@ set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-qlementine-pyqt]
-dependency_groups = ["dev", "qlementine-pyqt"]
+dependency_groups = ["dev", "qlementine-pyqt", "fastapi"]
 set_env = { QT_API = "pyqt6" }
 commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-qlementine-pyside]
-dependency_groups = ["dev", "qlementine-pyside"]
+dependency_groups = ["dev", "qlementine-pyside", "fastapi"]
 set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
 

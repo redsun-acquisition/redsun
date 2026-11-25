@@ -1,0 +1,3 @@
+node_modules/
+openapi.json
+src/api.d.ts

@@ -52,6 +52,7 @@ redsun/
 |   |-- examples/              whole scripts of the how-to guides, built by a test
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
+|-- clients/typescript/        the web session's TypeScript client; not part of the package, own CI job
 |-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
 |                              generate_asyncapi_models.py (src/redsun/fastapi/_asyncapi.py),
 |                              mypy_qt.py (tox mypy legs),

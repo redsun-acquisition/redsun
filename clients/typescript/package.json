@@ -1,0 +1,14 @@
+{
+  "name": "redsun-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "generate": "openapi-typescript openapi.json -o src/api.d.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}
