@@ -462,13 +462,13 @@ def test_a_getter_that_raises_answers_500(build: BuildSession) -> None:
 def test_serve_on_a_port_in_use_raises_and_shuts_the_session_down(
     build: BuildSession,
 ) -> None:
-    """Raise when the server cannot start, leaving the session shut down."""
+    """Raise OSError when the port is taken, leaving the session shut down."""
     with socket.socket() as taken:
         taken.bind(("127.0.0.1", 0))
         taken.listen()
         port = taken.getsockname()[1]
         session = build(OnWeb, {"remote": {"port": port}})
-        with pytest.raises(RuntimeError, match=f"could not start on 127.0.0.1:{port}"):
+        with pytest.raises(OSError):
             session.serve()
     assert not session.is_built
 

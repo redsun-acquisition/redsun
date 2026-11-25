@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import socket
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
@@ -29,27 +30,27 @@ class Placed(FastAPISession):
 
 
 class Served:
-    """Stands in for `uvicorn.Server`, keeping the configuration it was given."""
+    """Stands in for `uvicorn.Server`, a server that stops at once."""
 
-    def __init__(self, config: uvicorn.Config, seen: list[uvicorn.Config]) -> None:
-        seen.append(config)
+    def __init__(self, config: uvicorn.Config) -> None:
         self.config = config
-        self.started = True
         self.should_exit = False
 
-    async def serve(self) -> None:
+    async def serve(self, sockets: list[socket.socket]) -> None:
         """Return at once, as a server that has stopped."""
 
 
 @pytest.fixture
-def configs(monkeypatch: pytest.MonkeyPatch) -> list[uvicorn.Config]:
-    """Return the configurations `serve` gives to a server, which does not run."""
-    seen: list[uvicorn.Config] = []
+def addresses(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
+    """Return the addresses `serve` binds, with no socket bound and no server run."""
+    seen: list[tuple[str, int]] = []
 
-    def served(config: uvicorn.Config) -> Served:
-        return Served(config, seen)
+    def bind(address: tuple[str, int], **kwargs: object) -> socket.socket:
+        seen.append(address)
+        return socket.socket()
 
-    monkeypatch.setattr(uvicorn, "Server", served)
+    monkeypatch.setattr(socket, "create_server", bind)
+    monkeypatch.setattr(uvicorn, "Server", Served)
     monkeypatch.setattr("redsun.fastapi._session.until_interrupted", lambda: None)
     return seen
 
@@ -72,21 +73,21 @@ def test_a_file_alone_builds_a_web_session(
     ],
 )
 def test_the_file_lays_over_the_class_key_by_key(
-    configs: list[uvicorn.Config], given: dict[str, Any], host: str, port: int
+    addresses: list[tuple[str, int]], given: dict[str, Any], host: str, port: int
 ) -> None:
     """Serve where the class says, with each key the file gives replacing the class's."""
     with pytest.raises(SystemExit):
         Placed(given).serve()
-    assert [(c.host, c.port) for c in configs] == [(host, port)]
+    assert addresses == [(host, port)]
 
 
 def test_a_session_serves_on_localhost_8000_by_default(
-    configs: list[uvicorn.Config],
+    addresses: list[tuple[str, int]],
 ) -> None:
     """Serve on 127.0.0.1:8000 when nothing sets `remote`."""
     with pytest.raises(SystemExit):
         FastAPISession().serve()
-    assert [(c.host, c.port) for c in configs] == [("127.0.0.1", 8000)]
+    assert addresses == [("127.0.0.1", 8000)]
 
 
 @pytest.mark.parametrize(

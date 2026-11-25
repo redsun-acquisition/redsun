@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import socket
 import sys
 import time
 from concurrent.futures import wait
@@ -32,8 +33,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("redsun")
 
-START_TIMEOUT = 10.0
-"""Seconds `serve` waits for the server to start."""
 STOP_TIMEOUT = 10.0
 """Seconds `shutdown` waits for the server to stop."""
 
@@ -154,32 +153,30 @@ class FastAPISession(WebSession[FastAPI], Session):
         sets `remote`. The server's warnings and errors are logged with the
         session's records.
 
-        Ctrl+C stops the server, shuts the session down and exits. The session
-        is also shut down when the server fails to start, and when Ctrl+C
-        comes before it has.
+        The address is bound before the server starts, so a client may
+        connect as soon as `serve` is called. Ctrl+C stops the server, shuts
+        the session down and exits. The session is also shut down when the
+        address cannot be bound.
 
         Raises
         ------
-        RuntimeError
-            If the server stops before it starts, such as on a port in use.
-        TimeoutError
-            If the server neither starts nor stops within `START_TIMEOUT`.
+        OSError
+            If the address cannot be bound, such as on a port in use.
         """
         self.build()
         try:
-            server = uvicorn.Server(
-                uvicorn.Config(
-                    self.app,
-                    host=self._remote.host,
-                    port=self._remote.port,
-                    log_config=None,
-                    log_level="warning",
-                )
+            host = self._remote.host
+            sock = socket.create_server(
+                (host, self._remote.port),
+                family=socket.AF_INET6 if ":" in host else socket.AF_INET,
             )
+            self.on_release(sock.close)
             self.on_release(log_server_to_session())
-            running = run_coro(serve_until_stopped(server), return_future=True)
+            server = uvicorn.Server(
+                uvicorn.Config(self.app, log_config=None, log_level="warning")
+            )
+            running = run_coro(serve_until_stopped(server, sock), return_future=True)
             self.on_release(partial(stop, server, running))
-            wait_until_started(server, running)
             until_interrupted()
         finally:
             self.shutdown()
@@ -213,48 +210,19 @@ def log_server_to_session() -> Callable[[], None]:
     return undo
 
 
-async def serve_until_stopped(server: uvicorn.Server) -> None:
-    """Run *server*, turning its exit on a failed start into an exception.
-
-    Raises
-    ------
-    RuntimeError
-        If the server could not start.
-    """
+async def serve_until_stopped(server: uvicorn.Server, sock: socket.socket) -> None:
+    """Run *server* on *sock*, logging its exit when the application fails to start."""
     try:
-        await server.serve()
+        await server.serve(sockets=[sock])
     # on the shared loop, uvicorn's sys.exit would stop the loop itself
-    except SystemExit as e:
-        config = server.config
-        raise RuntimeError(
-            f"the server could not start on {config.host}:{config.port}"
-        ) from e
-
-
-def wait_until_started(server: uvicorn.Server, running: Future[None]) -> None:
-    """Block until *server* has started.
-
-    Raises
-    ------
-    RuntimeError
-        If the server stops first.
-    TimeoutError
-        If it neither starts nor stops within `START_TIMEOUT`.
-    """
-    deadline = time.monotonic() + START_TIMEOUT
-    while not server.started:
-        if running.done():
-            running.result()
-            raise RuntimeError("the server stopped before it started")
-        if time.monotonic() > deadline:
-            raise TimeoutError(f"the server did not start in {START_TIMEOUT} s")
-        time.sleep(0.01)
+    except SystemExit:
+        logger.error("The server stopped: the application failed to start")
 
 
 def stop(server: uvicorn.Server, running: Future[None]) -> None:
     """Ask *server* to exit and wait until it has, at most `STOP_TIMEOUT` seconds.
 
-    A server that failed has stopped already; why is raised where it failed.
+    A server that failed has stopped already.
     """
     server.should_exit = True
     _, pending = wait([running], STOP_TIMEOUT)
