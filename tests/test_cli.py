@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
+from importlib.metadata import EntryPoint
 from importlib.util import find_spec
+from pathlib import Path
 from typing import TYPE_CHECKING
+from unittest import mock
 
 import pytest
 from qtpy import API
@@ -21,8 +25,6 @@ from redsun.qt import QtHook
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
@@ -47,6 +49,8 @@ app([])
 """
 
 WIDE = {"COLUMNS": "200"}
+
+MOCK_BUNDLE = Path(__file__).parent / "launchable" / "mock_bundle"
 
 runner = CliRunner()
 
@@ -150,6 +154,71 @@ def test_the_version_option_prints_the_installed_version() -> None:
 
     assert done.exit_code == 0
     assert done.output.strip() == __version__
+
+
+def test_plugins_reports_what_each_installed_plugin_offers(mock_plugin: None) -> None:
+    """Name each installed plugin with its distribution, its version and the entries of its manifest."""
+    done = runner.invoke(app, ["plugins", "--json"])
+
+    assert done.exit_code == 0
+    report = json.loads(done.output)
+    assert report["redsun"] == __version__
+    assert report["format"] == 1
+    assert report["problems"] == []
+    [plugin] = report["plugins"]
+    assert plugin["plugin_name"] == "mock-bundle"
+    assert plugin["distribution"] == "mock-bundle-dist"
+    assert plugin["version"] == "1.2.3"
+    assert {
+        "group": "devices",
+        "plugin_id": "mock-stage",
+        "class": "mock_bundle.devices:MockStage",
+    } in plugin["entries"]
+    assert {
+        "group": "services",
+        "plugin_id": "stand-in",
+        "module": "mock_pkg.service.stand_in",
+    } in plugin["entries"]
+
+
+def test_plugins_reports_a_skipped_manifest_beside_the_ones_that_loaded(
+    tmp_path: Path,
+) -> None:
+    """Report a plugin whose manifest is invalid as a problem, and still list the others."""
+    (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
+    entries = []
+    for name in ("mock-bundle", "bad-bundle"):
+        entry = mock.Mock(spec=EntryPoint)
+        entry.name = name
+        entry.value = "redsun.yaml"
+        entry.dist = None
+        entries.append(entry)
+
+    def folder(package: str) -> Path:
+        return tmp_path if package == "bad_bundle" else MOCK_BUNDLE
+
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=entries),
+        mock.patch("redsun._manifest.files", side_effect=folder),
+    ):
+        done = runner.invoke(app, ["plugins", "--json"])
+
+    assert done.exit_code == 0
+    report = json.loads(done.output)
+    assert [plugin["plugin_name"] for plugin in report["plugins"]] == ["mock-bundle"]
+    [problem] = report["problems"]
+    assert problem["kind"] == "manifest"
+    assert problem["where"] == "bad-bundle"
+    assert "widgets: Extra inputs are not permitted" in problem["message"]
+
+
+def test_plugins_lists_the_ids_of_each_group_in_plain_text(mock_plugin: None) -> None:
+    """Print each plugin with its distribution and version, and its ids by group."""
+    done = runner.invoke(app, ["plugins"])
+
+    assert done.exit_code == 0
+    assert "mock-bundle (mock-bundle-dist 1.2.3)" in done.output
+    assert "presenters: mock-late, mock-motor" in done.output
 
 
 def test_the_command_loads_without_a_qt_binding() -> None:

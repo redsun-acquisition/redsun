@@ -11,6 +11,8 @@ import yaml
 from redsun import __version__
 from redsun.errors import BuildError, HookError
 
+from ._reports import GROUPS, plugins_report
+
 app = typer.Typer(
     name="redsun",
     add_completion=False,
@@ -105,3 +107,27 @@ def example(
     except (BuildError, HookError, OSError) as e:
         typer.echo(f"The example could not start. {e}", err=True)
         raise typer.Exit(1) from e
+
+
+@app.command()
+def plugins(
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the report as JSON.")
+    ] = False,
+) -> None:
+    """List the installed plugins and what each one offers."""
+    report = plugins_report()
+    if as_json:
+        typer.echo(report.to_json())
+        return
+    for plugin in report.plugins:
+        source = " ".join(filter(None, (plugin.distribution, plugin.version)))
+        typer.echo(f"{plugin.plugin_name} ({source})" if source else plugin.plugin_name)
+        for group in GROUPS:
+            ids = [entry.plugin_id for entry in plugin.entries if entry.group == group]
+            if ids:
+                typer.echo(f"  {group}: {', '.join(ids)}")
+    if report.problems:
+        typer.echo("Skipped:")
+        for problem in report.problems:
+            typer.echo(f"  {problem.where}: {problem.message}")

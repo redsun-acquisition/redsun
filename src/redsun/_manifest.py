@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import dataclass
 from importlib import import_module
 from importlib.metadata import entry_points
 from importlib.resources import as_file, files
@@ -142,43 +143,74 @@ def discover() -> dict[str, PluginManifest]:
     file and every error, and left out whole.
     """
     manifests: dict[str, PluginManifest] = {}
-    for plugin in entry_points(group=ENTRY_POINT_GROUP):
-        try:
-            resource = files(plugin.name.replace("-", "_")) / plugin.value
-            with as_file(resource) as path, open(path) as f:
-                manifest = PluginManifest.model_validate(yaml.safe_load(f) or {})
-        except (ImportError, OSError, yaml.YAMLError) as e:
-            logger.error(
-                'Plugin "%s" manifest %s could not be read and was skipped: %s',
-                plugin.name,
-                plugin.value,
-                e,
-            )
-            continue
-        except ValidationError as e:
-            logger.error(
-                'Plugin "%s" manifest %s is invalid and was skipped:\n%s',
-                plugin.name,
-                path,
-                "\n".join(f"  {line}" for line in problem_lines(e)),
-            )
-            continue
-        if manifest.name is not None and manifest.name != plugin.name:
-            logger.error(
-                'Plugin "%s" manifest %s names itself "%s" and was skipped.',
-                plugin.name,
-                path,
-                manifest.name,
-            )
-            continue
-        if manifest.hooks and plugin.name != OWN_PLUGIN:
-            logger.error(
-                'Plugin "%s" manifest %s has a hooks section and was skipped: '
-                "only redsun ships short hook names. Name the provider by its "
-                "class path, module:ClassName, in the session.",
-                plugin.name,
-                plugin.value,
-            )
-            continue
-        manifests[plugin.name] = manifest
+    for found in survey():
+        if found.manifest is None:
+            logger.error('Plugin "%s" %s', found.name, found.problem)
+        else:
+            manifests[found.name] = found.manifest
     return manifests
+
+
+@dataclass(frozen=True, slots=True)
+class Found:
+    """One entry point of the `redsun.plugins` group, and what reading it gave."""
+
+    name: str
+    """The entry point's name, which a session file gives as `plugin_name`."""
+
+    distribution: str | None
+    """The distribution registering the entry point, `None` when it is unknown."""
+
+    version: str | None
+    """The version of that distribution."""
+
+    manifest: PluginManifest | None
+    """The manifest, `None` when it was skipped."""
+
+    problem: str
+    """Why the manifest was skipped, empty when it was not."""
+
+
+def survey() -> list[Found]:
+    """Read the manifest of every installed plugin, the skipped ones included.
+
+    A manifest that cannot be read, does not validate, names itself otherwise
+    than its entry point or has a `hooks` section is skipped, and the
+    `problem` of its entry says which.
+    """
+    found = []
+    for plugin in entry_points(group=ENTRY_POINT_GROUP):
+        manifest, problem = read_manifest(plugin.name, plugin.value)
+        dist = plugin.dist
+        found.append(
+            Found(
+                name=plugin.name,
+                distribution=None if dist is None else dist.name,
+                version=None if dist is None else dist.version,
+                manifest=manifest,
+                problem=problem,
+            )
+        )
+    return found
+
+
+def read_manifest(name: str, value: str) -> tuple[PluginManifest | None, str]:
+    """Return the manifest the entry point *name* gives as *value*, or why it is skipped."""
+    try:
+        resource = files(name.replace("-", "_")) / value
+        with as_file(resource) as path, open(path) as f:
+            manifest = PluginManifest.model_validate(yaml.safe_load(f) or {})
+    except (ImportError, OSError, yaml.YAMLError) as e:
+        return None, f"manifest {value} could not be read and was skipped: {e}"
+    except ValidationError as e:
+        lines = "\n".join(f"  {line}" for line in problem_lines(e))
+        return None, f"manifest {path} is invalid and was skipped:\n{lines}"
+    if manifest.name is not None and manifest.name != name:
+        return None, f'manifest {path} names itself "{manifest.name}" and was skipped.'
+    if manifest.hooks and name != OWN_PLUGIN:
+        return None, (
+            f"manifest {value} has a hooks section and was skipped: "
+            "only redsun ships short hook names. Name the provider by its "
+            "class path, module:ClassName, in the session."
+        )
+    return manifest, ""

@@ -16,6 +16,8 @@ redsun [--version] [COMMAND]
 | `--version` | prints the installed version |
 | `example` | opens the example session in your platform's look |
 | `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
+| `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
+| `plugins --json` | prints the same list as a [report](#reports) |
 | none | prints the help, which lists the commands |
 
 Each command has a help of its own, such as `redsun example --help`.
@@ -47,10 +49,72 @@ It is a session like any other, named `redsun-example`, so it writes its
     options:
       show_root_heading: true
 
+## The installed plugins
+
+`redsun plugins` prints each installed plugin whose
+[manifest](plugin-manifest.md) loaded, with the distribution that installs it
+and its version, then the ids it lists under each group:
+
+```text
+mylab (mylab-devices 1.2.0)
+  devices: motor
+  presenters: controller
+  views: motor-view
+```
+
+`mylab` is the `plugin_name` a session file gives, and each id is a
+`plugin_id`. A plugin whose manifest was left out is listed last, under
+`Skipped:`, with the reason. The command exits with 0 in that case too,
+because the list itself was made.
+
+## Reports
+
+A command that takes `--json` prints a report: one JSON object, written for a
+program to read. Every report starts with the same three keys:
+
+| Key | Holds |
+| --- | --- |
+| `redsun` | the version of `redsun` that wrote the report |
+| `format` | the format of the report, `1` today |
+| `problems` | what the command found wrong, each with a `kind`, `where` it was found and a `message`; empty when nothing is |
+
+`format` goes up when a key is removed or changes meaning. A new key leaves
+it as it is, so a program reading a report should ignore keys it does not
+know.
+
+The report of `redsun plugins --json` adds `plugins`:
+
+```json
+{
+  "redsun": "0.19.0",
+  "format": 1,
+  "problems": [],
+  "plugins": [
+    {
+      "plugin_name": "mylab",
+      "distribution": "mylab-devices",
+      "version": "1.2.0",
+      "entries": [
+        {"group": "devices", "plugin_id": "motor", "class": "mylab.devices:MyMotor"},
+        {"group": "services", "plugin_id": "stage-ioc", "module": "mylab.iocs.stage"}
+      ]
+    }
+  ]
+}
+```
+
+An entry has `class`, as `module:ClassName`, or `module` for a service. A
+plugin whose manifest was left out is not in `plugins`: it is a problem of
+kind `manifest`, with the plugin's name as `where`.
+
+The JSON Schema of each report is a file in the
+[`schemas`](https://github.com/redsun-acquisition/redsun/tree/main/schemas)
+folder of the repository, written in JSON Schema 2020-12.
+
 ## Exit codes
 
 | Code | When |
 | --- | --- |
-| 0 | the help or the version was printed, or the example's window was closed |
+| 0 | the help, the version or the plugins were printed, or the example's window was closed |
 | 1 | the example could not start |
 | 2 | an option or a style the command does not know |
