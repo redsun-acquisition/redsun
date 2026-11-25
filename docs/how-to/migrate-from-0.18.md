@@ -4,16 +4,18 @@ icon: lucide/arrow-right-left
 
 # How to migrate from 0.18
 
-Release 0.19 makes the example session a command of `redsun`, where 0.18
-had an option for it. This page gives the change your scripts or your notes
-may need. The [changelog](../reference/changelog.md) lists everything else
-the release changed.
+Release 0.19 changes how you open the example session from a terminal. This
+page gives the change your scripts or your notes may need. The
+[changelog](../reference/changelog.md) lists everything else the release
+changed.
 
 ## The example is a command
 
-The [`redsun` command](../reference/command-line.md) now takes commands, and
-opening the example session is the first of them. The option `--example` is
-gone, so write `example` in its place, with the style after it as before:
+The [`redsun` program](../reference/command-line.md) you run from a terminal
+now takes a command that says what it should do, and opening the example
+session is the first of them. The option `--example` is gone, so write
+`example` in its place, with the [style](choose-a-style.md) after it as
+before:
 
 ```bash
 # 0.18

@@ -4,8 +4,10 @@ icon: lucide/terminal
 
 # The `redsun` command
 
-Installing `redsun` installs a command of the same name. `python -m redsun`
-runs it too, for an environment whose scripts are not on the path.
+When you install `redsun`, you also get a program to run from a terminal,
+called `redsun` too. You give it a command, such as `example`, to say what it
+should do. `python -m redsun` runs the same program, for an environment whose
+scripts are not on the path.
 
 ```bash
 redsun [--version] [COMMAND]
@@ -51,9 +53,13 @@ It is a session like any other, named `redsun-example`, so it writes its
 
 ## The installed plugins
 
-`redsun plugins` prints each installed plugin whose
-[manifest](plugin-manifest.md) loaded, with the distribution that installs it
-and its version, then the ids it lists under each group:
+`redsun plugins` shows you which plugins this environment has, and what you
+can name from each in a [session file](../explanation/glossary.md#session-file).
+It prints one plugin at a time: its name, the package that installs it with
+that package's version, and what its
+[manifest](../explanation/glossary.md#manifest) lists. The manifest sorts
+what a plugin offers into groups, such as `devices` and `views`, and gives
+each one a short name, its id:
 
 ```text
 mylab (mylab-devices 1.2.0)
@@ -62,15 +68,24 @@ mylab (mylab-devices 1.2.0)
   views: motor-view
 ```
 
-`mylab` is the `plugin_name` a session file gives, and each id is a
-`plugin_id`. A plugin whose manifest was left out is listed last, under
-`Skipped:`, with the reason. The command exits with 0 in that case too,
-because the list itself was made.
+Here `mylab` is what you write as `plugin_name`, and each id is what you
+write as `plugin_id`. The package is named because its name can differ from
+the plugin's: `mylab-devices` is what you install, and `mylab` is what a
+session file names.
+
+!!! warning "A plugin that was left out doesn't change the exit code"
+
+    When a plugin's manifest can't be read or is invalid, `redsun` leaves
+    the whole plugin out, and the command still exits with 0. It lists that
+    plugin last, under `Skipped:`, with the reason. In a script, read
+    `problems` in the [report](#reports) rather than the exit code.
 
 ## Reports
 
-A command that takes `--json` prints a report: one JSON object, written for a
-program to read. Every report starts with the same three keys:
+A [report](../explanation/glossary.md#report) is what a command prints when
+you give it `--json`, so that a program can read the answer where you would
+read the text. Every report is one JSON object, and it starts with the same
+three keys:
 
 | Key | Holds |
 | --- | --- |
@@ -78,11 +93,13 @@ program to read. Every report starts with the same three keys:
 | `format` | the format of the report, `1` today |
 | `problems` | what the command found wrong, each with a `kind`, `where` it was found and a `message`; empty when nothing is |
 
-`format` goes up when a key is removed or changes meaning. A new key leaves
-it as it is, so a program reading a report should ignore keys it does not
-know.
+`format` is a number that tells your program whether it can still read the
+report. The number gets bigger when a key is removed or changes meaning.
+Adding a key leaves the number as it is, so write your program to skip the
+keys it doesn't know.
 
-The report of `redsun plugins --json` adds `plugins`:
+The report of `redsun plugins --json` adds `plugins`, one object for each
+plugin whose manifest was read without a problem:
 
 ```json
 {
@@ -103,13 +120,18 @@ The report of `redsun plugins --json` adds `plugins`:
 }
 ```
 
-An entry has `class`, as `module:ClassName`, or `module` for a service. A
-plugin whose manifest was left out is not in `plugins`: it is a problem of
-kind `manifest`, with the plugin's name as `where`.
+`distribution` is the package that installs the plugin, and `version` is that
+package's version. Each entry names its class as `class`, written
+`module:ClassName`. A service has no class, so its entry has `module`
+instead, the module the service is run from.
 
-The JSON Schema of each report is a file in the
-[`schemas`](https://github.com/redsun-acquisition/redsun/tree/main/schemas)
-folder of the repository, written in JSON Schema 2020-12.
+A plugin that was left out isn't in `plugins`. It's one of the `problems`,
+with `manifest` as its `kind` and the plugin's name as `where`.
+
+Each report has a JSON Schema, a file that says exactly which keys the report
+can hold. The one for this report is published as
+[`plugins-report.schema.json`](schemas/plugins-report.schema.json), written
+in JSON Schema 2020-12.
 
 ## Exit codes
 

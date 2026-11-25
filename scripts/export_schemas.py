@@ -1,10 +1,10 @@
 """Write the JSON schemas of a session file, a plugin manifest and the command reports.
 
-The first two land in `docs/reference/schemas/`, which the docs build
-publishes, so an editor can check a file against them while it is written.
-Those of the reports land in `schemas/`, which is committed: a program
-reading a report takes its types from there, and a test fails when a file no
-longer matches its model.
+They land in `docs/reference/schemas/`, which the docs build publishes, so an
+editor can check a file against them while it is written. Those of the
+reports also land in `schemas/`, which is committed: a program reading a
+report takes its types from there, and a test fails when a file no longer
+matches its model.
 """
 
 from __future__ import annotations
@@ -38,6 +38,7 @@ def main() -> None:
         write(TARGET / f"{name}.schema.json", schema)
     REPORTS.mkdir(exist_ok=True)
     for name, schema in report_schemas().items():
+        write(TARGET / f"{name}.schema.json", schema)
         write(REPORTS / f"{name}.schema.json", schema)
 
 

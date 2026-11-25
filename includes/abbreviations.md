@@ -12,3 +12,4 @@
 *[BLAS]: Basic Linear Algebra Subprograms. The library numerical code runs its matrix arithmetic on.
 *[OpenMP]: A standard that compiled code uses to spread a loop over several threads.
 *[YAML]: A plain-text format for configuration, which session files and manifests are written in.
+*[JSON]: JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.
