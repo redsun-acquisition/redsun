@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from redsun.examples._web import ExampleWeb
-from redsun.ports._remote import served, signal_schema
+from redsun.fastapi._schemas import signal_adapters, signal_schema
+from redsun.ports._remote import served
 
 
 def event_schema(signals: dict[str, dict[str, list[dict[str, Any]]]]) -> dict[str, Any]:
@@ -50,7 +51,7 @@ def main(argv: list[str]) -> None:
     try:
         document = session.app.openapi()
         document["x-redsun-signals"] = {
-            name: signal_schema(what)
+            name: signal_schema(signal_adapters(presenter, what, {}))
             for name, presenter in session.presenters.items()
             if (what := served(presenter)) is not None
         }
