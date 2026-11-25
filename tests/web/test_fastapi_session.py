@@ -121,6 +121,17 @@ class Bounded:
         self.at += delta
         return self.at
 
+    @slot
+    @remote
+    async def step(self, delta: float = 1.0) -> float:
+        self.at += delta
+        return self.at
+
+    @slot
+    @remote
+    async def reset(self) -> None:
+        self.at = 0.0
+
 
 class Ending:
     def __init__(self, name: str) -> None:
@@ -247,6 +258,24 @@ def test_a_body_breaking_a_parameter_constraint_is_refused(
     with TestClient(session.app) as client:
         r = client.post("/api/bounded/move", json={"delta": -1.0})
     assert r.status_code == 422
+    assert session.bounded.at == 0.0
+
+
+def test_a_parameter_with_a_default_may_be_left_out(build: BuildSession) -> None:
+    """Call a slot with its parameter's default when the body leaves it out."""
+    session = build(WithBounded)
+    with TestClient(session.app) as client:
+        r = client.post("/api/bounded/step", json={})
+    assert (r.status_code, r.json()) == (200, 1.0)
+
+
+def test_a_slot_without_parameters_needs_no_body(build: BuildSession) -> None:
+    """Call a slot without parameters on a POST with no body."""
+    session = build(WithBounded)
+    session.bounded.at = 2.0
+    with TestClient(session.app) as client:
+        r = client.post("/api/bounded/reset")
+    assert (r.status_code, r.json()) == (200, None)
     assert session.bounded.at == 0.0
 
 

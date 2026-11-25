@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from collections import Counter
 from contextlib import suppress
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, Body, WebSocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 from pydantic_core import PydanticSerializationError
 from starlette.exceptions import HTTPException
 
@@ -144,19 +145,25 @@ def operation_id(route: APIRoute) -> str:
 def add_command(router: APIRouter, presenter: str, command: Command) -> None:
     """Add the POST route calling *command* with the body's fields."""
 
-    async def endpoint(body: BaseModel) -> object:
-        return await command.call(**body.model_dump())
+    async def endpoint(**kwargs: Any) -> object:
+        return await command.call(**kwargs)
 
-    fields: dict[str, Any] = {p: (t, ...) for p, t in command.parameters.items()}
-    # the body type is the command's own, which no annotation written here can name
-    endpoint.__annotations__["body"] = create_model(
-        f"{presenter}__{command.name}", **fields
+    signature = inspect.signature(command.call)
+    # FastAPI builds the body from the endpoint's signature, which is the slot's own
+    endpoint.__signature__ = signature.replace(  # type: ignore[attr-defined]
+        parameters=[
+            p.replace(
+                kind=inspect.Parameter.KEYWORD_ONLY,
+                annotation=Annotated[command.parameters[p.name], Body(embed=True)],
+            )
+            for p in signature.parameters.values()
+        ],
+        return_annotation=command.returns,
     )
     router.add_api_route(
         f"/api/{presenter}/{command.name}",
         endpoint,
         methods=["POST"],
-        response_model=command.returns,
         name=command.name,
     )
 
@@ -167,12 +174,9 @@ def add_query(router: APIRouter, presenter: str, query: Query) -> None:
     async def endpoint() -> object:
         return query.read()
 
+    endpoint.__signature__ = inspect.Signature(return_annotation=query.returns)  # type: ignore[attr-defined]
     router.add_api_route(
-        f"/api/{presenter}/{query.name}",
-        endpoint,
-        methods=["GET"],
-        response_model=query.returns,
-        name=query.name,
+        f"/api/{presenter}/{query.name}", endpoint, methods=["GET"], name=query.name
     )
 
 
