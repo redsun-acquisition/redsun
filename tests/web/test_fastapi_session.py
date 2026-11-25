@@ -158,6 +158,23 @@ def free_port() -> int:
         return int(probe.getsockname()[1])
 
 
+def events_scope() -> dict[str, Any]:
+    """Return the ASGI scope of a client opening `/api/events`."""
+    return {
+        "type": "websocket",
+        "asgi": {"version": "3.0"},
+        "scheme": "ws",
+        "path": "/api/events",
+        "raw_path": b"/api/events",
+        "root_path": "",
+        "query_string": b"",
+        "headers": [],
+        "client": ("test", 1),
+        "server": ("test", 80),
+        "subprotocols": [],
+    }
+
+
 class ClosedLoop(asyncio.SelectorEventLoop):
     """A loop refusing work from other threads, as a closed one does, while `refusing` is set."""
 
@@ -551,26 +568,13 @@ def test_an_emission_reaching_a_closed_loop_does_not_reach_the_emitter(
     loop = ClosedLoop()
     inbox: asyncio.Queue[MutableMapping[str, Any]] = asyncio.Queue()
     accepted = loop.create_future()
-    scope: dict[str, Any] = {
-        "type": "websocket",
-        "asgi": {"version": "3.0"},
-        "scheme": "ws",
-        "path": "/api/events",
-        "raw_path": b"/api/events",
-        "root_path": "",
-        "query_string": b"",
-        "headers": [],
-        "client": ("test", 1),
-        "server": ("test", 80),
-        "subprotocols": [],
-    }
 
     async def send(message: MutableMapping[str, Any]) -> None:
         if message["type"] == "websocket.accept":
             accepted.set_result(None)
 
     inbox.put_nowait({"type": "websocket.connect"})
-    handler = loop.create_task(session.app(scope, inbox.get, send))
+    handler = loop.create_task(session.app(events_scope(), inbox.get, send))
     try:
         loop.run_until_complete(accepted)
         loop.refusing = True
@@ -580,3 +584,51 @@ def test_an_emission_reaching_a_closed_loop_does_not_reach_the_emitter(
         inbox.put_nowait({"type": "websocket.disconnect", "code": 1000})
         loop.run_until_complete(handler)
         loop.close()
+
+
+def test_a_stalled_client_loses_events_while_another_gets_every_one(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Drop events for a client that stops reading, with one warning, and send all to another."""
+    monkeypatch.setattr("redsun.fastapi._routes.EVENT_BUFFER", 2)
+    session = build(OnWeb)
+    loop = asyncio.new_event_loop()
+    stalled_accepted = loop.create_future()
+    sent: asyncio.Queue[MutableMapping[str, Any]] = asyncio.Queue()
+
+    async def stalled(message: MutableMapping[str, Any]) -> None:
+        if message["type"] == "websocket.accept":
+            stalled_accepted.set_result(None)
+        else:
+            await asyncio.Event().wait()
+
+    async def reading(message: MutableMapping[str, Any]) -> None:
+        sent.put_nowait(message)
+
+    inboxes: list[asyncio.Queue[MutableMapping[str, Any]]] = [
+        asyncio.Queue() for _ in range(2)
+    ]
+    for inbox in inboxes:
+        inbox.put_nowait({"type": "websocket.connect"})
+    handlers = [
+        loop.create_task(session.app(events_scope(), inbox.get, send))
+        for inbox, send in zip(inboxes, (stalled, reading), strict=True)
+    ]
+    received: list[object] = []
+    try:
+        loop.run_until_complete(stalled_accepted)
+        loop.run_until_complete(sent.get())
+        with caplog.at_level(logging.WARNING, logger="redsun"):
+            for at in range(5):
+                session.mover.sig_moved.emit(float(at))
+                message = loop.run_until_complete(asyncio.wait_for(sent.get(), 5))
+                received.append(json.loads(message["text"])["args"])
+    finally:
+        for inbox in inboxes:
+            inbox.put_nowait({"type": "websocket.disconnect", "code": 1000})
+        loop.run_until_complete(asyncio.gather(*handlers))
+        loop.close()
+    assert received == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+    assert caplog.text.count("reads too slowly") == 1

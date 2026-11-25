@@ -6255,6 +6255,7 @@ dependencies = [
 
 [package.optional-dependencies]
 fastapi = [
+    { name = "anyio" },
     { name = "fastapi" },
     { name = "uvicorn" },
     { name = "websockets" },
@@ -6380,6 +6381,7 @@ epics = [
     { name = "ophyd-async", extra = ["ca"] },
 ]
 fastapi = [
+    { name = "anyio" },
     { name = "fastapi" },
     { name = "uvicorn" },
     { name = "websockets" },
@@ -6478,6 +6480,7 @@ zarr = [
 requires-dist = [
     { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.10.0" },
     { name = "annotated-types", specifier = ">=0.8.0" },
+    { name = "anyio", marker = "extra == 'fastapi'", specifier = ">=4.16.0" },
     { name = "app-model", marker = "extra == 'pyqt'", specifier = ">=0.5.1" },
     { name = "app-model", marker = "extra == 'pyside'", specifier = ">=0.5.1" },
     { name = "app-model", marker = "extra == 'qlementine-pyqt'", specifier = ">=0.5.1" },
@@ -6587,6 +6590,7 @@ epics = [
     { name = "ophyd-async", extras = ["ca"], specifier = ">=0.21.5" },
 ]
 fastapi = [
+    { name = "anyio", specifier = ">=4.16.0" },
     { name = "fastapi", specifier = ">=0.164.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
     { name = "websockets", specifier = ">=17.4" },

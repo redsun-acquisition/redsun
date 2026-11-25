@@ -147,6 +147,7 @@ sharedbox = [
     "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
 ]
 fastapi = [
+    "anyio>=4.16.0",
     "fastapi>=0.164.0",
     "uvicorn>=0.54.0",
     "websockets>=17.4",
@@ -215,6 +216,7 @@ sharedbox = [
 ]
 testing-qt = ["redsun[testing,qt-common]"]
 fastapi = [
+    "anyio>=4.16.0",
     "fastapi>=0.164.0",
     "uvicorn>=0.54.0",
     "websockets>=17.4",

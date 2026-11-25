@@ -7,9 +7,11 @@ import inspect
 import logging
 from collections import Counter
 from contextlib import suppress
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Annotated, Any
 
+import anyio
 from fastapi import APIRouter, Body, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -24,14 +26,17 @@ from ._schemas import asyncapi_document, check_schemas
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Mapping, MutableMapping
 
+    from anyio.abc import ObjectReceiveStream, ObjectSendStream
     from fastapi import FastAPI, Response
     from pydantic import TypeAdapter
 
     from ..ports._remote import Command, Query, Served
     from ._schemas import Adapters
 
+EVENT_BUFFER = 1000
+"""Messages one socket holds before newer ones are dropped for it."""
+
 Message = dict[str, object]
-Listeners = dict[asyncio.Queue[Message | None], asyncio.AbstractEventLoop]
 
 logger = logging.getLogger("redsun")
 
@@ -50,7 +55,7 @@ def build_api(
     under its name. The callables returned disconnect what the API connected
     and close the sockets still open.
     """
-    listeners: Listeners = {}
+    listeners: set[Listener] = set()
     releases: list[Callable[[], None]] = [partial(close_all, listeners)]
     signals: dict[str, dict[str, list[TypeAdapter[Any]]]] = {}
     operations: set[str] = set()
@@ -211,15 +216,17 @@ class RemoteRoute(APIRoute):
 
 
 def relay_for(
-    listeners: Listeners,
+    listeners: set[Listener],
     presenter: str,
     signal: str,
     adapters: list[TypeAdapter[Any]],
 ) -> Callable[..., None]:
-    """Return a callback putting an emission of *signal* on every open socket's queue.
+    """Return a callback handing an emission of *signal* to every open socket.
 
-    Nothing is done while no socket is open. An emission that cannot be
-    serialised is logged and dropped.
+    A signal is emitted on any thread, and a socket is written only from the
+    loop serving it, so each message is passed to that loop, which adds it to
+    the socket's stream. Nothing is done while no socket is open. An emission
+    that cannot be serialised is logged and dropped.
     """
 
     def relay(*args: object) -> None:
@@ -235,49 +242,91 @@ def relay_for(
             logger.warning("Signal %s.%s not sent: %s", presenter, signal, error)
             return
         message: Message = {"presenter": presenter, "signal": signal, "args": values}
-        put_on_all(listeners, message)
+        for listener in tuple(listeners):
+            listener.hand_over(message)
 
     return relay
 
 
-async def relay_events(websocket: WebSocket, listeners: Listeners) -> None:
-    """Send *websocket* every message put on its queue, until the client leaves.
+async def relay_events(websocket: WebSocket, listeners: set[Listener]) -> None:
+    """Send *websocket* every message handed to it, until the client leaves.
 
-    The queue is listed before the socket is accepted, so a call the client
+    The listener is added before the socket is accepted, so a call the client
     makes once connected cannot emit before it.
     """
-    queue: asyncio.Queue[Message | None] = asyncio.Queue()
-    listeners[queue] = asyncio.get_running_loop()
-    try:
-        await websocket.accept()
-        sending = asyncio.ensure_future(send_queued(websocket, queue))
+    send, receive = anyio.create_memory_object_stream[Message](EVENT_BUFFER)
+    listener = Listener(asyncio.get_running_loop(), send)
+    with send, receive:
+        listeners.add(listener)
         try:
-            while (await websocket.receive())["type"] != "websocket.disconnect":
-                pass
+            await websocket.accept()
+            sending = asyncio.ensure_future(send_received(websocket, receive))
+            try:
+                while (await websocket.receive())["type"] != "websocket.disconnect":
+                    pass
+            finally:
+                sending.cancel()
+                await asyncio.gather(sending, return_exceptions=True)
         finally:
-            sending.cancel()
-            await asyncio.gather(sending, return_exceptions=True)
-    finally:
-        del listeners[queue]
+            listeners.discard(listener)
 
 
-async def send_queued(
-    websocket: WebSocket, queue: asyncio.Queue[Message | None]
+async def send_received(
+    websocket: WebSocket, receive: ObjectReceiveStream[Message]
 ) -> None:
-    """Send each message of *queue*, and close *websocket* on `None`."""
-    while (message := await queue.get()) is not None:
+    """Send each message of *receive*, and close *websocket* once the stream is closed."""
+    async for message in receive:
         await websocket.send_json(message)
     await websocket.close()
 
 
-def put_on_all(listeners: Listeners, message: Message | None) -> None:
-    """Put *message* on every open socket's queue, skipping a queue whose loop has closed."""
-    for queue, loop in tuple(listeners.items()):
-        # a loop can close before its socket's handler removes the queue
+@dataclass(eq=False, slots=True)
+class Listener:
+    """An open event socket: the loop writing it and the stream of its messages."""
+
+    loop: asyncio.AbstractEventLoop
+    """The loop serving the socket."""
+
+    stream: ObjectSendStream[Message]
+    """The messages waiting to be sent, `EVENT_BUFFER` at most."""
+
+    full: bool = False
+    """Whether the last message was dropped for want of room."""
+
+    def hand_over(self, message: Message) -> None:
+        """Pass *message* to the socket's loop, from any thread."""
+        # a loop can close before its socket's handler drops the listener
         with suppress(RuntimeError):
-            loop.call_soon_threadsafe(queue.put_nowait, message)
+            self.loop.call_soon_threadsafe(self.put, message)
+
+    def put(self, message: Message) -> None:
+        """Add *message* to the stream, or drop it while the stream is full.
+
+        One warning is logged each time the stream fills up.
+        """
+        try:
+            self.stream.send_nowait(message)
+        except anyio.WouldBlock:
+            if not self.full:
+                logger.warning(
+                    "A client of /api/events reads too slowly: %d events wait for "
+                    "it, and newer ones are dropped until it takes some",
+                    EVENT_BUFFER,
+                )
+            self.full = True
+        # the socket closed between the hand-over and now
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+            pass
+        else:
+            self.full = False
+
+    def close(self) -> None:
+        """Close the stream from any thread, so the socket closes once it is sent."""
+        with suppress(RuntimeError):
+            self.loop.call_soon_threadsafe(self.stream.close)
 
 
-def close_all(listeners: Listeners) -> None:
+def close_all(listeners: set[Listener]) -> None:
     """Close every open socket."""
-    put_on_all(listeners, None)
+    for listener in tuple(listeners):
+        listener.close()
