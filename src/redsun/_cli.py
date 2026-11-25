@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-import argparse
-import sys
-from functools import partial
 from importlib.resources import files
-from typing import TYPE_CHECKING
+from typing import Annotated
 
+import typer
 import yaml
 
 from redsun import __version__
 from redsun.errors import BuildError, HookError
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+app = typer.Typer(
+    name="redsun",
+    add_completion=False,
+    rich_markup_mode=None,
+    pretty_exceptions_enable=False,
+)
+"""The `redsun` command, one function for each of its commands."""
 
 
 def styles() -> list[str]:
@@ -27,69 +30,78 @@ def styles() -> list[str]:
     return sorted(yaml.safe_load(text).get("hooks", {}))
 
 
-def example_style(known: Sequence[str], name: str) -> str:
-    """Return *name* if it is empty or one of *known*.
+STYLES = styles()
+
+
+def print_version(wanted: bool) -> None:
+    """Print the installed version and end the command, if *wanted*."""
+    if wanted:
+        typer.echo(__version__)
+        raise typer.Exit
+
+
+def known_style(name: str | None) -> str | None:
+    """Return *name* if it is `None` or the short name of a style.
 
     Raises
     ------
-    argparse.ArgumentTypeError
+    typer.BadParameter
         If it is neither, listing the styles.
     """
-    if name and name not in known:
-        raise argparse.ArgumentTypeError(
-            f"no style named {name!r}; choose from {', '.join(known)}"
+    if name is not None and name not in STYLES:
+        raise typer.BadParameter(
+            f"no style named {name!r}; choose from {', '.join(STYLES)}"
         )
     return name
 
 
-def parser() -> argparse.ArgumentParser:
-    """Return the parser of the `redsun` command."""
-    known = styles()
-    made = argparse.ArgumentParser(prog="redsun", description="Run what redsun ships.")
-    made.add_argument("--version", action="version", version=__version__)
-    made.add_argument(
-        "--example",
-        nargs="?",
-        const="",
-        type=partial(example_style, known),
-        metavar="STYLE",
-        help=(
-            "open the example session, every built-in component over "
-            f"simulated devices, in the style named ({', '.join(known)}), "
-            "or in the platform's look when no style is named"
+@app.callback(invoke_without_command=True)
+def redsun(
+    context: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            callback=print_version,
+            is_eager=True,
+            help="Print the installed version and exit.",
         ),
-    )
-    return made
+    ] = False,
+) -> None:
+    """Run what redsun ships."""
+    if context.invoked_subcommand is None:
+        # typer's own help for no argument exits with 2, as for a mistake
+        typer.echo(context.get_help())
 
 
-def run_example(style: str) -> int:
-    """Run the example session in *style*, the platform's look for an empty name.
-
-    A session that starts ends the process when its window closes, so this
-    returns only when the session could not start, with the exit code.
-    """
+@app.command()
+def example(
+    style: Annotated[
+        str | None,
+        typer.Argument(
+            callback=known_style,
+            metavar="STYLE",
+            show_default=False,
+            help=(
+                f"The style to open it in ({', '.join(STYLES)}); "
+                "the platform's look when none is named."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Open the example session, every built-in component over simulated devices."""
     try:
         # a Qt binding comes with an extra, and the command exists without one
         from redsun.examples import ExampleApp, example_config  # noqa: PLC0415
     except ImportError as e:
-        print(
+        typer.echo(
             f"The example needs a window, and a Qt binding could not be loaded ({e}). "
             "If none is installed, install 'redsun[pyqt]' or 'redsun[pyside]'.",
-            file=sys.stderr,
+            err=True,
         )
-        return 1
+        raise typer.Exit(1) from e
     try:
-        ExampleApp(example_config(style or None)).run()
+        ExampleApp(example_config(style)).run()
     except (BuildError, HookError, OSError) as e:
-        print(f"The example could not start. {e}", file=sys.stderr)
-        return 1
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    """Run the `redsun` command with *argv*, the process's arguments for `None`, and return the exit code."""
-    made = parser()
-    arguments = made.parse_args(argv)
-    if arguments.example is None:
-        made.print_help()
-        return 0
-    return run_example(arguments.example)
+        typer.echo(f"The example could not start. {e}", err=True)
+        raise typer.Exit(1) from e

@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import sys
-
-from redsun._cli import main
+from redsun._cli import app
 
 if __name__ == "__main__":
-    sys.exit(main())
+    app()

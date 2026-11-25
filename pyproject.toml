@@ -35,6 +35,7 @@ dependencies = [
     "pydantic>=2.14.3",
     "pyyaml>=6.0.3",
     "threadpoolctl>=3.8.0",
+    "typer>=0.29,<0.30",
     "typing-extensions>=4.16.0",
 ]
 requires-python = ">=3.11"
@@ -211,7 +212,7 @@ sharedbox = [
 testing-qt = ["redsun[testing,qt-common]"]
 
 [project.scripts]
-redsun = "redsun._cli:main"
+redsun = "redsun._cli:app"
 
 [project.entry-points."redsun.plugins"]
 redsun = "plugins.yaml"

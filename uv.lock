@@ -6250,6 +6250,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "threadpoolctl" },
+    { name = "typer" },
     { name = "typing-extensions" },
 ]
 
@@ -6530,6 +6531,7 @@ requires-dist = [
     { name = "superqt", marker = "extra == 'testing-qt'", specifier = ">=0.9.2" },
     { name = "threadpoolctl", specifier = ">=3.8.0" },
     { name = "tiled", extras = ["client", "server"], marker = "extra == 'tiled'", specifier = ">=0.2.22" },
+    { name = "typer", specifier = ">=0.29,<0.30" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
 provides-extras = ["ome-zarr", "profile", "pyqt", "pyside", "qlementine-pyqt", "qlementine-pyside", "qt-common", "sharedbox", "testing", "testing-qt", "tiled", "zarr"]
