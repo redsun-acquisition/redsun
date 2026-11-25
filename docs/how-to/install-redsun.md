@@ -91,6 +91,13 @@ checks that the two agree -->
 <button type="button" data-value="">none<small>no window: a headless session</small></button>
 </div>
 </div>
+<div class="install-row" data-role="extra" role="group" aria-label="Web">
+<span class="install-label">Web</span>
+<div class="install-choices">
+<button type="button" data-value="">none<small>no web API</small></button>
+<button type="button" data-value="fastapi">FastAPI<small><code>fastapi</code>: a session serving its presenters over HTTP, with <code>fastapi</code> and <code>uvicorn</code></small></button>
+</div>
+</div>
 <div class="install-row" data-role="extra" role="group" aria-label="Style">
 <span class="install-label">Style</span>
 <div class="install-choices">
