@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "generate": "openapi-typescript openapi.json -o src/api.d.ts",
+    "generate": "openapi-typescript openapi.json -o src/api.d.ts && node generate-events.mjs",
     "check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@asyncapi/modelina": "5.10.1",
     "openapi-typescript": "7.13.0",
     "typescript": "5.9.3"
   }

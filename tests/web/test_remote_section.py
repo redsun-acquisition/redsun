@@ -145,7 +145,7 @@ def test_the_example_allows_the_client_development_server(
     session = build(ExampleWeb)
     with TestClient(session.app) as client:
         r = client.options(
-            "/api/signals",
+            "/asyncapi.json",
             headers={"Origin": ORIGIN, "Access-Control-Request-Method": "GET"},
         )
     assert r.headers.get("access-control-allow-origin") == ORIGIN

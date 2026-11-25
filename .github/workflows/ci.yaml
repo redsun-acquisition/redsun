@@ -249,9 +249,9 @@ jobs:
           path: ./.coverage*
           include-hidden-files: true
 
-  # the example session's OpenAPI document is written here rather than read
-  # from another job, then the client is type-checked against it; the
-  # example's core needs no Qt binding, so none is installed
+  # the example session's OpenAPI and AsyncAPI documents are written here
+  # rather than read from another job, then the client is type-checked against
+  # them; the example's core needs no Qt binding, so none is installed
   typescript:
     name: TypeScript client
     needs: [scope]
@@ -271,8 +271,8 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.12"
 
-      - name: Write the OpenAPI document of the example session
-        run: uv run --locked --no-default-groups --group fastapi --project ../.. python ../../scripts/export_openapi.py openapi.json
+      - name: Write the OpenAPI and AsyncAPI documents of the example session
+        run: uv run --locked --no-default-groups --group fastapi --project ../.. python ../../scripts/export_openapi.py .
 
       - name: Install Node
         uses: actions/setup-node@v7
@@ -284,7 +284,7 @@ jobs:
       - name: Install the client's packages
         run: npm ci
 
-      - name: Generate the types
+      - name: Generate the route and event types
         run: npm run generate
 
       - name: Type-check the client
