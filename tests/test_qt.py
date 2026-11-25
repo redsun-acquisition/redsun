@@ -158,6 +158,24 @@ class RemoteApp(QtSession):
         yield self.view.sig_move, self.stage.move
 
 
+class Refreshing(QWidget):
+    """A view whose slot is a coroutine."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    @slot
+    async def refresh(self) -> None:
+        """Never run."""
+
+
+class AsyncSlotApp(QtSession):
+    refreshing: AsView[Refreshing]
+
+
 class Canvas(QWidget):
     placement: Placement = Central()
 
@@ -917,6 +935,16 @@ def test_a_view_not_shaped_for_qt_is_skipped(
 
     assert "panel" not in built.views
     assert re.search(match, caplog.text)
+
+
+def test_a_qt_view_with_an_async_slot_is_refused(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a Qt view declaring an `async` slot, which would run off the GUI thread."""
+    app = build(AsyncSlotApp)
+
+    assert "refreshing" not in app.views
+    assert "has an async slot 'refresh'" in caplog.text
 
 
 def test_a_view_given_a_parent_by_its_configuration_is_skipped(

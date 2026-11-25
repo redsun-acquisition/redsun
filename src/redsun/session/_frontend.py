@@ -57,6 +57,13 @@ class Frontend:
     session's loop, where most toolkits forbid touching a widget.
     """
 
+    async_view_slots: ClassVar[bool] = False
+    """Whether a view may mark a coroutine method with `slot`.
+
+    False here: the frontend runs a view's slots on its GUI thread, so a
+    view declaring an `async` slot is refused.
+    """
+
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
         """Refuse a view class this frontend cannot build.
