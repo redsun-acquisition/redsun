@@ -209,8 +209,9 @@ lays out no window.
   document is what a TypeScript client is generated from. A remote member's
   annotations must resolve at runtime, so the imports they need stay outside
   `if TYPE_CHECKING:`.
-- OpenAPI cannot describe the messages of a WebSocket, so the session serves
-  the argument types of each published signal apart, at `GET /api/signals`.
+- OpenAPI cannot describe the messages of a WebSocket, so the session
+  describes them in an AsyncAPI 3.0.0 document at `GET /asyncapi.json`, with
+  one message per published signal.
 - The API has no authentication. A session listening on an address other
   computers reach lets each of them call every remote slot.
 - The positioner and light presenters mark their state and their moves and

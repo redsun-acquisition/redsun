@@ -96,7 +96,7 @@ the member:
 | remote slot | `POST /api/{presenter}/{port}` | an object with the slot's parameters | the slot's return value, `null` for `None` |
 | remote property | `GET /api/{presenter}/{name}` | none | the property's value |
 | every public signal | the WebSocket `/api/events` | none | one message per emission: `{"presenter", "signal", "args"}` |
-| the signals' argument types | `GET /api/signals` | none | the JSON Schema of each signal's arguments |
+| the event messages | `GET /asyncapi.json` | none | the AsyncAPI document of `/api/events`: one message per signal, with the JSON Schema of its arguments |
 
 For the script above, `POST /api/ctrl/move_to` with the body
 `{"motor": "stage", "position": 2.5}` moves the stage and answers `2.5`, and
@@ -170,12 +170,15 @@ npx openapi-typescript http://127.0.0.1:8000/openapi.json -o src/api.d.ts
 
 A client written against those types fails to compile when a route changes
 its name or the type of a parameter. OpenAPI cannot describe the messages of
-a WebSocket, so the session serves the argument types of each signal apart, at
-`GET /api/signals`. The `redsun` repository holds a client of the example
-session in `clients/typescript/`, and the repository's
-`scripts/export_openapi.py` adds those argument types to the OpenAPI document
-as one more type, `RedsunEvent`, so the client's events are typed as well as
-its requests.
+a WebSocket, so the session describes them at `GET /asyncapi.json` in an
+AsyncAPI document, the counterpart of OpenAPI for APIs that send messages:
+one message per signal, with the JSON Schema of its arguments.
+`@asyncapi/modelina` turns that document into a TypeScript union with one
+interface per message, so a client handling the events fails to compile when
+a signal changes its name or its arguments. The `redsun` repository holds a
+client of the example session in `clients/typescript/`, whose
+`npm run generate` builds both sets of types from the documents the
+repository's `scripts/export_openapi.py` writes.
 
 ## The example in full
 
