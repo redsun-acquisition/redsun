@@ -122,8 +122,10 @@ MyApp().serve()
 The session listens on `127.0.0.1:8000` unless you say otherwise. Open
 `http://127.0.0.1:8000/docs` in a browser to see every route with its types,
 and to call each one by hand. If another program already listens on that
-port, `serve()` shuts the session down and raises `OSError`. The server's own
-warnings, such as one for a malformed request, go to the session's log.
+port, `serve()` shuts the session down and raises `OSError`. It does the same,
+raising `RuntimeError`, when the application fails to start or the server
+stops before Ctrl+C. The server's own warnings, such as one for a malformed
+request, go to the session's log.
 
 ## Choose where it listens
 
