@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from redsun.examples._web import ExampleWeb
-from redsun.fastapi._schemas import signal_adapters, signal_schema
+from redsun.fastapi._schemas import check_schemas, signal_schema
 from redsun.ports._remote import served
 
 
@@ -51,7 +51,7 @@ def main(argv: list[str]) -> None:
     try:
         document = session.app.openapi()
         document["x-redsun-signals"] = {
-            name: signal_schema(signal_adapters(presenter, what, {}))
+            name: signal_schema(check_schemas(presenter, what, {}))
             for name, presenter in session.presenters.items()
             if (what := served(presenter)) is not None
         }
