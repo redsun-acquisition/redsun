@@ -100,9 +100,11 @@ the member:
 
 For the script above, `POST /api/ctrl/move_to` with the body
 `{"motor": "stage", "position": 2.5}` moves the stage and answers `2.5`, and
-`GET /api/ctrl/names` answers `["stage"]`. A body with a wrong type is
-answered with 422 before the slot runs. A slot that raises answers 500 with
-`{"error": "..."}`, and the session logs the exception.
+`GET /api/ctrl/names` answers `["stage"]`. The body may leave out a
+parameter that has a default, and a slot without parameters takes no body. A
+body with a wrong type is answered with 422 before the slot runs. A slot that
+raises answers 500 with `{"error": "..."}`, and the session logs the
+exception.
 
 ## Serve the session
 
