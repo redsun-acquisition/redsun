@@ -13,7 +13,7 @@ from pydantic import Field, TypeAdapter
 
 from redsun import remote, slot
 from redsun.aio import clear_async_backend, set_async_backend
-from redsun.ports._remote import is_remote, served, signal_schema
+from redsun.ports._remote import is_remote, served
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -79,17 +79,6 @@ class Unresolvable:
     @slot
     @remote
     async def go(self, value: Decimal) -> None: ...
-
-
-class Plain:
-    def __init__(self, x: int) -> None:
-        self.x = x
-
-
-class NoSchema:
-    @slot
-    @remote
-    async def go(self, value: Plain) -> None: ...
 
 
 class VarArgs:
@@ -205,7 +194,6 @@ def test_a_component_with_nothing_remote_is_not_served() -> None:
         (SyncSlot, "'go' is a remote slot and must be async def"),
         (AsyncGetter, "'state' is a remote property with an async getter"),
         (Unresolvable, "'go' has annotations that do not resolve"),
-        (NoSchema, "'go' takes a type with no JSON Schema"),
         (VarArgs, "'go' has a variadic positional parameter (args)"),
         (VarKeywords, "'go' has a variadic keyword parameter (kwargs)"),
         (PositionalOnly, "'go' has a positional-only parameter (x)"),
@@ -215,13 +203,6 @@ def test_served_refuses_each_rule_naming_the_member(cls: type, message: str) -> 
     """Refuse each broken rule with an error naming the member."""
     with pytest.raises(TypeError, match=re.escape(message)):
         served(cls())
-
-
-def test_an_object_argument_is_published_untyped() -> None:
-    """Describe an object-typed signal argument with an empty schema."""
-    s = served(Good())
-    assert s is not None
-    assert signal_schema(s)["sig_any"] == [{"type": "string"}, {}]
 
 
 def test_served_lists_every_problem_in_one_error() -> None:

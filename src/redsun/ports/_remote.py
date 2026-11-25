@@ -6,9 +6,6 @@ import inspect
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar, get_type_hints
 
-from pydantic import TypeAdapter
-from pydantic.errors import PydanticUserError
-
 from ._wiring import marker_of, port_name, ports
 
 if TYPE_CHECKING:
@@ -24,7 +21,6 @@ __all__ = [
     "is_remote",
     "remote",
     "served",
-    "signal_schema",
 ]
 
 F = TypeVar("F", bound="Callable[..., Any]")
@@ -106,9 +102,6 @@ class Served:
     signals: dict[str, SignalInstance]
     """Every public signal, by port name."""
 
-    signal_types: dict[str, tuple[Any, ...]]
-    """The argument types of each signal in `signals`."""
-
 
 def served(component: object) -> Served | None:
     """Return what *component* serves, `None` when no member is `remote`.
@@ -136,27 +129,14 @@ def served(component: object) -> Served | None:
             if command is not None:
                 commands.append(command)
 
-    if not commands and not queries and not problems:
-        return None
-
-    exposed = ports(component).signals
-    signal_types = {
-        name: tuple(
-            Any if p.annotation is inspect.Parameter.empty else p.annotation
-            for p in signal.signature.parameters.values()
-        )
-        for name, signal in exposed.items()
-    }
-    for name, types in signal_types.items():
-        for t in types:
-            check_schema(t, f"signal {name!r} has an argument type", problems)
-
     if problems:
         raise TypeError(
             f"{cls.__name__} cannot be served:\n"
             + "\n".join(f"- {p}" for p in problems)
         )
-    return Served(tuple(commands), tuple(queries), exposed, signal_types)
+    if not commands and not queries:
+        return None
+    return Served(tuple(commands), tuple(queries), ports(component).signals)
 
 
 def read_command(
@@ -187,14 +167,10 @@ def read_command(
             refused = True
         else:
             parameters[p.name] = hints.get(p.name, Any)
-    returns = hints.get("return", Any)
-    for name, t in parameters.items():
-        check_schema(t, f"{attr!r} takes a type", problems, name)
-    check_schema(returns, f"{attr!r} returns a type", problems)
     if refused:
         return None
     method = getattr(component, attr)
-    return Command(port_name(method), method, parameters, returns)
+    return Command(port_name(method), method, parameters, hints.get("return", Any))
 
 
 def read_query(
@@ -216,9 +192,7 @@ def read_query(
     hints = resolve_hints(getter, attr, problems)
     if hints is None:
         return None
-    returns = hints.get("return", Any)
-    check_schema(returns, f"{attr!r} returns a type", problems)
-    return Query(attr, lambda: getattr(component, attr), returns)
+    return Query(attr, lambda: getattr(component, attr), hints.get("return", Any))
 
 
 def resolve_hints(
@@ -230,22 +204,3 @@ def resolve_hints(
     except NameError as error:
         problems.append(f"{attr!r} has annotations that do not resolve: {error}")
         return None
-
-
-def check_schema(
-    t: Any, subject: str, problems: list[str], parameter: str | None = None
-) -> None:
-    """Record in *problems* that *subject* has no JSON Schema when *t* has none."""
-    try:
-        TypeAdapter(t).json_schema()
-    except PydanticUserError as error:
-        where = f" ({parameter})" if parameter else ""
-        problems.append(f"{subject} with no JSON Schema{where}: {error.message}")
-
-
-def signal_schema(served: Served) -> dict[str, list[dict[str, Any]]]:
-    """Return the JSON Schema of each argument of each signal, by signal name."""
-    return {
-        name: [TypeAdapter(t).json_schema() for t in types]
-        for name, types in served.signal_types.items()
-    }
