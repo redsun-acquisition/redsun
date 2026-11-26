@@ -290,6 +290,9 @@ jobs:
       - name: Type-check the client
         run: npm run check
 
+      - name: Lint the client
+        run: npm run lint
+
   coverage:
     name: Upload coverage
     # nothing to upload when the scope failed or the tests were skipped
