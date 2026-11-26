@@ -229,7 +229,8 @@ def class_ports(cls: type) -> PortNames:
         if isinstance(declared, Signal) and not attr.startswith("_"):
             signals.add(attr)
         elif (marker := marker_of(declared)) is not None:
-            slots[marker.name or attr.lstrip("_")] = marker.signals
+            name = getattr(declared, "__name__", attr)
+            slots[marker.name or name.lstrip("_")] = marker.signals
     return PortNames(signals=frozenset(signals), slots=slots)
 
 

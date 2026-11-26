@@ -48,6 +48,7 @@ def test_a_check_records_each_component_and_lookup(mock_plugin: None) -> None:
         },
         "pairs": [["m2", "v"], ["m2", "nobody"]],
     }
+    base["presenters"]["m2"] = {**BUNDLE, "plugin_id": "mock-late"}
     overlay = {"presenters": {"m2": {**BUNDLE, "plugin_id": "mock-motor"}}}
 
     report = check_report([base, overlay])
@@ -68,6 +69,8 @@ def test_a_check_records_each_component_and_lookup(mock_plugin: None) -> None:
         "m2 <-> v": "passed",
         "m2 <-> nobody": "failed",
     }
+    [m2] = [c for c in report.components if c.name == "m2"]
+    assert m2.class_path == "mock_bundle.presenters:MockMotorPresenter"
     [fast] = [c for c in report.components if c.name == "fast"]
     assert fast.reason is not None and "speed" in fast.reason
     assert report.problems == []
@@ -162,6 +165,17 @@ def test_a_device_naming_an_undeclared_service_fails(mock_plugin: None) -> None:
     assert stage.reason is not None and "'nowhere'" in stage.reason
 
 
+def test_a_stack_whose_plugin_does_not_resolve_is_one_record(mock_plugin: None) -> None:
+    """Record an unresolved stack once, under stacks, with its plugin keys."""
+    report = check_report(
+        [{"session": "s", "stacks": {"st": {"plugin_name": "nope", "plugin_id": "x"}}}]
+    )
+
+    assert [(c.name, c.group, c.plugin_name, c.status) for c in report.components] == [
+        ("st", "stacks", "nope", "failed")
+    ]
+
+
 def test_a_check_records_each_provider(mock_plugin: None) -> None:
     """Pass a provider whose plugin resolves, and fail one whose plugin does not."""
     report = check_report(
@@ -230,14 +244,21 @@ def test_a_check_of_a_qt_file_records_hooks_and_layout_names(mock_plugin: None) 
             {
                 "session": "s",
                 "frontend": "qt",
-                "views": {"v": {**BUNDLE, "plugin_id": "mock-motor-view"}},
+                "views": {
+                    "v": {**BUNDLE, "plugin_id": "mock-motor-view"},
+                    "refused": {
+                        **BUNDLE,
+                        "plugin_id": "mock-motor-view",
+                        "placement": "nowhere",
+                    },
+                },
                 "hooks": {
                     "configure_application": {
                         "provider": "mock_bundle.hooks:MockStyle",
                         "kwargs": {"nonsense": 1},
                     }
                 },
-                "layout": {"regions": {"left": "ghost"}},
+                "layout": {"regions": {"left": "ghost", "right": "refused"}},
             }
         ]
     )
@@ -245,3 +266,5 @@ def test_a_check_of_a_qt_file_records_hooks_and_layout_names(mock_plugin: None) 
     [hook] = [c for c in report.components if c.group == "hooks"]
     assert hook.status == "failed"
     assert lookups(report)["ghost"] == "failed"
+    [refused] = [lookup for lookup in report.lookups if lookup.name == "refused"]
+    assert refused.reason == "view 'refused' would not be built"

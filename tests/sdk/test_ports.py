@@ -59,6 +59,15 @@ class Display:
     def show(self, value: object) -> None: ...
 
 
+class Aliased:
+    """A component whose slot is also reachable under another attribute."""
+
+    @slot
+    def _update(self) -> None: ...
+
+    show = _update
+
+
 class Changes(SignalGroup):
     """The signals a component makes in its constructor."""
 
@@ -129,3 +138,8 @@ def test_class_ports_does_not_see_a_signal_group_made_in_init() -> None:
 
     assert "changed" not in names.signals
     assert names.slots == {"show": ()}
+
+
+def test_class_ports_names_an_aliased_slot_as_ports_does() -> None:
+    """Name a slot by its function, not by the attribute that aliases it."""
+    assert class_ports(Aliased).slots == {"update": ()}

@@ -145,10 +145,18 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
     stack_of = {
         half: stack.name for stack in session._stacks.values() for half in stack.roles
     }
+    refused_stacks = config.stacks.keys() - session._stacks.keys()
     declarations = sorted(
         session._declarations.values(), key=lambda d: list(Layer).index(d.kind)
     )
     for declaration in declarations:
+        # a stack that cannot be made declares its halves as stand-ins; it is
+        # recorded once, under stacks, below
+        if declaration.cls is object and any(
+            declaration.name == name or declaration.name.startswith(f"{name}_")
+            for name in refused_stacks
+        ):
+            continue
         group: Group = declaration.kind.section  # type: ignore[assignment]
         entry = getattr(config, group).get(declaration.source)
         if entry is None and declaration.name in stack_of:
@@ -176,6 +184,16 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
     for stack in session._stacks.values():
         yield component(
             stack.name, "stacks", stack.cls, config.stacks.get(stack.name), "passed"
+        )
+    for name in sorted(refused_stacks):
+        reason = session._failed.get(name)
+        yield component(
+            name,
+            "stacks",
+            None,
+            config.stacks[name],
+            "failed",
+            None if reason is None else str(reason),
         )
     for name in session._services:
         yield component(name, "services", None, config.services.get(name), "passed")
@@ -211,12 +229,12 @@ def layout_lookups(session: Session) -> Iterator[Lookup]:
     }
     _, dropped = resolved_layout(session._window_layout, placements, session.frontend)
     for name in dropped:
-        yield Lookup(
-            section="layout",
-            name=name,
-            status="failed",
-            reason="no declared view or stack has this name",
+        reason = (
+            f"view {name!r} would not be built"
+            if name in placements and name in session._failed
+            else "no declared view or stack has this name"
         )
+        yield Lookup(section="layout", name=name, status="failed", reason=reason)
 
 
 def component_class(session: Session, name: str) -> tuple[type | None, str | None]:

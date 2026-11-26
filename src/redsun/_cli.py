@@ -141,7 +141,11 @@ def plugins(
 def check(
     files: Annotated[
         list[Path],
-        typer.Argument(help="The session files, merged in the order given."),
+        typer.Argument(
+            help="The session files, merged in the order given.",
+            metavar="FILE",
+            show_default=False,
+        ),
     ],
     as_json: Annotated[
         bool, typer.Option("--json", help="Print the report as JSON.")

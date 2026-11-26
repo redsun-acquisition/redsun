@@ -104,7 +104,7 @@ hook provider a status, and each name the file looks up in `layout`,
 | Status | Means |
 | --- | --- |
 | `passed` | it would be built, or found |
-| `failed` | it would not: its plugin or class can't be found, its entry gives a key its class doesn't take, or a name points at a component the session doesn't declare |
+| `failed` | it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a `layout` name has no view to answer to |
 | `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built |
 
 ```text
@@ -112,7 +112,7 @@ problems:
   presenters.p.workers: Input should be greater than or equal to 1
 components:
   passed     devices    stage   (mylab:motor, mylab.devices:MyMotor)
-  failed     views      viewer   (mylab:viewer) - no plugin named 'mylab'
+  failed     views      viewer   (mylab:viewer) - plugin 'mylab' is not installed, or its manifest is invalid
 lookups:
   undecided  wiring     camera.sig_frame -> viewer.show - 'camera' declares no signal 'sig_frame'; its signals: sig_done
 not checked:

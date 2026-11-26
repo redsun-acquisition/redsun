@@ -408,4 +408,4 @@ def test_run_reports_a_type_error_from_the_file_without_a_traceback(
 
     assert done.exit_code == 1
     assert "already" in done.output
-    assert "Traceback" not in done.output
+    assert isinstance(done.exception, SystemExit)
