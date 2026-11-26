@@ -131,6 +131,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeForm
 
     from redsun.compute import ProcessPoolSettings, ThreadPoolSettings
+    from redsun.errors import PluginError
     from redsun.ports import Connection, Link, Unconnected
     from redsun.services import Service
     from redsun.view import Placement, WindowLayout
@@ -304,6 +305,7 @@ class Session(BuildableSession):
         "_stacks",
         "_storage",
         "_transport",
+        "_unresolved_services",
         "_window_layout",
         "_wiring",
     )
@@ -401,6 +403,7 @@ class Session(BuildableSession):
         self._class_counts: Counter[type] = Counter()
         self._services: dict[str, Service] = {}
         self._failed_services: dict[str, BaseException] = {}
+        self._unresolved_services: dict[str, PluginError] = {}
         self._transport = CHANNEL_ACCESS
         self._devices: dict[str, Device] = {}
         self._device_index: dict[str, Device] = {}
@@ -906,6 +909,28 @@ class Session(BuildableSession):
 
     def read_configuration(self) -> None:
         """Merge the sources, install the hooks, read the declarations, open the logs."""
+        config = self._read()
+        self._open_storage(config)
+        # registered after the logs, so a provider's teardown is still logged
+        for hook in distinct(chain.from_iterable(self.hooks.values())):
+            if isinstance(hook, HasShutdown):
+                self.on_release(partial(self._shut_down_hook, hook))
+
+    def _read(self) -> SessionFile:
+        """Read the sources and the declarations as the build does, with no effect.
+
+        Everything `read_configuration` does before it opens the logs: the
+        hook providers are built, the declarations and services read, and a
+        catalog's need for `tiled` checked. Nothing is written and nothing
+        starts.
+
+        Raises
+        ------
+        TypeError
+            If a declaration, a stack or a service is refused as a whole.
+        ImportError
+            If the configuration keeps a catalog and `tiled` is not installed.
+        """
         installed.cache_clear()
         config = self._configuration()
         self._log_hooks()
@@ -922,12 +947,10 @@ class Session(BuildableSession):
         components = self._components()
         self._refuse_component_values(components)
         self._check_layers(components)
+        if config.storage is not None and config.storage.catalog is not None:
+            require_tiled()
         self._read_services(config)
-        self._open_storage(config)
-        # registered after the logs, so a provider's teardown is still logged
-        for hook in distinct(chain.from_iterable(self.hooks.values())):
-            if isinstance(hook, HasShutdown):
-                self.on_release(partial(self._shut_down_hook, hook))
+        return config
 
     def _read_stacks(self, config: SessionFile) -> None:
         """Read the stacks and declare their halves beside the other declarations.
@@ -972,7 +995,9 @@ class Session(BuildableSession):
             If a service shares its name with a component.
         """
         self._transport = config.transport or CHANNEL_ACCESS
-        self._services = read_services(type(self), config.services, self._transport)
+        self._services, self._unresolved_services = read_services(
+            type(self), config.services, self._transport
+        )
         clash = sorted(self._services.keys() & self._declarations.keys())
         if clash:
             raise TypeError(
@@ -988,8 +1013,6 @@ class Session(BuildableSession):
     def _open_storage(self, config: SessionFile) -> None:
         """Make the path provider *config* describes, and open the logs under it."""
         self._storage = StorageConfig() if config.storage is None else config.storage
-        if self._storage.catalog is not None:
-            require_tiled()
         self._path_provider = SessionPathProvider(
             base_dir=self._storage.base_dir,
             session=self.name,

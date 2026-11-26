@@ -36,6 +36,7 @@ from redsun import (
     slot,
 )
 from redsun.aio import run_coro
+from redsun.errors import PluginError
 from redsun.services import _service
 from redsun.services._transports import (
     CHANNEL_ACCESS,
@@ -318,6 +319,17 @@ def test_services_are_read_from_annotations_and_the_configuration() -> None:
     )
     assert (stage_ioc.launched, stage_ioc.prefix) == (False, "MOT:")
     assert not services["beamline"].launched
+
+
+def test_a_service_whose_plugin_does_not_resolve_is_recorded() -> None:
+    """Record a service left out because its plugin does not resolve."""
+    session = Session(
+        {"session": "s", "services": {"ioc": {"plugin_name": "nope", "plugin_id": "x"}}}
+    )
+    session.read_configuration()
+
+    assert isinstance(session._unresolved_services["ioc"], PluginError)
+    session.shutdown()
 
 
 def test_a_marker_where_an_alias_is_used_replaces_the_alias_marker() -> None:
