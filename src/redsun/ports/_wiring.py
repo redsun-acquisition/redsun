@@ -14,7 +14,7 @@ from typing import (
 from psygnal import Signal, SignalGroup
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Sequence
+    from collections.abc import Awaitable, Callable, Mapping, Sequence
     from threading import Thread
     from typing import TypeAlias
 
@@ -27,11 +27,13 @@ __all__ = [
     "ComponentNotBuilt",
     "Connection",
     "Link",
+    "PortNames",
     "Ports",
     "Slot",
     "SlotThread",
     "Unconnected",
     "WiringError",
+    "class_ports",
     "links_between",
     "marker_of",
     "owner_of",
@@ -201,6 +203,34 @@ def ports(component: object) -> Ports:
                 signals[member] = value[member]
 
     return Ports(signals=signals, slots=slots)
+
+
+@dataclass(frozen=True, slots=True)
+class PortNames:
+    """The ports a class declares, by name, read without building it."""
+
+    signals: frozenset[str]
+    """The names of its public `Signal` attributes."""
+
+    slots: Mapping[str, tuple[str, ...]]
+    """Each slot's port name, with the signals that reach it in a pairing."""
+
+
+def class_ports(cls: type) -> PortNames:
+    """Return the port names *cls* declares, as `ports` finds them on an instance.
+
+    The class is never built, so a member of a `SignalGroup` the constructor
+    makes is not among them.
+    """
+    signals: set[str] = set()
+    slots: dict[str, tuple[str, ...]] = {}
+    for attr in dir(cls):
+        declared = getattr(cls, attr, None)
+        if isinstance(declared, Signal) and not attr.startswith("_"):
+            signals.add(attr)
+        elif (marker := marker_of(declared)) is not None:
+            slots[marker.name or attr.lstrip("_")] = marker.signals
+    return PortNames(signals=frozenset(signals), slots=slots)
 
 
 def links_between(a: object, b: object) -> list[Link]:
