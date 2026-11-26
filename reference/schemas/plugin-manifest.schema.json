@@ -124,6 +124,7 @@
     },
     "devices": {
       "additionalProperties": {
+        "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
         "type": "string"
       },
       "default": {},
@@ -133,6 +134,7 @@
     },
     "presenters": {
       "additionalProperties": {
+        "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
         "type": "string"
       },
       "default": {},
@@ -142,6 +144,7 @@
     },
     "views": {
       "additionalProperties": {
+        "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
         "type": "string"
       },
       "default": {},
@@ -151,6 +154,7 @@
     },
     "stacks": {
       "additionalProperties": {
+        "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
         "type": "string"
       },
       "default": {},
@@ -160,6 +164,7 @@
     },
     "providers": {
       "additionalProperties": {
+        "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
         "type": "string"
       },
       "default": {},
@@ -178,6 +183,7 @@
     },
     "hooks": {
       "additionalProperties": {
+        "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
         "type": "string"
       },
       "default": {},
