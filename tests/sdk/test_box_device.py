@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
+from mock_pkg.board_controller import BoardController
 from mock_pkg.box_controller import (
     BoxController,
     IntExposureController,
@@ -19,7 +20,9 @@ from mock_pkg.box_controller import (
 )
 from ophyd_async.core import (
     Device,
+    DeviceMap,
     DeviceVector,
+    NotConnectedError,
     SignalR,
     SignalRW,
     StrictEnum,
@@ -30,6 +33,7 @@ from sharedbox import BoxClosedError, RequestError, SegmentStatus
 
 from redsun.device import sharedbox as box_device
 from redsun.device.sharedbox import (
+    AllServed,
     BoxDeviceConnector,
     BoxPutError,
     ServiceExitedError,
@@ -135,6 +139,31 @@ class Mover(Device):
         )
 
 
+class Spare(Device):
+    gain: SignalRW[int]
+
+
+class Board(Device):
+    exposure: SignalRW[float]
+    lasers: DeviceMap[SignalRW[bool]]
+    detector: AllServed
+    spare: Spare
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(
+            name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+        )
+
+
+class MixedMap(Device):
+    detector: DeviceMap[SignalRW[int]]
+
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(
+            name=name, connector=BoxDeviceConnector(prefix, declared_only=True)
+        )
+
+
 @pytest_asyncio.fixture
 async def served() -> AsyncGenerator[tuple[BoxController, str], None]:
     prefix = f"T{uuid4().hex[:8]}"
@@ -172,6 +201,28 @@ async def detector(
     yield device
     for box in device._connector._boxes.values():  # type: ignore[attr-defined]
         box.close()
+
+
+@pytest_asyncio.fixture
+async def board_served() -> AsyncGenerator[tuple[BoardController, str], None]:
+    prefix = f"T{uuid4().hex[:8]}"
+    controller = BoardController()
+    controller.set_path([prefix])
+    fastcs = FastCS(controller, [BoxTransport()], loop=asyncio.get_running_loop())
+    task = asyncio.create_task(fastcs.serve(interactive=False))
+    yield controller, prefix
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest_asyncio.fixture
+async def board(
+    board_served: tuple[BoardController, str],
+) -> AsyncGenerator[Board, None]:
+    device = Board(board_served[1], name="board")
+    await device.connect(timeout=5)
+    yield device
+    device._connector.close()  # type: ignore[attr-defined]
 
 
 async def test_a_device_is_filled_from_the_index(detector: MyDetector) -> None:
@@ -570,6 +621,16 @@ async def test_describe_carries_the_served_description_only_when_given(
     assert "description" not in mode
 
 
+async def test_describe_carries_the_served_label_only_when_given(
+    board: Board,
+) -> None:
+    """Put the label the service served in the data key, and no key when it served none."""
+    exposure = (await board.exposure.describe())["board-exposure"]
+    gain = (await board.spare.gain.describe())["board-spare-gain"]
+    assert exposure.get("label") == "Exposure"
+    assert "label" not in gain
+
+
 @pytest.mark.parametrize("declared_only", [False, True])
 async def test_a_declared_child_missing_from_the_index_fails_connect(
     served: tuple[BoxController, str], declared_only: bool
@@ -763,3 +824,43 @@ async def test_a_connect_without_a_service_times_out() -> None:
 def test_stream_name_joins_prefix_and_part() -> None:
     """Join the prefix and the part with a colon."""
     assert stream_name("MYAPP:DET:", "frames") == "MYAPP:DET:frames"
+
+
+async def test_a_declared_map_takes_every_attribute_of_its_controller(
+    board_served: tuple[BoardController, str], board: Board
+) -> None:
+    """Fill a declared map with one entry per served attribute, and write through one."""
+    controller, _ = board_served
+    assert sorted(board.lasers.keys()) == ["blue", "red"]
+    await board.lasers["red"].set(True)
+    assert controller.lasers.red.get() is True
+
+
+async def test_a_map_refuses_an_attribute_of_another_signal_type(
+    board_served: tuple[BoardController, str],
+) -> None:
+    """Fail connect, naming the read-only attribute a map of writable signals cannot hold."""
+    device = MixedMap(board_served[1], name="bad")
+    with pytest.raises(NotConnectedError, match="count"):
+        await device.connect(timeout=5)
+
+
+async def test_a_child_that_takes_all_served_gets_its_whole_subtree(
+    board_served: tuple[BoardController, str], board: Board
+) -> None:
+    """Fill an `AllServed` child with everything below it, and a sibling with what it declares."""
+    controller, _ = board_served
+    detector: Any = board.detector
+    assert isinstance(detector.gain, SignalRW)
+    assert await detector.count.get_value() == 3
+    await detector.region.width.set(16)
+    assert controller.detector.region.width.get() == 16
+    assert [name for name, _ in board.spare.children()] == ["gain"]
+
+
+async def test_a_map_and_an_all_served_child_connect_empty_in_mock_mode() -> None:
+    """Connect a device declaring a map and an `AllServed` child without a service."""
+    device = Board("absent", name="board")
+    await device.connect(mock=True)
+    assert dict(device.lasers) == {}
+    assert list(device.detector.children()) == []

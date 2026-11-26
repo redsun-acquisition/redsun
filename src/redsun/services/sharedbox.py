@@ -9,8 +9,17 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import numpy as np
-from fastcs.attributes import AttrR, AttrW
-from fastcs.datatypes import Bool, Enum, Float, Int, String, Table, Waveform
+from fastcs.attributes import AttributeIORefT, AttrR, AttrRW, AttrW
+from fastcs.datatypes import (
+    Bool,
+    DType_T,
+    Enum,
+    Float,
+    Int,
+    String,
+    Table,
+    Waveform,
+)
 from fastcs.transports import Transport
 from sharedbox import (
     KindMismatchError,
@@ -42,9 +51,9 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from fastcs.controllers import ControllerAPI
-    from fastcs.datatypes import DataType, DType_T
+    from fastcs.datatypes import DataType
 
-__all__ = ["BoxTransport"]
+__all__ = ["BoxTransport", "LabelledAttrR", "LabelledAttrRW", "LabelledAttrW"]
 
 _INT64_MAX = 2**63 - 1
 
@@ -58,6 +67,65 @@ _NUMERIC_KEYS: tuple[Literal["units", "min", "max", "min_alarm", "max_alarm"], .
 """Settings of a FastCS `Int` or `Float` the description carries when set."""
 
 _BoxT = TypeVar("_BoxT", bound=SharedBox)
+
+
+class LabelledAttrR(AttrR[DType_T, AttributeIORefT]):
+    """A FastCS `AttrR` with a label, the name a client shows for it.
+
+    `BoxTransport` serves the label beside the attribute's description.
+    """
+
+    def __init__(
+        self,
+        datatype: DataType[DType_T],
+        io_ref: AttributeIORefT | None = None,
+        group: str | None = None,
+        initial_value: DType_T | None = None,
+        description: str | None = None,
+        *,
+        label: str,
+    ) -> None:
+        super().__init__(datatype, io_ref, group, initial_value, description)
+        self.label = label
+
+
+class LabelledAttrW(AttrW[DType_T, AttributeIORefT]):
+    """A FastCS `AttrW` with a label, the name a client shows for it.
+
+    `BoxTransport` serves the label beside the attribute's description.
+    """
+
+    def __init__(
+        self,
+        datatype: DataType[DType_T],
+        io_ref: AttributeIORefT | None = None,
+        group: str | None = None,
+        description: str | None = None,
+        *,
+        label: str,
+    ) -> None:
+        super().__init__(datatype, io_ref, group, description)
+        self.label = label
+
+
+class LabelledAttrRW(AttrRW[DType_T, AttributeIORefT]):
+    """A FastCS `AttrRW` with a label, the name a client shows for it.
+
+    `BoxTransport` serves the label beside the attribute's description.
+    """
+
+    def __init__(
+        self,
+        datatype: DataType[DType_T],
+        io_ref: AttributeIORefT | None = None,
+        group: str | None = None,
+        initial_value: DType_T | None = None,
+        description: str | None = None,
+        *,
+        label: str,
+    ) -> None:
+        super().__init__(datatype, io_ref, group, initial_value, description)
+        self.label = label
 
 
 def _cut(text: str, capacity: int, field: str) -> str:
@@ -228,6 +296,9 @@ class BoxTransport(Transport):
                     attribute.datatype, "/".join((*api.path, name))
                 ),
                 "description": attribute.description or "",
+                "label": attribute.label
+                if isinstance(attribute, (LabelledAttrR, LabelledAttrW, LabelledAttrRW))
+                else "",
             }
             for name, attribute in api.attributes.items()
         }

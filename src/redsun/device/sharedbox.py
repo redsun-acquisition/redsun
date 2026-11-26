@@ -4,7 +4,7 @@ import asyncio
 import enum
 import json
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, cast, get_origin
+from typing import TYPE_CHECKING, Any, ClassVar, cast, get_args, get_origin
 
 import numpy as np
 from bluesky.protocols import Location, Reading
@@ -14,6 +14,7 @@ from ophyd_async.core import (
     Device,
     DeviceConnector,
     DeviceFiller,
+    DeviceMap,
     DeviceMock,
     DeviceVector,
     SignalBackend,
@@ -25,6 +26,7 @@ from ophyd_async.core import (
     TriggerableCommand,
     make_datakey,
 )
+from ophyd_async.core._device_filler import _get_device_dict_child_datatype
 from ophyd_async.core._signal_backend import make_metadata
 from sharedbox import (
     BoxClosedError,
@@ -62,6 +64,7 @@ if TYPE_CHECKING:
     from sharedbox import FieldWatch, RequestFuture, SharedBox
 
 __all__ = [
+    "AllServed",
     "BoxCommandBackend",
     "BoxDeviceConnector",
     "BoxPutError",
@@ -92,6 +95,21 @@ _ERROR_TEXT = re.compile(
 
 _LABEL = re.compile(r"[\w:-]+\.\w+: ")
 """The box class and field `sharedbox` puts in front of the text of a failed request."""
+
+
+class AllServed(Device):
+    """A device that takes everything its service serves below it.
+
+    A `BoxDeviceConnector` fills it with every attribute, command and
+    child of its part of the service, and its children the same way, even
+    when the device above it connects with `declared_only=True`.
+
+    ```python
+    class Flyer(Device):
+        exposure: SignalRW[float]
+        detector: AllServed
+    ```
+    """
 
 
 class BoxPutError(Exception):
@@ -146,7 +164,7 @@ def _filled(
     device: Device, description: ControllerDescription, declared_only: bool
 ) -> Iterator[ControllerDescription]:
     """Yield `description` and the controllers below it that `device` fills, parents first."""
-    if not declared_only or isinstance(device, DeviceVector):
+    if not declared_only or isinstance(device, (DeviceVector, AllServed)):
         # shortcut: a vector's entries are made by the fill, after the boxes are
         # attached, so everything below it is attached; filter by the entry type
         # if a vector entry ever leaves out a sub-controller with a box
@@ -413,8 +431,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     async def get_datakey(self, source: str) -> DataKey:
         """Return the data key, with the units, precision, limits and choices served.
 
-        A description the service served for the attribute is added as
-        `description`; an attribute served without one gets no such key.
+        A description and a label the service served for the attribute are
+        added as `description` and `label`; an attribute served without one
+        gets no such key.
         """
         datatype = self._description["datatype"]
         # TODO: ask ophyd-async to export make_metadata from ophyd_async.core
@@ -436,6 +455,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         if text := self._description["description"]:
             # event-model's DataKey takes keys beyond those its TypedDict names
             datakey["description"] = text  # type: ignore[typeddict-unknown-key]
+        # the index of a service running an older redsun has no label
+        if label := self._description.get("label"):
+            datakey["label"] = label  # type: ignore[typeddict-unknown-key]
         return datakey
 
     async def get_reading(self) -> Reading[SignalDatatypeT]:
@@ -575,13 +597,20 @@ class BoxDeviceConnector(DeviceConnector):
     itself and its children from what the index describes. A child gets its
     part of the description from its parent.
 
+    A declared `DeviceMap` takes one entry per attribute of its part of the
+    service, keyed by the attribute's name; an attribute whose signal type
+    the map does not hold fails `connect`, naming it. A map in mock mode
+    stays empty.
+
     Parameters
     ----------
     declared_only
         Fill only the signals, commands and children the device declares,
         and skip the rest of what the service serves. Declared children
-        follow the same rule, and a declared `DeviceVector` takes every
-        entry the service serves.
+        follow the same rule, except that a declared `DeviceVector` takes
+        every entry the service serves and a declared
+        [`AllServed`][redsun.device.sharedbox.AllServed] takes everything
+        served below it.
     """
 
     mock_device_vector_children: ClassVar[list[int]] = [1, 2]
@@ -726,10 +755,14 @@ class BoxDeviceConnector(DeviceConnector):
 
     def _fill(self, device: Device, description: ControllerDescription) -> None:
         """Create the signals, commands and children `description` names."""
+        if isinstance(device, DeviceMap):
+            self._fill_map(device, description)
+            return
         box = description["box"]
+        declared_only = self._declared_only and not isinstance(device, AllServed)
         declared = (
             {name for name, _ in device.children()}
-            if self._declared_only and not isinstance(device, DeviceVector)
+            if declared_only and not isinstance(device, DeviceVector)
             else None
         )
 
@@ -751,10 +784,32 @@ class BoxDeviceConnector(DeviceConnector):
                 )
         for key, child in description["children"].items():
             if wanted(key):
-                self._fill_child(device, key, child)
+                self._fill_child(device, key, child, declared_only)
+
+    def _fill_map(
+        self, device: DeviceMap[Any], description: ControllerDescription
+    ) -> None:
+        """Create one entry of `device` per attribute `description` names.
+
+        Raises
+        ------
+        TypeError
+            An attribute's signal type is not the one the map holds.
+        """
+        held = get_args(_get_device_dict_child_datatype(device))
+        for name, attribute in description["attributes"].items():
+            signal_type: type[Any] = _SIGNALS[attribute["access"]]
+            if held:
+                signal_type = signal_type[held[0]]
+            backend = self._filler.fill_child_signal(name, signal_type, map_key=name)
+            backend._bind(self._boxes, _box_key(description), name, attribute)
 
     def _fill_child(
-        self, device: Device, key: str, child: ControllerDescription
+        self,
+        device: Device,
+        key: str,
+        child: ControllerDescription,
+        declared_only: bool,
     ) -> None:
         """Create the child device `key` of `device`, filled from `child` on connect."""
         if isinstance(device, DeviceVector):
@@ -771,4 +826,4 @@ class BoxDeviceConnector(DeviceConnector):
         connector._description = child
         connector._boxes = self._boxes
         connector._is_child = True
-        connector._declared_only = self._declared_only
+        connector._declared_only = declared_only

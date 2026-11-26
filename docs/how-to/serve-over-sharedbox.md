@@ -92,7 +92,19 @@ A signal's `describe()` carries what the service served for its attribute:
 the units, precision and limits of a number, the choices of an enum, and the
 text given to the attribute's `description=`, under the key `description`.
 That text is how a view can say what a setting does, so give it to the
-attributes a person will edit.
+attributes a person will edit. To give an attribute a name for a view to
+show as well, declare it with
+[`LabelledAttrRW`][redsun.services.sharedbox.LabelledAttrRW], or its read-only
+and write-only siblings `LabelledAttrR` and `LabelledAttrW`, and the label
+reaches the data key under the key `label`:
+
+```{.python}
+self.exposure = LabelledAttrRW(
+    Float(units="ms"),
+    label="Exposure",
+    description="How long each frame collects light.",
+)
+```
 
 One service can also back several devices, each taking a part of it, such as
 a flyer that runs a scan and a detector that records it. Give each of them
@@ -103,6 +115,25 @@ child follows the same rule, while a declared `DeviceVector` takes every
 entry the service serves. A declared name the service lacks still fails
 `connect`, and two devices that declare the same attribute both read and
 write it.
+
+Two kinds of child take more than they declare. A
+`DeviceMap[SignalRW[bool]]` takes one signal per attribute of its
+sub-controller, keyed by the attribute's name, so a service can add a laser
+without the device changing; an attribute the map cannot hold, such as a
+read-only one in a map of `SignalRW`, fails `connect` with its name. A child
+declared as [`AllServed`][redsun.device.sharedbox.AllServed] takes every
+attribute, command and child its sub-controller serves, at every level below
+it, while its siblings keep only what they declare:
+
+```{.python}
+class Flyer(Device):
+    exposure: SignalRW[float]
+    lasers: DeviceMap[SignalRW[bool]]
+    detector: AllServed
+```
+
+In mock mode both stay empty, because there is no service to list what they
+would take.
 
 !!! warning "A read after shutdown raises"
 
