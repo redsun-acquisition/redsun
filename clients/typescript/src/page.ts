@@ -21,13 +21,19 @@ type Reply<P extends GetPath> = paths[P] extends {
 const base = new URLSearchParams(location.search).get("base") ?? "http://127.0.0.1:8000";
 const STEP = 1;
 
+function byId(id: string): HTMLElement {
+  const found = document.getElementById(id);
+  if (!found) throw new Error(`index.html has no element with id "${id}"`);
+  return found;
+}
+
 function show(error: unknown): void {
-  document.getElementById("error")!.textContent = String(error);
+  byId("error").textContent = String(error);
 }
 
 async function call(path: string, init?: RequestInit): Promise<unknown> {
   const response = await fetch(`${base}${path}`, init);
-  if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
+  if (!response.ok) throw new Error(`${path}: ${String(response.status)} ${await response.text()}`);
   return response.json();
 }
 
@@ -59,7 +65,7 @@ async function drawAxes(container: HTMLElement): Promise<void> {
     for (const [axis, info] of Object.entries(axes)) {
       const readback = element("span", {
         id: `readback-${device}-${axis}`,
-        textContent: `${info.readback.value} ${info.readback.units ?? ""}`,
+        textContent: `${String(info.readback.value)} ${info.readback.units ?? ""}`,
       });
       const move = (delta: number) => () =>
         post("/api/positioner/move", { device, axis, delta }).catch(show);
@@ -68,9 +74,9 @@ async function drawAxes(container: HTMLElement): Promise<void> {
           "div",
           { className: "row" },
           element("span", { className: "name", textContent: `${device} ${axis}` }),
-          element("button", { textContent: `-${STEP}`, onclick: move(-STEP) }),
+          element("button", { textContent: String(-STEP), onclick: move(-STEP) }),
           readback,
-          element("button", { textContent: `+${STEP}`, onclick: move(STEP) }),
+          element("button", { textContent: `+${String(STEP)}`, onclick: move(STEP) }),
         ),
       );
     }
@@ -108,8 +114,8 @@ async function drawLights(container: HTMLElement): Promise<void> {
 
 async function main(): Promise<void> {
   await Promise.all([
-    drawAxes(document.getElementById("axes")!),
-    drawLights(document.getElementById("lights")!),
+    drawAxes(byId("axes")),
+    drawLights(byId("lights")),
   ]);
   connect(base, (event) => {
     switch (event.signal) {
