@@ -19,7 +19,7 @@ Every key is optional.
 | --- | --- | --- | --- |
 | `schema_version` | number | `1.0` | the format of the file; `1.0` is the only one |
 | `session` | text | the name of the session class | the name of the session |
-| `frontend` | `qt` | the frontend of the session class | the registered frontend to build on |
+| `frontend` | `qt` or `fastapi` | the frontend of the session class | the registered frontend to build on |
 | `strict` | true or false | `false` | whether a component that fails to build or to set up stops the session |
 | `mock` | true or false | `false` | whether devices connect to simulated backends, and no service is launched |
 | `metadata` | mapping | empty | anything to record with the session |
@@ -33,6 +33,7 @@ Every key is optional.
 | `providers` | mapping | empty | classes that share values with the components, by name |
 | `compute` | mapping or preset | the defaults below | [the cores background calls may use](#compute) |
 | `storage` | mapping | the defaults below | [where files go](#storage), and the catalog |
+| `remote` | mapping | the defaults below | [where a web session serves](#remote) its API |
 | `wiring` | mapping | empty | [which signal reaches which slot](#wiring) |
 | `pairs` | list | empty | [components linked to each other](#pairs), two names each |
 | `hooks` | mapping | empty | the [hook providers](#hooks), by hook point |
@@ -196,6 +197,44 @@ compute:
 
 The section changes nothing in a session whose components ask for no
 [executor](../explanation/glossary.md#executor).
+
+## Remote
+
+`remote` says where a web session, such as
+[`FastAPISession`][redsun.fastapi.FastAPISession], serves its API, and every
+other session refuses it. A web session class may declare the same keys in its
+`remote` attribute; the file wins over the class, key by key.
+
+| Key | Type | Default | Holds |
+| --- | --- | --- | --- |
+| `host` | text | `127.0.0.1` | the address the session listens on |
+| `port` | whole number, 0 to 65535 | `8000` | the port the session listens on |
+| `origins` | list of text | empty | the origins a browser may call the API from; none is allowed if empty |
+
+```yaml
+remote:
+  host: 0.0.0.0
+  port: 8080
+  origins: ["http://localhost:5173"]
+```
+
+A file with `frontend: fastapi` describes a web session whole, with no session
+class of your own.
+
+### Sections each frontend refuses
+
+A section that the session's frontend does not read is refused with a
+`ConfigurationError` naming it, before anything is built:
+
+| Section | Refused by |
+| --- | --- |
+| `remote` | every session that is not a web session, such as a Qt session or one with no frontend |
+| `views`, `shortcuts`, `actions`, `color_scheme` | a web session |
+| `layout` | a web session, and any other session whose frontend lays out no window |
+
+A file shared by a Qt session and a web session is therefore split in
+layers: a base file with the devices and presenters, and one file per
+frontend naming `frontend:` and the sections that frontend reads.
 
 ## Storage
 

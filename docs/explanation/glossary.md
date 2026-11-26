@@ -204,9 +204,9 @@ and the session shuts it down with the component.
 
 ### Frontend
 
-A frontend is what shows a session on screen, such as the Qt one that
-`redsun` ships. A session file names it by its registered name (`frontend: qt`), and a
-package can register its own.
+A frontend is what shows a session to a person, such as the Qt window or the
+[web session](#web-session) that `redsun` ships. A session file names it by
+its registered name (`frontend: qt`), and a package can register its own.
 
 ### Future
 
@@ -415,6 +415,12 @@ A release is something a [build step](#build-step) registers so that
 `shutdown` can undo it later, such as stopping a service. Releases run in
 reverse order, so the last one registered runs first.
 
+### Remote member
+
+A remote member is a [slot](#slot) or a property of a [presenter](#presenter)
+marked with [`remote`][redsun.remote], which a [web session](#web-session)
+lets clients outside the process call or read.
+
 ### Run
 
 A run is one recording made by a [plan](#plan): everything between a start
@@ -576,6 +582,13 @@ services, which [How to write a service](../how-to/write-a-service.md) uses.
 A view is a [component](#component) with a [placement](#placement), which
 says where it is shown. It holds widgets, shows the state of the session and
 passes on what the user does, with no application logic of its own.
+
+### Web session
+
+A web session is a session that shows no views and serves its presenters'
+[remote members](#remote-member) over HTTP instead, with their signals on a
+WebSocket, so a page in a browser or a script can use them.
+[`FastAPISession`][redsun.fastapi.FastAPISession] is the one `redsun` ships.
 
 ### Wiring
 

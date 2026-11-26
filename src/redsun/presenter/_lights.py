@@ -15,7 +15,7 @@ from psygnal import Signal
 from redsun.aio import run_coro
 from redsun.injection import DevicesOf  # noqa: TC001
 from redsun.log import Loggable
-from redsun.ports import slot
+from redsun.ports import remote, slot
 from redsun.utils.devices import (
     Light,
     LightInfo,
@@ -116,6 +116,7 @@ class LightPresenter(Loggable):
             raise
 
     @property
+    @remote
     def lights(self) -> dict[str, LightInfo]:
         """Each light's state and intensity range, by device name."""
         return self._info
@@ -130,6 +131,7 @@ class LightPresenter(Loggable):
         return self._configuration.configuration
 
     @slot(signal="sig_enabled")
+    @remote
     async def set_enabled(self, device: str, on: bool) -> None:
         """Switch *device* on or off.
 
@@ -149,6 +151,7 @@ class LightPresenter(Loggable):
             self.sig_failed.emit(device, str(error) or type(error).__name__)
 
     @slot(signal="sig_intensity")
+    @remote
     async def set_intensity(self, device: str, value: float) -> None:
         """Set the intensity of *device*, in its units.
 

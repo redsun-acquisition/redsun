@@ -69,6 +69,7 @@ Run a session, follow what it does and keep its settings.
 - [How to profile a session](profile-a-session.md)
 - [How to change a device setting while a plan runs](change-a-setting-while-a-plan-runs.md)
 - [How to save a session](save-a-session.md)
+- [How to serve a session over the web](serve-a-session-over-the-web.md)
 
 ### Store data
 
@@ -84,6 +85,7 @@ compute from them.
 
 Move code written for an earlier release to this one.
 
+- [How to migrate from 0.18](migrate-from-0.18.md)
 - [How to migrate from 0.17](migrate-from-0.17.md)
 - [How to migrate from 0.16](migrate-from-0.16.md)
 - [How to migrate from 0.15](migrate-from-0.15.md)

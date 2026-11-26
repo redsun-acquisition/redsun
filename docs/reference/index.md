@@ -49,6 +49,7 @@ release notes.
 | change one step of the build | [Build steps](api/session.md#build-steps) |
 | share a value, or ask the session for one | [`redsun.injection`](api/injection.md), [`redsun.registry`](api/registry.md) |
 | connect a signal to a slot | [`redsun.ports`](api/ports.md) |
+| serve presenters over the web | [`redsun.remote`](api/ports.md#remote-members), [`redsun.fastapi`](api/fastapi.md) |
 | describe a plan and build its controls | [`redsun.presenter`](api/presenter.md), [Qt widgets](api/view.md#qt-widgets) |
 | run a plan, or one that runs until stopped | [`redsun.engine`](api/engine.md) |
 | place a view in the window | [Placements](api/qt.md#placements) |
@@ -82,6 +83,8 @@ Find a class or a function by the module you import it from.
         - [`redsun.engine.plan_stubs`](api/engine.md#plan-stubs): steps a
           plan uses to wait for an action
     - [`redsun.errors`](api/errors.md): the exceptions a session raises
+    - [`redsun.fastapi`](api/fastapi.md): the web session, serving the
+      presenters over HTTP
     - [`redsun.injection`](api/injection.md): how a component says what it
       needs and what it offers
     - [`redsun.log`](api/log.md): the logger, and the records of a session

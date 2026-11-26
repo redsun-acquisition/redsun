@@ -91,6 +91,13 @@ checks that the two agree -->
 <button type="button" data-value="">none<small>no window: a headless session</small></button>
 </div>
 </div>
+<div class="install-row" data-role="extra" role="group" aria-label="Web">
+<span class="install-label">Web</span>
+<div class="install-choices">
+<button type="button" data-value="">none<small>no web API</small></button>
+<button type="button" data-value="fastapi">FastAPI<small><code>fastapi</code>: a session serving its presenters over HTTP, with <code>fastapi</code> and <code>uvicorn</code></small></button>
+</div>
+</div>
 <div class="install-row" data-role="extra" role="group" aria-label="Style">
 <span class="install-label">Style</span>
 <div class="install-choices">
@@ -135,6 +142,7 @@ leaves it to the first session you start, which then takes several seconds
 longer.
 
 The guides for the optional parts are
+[serving a session over the web](serve-a-session-over-the-web.md),
 [writing a derived product](write-a-derived-product.md),
 [keeping a catalog of runs](keep-a-catalog.md),
 [testing a plugin](test-a-plugin.md) and

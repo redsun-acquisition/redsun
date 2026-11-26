@@ -48,8 +48,11 @@ SLOT_THREAD_ATTR = "__redsun_slot_thread__"
 SlotThread: TypeAlias = "Literal['main', 'current'] | Thread | None"
 """Thread a slot is delivered on, as accepted by `psygnal`."""
 
-SlotCallable: TypeAlias = "Callable[..., None] | Callable[..., Awaitable[None]]"
-"""What a signal calls: a function returning nothing, or a coroutine function."""
+SlotCallable: TypeAlias = "Callable[..., None] | Callable[..., Awaitable[object]]"
+"""What a signal calls: a function returning nothing, or a coroutine function.
+
+An `async` slot may return a value, which a signal reaching it drops.
+"""
 
 Link: TypeAlias = "tuple[SignalInstance | SignalR[Any], SlotCallable]"
 """A signal and the slot it reaches, as a session's `wire` yields it."""

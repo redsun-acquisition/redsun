@@ -8,6 +8,7 @@ component's signal to another's slot.
 
 from __future__ import annotations
 
+from ._remote import remote
 from ._wiring import (
     ComponentNotBuilt,
     Connection,
@@ -31,5 +32,6 @@ __all__ = [
     "WiringError",
     "links_between",
     "ports",
+    "remote",
     "slot",
 ]

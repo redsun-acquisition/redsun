@@ -28,9 +28,11 @@ __all__ = [
     "HasShutdown",
     "NamedComponent",
     "Serializable",
+    "WebSession",
 ]
 
 WindowT_co = TypeVar("WindowT_co", covariant=True)
+AppT_co = TypeVar("AppT_co", covariant=True)
 SetupP = ParamSpec("SetupP")
 
 
@@ -238,6 +240,28 @@ class DesktopSession(BuildableSession, Protocol[WindowT_co]):
     @abstractmethod
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""
+        ...
+
+
+@runtime_checkable
+class WebSession(BuildableSession, Protocol[AppT_co]):
+    """A session whose presenters are published as an API that clients reach over the network.
+
+    The application's type is the parameter, since each web framework has its
+    own: a session served by FastAPI satisfies `WebSession[FastAPI]`.
+    """
+
+    __slots__ = ()
+
+    @property
+    @abstractmethod
+    def app(self) -> AppT_co:
+        """The web application serving the session's API."""
+        ...
+
+    @abstractmethod
+    def serve(self) -> NoReturn:
+        """Build, start serving the API, and hand over to the server until it stops."""
         ...
 
 

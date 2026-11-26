@@ -30,6 +30,7 @@ from .._hooks import known_points
 from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
+from ..ports._wiring import marker_of
 from ..services._transports import CHANNEL_ACCESS
 from ._compute import component_kinds
 from ._factories import constructor, resolved
@@ -642,6 +643,14 @@ def check(
     if isinstance(declared, Placement):
         frontend.check_placement(target, declared, where)
     frontend.check_view(target, where)
+    if not frontend.async_view_slots:
+        for name in dir(target):
+            member = inspect.getattr_static(target, name)
+            if marker_of(member) is not None and inspect.iscoroutinefunction(member):
+                raise TypeError(
+                    f"{where} has an async slot {name!r}; {frontend.__name__} "
+                    "runs a view's slots on the GUI thread, so they are plain def"
+                )
     return target
 
 

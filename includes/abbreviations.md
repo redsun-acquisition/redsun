@@ -12,3 +12,6 @@
 *[BLAS]: Basic Linear Algebra Subprograms. The library numerical code runs its matrix arithmetic on.
 *[OpenMP]: A standard that compiled code uses to spread a loop over several threads.
 *[YAML]: A plain-text format for configuration, which session files and manifests are written in.
+*[API]: Application programming interface. The set of calls one program offers to others.
+*[HTTP]: Hypertext Transfer Protocol. The way a browser asks a server for a page or calls its API.
+*[JSON]: JavaScript Object Notation. A plain-text format for data, which a web API sends and receives.

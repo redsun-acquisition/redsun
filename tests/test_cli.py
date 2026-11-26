@@ -14,7 +14,9 @@ from qtpy.QtWidgets import QTabWidget
 from redsun._cli import main, styles
 from redsun.errors import BuildError, HookError
 from redsun.examples import ExampleApp, example_config
+from redsun.examples._core import ExampleCore
 from redsun.examples._devices import Axis, Plans
+from redsun.fastapi import FastAPISession
 from redsun.qt import QtHook
 from redsun.qt.styles import qlementine
 
@@ -34,6 +36,17 @@ STYLES = [
     pytest.param(name, marks=needs_qlementine) if name == "qlementine" else name
     for name in styles()
 ]
+
+WEB_WITHOUT_QT = """
+import sys
+
+sys.modules["qtpy"] = None
+from redsun.fastapi import FastAPISession
+from redsun._cli import main
+
+FastAPISession.serve = lambda self: None
+sys.exit(main(["--example", "--web"]))
+"""
 
 WITHOUT_QT = """
 import sys
@@ -182,3 +195,48 @@ def test_a_session_that_cannot_start_is_reported_without_a_traceback(
 
     assert main(["--example"]) == 1
     assert str(error) in capsys.readouterr().err
+
+
+def test_example_web_serves_the_example(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Serve a session that is both a web session and the example's core."""
+    served: list[type] = []
+    monkeypatch.setattr(FastAPISession, "serve", lambda self: served.append(type(self)))
+
+    main(["--example", "--web"])
+
+    (cls,) = served
+    assert issubclass(cls, FastAPISession)
+    assert issubclass(cls, ExampleCore)
+
+
+@pytest.mark.parametrize(
+    "arguments", [["--web"], ["--example", "napari", "--web"]], ids=["alone", "styled"]
+)
+def test_web_without_example_or_with_a_style_is_refused(arguments: list[str]) -> None:
+    """Refuse --web without --example, and with a style, which a web session has no use for."""
+    with pytest.raises(SystemExit) as stopped:
+        main(arguments)
+
+    assert stopped.value.code == 2
+
+
+def test_the_web_example_without_the_extra_names_it(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Exit with 1 and name the extra to install when the web frontend cannot be imported."""
+    monkeypatch.setitem(sys.modules, "redsun.examples._web", None)
+
+    assert main(["--example", "--web"]) == 1
+    assert "redsun[fastapi]" in capsys.readouterr().err
+
+
+def test_the_web_example_needs_no_qt_binding() -> None:
+    """Serve the example in a process where no Qt binding can be imported."""
+    done = subprocess.run(
+        [sys.executable, "-c", WEB_WITHOUT_QT],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert done.returncode == 0, done.stderr

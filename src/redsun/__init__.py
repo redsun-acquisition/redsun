@@ -42,6 +42,7 @@ from redsun.ports import (
     Link,
     WiringError,
     links_between,
+    remote,
     slot,
 )
 from redsun.registry import (
@@ -76,6 +77,7 @@ from redsun.session import (
     Serializable,
     Serves,
     Session,
+    WebSession,
 )
 from redsun.view import Column, Placement, Row, Shortcut, Tabs, WindowLayout, shortcut
 
@@ -146,6 +148,7 @@ __all__ = [
     "Settings",
     "Shortcut",
     "Tabs",
+    "WebSession",
     "WindowLayout",
     "WiringError",
     "WrapsBuild",
@@ -153,6 +156,7 @@ __all__ = [
     "links_between",
     "provides",
     "rejected",
+    "remote",
     "satisfies",
     "satisfying",
     "shortcut",

@@ -70,6 +70,7 @@ nav = [
             "how-to/profile-a-session.md",
             "how-to/change-a-setting-while-a-plan-runs.md",
             "how-to/save-a-session.md",
+            "how-to/serve-a-session-over-the-web.md",
         ]},
         { "Store data" = [
             "how-to/choose-where-files-go.md",
@@ -77,6 +78,7 @@ nav = [
             "how-to/write-a-derived-product.md",
         ]},
         { "Upgrade" = [
+            "how-to/migrate-from-0.18.md",
             "how-to/migrate-from-0.17.md",
             "how-to/migrate-from-0.16.md",
             "how-to/migrate-from-0.15.md",
@@ -151,6 +153,7 @@ nav = [
                 "explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field.md",
                 "explanation/decisions/0040-a-view-has-a-title-apart-from-its-name.md",
                 "explanation/decisions/0041-a-view-can-sit-in-the-status-bar.md",
+                "explanation/decisions/0042-presenters-publish-a-remote-api.md",
         ]},
     ]},
     { "Reference" = [
@@ -171,6 +174,7 @@ nav = [
             "reference/api/device-sharedbox.md",
             "reference/api/engine.md",
             "reference/api/errors.md",
+            "reference/api/fastapi.md",
             "reference/api/injection.md",
             "reference/api/log.md",
             "reference/api/path_provider.md",
