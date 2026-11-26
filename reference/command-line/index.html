@@ -5191,6 +5191,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#checking-a-session-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Checking a session file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-a-session-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6315,6 +6326,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#checking-a-session-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Checking a session file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-a-session-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6476,6 +6498,14 @@ scripts are not on the path.</p>
 <tr>
 <td><code>plugins --json</code></td>
 <td>prints the same list as a <a href="#reports">report</a></td>
+</tr>
+<tr>
+<td><code>check FILE...</code></td>
+<td>checks whether the session the files describe would build, without building it</td>
+</tr>
+<tr>
+<td><code>check FILE... --json</code></td>
+<td>prints the same check as a <a href="#reports">report</a></td>
 </tr>
 <tr>
 <td><code>run FILE...</code></td>
@@ -6647,6 +6677,59 @@ the whole plugin out, and the command still exits with 0. It lists that
 plugin last, under <code>Skipped:</code>, with the reason. In a script, read
 <code>problems</code> in the <a href="#reports">report</a> rather than the exit code.</p>
 </div>
+<h2 id="checking-a-session-file">Checking a session file<a class="headerlink" href="#checking-a-session-file" title="Permanent link">&para;</a></h2>
+<p><code>redsun check</code> tells you whether a session file would build, without building
+it. It reads the files with the code a build reads them with, merged in the
+order you give them, but it starts no service, connects no device, opens no
+window and writes no log file:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>redsun<span class="w"> </span>check<span class="w"> </span>session.yaml
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>redsun<span class="w"> </span>check<span class="w"> </span>session.yaml<span class="w"> </span>this-computer.yaml<span class="w"> </span>--json
+</span></code></pre></div>
+<p>The check resolves each plugin and imports each class, so it needs the same
+packages installed as the session would: checking a file whose <code>frontend</code> is
+<code>qt</code> needs a Qt binding, for example. It gives each component, service and
+hook provider a status, and each name the file looks up in <code>layout</code>,
+<code>wiring</code>, <code>pairs</code> or a stack:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>it would be built, or found</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a <code>layout</code> name has no view to answer to</td>
+</tr>
+<tr>
+<td><code>undecided</code></td>
+<td>reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a <a class="autorefs autorefs-external" href="https://psygnal.readthedocs.io/en/latest/reference/psygnal/#psygnal.SignalGroup"><code>SignalGroup</code></a> made when the component is built</td>
+</tr>
+</tbody>
+</table>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>problems:
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  presenters.p.workers: Input should be greater than or equal to 1
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>components:
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  passed     devices    stage   (mylab:motor, mylab.devices:MyMotor)
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  failed     views      viewer   (mylab:viewer) - plugin 'mylab' is not installed, or its manifest is invalid
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>lookups:
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  undecided  wiring     camera.sig_frame -&gt; viewer.show - 'camera' declares no signal 'sig_frame'; its signals: sig_done
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>not checked:
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>  the values given to constructors, what setup does, ...
+</span></code></pre></div>
+<p>Some things only a build can find, and the check lists them under
+<code>not checked</code>: the values given to constructors, what <code>setup</code> does, members of
+a <code>SignalGroup</code>, placements a view gives through a property, and services and
+device connections, which never start. A file that passes the check can still
+fail to build for one of those reasons.</p>
+<p>The check exits with 1 when the file has a problem or anything <code>failed</code>. A
+result that is only <code>undecided</code> exits with 0, since nothing is certainly
+wrong, and is listed so that you can look at it.</p>
 <h2 id="running-a-session-file">Running a session file<a class="headerlink" href="#running-a-session-file" title="Permanent link">&para;</a></h2>
 <p><code>redsun run</code> starts a session from
 <a href="../../explanation/glossary/#session-file">session files</a>, so you don't need a
@@ -6660,8 +6743,8 @@ as <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol 
 changes what an earlier one says, and the
 <a href="../../explanation/glossary/#frontend">frontend</a> the files name decides what
 opens:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>redsun<span class="w"> </span>run<span class="w"> </span>session.yaml
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>redsun<span class="w"> </span>run<span class="w"> </span>session.yaml<span class="w"> </span>this-computer.yaml<span class="w"> </span>--mock
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>redsun<span class="w"> </span>run<span class="w"> </span>session.yaml
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>redsun<span class="w"> </span>run<span class="w"> </span>session.yaml<span class="w"> </span>this-computer.yaml<span class="w"> </span>--mock
 </span></code></pre></div>
 <p>The options set what a script would pass to <code>from_config</code> or write as a key
 of the file:</p>
@@ -6734,22 +6817,22 @@ Adding a key leaves the number as it is, so write your program to skip the
 keys it doesn't know.</p>
 <p>The report of <code>redsun plugins --json</code> adds <code>plugins</code>, one object for each
 plugin whose manifest was read without a problem:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"redsun"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.19.0"</span><span class="p">,</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">"problems"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span><span class="nt">"plugin_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab"</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">"distribution"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab-devices"</span><span class="p">,</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.0"</span><span class="p">,</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="nt">"entries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devices"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"motor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.devices:MyMotor"</span><span class="p">},</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"services"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stage-ioc"</span><span class="p">,</span><span class="w"> </span><span class="nt">"module"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.iocs.stage"</span><span class="p">}</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="p">]</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span><span class="p">]</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"redsun"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.19.0"</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">"problems"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">"plugin_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab"</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">"distribution"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab-devices"</span><span class="p">,</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.0"</span><span class="p">,</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">"entries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devices"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"motor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.devices:MyMotor"</span><span class="p">},</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"services"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stage-ioc"</span><span class="p">,</span><span class="w"> </span><span class="nt">"module"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.iocs.stage"</span><span class="p">}</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">      </span><span class="p">]</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><code>distribution</code> is the package that installs the plugin, and <code>version</code> is that
 package's version. Each entry names its class as <code>class</code>, written
@@ -6757,10 +6840,35 @@ package's version. Each entry names its class as <code>class</code>, written
 instead, the module the service is run from.</p>
 <p>A plugin that was left out isn't in <code>plugins</code>. It's one of the <code>problems</code>,
 with <code>manifest</code> as its <code>kind</code> and the plugin's name as <code>where</code>.</p>
+<p>The report of <code>redsun check --json</code> adds <code>components</code>, <code>lookups</code> and
+<code>skipped</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">"redsun"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.19.0"</span><span class="p">,</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">"problems"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">{</span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value"</span><span class="p">,</span><span class="w"> </span><span class="nt">"where"</span><span class="p">:</span><span class="w"> </span><span class="s2">"presenters.p.workers"</span><span class="p">,</span><span class="w"> </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Input should be greater than or equal to 1"</span><span class="p">}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">"components"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stage"</span><span class="p">,</span><span class="w"> </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devices"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"motor"</span><span class="p">,</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">     </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.devices:MyMotor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"passed"</span><span class="p">}</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">"lookups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="p">{</span><span class="nt">"section"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wiring"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"camera.sig_frame -&gt; viewer.show"</span><span class="p">,</span><span class="w"> </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"undecided"</span><span class="p">,</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">     </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"'camera' declares no signal 'sig_frame'; its signals: sig_done"</span><span class="p">}</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span><span class="nt">"skipped"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"the values given to constructors"</span><span class="p">,</span><span class="w"> </span><span class="s2">"what setup does"</span><span class="p">]</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Its <code>problems</code> can have two more kinds than a plugin listing's: <code>value</code>, a
+value of the file that is refused, with its key path as <code>where</code>, and
+<code>session</code>, a session that can't be made or read at all, such as one naming a
+frontend that isn't installed. After a <code>session</code> problem, <code>components</code> and
+<code>lookups</code> are empty, because the check stopped where the build would.</p>
 <p>Each report has a <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> Schema, a file that says exactly which keys the report
-can hold. The one for this report is published as
-<a href="../schemas/plugins-report.schema.json"><code>plugins-report.schema.json</code></a>, written
-in <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> Schema 2020-12.</p>
+can hold. They are published as
+<a href="../schemas/plugins-report.schema.json"><code>plugins-report.schema.json</code></a> and
+<a href="../schemas/check-report.schema.json"><code>check-report.schema.json</code></a>, written in
+<abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> Schema 2020-12.</p>
 <h2 id="exit-codes">Exit codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -6772,11 +6880,11 @@ in <abbr title="JavaScript Object Notation. A plain-text format for data that pr
 <tbody>
 <tr>
 <td>0</td>
-<td>the help, the version or the plugins were printed, or the window of the example or of the session run was closed</td>
+<td>the help, the version or the plugins were printed, a check found nothing that failed, or the window of the example or of the session run was closed</td>
 </tr>
 <tr>
 <td>1</td>
-<td>the example or the session run could not start, or the files name no frontend</td>
+<td>the example or the session run could not start, the files name no frontend, or a check found a problem or something that failed</td>
 </tr>
 <tr>
 <td>2</td>
