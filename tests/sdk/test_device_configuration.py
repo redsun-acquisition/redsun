@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import pytest
 from ophyd_async.core import Device, set_mock_attr
 
 from redsun.presenter import DeviceConfiguration
 from redsun.utils.devices import device_path
 from tests.sdk.mocks import SoftAxis, XYStage
+
+if TYPE_CHECKING:
+    from bluesky.protocols import Reading
 
 
 class Rig(Device):
@@ -16,6 +21,16 @@ class Rig(Device):
     def __init__(self, name: str = "") -> None:
         self.xy = XYStage("")
         super().__init__(name=name)
+
+
+class DriftingAxis(SoftAxis):
+    """An axis whose velocity changes from 1.0 to 2.0 after its configuration is read."""
+
+    async def read_configuration(self) -> dict[str, Reading[Any]]:
+        """Return the configuration, then change the velocity."""
+        reading = await super().read_configuration()
+        await self.velocity.set(2.0)
+        return reading
 
 
 @pytest.fixture
@@ -183,3 +198,16 @@ async def test_a_failed_read_back_reports_the_last_value_the_device_gave(
 
     assert seen == [(axis.velocity.name, 3.0)]
     assert configuration.configuration.readings[axis.velocity.name]["value"] == 3.0
+
+
+async def test_a_value_relayed_while_adding_is_kept() -> None:
+    """Keep the value a device reports while it is added, not the older one it read."""
+    axis = DriftingAxis("focus")
+    await axis.connect(mock=False)
+    configuration = DeviceConfiguration("lights")
+
+    added = await configuration.add("focus", axis)
+
+    assert await axis.velocity.get_value() == 2.0
+    assert configuration.configuration.readings[axis.velocity.name]["value"] == 2.0
+    assert added.readings[axis.velocity.name]["value"] == 2.0

@@ -60,9 +60,10 @@ class DeviceConfiguration(Loggable):
     ) -> Configuration:
         """Read *device*'s configuration, follow its signals, and file it under *owner*.
 
-        Returns the configuration of *device* alone. Nothing is kept when
-        reading fails or the call is cancelled. A key already added is
-        followed once, and stays with its first owner.
+        Returns the configuration of *device* alone. A value a signal reports
+        while it is added replaces the one read. Nothing is kept when reading
+        fails or the call is cancelled. A key already added is followed once,
+        and stays with its first owner.
 
         Parameters
         ----------
@@ -80,6 +81,12 @@ class DeviceConfiguration(Loggable):
                 self._unsubscribers.append(partial(signal.clear_sub, self._relay))
                 signal.subscribe_reading(self._relay)
                 configuration.paths[signal.name] = device_path(signal)
+                # the subscription relays the current value at once, which may
+                # be newer than the one read above
+                if signal.name in self._configuration.readings:
+                    configuration.readings[signal.name] = self._configuration.readings[
+                        signal.name
+                    ]
         named = device if owner_device is None else owner_device
         if isinstance(named, Device):
             configuration.paths[owner] = device_path(named)
