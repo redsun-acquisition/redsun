@@ -415,6 +415,13 @@ A release is something a [build step](#build-step) registers so that
 `shutdown` can undo it later, such as stopping a service. Releases run in
 reverse order, so the last one registered runs first.
 
+### Report
+
+A report is what a subcommand of the `redsun` command prints when you give it
+`--json`: one JSON object written for a program to read, where the same
+subcommand without `--json` prints text for you. Every report starts with the same keys, which
+[The `redsun` command](../reference/command-line.md#reports) lists.
+
 ### Run
 
 A run is one recording made by a [plan](#plan): everything between a start

@@ -11,7 +11,8 @@ redsun/
 |   |-- __init__.py            what a component author imports: Session, AsDevice, ...
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
-|   |-- _cli.py                the redsun command: --version, example
+|   |-- _cli.py                the redsun command: --version, example, plugins
+|   |-- _reports.py            what the command prints with --json, as models
 |   |-- examples/              ExampleApp, every built-in component over simulated devices
 |   |-- plugins.yaml           manifest of the built-in views
 |   |-- session/               Session, declarations, build steps, plugin loading
@@ -52,10 +53,12 @@ redsun/
 |   |-- examples/              whole scripts of the how-to guides, built by a test
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
-|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
+|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs, schemas/),
 |                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)
+|-- schemas/                   JSON Schema of each command report, exported by
+|                              scripts/export_schemas.py and checked by a test
 |-- changelog.d/               towncrier entry files, one per change
 |-- .github/workflows/         CI, changelog entry check, docs
 |-- .claude/                   agents, commands, docs-conventions skill

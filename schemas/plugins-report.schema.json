@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Entry": {
+      "description": "One entry of a plugin manifest.",
+      "properties": {
+        "group": {
+          "description": "The group of the manifest the entry is listed under.",
+          "enum": [
+            "devices",
+            "presenters",
+            "views",
+            "stacks",
+            "providers",
+            "services",
+            "hooks"
+          ],
+          "title": "Group",
+          "type": "string"
+        },
+        "plugin_id": {
+          "description": "The id a session file gives as `plugin_id`.",
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "class": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The class the entry names, as `module:ClassName`; absent for a service.",
+          "title": "Class"
+        },
+        "module": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The module a service is run from; absent for every other group.",
+          "title": "Module"
+        }
+      },
+      "required": [
+        "group",
+        "plugin_id"
+      ],
+      "title": "Entry",
+      "type": "object"
+    },
+    "Plugin": {
+      "description": "An installed plugin whose manifest loaded.",
+      "properties": {
+        "plugin_name": {
+          "description": "The name a session file gives as `plugin_name`.",
+          "title": "Plugin Name",
+          "type": "string"
+        },
+        "distribution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The distribution that installs the plugin; absent when it is unknown.",
+          "title": "Distribution"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The version of that distribution.",
+          "title": "Version"
+        },
+        "entries": {
+          "description": "What the manifest lists, by group and then by id.",
+          "items": {
+            "$ref": "#/$defs/Entry"
+          },
+          "title": "Entries",
+          "type": "array"
+        }
+      },
+      "required": [
+        "plugin_name",
+        "entries"
+      ],
+      "title": "Plugin",
+      "type": "object"
+    },
+    "Problem": {
+      "description": "Something a command found wrong.",
+      "properties": {
+        "kind": {
+          "const": "manifest",
+          "description": "What the problem is about: `manifest`, a plugin manifest that was skipped.",
+          "title": "Kind",
+          "type": "string"
+        },
+        "where": {
+          "description": "What it was found in: for a manifest, the name of the plugin.",
+          "title": "Where",
+          "type": "string"
+        },
+        "message": {
+          "description": "What is wrong, as `redsun` logs it.",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "where",
+        "message"
+      ],
+      "title": "Problem",
+      "type": "object"
+    }
+  },
+  "description": "The installed plugins and what each one offers.",
+  "properties": {
+    "redsun": {
+      "description": "The version of `redsun` that wrote the report.",
+      "title": "Redsun",
+      "type": "string"
+    },
+    "format": {
+      "description": "The value of `FORMAT` when the report was written.",
+      "title": "Format",
+      "type": "integer"
+    },
+    "problems": {
+      "description": "What the command found wrong, empty when nothing is.",
+      "items": {
+        "$ref": "#/$defs/Problem"
+      },
+      "title": "Problems",
+      "type": "array"
+    },
+    "plugins": {
+      "description": "The plugins whose manifest loaded, in the order they were found.",
+      "items": {
+        "$ref": "#/$defs/Plugin"
+      },
+      "title": "Plugins",
+      "type": "array"
+    }
+  },
+  "required": [
+    "redsun",
+    "format",
+    "problems",
+    "plugins"
+  ],
+  "title": "PluginsReport",
+  "type": "object"
+}

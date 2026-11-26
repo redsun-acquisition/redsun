@@ -128,6 +128,8 @@ def mock_plugin() -> Generator[None, None, None]:
     entry.name = "mock-bundle"
     entry.value = "redsun.yaml"
     entry.group = "redsun.plugins"
+    entry.dist = mock.Mock(version="1.2.3")
+    entry.dist.name = "mock-bundle-dist"
 
     @contextlib.contextmanager
     def as_file(path: str | Path) -> Generator[Path, None, None]:
