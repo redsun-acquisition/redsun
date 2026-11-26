@@ -10,7 +10,7 @@ import typer
 import yaml
 
 from redsun import DesktopSession, Session, __version__
-from redsun.errors import BuildError, ConfigurationError, HookError, PluginError
+from redsun.errors import BuildError, HookError
 
 from ._config import frontends
 from ._reports import GROUPS, plugins_report
@@ -185,15 +185,6 @@ def run(
             )
             raise typer.Exit(1)
         session.run()
-    except (
-        BuildError,
-        ConfigurationError,
-        HookError,
-        ImportError,
-        OSError,
-        PluginError,
-        TypeError,
-        ValueError,
-    ) as e:
+    except (BuildError, HookError, ImportError, OSError, ValueError) as e:
         typer.echo(f"The session could not start. {e}", err=True)
         raise typer.Exit(1) from e
