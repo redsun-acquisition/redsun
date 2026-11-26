@@ -17,6 +17,21 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.18.3](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.3) - 26-11-2026
+
+### Added
+
+- `redsun.device.sharedbox.BoxDeviceConnector` puts the `description` a FastCS attribute is served with into its signal's data key, as `description`, so it reaches `describe()`, `describe_configuration()` and the run documents. ([#302](https://github.com/redsun-acquisition/redsun/pull/302))
+- `redsun.device.sharedbox.BoxDeviceConnector` fills a declared `DeviceMap` with one signal per attribute of its sub-controller, keyed by the attribute's name, also with `declared_only=True`. ([#332](https://github.com/redsun-acquisition/redsun/pull/332))
+- `redsun.device.sharedbox.AllServed`, a device that `redsun.device.sharedbox.BoxDeviceConnector` fills with everything served below it, even under `declared_only=True`: ([#332](https://github.com/redsun-acquisition/redsun/pull/332))
+
+  ```python
+  class Flyer(Device):
+      exposure: SignalRW[float]
+      detector: AllServed
+  ```
+- `redsun.services.sharedbox.LabelledAttrR`, `LabelledAttrRW` and `LabelledAttrW`, `fastcs` attributes with a `label`, which `redsun.services.sharedbox.BoxTransport` serves and `redsun.device.sharedbox.BoxDeviceConnector` puts into the signal's data key, as `label`. ([#332](https://github.com/redsun-acquisition/redsun/pull/332))
+
 ## [0.18.2](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.2) - 23-11-2026
 
 ### Fixed
