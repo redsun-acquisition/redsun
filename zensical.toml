@@ -154,6 +154,7 @@ nav = [
                 "explanation/decisions/0040-a-view-has-a-title-apart-from-its-name.md",
                 "explanation/decisions/0041-a-view-can-sit-in-the-status-bar.md",
                 "explanation/decisions/0042-presenters-publish-a-remote-api.md",
+                "explanation/decisions/0043-who-owns-a-format-decides-how-its-models-are-written.md",
         ]},
     ]},
     { "Reference" = [

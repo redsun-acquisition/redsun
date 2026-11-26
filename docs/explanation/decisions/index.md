@@ -58,3 +58,4 @@ renamed name.
 - [40. A view has a title apart from its name](0040-a-view-has-a-title-apart-from-its-name.md)
 - [41. A view can sit in the status bar](0041-a-view-can-sit-in-the-status-bar.md)
 - [42. Presenters publish a remote API](0042-presenters-publish-a-remote-api.md)
+- [43. Who owns a format decides how its models are written](0043-who-owns-a-format-decides-how-its-models-are-written.md)
