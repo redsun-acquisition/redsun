@@ -11,7 +11,7 @@ from importlib.resources import as_file, files
 from typing import TYPE_CHECKING, Annotated, Final
 
 import yaml
-from pydantic import AfterValidator, BaseModel, ValidationError
+from pydantic import AfterValidator, BaseModel, ValidationError, WithJsonSchema
 
 from redsun.services import STARTUP_TIMEOUT, STOP_TIMEOUT
 
@@ -26,18 +26,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger("redsun")
 
 ENTRY_POINT_GROUP: Final = "redsun.plugins"
+CLASS_PATH: Final = r"[A-Za-z_][\w.]*:[A-Za-z_]\w*"
+"""A class written as `module:ClassName`, as a regular expression."""
 OWN_PLUGIN: Final = "redsun"
 """The plugin holding what `redsun` itself ships, short hook names included."""
 
 
 def class_path(value: str) -> str:
     """Refuse text that does not name a class as `module:ClassName`."""
-    if not re.fullmatch(r"[A-Za-z_][\w.]*:[A-Za-z_]\w*", value):
+    if not re.fullmatch(CLASS_PATH, value):
         raise ValueError(f"{value!r} is not a class path; expected 'module:ClassName'")
     return value
 
 
-ClassPath = Annotated[str, AfterValidator(class_path)]
+ClassPath = Annotated[
+    str,
+    AfterValidator(class_path),
+    WithJsonSchema({"type": "string", "pattern": f"^{CLASS_PATH}$"}),
+]
 """A class named as `module:ClassName`, imported only when a session uses it."""
 
 

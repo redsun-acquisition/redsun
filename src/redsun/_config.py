@@ -13,6 +13,7 @@ from typing import (
     Annotated,
     Any,
     Final,
+    Literal,
     TypeAlias,
     TypeGuard,
     cast,
@@ -381,7 +382,19 @@ def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> Sess
         ) from None
 
 
-class ComponentEntry(BaseModel, extra="allow", use_attribute_docstrings=True):
+class ComponentEntry(
+    BaseModel,
+    extra="allow",
+    use_attribute_docstrings=True,
+    # what `pair_plugin_keys` refuses, which the generated schema cannot say
+    json_schema_extra={
+        "dependentRequired": {
+            "plugin_name": ["plugin_id"],
+            "plugin_id": ["plugin_name"],
+        },
+        "patternProperties": {"^plugin_(?!(name|id)$)": False},
+    },
+):
     """A component's entry: the plugin it comes from, and its constructor keywords.
 
     Every key besides the plugin keys is a keyword for the component's
@@ -430,7 +443,14 @@ class DeviceEntry(ComponentEntry):
     """Whether the build connects the device."""
 
 
-class ViewEntry(ComponentEntry):
+class PresenterEntry(ComponentEntry):
+    """A presenter's entry, with the key the session keeps from its constructor."""
+
+    workers: int | None = Field(default=None, ge=1, strict=True)
+    """How many worker processes the component's `ProcessExecutor` gets."""
+
+
+class ViewEntry(PresenterEntry):
     """A view's entry, with the keys the session keeps from its constructor."""
 
     placement: str | dict[str, str] | None = None
@@ -637,7 +657,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     devices: dict[str, DeviceEntry] = {}
     """Devices by name."""
 
-    presenters: dict[str, ComponentEntry] = {}
+    presenters: dict[str, PresenterEntry] = {}
     """Presenters by name."""
 
     views: dict[str, ViewEntry] = {}
@@ -674,10 +694,10 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     providers: dict[str, ComponentEntry] = {}
     """Classes registering values the session hands to components, by name."""
 
-    actions: Any = None
+    actions: list[dict[str, Any]] | None = None
     """Menu actions the Qt session registers, checked when it reads them."""
 
-    color_scheme: Any = None
+    color_scheme: Literal["system", "light", "dark"] | None = None
     """The Qt session's color scheme, checked when it reads it."""
 
     @model_validator(mode="wrap")
