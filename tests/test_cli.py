@@ -21,7 +21,7 @@ from redsun._cli import app, styles
 from redsun.errors import BuildError, HookError
 from redsun.examples import ExampleApp, example_config
 from redsun.examples._devices import Axis, Plans
-from redsun.qt import QtHook
+from redsun.qt import QtHook, QtSession
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
@@ -53,6 +53,8 @@ app([])
 WIDE = {"COLUMNS": "200"}
 
 MOCK_BUNDLE = Path(__file__).parent / "launchable" / "mock_bundle"
+
+CONFIGS = Path(__file__).parent / "configs"
 
 runner = CliRunner()
 
@@ -305,3 +307,77 @@ def test_a_session_that_cannot_start_is_reported_without_a_traceback(
 
     assert done.exit_code == 1
     assert str(error) in done.output
+
+
+@pytest.mark.qt
+def test_run_starts_the_session_the_files_describe(
+    mock_plugin: None,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Merge the files in order, add `--mock` and `--strict`, and start the Qt session they name."""
+    layer = tmp_path / "layer.yaml"
+    layer.write_text(
+        "devices:\n  stage:\n    plugin_name: mock-bundle\n"
+        "    plugin_id: mock-stage\n    axis: Y\n"
+    )
+    started: list[dict[str, object]] = []
+
+    def record(session: QtSession) -> None:
+        started.append(session.serialize())
+        # as the real `run` ends: with the exit code of the event loop
+        raise SystemExit(0)
+
+    monkeypatch.setattr(QtSession, "run", record)
+
+    done = runner.invoke(
+        app,
+        ["run", str(CONFIGS / "mock_session.yaml"), str(layer), "--mock", "--strict"],
+    )
+
+    assert done.exit_code == 0, done.output
+    [config] = started
+    assert config["devices"]["stage"]["axis"] == "Y"  # type: ignore[index]
+    assert config["mock"] is True
+    assert config["strict"] is True
+
+
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [
+        (None, "could not start. [Errno 2] No such file or directory"),
+        ("session: s\nfrontend: nowhere\n", "frontend 'nowhere'"),
+        ("session: s\n", "names no frontend, so it has nothing to show. Name one"),
+    ],
+    ids=["missing file", "unknown frontend", "no frontend"],
+)
+def test_run_refuses_a_session_it_cannot_start(
+    content: str | None, reason: str, tmp_path: Path
+) -> None:
+    """Exit with 1 and say why for a missing file, an unknown frontend and a file naming no frontend."""
+    path = tmp_path / "session.yaml"
+    if content is not None:
+        path.write_text(content)
+
+    done = runner.invoke(app, ["run", str(path)], env=WIDE)
+
+    assert done.exit_code == 1
+    assert reason in done.output
+
+
+@pytest.mark.qt
+def test_run_reports_a_session_that_fails_to_build(
+    mock_plugin: None, qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Exit with 1 and print the reason when the session raises while it starts."""
+
+    def refuse(session: QtSession) -> None:
+        raise BuildError("a strict session skipped a component")
+
+    monkeypatch.setattr(QtSession, "run", refuse)
+
+    done = runner.invoke(app, ["run", str(CONFIGS / "mock_session.yaml")])
+
+    assert done.exit_code == 1
+    assert "a strict session skipped a component" in done.output
