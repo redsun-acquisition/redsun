@@ -25,8 +25,6 @@ from redsun.qt import QtHook, QtSession
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
@@ -57,28 +55,6 @@ MOCK_BUNDLE = Path(__file__).parent / "launchable" / "mock_bundle"
 CONFIGS = Path(__file__).parent / "configs"
 
 runner = CliRunner()
-
-
-@pytest.fixture
-def a_bad_plugin_beside_a_good_one(tmp_path: Path) -> Generator[None, None, None]:
-    """Present `mock_bundle` and a plugin whose manifest is invalid, neither with a distribution."""
-    (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
-    entries = []
-    for name in ("mock-bundle", "bad-bundle"):
-        entry = mock.Mock(spec=EntryPoint)
-        entry.name = name
-        entry.value = "redsun.yaml"
-        entry.dist = None
-        entries.append(entry)
-
-    def folder(package: str) -> Path:
-        return tmp_path if package == "bad_bundle" else MOCK_BUNDLE
-
-    with (
-        mock.patch("redsun._manifest.entry_points", return_value=entries),
-        mock.patch("redsun._manifest.files", side_effect=folder),
-    ):
-        yield
 
 
 @pytest.mark.qt
