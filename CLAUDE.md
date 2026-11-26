@@ -11,7 +11,7 @@ redsun/
 |   |-- __init__.py            what a component author imports: Session, AsDevice, ...
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
-|   |-- _cli.py                the redsun command: --version, --example, --web
+|   |-- _cli.py                the redsun command: --version, example, example --web
 |   |-- examples/              ExampleApp, every built-in component over simulated devices:
 |   |                          _core.py the components, _app.py the Qt session,
 |   |                          _web.py the web session (the fastapi extra)

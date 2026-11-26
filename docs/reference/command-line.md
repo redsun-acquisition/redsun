@@ -8,18 +8,18 @@ Installing `redsun` installs a command of the same name. `python -m redsun`
 runs it too, for an environment whose scripts are not on the path.
 
 ```bash
-redsun [--version] [--example [STYLE]] [--web]
+redsun [--version] [COMMAND]
 ```
 
-| Option | What it does |
+| Option or command | What it does |
 | --- | --- |
 | `--version` | prints the installed version |
-| `--example` | opens the example session in your platform's look |
-| `--example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
-| `--example --web` | serves the example session over HTTP on `127.0.0.1:8000` instead of opening a window, until Ctrl+C |
-| none | prints the help |
+| `example` | opens the example session in your platform's look |
+| `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
+| `example --web` | serves the example session over HTTP on `127.0.0.1:8000` instead of opening a window, until Ctrl+C |
+| none | prints the help, which lists the commands |
 
-`--web` is refused without `--example`, and together with a style.
+Each command has a help of its own, such as `redsun example --help`.
 
 ## The example session
 
@@ -64,4 +64,4 @@ port is in use.
 | --- | --- |
 | 0 | the help or the version was printed, the example's window was closed, or the served example was stopped with Ctrl+C |
 | 1 | the example could not start, or the extra it needs is not installed |
-| 2 | an option or a style the command does not know, `--web` without `--example`, or `--web` with a style |
+| 2 | an option or a style the command does not know, or `example --web` with a style |

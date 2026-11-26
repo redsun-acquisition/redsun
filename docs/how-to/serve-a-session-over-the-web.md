@@ -160,7 +160,7 @@ The example session that `redsun` ships serves its positioner and lights the
 same way:
 
 ```bash
-redsun --example --web
+redsun example --web
 ```
 
 Its devices are simulated, so nothing outside the process moves.
