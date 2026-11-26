@@ -185,6 +185,8 @@ def run(
             )
             raise typer.Exit(1)
         session.run()
+    # a bad file or a failed build raises one of these; anything else is a bug,
+    # and catching `Exception` would print it as one line and hide its traceback
     except (BuildError, HookError, ImportError, OSError, ValueError) as e:
         typer.echo(f"The session could not start. {e}", err=True)
         raise typer.Exit(1) from e
