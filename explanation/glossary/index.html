@@ -5561,6 +5561,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#report" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Report
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#run" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7678,6 +7689,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#report" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Report
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#run" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -8359,6 +8381,11 @@ together with the <a href="#setpoint">setpoint</a>, in the <code>movable_logic</
 <p>A release is something a <a href="#build-step">build step</a> registers so that
 <code>shutdown</code> can undo it later, such as stopping a service. Releases run in
 reverse order, so the last one registered runs first.</p>
+<h3 id="report">Report<a class="headerlink" href="#report" title="Permanent link">&para;</a></h3>
+<p>A report is what a subcommand of the <code>redsun</code> command prints when you give it
+<code>--json</code>: one <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> object written for a program to read, where the same
+subcommand without <code>--json</code> prints text for you. Every report starts with the same keys, which
+<a href="../../reference/command-line/#reports">The <code>redsun</code> command</a> lists.</p>
 <h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
 <p>A run is one recording made by a <a href="#plan">plan</a>: everything between a start
 <a href="#document">document</a> and a stop document, under an identifier of its own. A

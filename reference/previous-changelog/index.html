@@ -8419,7 +8419,7 @@ Dates are written <code>DD-MM-YYYY</code>.</p>
 </span></code></pre></div>
 <ul>
 <li>
-<p>JSON schemas of a session file and a plugin manifest, published with the
+<p><abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> schemas of a session file and a plugin manifest, published with the
   documentation under <code>reference/schemas/</code>. A first line
   <code># yaml-language-server: $schema=&lt;url&gt;</code> has an editor check a file against
   one.</p>
@@ -8533,7 +8533,7 @@ Dates are written <code>DD-MM-YYYY</code>.</p>
   something. <code>SessionFileHandler</code> takes a <code>service</code> and a <code>run</code>, and
   <code>SessionFileHandler.run</code> names the run a file belongs to; <code>add_handler</code>,
   <code>remove_handler</code> and <code>session_log</code> take a <code>service</code>.</li>
-<li>A line of a service's output that is a JSON log record, written by a stdlib
+<li>A line of a service's output that is a <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> log record, written by a stdlib
   formatter or by <code>loguru</code> with <code>serialize=True</code>, is logged with its own level,
   time and traceback under <code>redsun.service.&lt;service&gt;.&lt;logger&gt;</code>; so is a line
   <code>pvxs</code> writes, <code>&lt;time&gt; &lt;LEVEL&gt; &lt;logger&gt; &lt;message&gt;</code>, with its level, time

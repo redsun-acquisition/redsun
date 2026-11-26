@@ -5180,6 +5180,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-installed-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The installed plugins
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reports
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#exit-codes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6271,6 +6293,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-installed-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The installed plugins
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reports
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#exit-codes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6377,14 +6421,16 @@
 
 
 <h1 id="the-redsun-command">The <code>redsun</code> command<a class="headerlink" href="#the-redsun-command" title="Permanent link">&para;</a></h1>
-<p>Installing <code>redsun</code> installs a command of the same name. <code>python -m redsun</code>
-runs it too, for an environment whose scripts are not on the path.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>redsun<span class="w"> </span><span class="o">[</span>--version<span class="o">]</span><span class="w"> </span><span class="o">[</span>COMMAND<span class="o">]</span>
+<p>When you install <code>redsun</code>, you also get the <code>redsun</code> command, a program you
+run from a terminal. You tell it what to do with a subcommand, such as
+<code>example</code>. <code>python -m redsun</code> runs the same command, for an environment whose
+scripts are not on the path.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>redsun<span class="w"> </span><span class="o">[</span>--version<span class="o">]</span><span class="w"> </span><span class="o">[</span>SUBCOMMAND<span class="o">]</span>
 </span></code></pre></div>
 <table>
 <thead>
 <tr>
-<th>Option or command</th>
+<th>Option or subcommand</th>
 <th>What it does</th>
 </tr>
 </thead>
@@ -6402,12 +6448,20 @@ runs it too, for an environment whose scripts are not on the path.</p>
 <td>opens the example session in the style named: <code>napari</code> or <code>qlementine</code></td>
 </tr>
 <tr>
+<td><code>plugins</code></td>
+<td>lists the installed <a href="../../explanation/glossary/#plugin">plugins</a> and what each one offers</td>
+</tr>
+<tr>
+<td><code>plugins --json</code></td>
+<td>prints the same list as a <a href="#reports">report</a></td>
+</tr>
+<tr>
 <td>none</td>
-<td>prints the help, which lists the commands</td>
+<td>prints the help, which lists the subcommands</td>
 </tr>
 </tbody>
 </table>
-<p>Each command has a help of its own, such as <code>redsun example --help</code>.</p>
+<p>Each subcommand has a help of its own, such as <code>redsun example --help</code>.</p>
 <h2 id="the-example-session">The example session<a class="headerlink" href="#the-example-session" title="Permanent link">&para;</a></h2>
 <p>The example is a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;QtSession&lt;/span&gt;" href="../api/qt/#redsun.qt.QtSession"><code>QtSession</code></a> holding every component
 <code>redsun</code> ships: the acquisition, positioner, lights and log views, with
@@ -6543,7 +6597,91 @@ writes it.</p>
 
     </div>
 
-</div><h2 id="exit-codes">Exit codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
+</div><h2 id="the-installed-plugins">The installed plugins<a class="headerlink" href="#the-installed-plugins" title="Permanent link">&para;</a></h2>
+<p><code>redsun plugins</code> shows you which plugins this environment has, and what you
+can name from each in a <a href="../../explanation/glossary/#session-file">session file</a>.
+It prints one plugin at a time: its name, the package that installs it with
+that package's version, and what its
+<a href="../../explanation/glossary/#manifest">manifest</a> lists. The manifest sorts
+what a plugin offers into groups, such as <code>devices</code> and <code>views</code>, and gives
+each one a short name, its id:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mylab (mylab-devices 1.2.0)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  devices: motor
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  presenters: controller
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  views: motor-view
+</span></code></pre></div>
+<p>Here <code>mylab</code> is what you write as <code>plugin_name</code>, and each id is what you
+write as <code>plugin_id</code>. The package is named because its name can differ from
+the plugin's: <code>mylab-devices</code> is what you install, and <code>mylab</code> is what a
+session file names.</p>
+<div class="admonition warning">
+<p class="admonition-title">A plugin that was left out doesn't change the exit code</p>
+<p>When a plugin's manifest can't be read or is invalid, <code>redsun</code> leaves
+the whole plugin out, and the command still exits with 0. It lists that
+plugin last, under <code>Skipped:</code>, with the reason. In a script, read
+<code>problems</code> in the <a href="#reports">report</a> rather than the exit code.</p>
+</div>
+<h2 id="reports">Reports<a class="headerlink" href="#reports" title="Permanent link">&para;</a></h2>
+<p>A <a href="../../explanation/glossary/#report">report</a> is what a subcommand prints
+when you give it <code>--json</code>, so that a program can read the answer where you
+would read the text. Every report is one <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> object, and it starts with the same
+three keys:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>redsun</code></td>
+<td>the version of <code>redsun</code> that wrote the report</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>the format of the report, <code>1</code> today</td>
+</tr>
+<tr>
+<td><code>problems</code></td>
+<td>what the command found wrong, each with a <code>kind</code>, <code>where</code> it was found and a <code>message</code>; empty when nothing is</td>
+</tr>
+</tbody>
+</table>
+<p><code>format</code> is a number that tells your program whether it can still read the
+report. The number gets bigger when a key is removed or changes meaning.
+Adding a key leaves the number as it is, so write your program to skip the
+keys it doesn't know.</p>
+<p>The report of <code>redsun plugins --json</code> adds <code>plugins</code>, one object for each
+plugin whose manifest was read without a problem:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"redsun"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.19.0"</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"problems"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">"plugin_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">"distribution"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab-devices"</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.0"</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="nt">"entries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devices"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"motor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.devices:MyMotor"</span><span class="p">},</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"services"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stage-ioc"</span><span class="p">,</span><span class="w"> </span><span class="nt">"module"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.iocs.stage"</span><span class="p">}</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="p">]</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><code>distribution</code> is the package that installs the plugin, and <code>version</code> is that
+package's version. Each entry names its class as <code>class</code>, written
+<code>module:ClassName</code>. A service has no class, so its entry has <code>module</code>
+instead, the module the service is run from.</p>
+<p>A plugin that was left out isn't in <code>plugins</code>. It's one of the <code>problems</code>,
+with <code>manifest</code> as its <code>kind</code> and the plugin's name as <code>where</code>.</p>
+<p>Each report has a <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> Schema, a file that says exactly which keys the report
+can hold. The one for this report is published as
+<a href="../schemas/plugins-report.schema.json"><code>plugins-report.schema.json</code></a>, written
+in <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> Schema 2020-12.</p>
+<h2 id="exit-codes">Exit codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -6554,7 +6692,7 @@ writes it.</p>
 <tbody>
 <tr>
 <td>0</td>
-<td>the help or the version was printed, or the example's window was closed</td>
+<td>the help, the version or the plugins were printed, or the example's window was closed</td>
 </tr>
 <tr>
 <td>1</td>

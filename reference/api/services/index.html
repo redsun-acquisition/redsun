@@ -6854,7 +6854,7 @@ identity, readiness, logging, and when to stop.</p>
 <p>A container makes one per declared service. A service with a <em>module</em> is
 launched as <code>python -m &lt;module&gt; &lt;args&gt;</code>; one without is attached to, runs
 elsewhere, and <code>start</code> and <code>stop</code> do nothing. Each output line is logged
-under <code>redsun.service.&lt;name&gt;</code>: as the record it describes if it is a JSON
+under <code>redsun.service.&lt;name&gt;</code>: as the record it describes if it is a <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr>
 log record or a <code>pvxs</code> log line, at <code>DEBUG</code> otherwise.</p>
 
 
@@ -7554,7 +7554,7 @@ the interrupt itself calls <code>ready</code> inside the block that handles it.<
 
         <p>Log at the session's level, in lines the session rebuilds into records.</p>
 <p>Records of <code>logging</code> and, when it is installed, of <code>loguru</code> go to
-standard output as JSON, each keeping its level, time, logger name and
+standard output as <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr>, each keeping its level, time, logger name and
 traceback. The level is the one the session records at, <code>INFO</code> when no
 session launched the process. The handlers already on the root logger, the
 <code>redsun</code> logger and <code>loguru</code> are replaced, so none of their records is

@@ -7101,9 +7101,9 @@ file. The handler's <code>files</code> property lists its files with the oldest 
 first.</p>
 <h2 id="log-from-a-service">Log from a service<a class="headerlink" href="#log-from-a-service" title="Permanent link">&para;</a></h2>
 <p>The session logs a service's output under <code>redsun.service.&lt;service&gt;</code>. A line
-that is a JSON log record keeps its level, time and traceback, under
+that is a <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> log record keeps its level, time and traceback, under
 <code>redsun.service.&lt;service&gt;.&lt;its logger&gt;</code>, and any other line, such as a <code>print</code>,
-is logged at <code>DEBUG</code>. The session reads two JSON layouts.</p>
+is logged at <code>DEBUG</code>. The session reads two <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> layouts.</p>
 <p>A Python service calls
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;configure_logging&lt;/span&gt;" href="../../reference/api/services/#redsun.services.configure_logging"><code>configure_logging</code></a> once, at startup:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.services</span><span class="w"> </span><span class="kn">import</span> <span class="n">configure_logging</span>
@@ -7116,7 +7116,7 @@ the session records at. So do its <code>loguru</code> records when <code>loguru<
 <code>logging</code>: <code>fastcs</code> is one, so a <code>fastcs</code> service's own messages arrive too.
 Each record keeps its level, time, logger name and traceback. If you start the
 service outside a session, it logs at <code>INFO</code>.</p>
-<p>A service not written in Python writes one JSON object per line, in either of
+<p>A service not written in Python writes one <abbr title="JavaScript Object Notation. A plain-text format for data that programs exchange, which the reports of the redsun command are written in.">JSON</abbr> object per line, in either of
 two layouts: the layout of <code>loguru</code> with <code>serialize=True</code>, or an object with the
 fields <code>name</code>, <code>levelno</code>, <code>created</code>, <code>msg</code> and <code>exc_text</code> of a
 <code>logging.LogRecord</code>.</p>

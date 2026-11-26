@@ -2649,10 +2649,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-example-is-a-command" class="md-nav__link">
+  <a href="#the-example-is-a-subcommand" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The example is a command
+        The example is a subcommand
       </span>
     </span>
   </a>
@@ -6166,10 +6166,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-example-is-a-command" class="md-nav__link">
+  <a href="#the-example-is-a-subcommand" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        The example is a command
+        The example is a subcommand
       </span>
     </span>
   </a>
@@ -6308,14 +6308,16 @@
 
 
 <h1 id="how-to-migrate-from-018">How to migrate from 0.18<a class="headerlink" href="#how-to-migrate-from-018" title="Permanent link">&para;</a></h1>
-<p>Release 0.19 makes the example session a command of <code>redsun</code>, where 0.18
-had an option for it. This page gives the change your scripts or your notes
-may need. The <a href="../../reference/changelog/">changelog</a> lists everything else
-the release changed.</p>
-<h2 id="the-example-is-a-command">The example is a command<a class="headerlink" href="#the-example-is-a-command" title="Permanent link">&para;</a></h2>
-<p>The <a href="../../reference/command-line/"><code>redsun</code> command</a> now takes commands, and
-opening the example session is the first of them. The option <code>--example</code> is
-gone, so write <code>example</code> in its place, with the style after it as before:</p>
+<p>Release 0.19 changes how you open the example session from a terminal. This
+page gives the change your scripts or your notes may need. The
+<a href="../../reference/changelog/">changelog</a> lists everything else the release
+changed.</p>
+<h2 id="the-example-is-a-subcommand">The example is a subcommand<a class="headerlink" href="#the-example-is-a-subcommand" title="Permanent link">&para;</a></h2>
+<p>The <a href="../../reference/command-line/"><code>redsun</code> command</a> now takes a subcommand
+that says what it should do, and opening the example session is the first of
+them. The option <code>--example</code> is gone, so write
+<code>example</code> in its place, with the <a href="../choose-a-style/">style</a> after it as
+before:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># 0.18</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>redsun<span class="w"> </span>--example
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>redsun<span class="w"> </span>--example<span class="w"> </span>napari
@@ -6325,7 +6327,7 @@ gone, so write <code>example</code> in its place, with the style after it as bef
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>redsun<span class="w"> </span>example<span class="w"> </span>napari
 </span></code></pre></div>
 <p><code>redsun --version</code> is unchanged, and <code>redsun</code> with nothing after it still
-prints the help, which now lists the commands.</p>
+prints the help, which now lists the subcommands.</p>
 
 
 
