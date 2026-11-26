@@ -1,6 +1,4 @@
 
-
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -18,7 +16,6 @@
       
       
       
-      
         <link rel="prev" href="../compute/">
       
       
@@ -29,7 +26,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.1.3">
+      <meta name="generator" content="zensical-0.1.2">
     
     
       
@@ -40,13 +37,12 @@
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.e2cf241e.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.ebb7f775.min.css">
       
         
           
         
         <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.b60ce83d.min.css">
-      
       
       
 
@@ -2502,8 +2498,6 @@
       
         
       
-        
-      
     
     
     
@@ -2547,35 +2541,6 @@
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../how-to/migrate-from-0.18/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right-left" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to migrate from 0.18
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -3044,7 +3009,7 @@
         
   
   
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 9.5a3 2.5 0 0 1 6 0c0 2-2 2-3 3.5M12 17h.01"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
   
   <span class="md-ellipsis">
     
@@ -3226,7 +3191,7 @@
         
   
   
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-route" viewBox="0 0 24 24"><path d="M9 5h8.5a1 1 0 0 1 0 7h-11a1 1 0 0 0 0 7H15"/><circle cx="18" cy="19" r="3"/><circle cx="6" cy="5" r="3"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
   
   <span class="md-ellipsis">
     
@@ -5402,6 +5367,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.device.sharedbox.AllServed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AllServed
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.device.sharedbox.BoxDeviceConnector" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6428,6 +6404,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#redsun.device.sharedbox.AllServed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AllServed
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redsun.device.sharedbox.BoxDeviceConnector" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6885,6 +6872,44 @@
 
 
 
+<h2 id="redsun.device.sharedbox.AllServed" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">AllServed</span>
+
+
+<a href="#redsun.device.sharedbox.AllServed" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="&lt;code&gt;ophyd_async.core.Device&lt;/code&gt;" href="https://blueskyproject.io/ophyd-async/main/_api/ophyd_async/ophyd_async.core.html#ophyd_async.core.Device">Device</a></code></p>
+
+
+
+        <p>A device that takes everything its service serves below it.</p>
+<p>A <code>BoxDeviceConnector</code> fills it with every attribute, command and
+child of its part of the service, and its children the same way, even
+when the device above it connects with <code>declared_only=True</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="redsun.device.sharedbox.AllServed--__span-0-1"><a id="redsun.device.sharedbox.AllServed--__codelineno-0-1" name="redsun.device.sharedbox.AllServed--__codelineno-0-1" href="#redsun.device.sharedbox.AllServed--__codelineno-0-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Flyer</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+</span><span id="redsun.device.sharedbox.AllServed--__span-0-2"><a id="redsun.device.sharedbox.AllServed--__codelineno-0-2" name="redsun.device.sharedbox.AllServed--__codelineno-0-2" href="#redsun.device.sharedbox.AllServed--__codelineno-0-2"></a>    <span class="n">exposure</span><span class="p">:</span> <span class="n">SignalRW</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+</span><span id="redsun.device.sharedbox.AllServed--__span-0-3"><a id="redsun.device.sharedbox.AllServed--__codelineno-0-3" name="redsun.device.sharedbox.AllServed--__codelineno-0-3" href="#redsun.device.sharedbox.AllServed--__codelineno-0-3"></a>    <span class="n">detector</span><span class="p">:</span> <span class="n">AllServed</span>
+</span></code></pre></div>
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
 <h2 id="redsun.device.sharedbox.BoxDeviceConnector" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">BoxDeviceConnector</span>
 
@@ -6905,6 +6930,10 @@
 <p>The top device attaches the index and the boxes of the service and fills
 itself and its children from what the index describes. A child gets its
 part of the description from its parent.</p>
+<p>A declared <code>DeviceMap</code> takes one entry per attribute of its part of the
+service, keyed by the attribute's name; an attribute whose signal type
+the map does not hold fails <code>connect</code>, naming it. A map in mock mode
+stays empty.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -6929,8 +6958,10 @@ part of the description from its parent.</p>
               <div class="doc-md-description">
                 <p>Fill only the signals, commands and children the device declares,
 and skip the rest of what the service serves. Declared children
-follow the same rule, and a declared <code>DeviceVector</code> takes every
-entry the service serves.</p>
+follow the same rule, except that a declared <code>DeviceVector</code> takes
+every entry the service serves and a declared
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AllServed&lt;/span&gt;" href="./#redsun.device.sharedbox.AllServed"><code>AllServed</code></a> takes everything
+served below it.</p>
               </div>
             </td>
             <td>
@@ -7269,8 +7300,9 @@ not one the field has.</p>
     <div class="doc doc-contents ">
 
         <p>Return the data key, with the units, precision, limits and choices served.</p>
-<p>A description the service served for the attribute is added as
-<code>description</code>; an attribute served without one gets no such key.</p>
+<p>A description and a label the service served for the attribute are
+added as <code>description</code> and <code>label</code>; an attribute served without one
+gets no such key.</p>
 
 
     </div>
@@ -7842,8 +7874,7 @@ character other than a letter, a digit, <code>_</code> or <code>-</code>.</p>
       <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":"../../../redirect.json","search":"../../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.9e76c64c.min.js"></script>
-      
+      <script src="../../../assets/javascripts/bundle.3cb411a8.min.js"></script>
       
         <script src="../../../javascripts/install-table.js"></script>
       
