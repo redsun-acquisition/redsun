@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 
 from redsun import __version__
 from redsun._cli import app, styles
+from redsun._reports import CheckReport
 from redsun.errors import BuildError, HookError
 from redsun.examples import ExampleApp, example_config
 from redsun.examples._devices import Axis, Plans
@@ -357,3 +358,54 @@ def test_run_reports_a_session_that_fails_to_build(
 
     assert done.exit_code == 1
     assert "a strict session skipped a component" in done.output
+
+
+def test_check_prints_the_report_as_json(mock_plugin: None, tmp_path: Path) -> None:
+    """Print the check's report as JSON, and exit with 1 when a record failed."""
+    session = tmp_path / "session.yaml"
+    session.write_text(
+        "session: s\npresenters:\n  ghost:\n    plugin_name: nope\n    plugin_id: x\n"
+    )
+
+    done = runner.invoke(app, ["check", str(session), "--json"])
+
+    assert done.exit_code == 1
+    report = CheckReport.model_validate_json(done.output)
+    assert [(c.name, c.status) for c in report.components] == [("ghost", "failed")]
+
+
+def test_check_exits_with_0_when_only_undecided(
+    mock_plugin: None, tmp_path: Path
+) -> None:
+    """Exit with 0 when nothing failed, listing what could not be decided."""
+    session = tmp_path / "session.yaml"
+    session.write_text(
+        "session: s\npresenters:\n  m:\n    plugin_name: mock-bundle\n"
+        "    plugin_id: mock-motor\nviews:\n  v:\n    plugin_name: mock-bundle\n"
+        "    plugin_id: mock-motor-view\nwiring:\n  m.sig_unknown: v.refresh\n"
+    )
+
+    done = runner.invoke(app, ["check", str(session)])
+
+    assert done.exit_code == 0
+    assert "undecided  wiring     m.sig_unknown -> v.refresh" in done.output
+    assert "not checked:" in done.output
+
+
+@pytest.mark.qt
+def test_run_reports_a_type_error_from_the_file_without_a_traceback(
+    mock_plugin: None, qapp: QApplication, tmp_path: Path
+) -> None:
+    """Exit with 1 and the reason when the file declares a stack half twice."""
+    session = tmp_path / "session.yaml"
+    session.write_text(
+        "session: s\nfrontend: qt\npresenters:\n  motor_view:\n"
+        "    plugin_name: mock-bundle\n    plugin_id: mock-late\n"
+        "stacks:\n  motor:\n    plugin_name: mock-bundle\n    plugin_id: mock-motor\n"
+    )
+
+    done = runner.invoke(app, ["run", str(session)])
+
+    assert done.exit_code == 1
+    assert "already" in done.output
+    assert "Traceback" not in done.output
