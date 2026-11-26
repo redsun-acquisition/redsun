@@ -24,15 +24,32 @@ Group = Literal[
 GROUPS: Final = get_args(Group)
 """The groups, in the order a report lists them."""
 
+Status = Literal["passed", "failed", "undecided"]
+"""The outcome of a check: certain to work, certain to fail, or not knowable without a build."""
+
+SKIPPED: Final = (
+    "the values given to constructors",
+    "what setup does",
+    "members of a SignalGroup",
+    "placements a view gives through a property",
+    "services and device connections, which never start",
+)
+"""What a check without a build cannot see, as `CheckReport.skipped` lists it."""
+
 
 class Problem(BaseModel, frozen=True, use_attribute_docstrings=True):
     """Something a command found wrong."""
 
-    kind: Literal["manifest"]
-    """What the problem is about: `manifest`, a plugin manifest that was skipped."""
+    kind: Literal["manifest", "value", "session"]
+    """What the problem is about.
+
+    `manifest` is a plugin manifest that was skipped, `value` a value of a
+    session file that is refused, and `session` a session that cannot be made
+    or read at all.
+    """
 
     where: str
-    """What it was found in: for a manifest, the name of the plugin."""
+    """What it was found in: for a manifest, the name of the plugin; for a value, its key path; for a session, the files."""
 
     message: str
     """What is wrong, as `redsun` logs it."""
@@ -87,6 +104,60 @@ class Report(BaseModel, frozen=True, use_attribute_docstrings=True):
         return self.model_dump_json(by_alias=True, exclude_none=True, indent=2)
 
 
+class Component(BaseModel, frozen=True, use_attribute_docstrings=True):
+    """One declared component, service or hook provider, and what a check found."""
+
+    name: str
+    """The name the session declares it under."""
+
+    group: Group
+    """The section of the session file it belongs to."""
+
+    plugin_name: str | None = None
+    """The plugin its entry names; absent for a class the session declares in code."""
+
+    plugin_id: str | None = None
+    """The id of its entry in that plugin's manifest."""
+
+    class_path: str | None = Field(default=None, alias="class")
+    """Its class, as `module:ClassName`; absent when it could not be found."""
+
+    status: Status
+    """Whether it would be built."""
+
+    reason: str | None = None
+    """Why it failed, or why the check could not decide."""
+
+
+class Lookup(BaseModel, frozen=True, use_attribute_docstrings=True):
+    """One name the session file looks up, and what a check found."""
+
+    section: Literal["layout", "wiring", "pairs", "stacks"]
+    """The section of the session file the name is in."""
+
+    name: str
+    """The name as the section writes it, such as `ctrl.sig_moved -> panel.show`."""
+
+    status: Status
+    """Whether the name would be found."""
+
+    reason: str | None = None
+    """Why it failed, or why the check could not decide."""
+
+
+class CheckReport(Report, frozen=True):
+    """Whether a session file would build, found without building it."""
+
+    components: list[Component]
+    """Each declared component, service and hook provider."""
+
+    lookups: list[Lookup]
+    """Each name in `layout`, `wiring`, `pairs` and the stacks."""
+
+    skipped: list[str]
+    """What the check could not look at."""
+
+
 class PluginsReport(Report, frozen=True):
     """The installed plugins and what each one offers."""
 
@@ -131,7 +202,10 @@ def plugins_report() -> PluginsReport:
 
 def report_schemas() -> dict[str, dict[str, Any]]:
     """Return the JSON Schema of each report, by the name of its file."""
-    reports: dict[str, type[Report]] = {"plugins-report": PluginsReport}
+    reports: dict[str, type[Report]] = {
+        "check-report": CheckReport,
+        "plugins-report": PluginsReport,
+    }
     return {
         name: {
             "$schema": DIALECT,
