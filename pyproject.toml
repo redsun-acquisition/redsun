@@ -265,6 +265,7 @@ module = [
     "docs.examples.box_service",
     "docs.examples.stage_fastcs",
     "redsun.services.sharedbox",
+    "mock_pkg.board_controller",
     "mock_pkg.box_controller",
 ]
 disable_error_code = ["misc", "untyped-decorator"]
