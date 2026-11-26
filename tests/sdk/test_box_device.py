@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 import pytest_asyncio
 from fastcs.control_system import FastCS
+from mock_pkg.board_controller import BoardController
 from mock_pkg.box_controller import (
-    BoardController,
     BoxController,
     IntExposureController,
     NamedController,
@@ -144,6 +144,7 @@ class Spare(Device):
 
 
 class Board(Device):
+    exposure: SignalRW[float]
     lasers: DeviceMap[SignalRW[bool]]
     detector: AllServed
     spare: Spare
@@ -621,13 +622,13 @@ async def test_describe_carries_the_served_description_only_when_given(
 
 
 async def test_describe_carries_the_served_label_only_when_given(
-    detector: MyDetector,
+    board: Board,
 ) -> None:
     """Put the label the service served in the data key, and no key when it served none."""
-    exposure = (await detector.exposure.describe())["det-exposure"]
-    mode = (await detector.mode.describe())["det-mode"]  # type: ignore[attr-defined]
+    exposure = (await board.exposure.describe())["board-exposure"]
+    gain = (await board.spare.gain.describe())["board-spare-gain"]
     assert exposure.get("label") == "Exposure"
-    assert "label" not in mode
+    assert "label" not in gain
 
 
 @pytest.mark.parametrize("declared_only", [False, True])

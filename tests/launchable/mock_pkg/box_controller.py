@@ -8,10 +8,8 @@ import enum
 import numpy as np
 from fastcs.attributes import AttrR, AttrRW, AttrW
 from fastcs.controllers import Controller, ControllerVector
-from fastcs.datatypes import Bool, Enum, Float, Int, String, Table, Waveform
+from fastcs.datatypes import Enum, Float, Int, String, Table, Waveform
 from fastcs.methods import command
-
-from redsun.services.sharedbox import LabelledAttrRW
 
 
 class Mode(enum.Enum):
@@ -39,9 +37,8 @@ class BoxController(Controller):
         self.put_started = asyncio.Event()
         self.put_gate: asyncio.Event | None = None
         self.runs = 0
-        self.exposure = LabelledAttrRW(
+        self.exposure = AttrRW(
             Float(units="ms", min=0.0, prec=2),
-            label="Exposure",
             description="How long each frame collects light.",
         )
         self.label = AttrR(String(length=8), initial_value="start")
@@ -71,44 +68,6 @@ class BoxController(Controller):
     async def run(self) -> None:
         """Count one run."""
         self.runs += 1
-
-
-class Lasers(Controller):
-    """Two switches."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.red = AttrRW(Bool())
-        self.blue = AttrRW(Bool())
-
-
-class Region(Controller):
-    """The region a readout keeps."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.width = AttrRW(Int(), initial_value=8)
-
-
-class Readout(Controller):
-    """A readable and a writable setting, and a region below them."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.gain = AttrRW(Int())
-        self.count = AttrR(Int(), initial_value=3)
-        self.region = Region()
-
-
-class BoardController(Controller):
-    """A controller whose children devices take in different ways."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.exposure = AttrRW(Float())
-        self.lasers = Lasers()
-        self.detector = Readout()
-        self.spare = Readout()
 
 
 class IntExposureController(Controller):
