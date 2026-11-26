@@ -20,6 +20,8 @@ redsun [--version] [SUBCOMMAND]
 | `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
 | `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
 | `plugins --json` | prints the same list as a [report](#reports) |
+| `check FILE...` | checks whether the session the files describe would build, without building it |
+| `check FILE... --json` | prints the same check as a [report](#reports) |
 | `run FILE...` | runs the session the files describe, with the frontend they name |
 | none | prints the help, which lists the subcommands |
 
@@ -80,6 +82,52 @@ session file names.
     the whole plugin out, and the command still exits with 0. It lists that
     plugin last, under `Skipped:`, with the reason. In a script, read
     `problems` in the [report](#reports) rather than the exit code.
+
+## Checking a session file
+
+`redsun check` tells you whether a session file would build, without building
+it. It reads the files with the code a build reads them with, merged in the
+order you give them, but it starts no service, connects no device, opens no
+window and writes no log file:
+
+```bash
+redsun check session.yaml
+redsun check session.yaml this-computer.yaml --json
+```
+
+The check resolves each plugin and imports each class, so it needs the same
+packages installed as the session would: checking a file whose `frontend` is
+`qt` needs a Qt binding, for example. It gives each component, service and
+hook provider a status, and each name the file looks up in `layout`,
+`wiring`, `pairs` or a stack:
+
+| Status | Means |
+| --- | --- |
+| `passed` | it would be built, or found |
+| `failed` | it would not: its plugin or class can't be found, its entry gives a key its class doesn't take, or a name points at a component the session doesn't declare |
+| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built |
+
+```text
+problems:
+  presenters.p.workers: Input should be greater than or equal to 1
+components:
+  passed     devices    stage   (mylab:motor, mylab.devices:MyMotor)
+  failed     views      viewer   (mylab:viewer) - no plugin named 'mylab'
+lookups:
+  undecided  wiring     camera.sig_frame -> viewer.show - 'camera' declares no signal 'sig_frame'; its signals: sig_done
+not checked:
+  the values given to constructors, what setup does, ...
+```
+
+Some things only a build can find, and the check lists them under
+`not checked`: the values given to constructors, what `setup` does, members of
+a `SignalGroup`, placements a view gives through a property, and services and
+device connections, which never start. A file that passes the check can still
+fail to build for one of those reasons.
+
+The check exits with 1 when the file has a problem or anything `failed`. A
+result that is only `undecided` exits with 0, since nothing is certainly
+wrong, and is listed so that you can look at it.
 
 ## Running a session file
 
@@ -162,15 +210,44 @@ instead, the module the service is run from.
 A plugin that was left out isn't in `plugins`. It's one of the `problems`,
 with `manifest` as its `kind` and the plugin's name as `where`.
 
+The report of `redsun check --json` adds `components`, `lookups` and
+`skipped`:
+
+```json
+{
+  "redsun": "0.19.0",
+  "format": 1,
+  "problems": [
+    {"kind": "value", "where": "presenters.p.workers", "message": "Input should be greater than or equal to 1"}
+  ],
+  "components": [
+    {"name": "stage", "group": "devices", "plugin_name": "mylab", "plugin_id": "motor",
+     "class": "mylab.devices:MyMotor", "status": "passed"}
+  ],
+  "lookups": [
+    {"section": "wiring", "name": "camera.sig_frame -> viewer.show", "status": "undecided",
+     "reason": "'camera' declares no signal 'sig_frame'; its signals: sig_done"}
+  ],
+  "skipped": ["the values given to constructors", "what setup does"]
+}
+```
+
+Its `problems` can have two more kinds than a plugin listing's: `value`, a
+value of the file that is refused, with its key path as `where`, and
+`session`, a session that can't be made or read at all, such as one naming a
+frontend that isn't installed. After a `session` problem, `components` and
+`lookups` are empty, because the check stopped where the build would.
+
 Each report has a JSON Schema, a file that says exactly which keys the report
-can hold. The one for this report is published as
-[`plugins-report.schema.json`](schemas/plugins-report.schema.json), written
-in JSON Schema 2020-12.
+can hold. They are published as
+[`plugins-report.schema.json`](schemas/plugins-report.schema.json) and
+[`check-report.schema.json`](schemas/check-report.schema.json), written in
+JSON Schema 2020-12.
 
 ## Exit codes
 
 | Code | When |
 | --- | --- |
-| 0 | the help, the version or the plugins were printed, or the window of the example or of the session run was closed |
-| 1 | the example or the session run could not start, or the files name no frontend |
+| 0 | the help, the version or the plugins were printed, a check found nothing that failed, or the window of the example or of the session run was closed |
+| 1 | the example or the session run could not start, the files name no frontend, or a check found a problem or something that failed |
 | 2 | an option or a style the command does not know |
