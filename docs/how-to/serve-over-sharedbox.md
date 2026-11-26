@@ -107,6 +107,25 @@ entry the service serves. A declared name the service lacks still fails
 `connect`, and two devices that declare the same attribute both read and
 write it.
 
+Two kinds of child take more than they declare. A
+`DeviceMap[SignalRW[bool]]` takes one signal per attribute of its
+sub-controller, keyed by the attribute's name, so a service can add a laser
+without the device changing; an attribute the map cannot hold, such as a
+read-only one in a map of `SignalRW`, fails `connect` with its name. A child
+declared as [`AllServed`][redsun.device.sharedbox.AllServed] takes every
+attribute, command and child its sub-controller serves, at every level below
+it, while its siblings keep only what they declare:
+
+```{.python}
+class Flyer(Device):
+    exposure: SignalRW[float]
+    lasers: DeviceMap[SignalRW[bool]]
+    detector: AllServed
+```
+
+In mock mode both stay empty, because there is no service to list what they
+would take.
+
 !!! warning "A read after shutdown raises"
 
     When the session shuts down, it closes the boxes every device attached,
