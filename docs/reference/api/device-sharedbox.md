@@ -7,6 +7,7 @@ icon: lucide/code
 ::: redsun.device.sharedbox
     options:
       members:
+        - AllServed
         - BoxDeviceConnector
         - BoxSignalBackend
         - BoxCommandBackend
