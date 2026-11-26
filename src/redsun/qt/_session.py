@@ -413,6 +413,14 @@ class Qt(Frontend):
         return "main" if isinstance(consumer, QWidget) else None
 
 
+class NotBuiltError(RuntimeError, AttributeError):
+    """Raised when something `build` creates is read before it.
+
+    It is an `AttributeError` too, so `hasattr` and a protocol check by
+    `isinstance` see the attribute as missing rather than failing.
+    """
+
+
 class QtSession(DesktopSession[QMainWindow], Session):
     """Application container whose views are attached to a Qt main window.
 
@@ -521,7 +529,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             If read before `build`, which is where it is created.
         """
         if self._main_window is None:
-            raise RuntimeError("Call build() before reading the main window")
+            raise NotBuiltError("Call build() before reading the main window")
         return self._main_window
 
     @property

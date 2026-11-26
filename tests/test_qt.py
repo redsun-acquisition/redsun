@@ -47,6 +47,7 @@ from redsun import (
     AsView,
     AttachableComponent,
     Declare,
+    DesktopSession,
     Link,
     Placement,
     Session,
@@ -708,6 +709,11 @@ def test_no_toolkit_object_exists_before_the_build(
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = app.main_window
     assert build(app).main_window.findChildren(QDockWidget) != []
+
+
+def test_an_unbuilt_session_is_a_desktop_session(qapp: QApplication) -> None:
+    """Recognise a Qt session as a desktop session before it is built."""
+    assert isinstance(QtApp(), DesktopSession)
 
 
 def test_the_configuration_names_the_container(

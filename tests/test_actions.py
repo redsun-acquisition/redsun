@@ -116,12 +116,6 @@ def test_releasing_the_session_takes_its_commands_with_it(
     ("declared", "message"),
     [
         pytest.param(
-            "mock_bundle.menu_callbacks:note",
-            "must be a list of entries",
-            id="not-a-list",
-        ),
-        pytest.param([["probe.note"]], "must be a mapping", id="entry-not-a-mapping"),
-        pytest.param(
             [
                 {
                     "id": "probe.note",

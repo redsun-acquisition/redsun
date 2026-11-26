@@ -21,6 +21,7 @@ redsun [--version] [SUBCOMMAND]
 | `example --web` | serves the example session over HTTP on `127.0.0.1:8000` instead of opening a window, until Ctrl+C |
 | `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
 | `plugins --json` | prints the same list as a [report](#reports) |
+| `run FILE...` | runs the session the files describe, with the frontend they name |
 | none | prints the help, which lists the subcommands |
 
 Each subcommand has a help of its own, such as `redsun example --help`.
@@ -91,6 +92,39 @@ session file names.
     plugin last, under `Skipped:`, with the reason. In a script, read
     `problems` in the [report](#reports) rather than the exit code.
 
+## Running a session file
+
+`redsun run` starts a session from
+[session files](../explanation/glossary.md#session-file), so you don't need a
+Python script to open one. It merges the files in the order you give them,
+as [`Session.from_config`][redsun.Session.from_config] does, so a later file
+changes what an earlier one says, and the
+[frontend](../explanation/glossary.md#frontend) the files name decides what
+opens:
+
+```bash
+redsun run session.yaml
+redsun run session.yaml this-computer.yaml --mock
+```
+
+The options set what a script would pass to `from_config` or write as a key
+of the file:
+
+| Option | What it does |
+| --- | --- |
+| `--mock` | adds `mock: true` after the files, which makes it a [mocked session](../explanation/glossary.md#mocked-session) |
+| `--strict` | adds `strict: true` after the files, which makes it a [strict session](../explanation/glossary.md#strict-session) |
+| `--log-level LEVEL` | sets the level the session logs at, such as `DEBUG` |
+| `--profile start` or `--profile run` | profiles the session's start or its whole run, as [Profile a session](../how-to/profile-a-session.md) shows |
+| `--profile-dir PATH` | names the folder the profile is written to |
+
+The command runs a session that has a frontend. A file naming no `frontend`
+describes a session with nothing to show, so the command refuses it, exits
+with 1 and lists the frontends installed. You start such a session from
+Python instead, as [Run a session without a GUI](../how-to/run-without-a-gui.md)
+shows. The command also exits with 1, printing the reason, when a file can't
+be read or the session can't be built.
+
 ## Reports
 
 A [report](../explanation/glossary.md#report) is what a subcommand prints
@@ -148,6 +182,6 @@ in JSON Schema 2020-12.
 
 | Code | When |
 | --- | --- |
-| 0 | the help, the version or the plugins were printed, the example's window was closed, or the served example was stopped with Ctrl+C |
-| 1 | the example could not start, or the extra it needs is not installed |
+| 0 | the help, the version or the plugins were printed, the window of the example or of the session run was closed, or the served example was stopped with Ctrl+C |
+| 1 | the example or the session run could not start, the files name no frontend, or the extra the example needs is not installed |
 | 2 | an option or a style the command does not know, or `example --web` with a style |

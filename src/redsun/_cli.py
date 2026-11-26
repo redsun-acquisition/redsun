@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 from importlib.resources import files
+from pathlib import Path  # noqa: TC003
 from typing import Annotated
 
 import typer
 import yaml
 
-from redsun import __version__
+from redsun import DesktopSession, Session, __version__
 from redsun.errors import BuildError, HookError
 
+from ._config import frontends
 from ._reports import GROUPS, plugins_report
+from .session._profile import ProfileKind  # noqa: TC001
 
 app = typer.Typer(
     name="redsun",
@@ -171,3 +174,59 @@ def plugins(
         typer.echo("Skipped:")
         for problem in report.problems:
             typer.echo(f"  {problem.where}: {problem.message}")
+
+
+# typer reads the annotations at runtime, so `Path` and `ProfileKind` are real imports
+@app.command()
+def run(
+    files: Annotated[
+        list[Path],
+        typer.Argument(
+            metavar="FILE",
+            show_default=False,
+            help="The session files, merged in the order given.",
+        ),
+    ],
+    log_level: Annotated[
+        str | None,
+        typer.Option(help="The level the session logs at, such as DEBUG."),
+    ] = None,
+    profile: Annotated[
+        ProfileKind | None,
+        typer.Option(help="Profile the session's start, or its whole run."),
+    ] = None,
+    profile_dir: Annotated[
+        Path | None,
+        typer.Option(help="The folder the profile is written to."),
+    ] = None,
+    mock: Annotated[
+        bool, typer.Option("--mock", help="Connect every device to a simulation.")
+    ] = False,
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", help="Stop when a component fails to build."),
+    ] = False,
+) -> None:
+    """Run the session the files describe, with the frontend they name."""
+    sources: list[Path | dict[str, bool]] = [*files]
+    if mock:
+        sources.append({"mock": True})
+    if strict:
+        sources.append({"strict": True})
+    try:
+        session = Session.from_config(
+            sources, log_level=log_level, profile=profile, profile_dir=profile_dir
+        )
+        if not isinstance(session, DesktopSession):
+            typer.echo(
+                "The session names no frontend, so it has nothing to show. Name "
+                f"one with the 'frontend' key: {', '.join(sorted(frontends()))}.",
+                err=True,
+            )
+            raise typer.Exit(1)
+        session.run()
+    # a bad file or a failed build raises one of these; anything else is a bug,
+    # and catching `Exception` would print it as one line and hide its traceback
+    except (BuildError, HookError, ImportError, OSError, ValueError) as e:
+        typer.echo(f"The session could not start. {e}", err=True)
+        raise typer.Exit(1) from e

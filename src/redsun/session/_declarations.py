@@ -25,7 +25,7 @@ from redsun.errors import HookError, PluginError
 from redsun.services import Service
 from redsun.view import Placement
 
-from .._config import DeviceEntry, ViewEntry
+from .._config import DeviceEntry, PresenterEntry, ViewEntry
 from .._hooks import known_points
 from .._structural import protocol_of
 from ..injection._census import devices_protocol
@@ -1156,8 +1156,9 @@ def is_marked(hint: Any, marker: type) -> bool:
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
     """Return the keywords *entry* gives its component, none for no entry.
 
-    A device's `service` and `autoconnect`, and a view's `placement` and
-    `title`, are among them where the entry gives them.
+    A device's `service` and `autoconnect`, a presenter's or view's
+    `workers`, and a view's `placement` and `title`, are among them where the
+    entry gives them.
     """
     if entry is None:
         return {}
@@ -1169,6 +1170,8 @@ def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
             found["services"] = entry.services
         if "autoconnect" in entry.model_fields_set:
             found["autoconnect"] = entry.autoconnect
+    if isinstance(entry, PresenterEntry) and "workers" in entry.model_fields_set:
+        found["workers"] = entry.workers
     if isinstance(entry, ViewEntry):
         if "placement" in entry.model_fields_set:
             found["placement"] = entry.placement

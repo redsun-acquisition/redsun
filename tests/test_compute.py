@@ -634,17 +634,23 @@ def test_workers_reach_the_constructor_of_a_device_or_a_class_without_processes(
         build(ThreadWorkersLab, {"presenters": {"own": {"workers": 3}}}).own.workers
         == 3
     )
-    keywords = build(KeywordWorkersLab, {"presenters": {"own": {"workers": "auto"}}})
-    assert keywords.own.kwargs == {"workers": "auto"}
+    keywords = build(KeywordWorkersLab, {"presenters": {"own": {"workers": 4}}})
+    assert keywords.own.kwargs == {"workers": 4}
 
 
 @pytest.mark.parametrize("workers", [0, -1, True, 1.5, "2"])
 def test_a_workers_that_is_not_a_whole_number_of_one_or_more_skips_the_component(
     build: BuildSession, caplog: pytest.LogCaptureFixture, workers: object
 ) -> None:
-    """Skip a presenter whose workers is not an int of at least 1, naming the key."""
+    """Skip a presenter declared in Python whose workers is not an int of at least 1."""
+
+    class BadWorkers(Session):
+        # the annotation is read in the class's namespace, which a local is not
+        given = workers
+        fit: Annotated[AsPresenter[Fitter], Declare(workers=given)]
+
     with caplog.at_level(logging.ERROR, logger="redsun"):
-        session = build(OneFitter, {"presenters": {"fit": {"workers": workers}}})
+        session = build(BadWorkers)
     assert "fit" not in session.presenters
     assert f"gives workers={workers!r}" in caplog.text
 
