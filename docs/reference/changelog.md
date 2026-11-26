@@ -17,6 +17,12 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
 <!-- towncrier release notes start -->
 
+## [0.18.4](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.4) - 26-11-2026
+
+### Fixed
+
+- `redsun.presenter.DeviceConfiguration.add` keeps the value a signal reports while its device is added, instead of the older value read before, so `readings` and the value `configure` falls back to when a read-back fails match what the device holds. ([#335](https://github.com/redsun-acquisition/redsun/pull/335))
+
 ## [0.18.3](https://github.com/redsun-acquisition/redsun/releases/tag/v0.18.3) - 26-11-2026
 
 ### Added
