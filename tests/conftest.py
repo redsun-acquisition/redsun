@@ -144,3 +144,25 @@ def mock_plugin() -> Generator[None, None, None]:
         mock.patch("redsun._manifest.as_file", side_effect=as_file),
     ):
         yield
+
+
+@pytest.fixture
+def a_bad_plugin_beside_a_good_one(tmp_path: Path) -> Generator[None, None, None]:
+    """Present `mock_bundle` and a plugin whose manifest is invalid, neither with a distribution."""
+    (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
+    entries = []
+    for name in ("mock-bundle", "bad-bundle"):
+        entry = mock.Mock(spec=EntryPoint)
+        entry.name = name
+        entry.value = "redsun.yaml"
+        entry.dist = None
+        entries.append(entry)
+
+    def folder(package: str) -> Path:
+        return tmp_path if package == "bad_bundle" else _MOCK_PKG_DIR
+
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=entries),
+        mock.patch("redsun._manifest.files", side_effect=folder),
+    ):
+        yield

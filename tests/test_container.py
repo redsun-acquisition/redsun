@@ -42,6 +42,7 @@ from redsun import (
 from redsun.aio import run_coro
 from redsun.ports import WiringError
 from redsun.session import BuildStep, Layer
+from redsun.session._base import unaccepted
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -1234,6 +1235,13 @@ def asking(hint: object) -> type[Asking]:
     return type("Asking", (Asking,), {"__init__": __init__})
 
 
+class AnnotatedForLater:
+    """A class whose constructor names a type that exists only for a type checker."""
+
+    def __init__(self, name: str, *, provider: OnlyForTypeCheckers) -> None:  # type: ignore[name-defined]  # noqa: F821
+        self.name = name
+
+
 def test_build_resolves_every_declaration(app: App) -> None:
     """Build every declared component and device and set each on its attribute."""
     assert app.is_built
@@ -2410,3 +2418,8 @@ def test_a_session_keeps_the_async_backend_while_another_still_runs(
 
     second.shutdown()
     assert get_async_backend() is None
+
+
+def test_unaccepted_reads_the_keyword_names_without_resolving_annotations() -> None:
+    """Name the keys a constructor refuses without evaluating its annotations."""
+    assert unaccepted(AnnotatedForLater, {"provider": 1, "speed": 2}) == ["speed"]

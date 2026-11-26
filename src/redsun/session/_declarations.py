@@ -862,7 +862,7 @@ def service_attributes(cls: type) -> dict[str, str]:
 
 def read_services(
     cls: type, section: Mapping[str, ComponentEntry], transport: str = CHANNEL_ACCESS
-) -> dict[str, Service]:
+) -> tuple[dict[str, Service], dict[str, PluginError]]:
     """Make the services *cls* annotates and the `services` section lists.
 
     A `Launch` or `Attach` marker overrides the section's entry, and the last
@@ -878,9 +878,11 @@ def read_services(
         entry giving a module, a service is given a keyword `Service` does not
         take, or it shares its name with an attribute of the session.
 
-    An entry naming a plugin that does not resolve is logged and left out.
+    An entry naming a plugin that does not resolve is logged and left out,
+    and returned second, with its error, by the service's name.
     """
     found: dict[str, Service] = {}
+    unresolved: dict[str, PluginError] = {}
     read_keys: set[str] = set()
     for attr, _, metadata in marked(cls, ServiceMark):
         where = f"{cls.__qualname__}.{attr}"
@@ -900,6 +902,7 @@ def read_services(
             from_file = service_entry(listed) if listed is not None else {}
         except PluginError as e:
             logger.error("Failed to read service '%s': %s", name, e)
+            unresolved[name] = e
             continue
         if isinstance(given, Attach) and "module" in from_file:
             raise TypeError(
@@ -918,8 +921,9 @@ def read_services(
             )
         except PluginError as e:
             logger.error("Failed to read service '%s': %s", cfg_key, e)
+            unresolved[cfg_key] = e
     refuse_shadowed(cls, found, "service")
-    return found
+    return found, unresolved
 
 
 def read_hooks(

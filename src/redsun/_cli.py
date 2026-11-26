@@ -12,8 +12,9 @@ import yaml
 from redsun import DesktopSession, Session, __version__
 from redsun.errors import BuildError, HookError
 
+from ._check import check_report
 from ._config import frontends
-from ._reports import GROUPS, plugins_report
+from ._reports import GROUPS, CheckReport, plugins_report
 from .session._profile import ProfileKind  # noqa: TC001
 
 app = typer.Typer(
@@ -136,6 +137,64 @@ def plugins(
             typer.echo(f"  {problem.where}: {problem.message}")
 
 
+@app.command()
+def check(
+    files: Annotated[
+        list[Path],
+        typer.Argument(
+            help="The session files, merged in the order given.",
+            metavar="FILE",
+            show_default=False,
+        ),
+    ],
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the report as JSON.")
+    ] = False,
+) -> None:
+    """Check whether the session the files describe would build, without building it."""
+    report = check_report(files)
+    if as_json:
+        typer.echo(report.to_json())
+    else:
+        print_check(report)
+    failed = any(c.status == "failed" for c in report.components) or any(
+        lookup.status == "failed" for lookup in report.lookups
+    )
+    if report.problems or failed:
+        raise typer.Exit(1)
+
+
+def print_check(report: CheckReport) -> None:
+    """Print *report* one line per record, each section only when it has any."""
+    if report.problems:
+        typer.echo("problems:")
+        for problem in report.problems:
+            typer.echo(f"  {problem.where}: {problem.message}")
+    if report.components:
+        typer.echo("components:")
+        for component in report.components:
+            source = ", ".join(
+                filter(
+                    None,
+                    (
+                        component.plugin_name
+                        and f"{component.plugin_name}:{component.plugin_id}",
+                        component.class_path,
+                    ),
+                )
+            )
+            line = f"  {component.status:<10} {component.group:<10} {component.name}"
+            line += f"   ({source})" if source else ""
+            typer.echo(line + (f" - {component.reason}" if component.reason else ""))
+    if report.lookups:
+        typer.echo("lookups:")
+        for lookup in report.lookups:
+            line = f"  {lookup.status:<10} {lookup.section:<10} {lookup.name}"
+            typer.echo(line + (f" - {lookup.reason}" if lookup.reason else ""))
+    typer.echo("not checked:")
+    typer.echo(f"  {', '.join(report.skipped)}")
+
+
 # typer reads the annotations at runtime, so `Path` and `ProfileKind` are real imports
 @app.command()
 def run(
@@ -187,6 +246,6 @@ def run(
         session.run()
     # a bad file or a failed build raises one of these; anything else is a bug,
     # and catching `Exception` would print it as one line and hide its traceback
-    except (BuildError, HookError, ImportError, OSError, ValueError) as e:
+    except (BuildError, HookError, ImportError, OSError, TypeError, ValueError) as e:
         typer.echo(f"The session could not start. {e}", err=True)
         raise typer.Exit(1) from e

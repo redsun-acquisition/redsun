@@ -42,6 +42,10 @@ class ConfigurationError(ValueError):
     def __init__(self, sources: Sequence[str], problems: Sequence[str]) -> None:
         lines = "\n".join(f"  {problem}" for problem in problems)
         super().__init__(f"Configuration ({', '.join(sources)}) is invalid:\n{lines}")
+        self.sources = tuple(sources)
+        """The sources the configuration was read from."""
+        self.problems = tuple(problems)
+        """One line for each problem, as `section.key: what`."""
 
 
 class ConfigurationInUse(OSError):
