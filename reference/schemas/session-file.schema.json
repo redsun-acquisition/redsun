@@ -69,7 +69,18 @@
     },
     "ComponentEntry": {
       "additionalProperties": true,
+      "dependentRequired": {
+        "plugin_id": [
+          "plugin_name"
+        ],
+        "plugin_name": [
+          "plugin_id"
+        ]
+      },
       "description": "A component's entry: the plugin it comes from, and its constructor keywords.\n\nEvery key besides the plugin keys is a keyword for the component's\nconstructor, which checks them when the component is built.",
+      "patternProperties": {
+        "^plugin_(?!(name|id)$)": false
+      },
       "properties": {
         "plugin_name": {
           "anyOf": [
@@ -182,7 +193,18 @@
     },
     "DeviceEntry": {
       "additionalProperties": true,
+      "dependentRequired": {
+        "plugin_id": [
+          "plugin_name"
+        ],
+        "plugin_name": [
+          "plugin_id"
+        ]
+      },
       "description": "A device's entry, with the keys the container keeps from its constructor.",
+      "patternProperties": {
+        "^plugin_(?!(name|id)$)": false
+      },
       "properties": {
         "plugin_name": {
           "anyOf": [
@@ -298,6 +320,65 @@
       "title": "LayoutEntry",
       "type": "object"
     },
+    "PresenterEntry": {
+      "additionalProperties": true,
+      "dependentRequired": {
+        "plugin_id": [
+          "plugin_name"
+        ],
+        "plugin_name": [
+          "plugin_id"
+        ]
+      },
+      "description": "A presenter's entry, with the key the session keeps from its constructor.",
+      "patternProperties": {
+        "^plugin_(?!(name|id)$)": false
+      },
+      "properties": {
+        "plugin_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The plugin whose manifest lists the component.",
+          "title": "Plugin Name"
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The component's id in that manifest.",
+          "title": "Plugin Id"
+        },
+        "workers": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How many worker processes the component's `ProcessExecutor` gets.",
+          "title": "Workers"
+        }
+      },
+      "title": "PresenterEntry",
+      "type": "object"
+    },
     "RowEntry": {
       "additionalProperties": false,
       "description": "Views side by side in a layout, as a session file writes them.",
@@ -349,7 +430,18 @@
     },
     "StackEntry": {
       "additionalProperties": true,
+      "dependentRequired": {
+        "plugin_id": [
+          "plugin_name"
+        ],
+        "plugin_name": [
+          "plugin_id"
+        ]
+      },
       "description": "A stack's entry: the plugin it comes from, and one mapping of keywords per role.",
+      "patternProperties": {
+        "^plugin_(?!(name|id)$)": false
+      },
       "properties": {
         "plugin_name": {
           "anyOf": [
@@ -455,7 +547,18 @@
     },
     "ViewEntry": {
       "additionalProperties": true,
+      "dependentRequired": {
+        "plugin_id": [
+          "plugin_name"
+        ],
+        "plugin_name": [
+          "plugin_id"
+        ]
+      },
       "description": "A view's entry, with the keys the session keeps from its constructor.",
+      "patternProperties": {
+        "^plugin_(?!(name|id)$)": false
+      },
       "properties": {
         "plugin_name": {
           "anyOf": [
@@ -482,6 +585,20 @@
           "default": null,
           "description": "The component's id in that manifest.",
           "title": "Plugin Id"
+        },
+        "workers": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How many worker processes the component's `ProcessExecutor` gets.",
+          "title": "Workers"
         },
         "placement": {
           "anyOf": [
@@ -652,7 +769,7 @@
       "anyOf": [
         {
           "additionalProperties": {
-            "$ref": "#/$defs/ComponentEntry"
+            "$ref": "#/$defs/PresenterEntry"
           },
           "default": {},
           "description": "Presenters by name.",
@@ -853,11 +970,36 @@
       "type": "object"
     },
     "actions": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "default": null,
       "description": "Menu actions the Qt session registers, checked when it reads them.",
       "title": "Actions"
     },
     "color_scheme": {
+      "anyOf": [
+        {
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "default": null,
       "description": "The Qt session's color scheme, checked when it reads it.",
       "title": "Color Scheme"
