@@ -8,3 +8,6 @@ icon: lucide/code
     options:
       members:
         - BoxTransport
+        - LabelledAttrR
+        - LabelledAttrRW
+        - LabelledAttrW

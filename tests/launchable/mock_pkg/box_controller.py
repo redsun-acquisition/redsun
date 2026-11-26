@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import enum
-from typing import Any
 
 import numpy as np
 from fastcs.attributes import AttrR, AttrRW, AttrW
@@ -12,20 +11,14 @@ from fastcs.controllers import Controller, ControllerVector
 from fastcs.datatypes import Bool, Enum, Float, Int, String, Table, Waveform
 from fastcs.methods import command
 
+from redsun.services.sharedbox import LabelledAttrRW
+
 
 class Mode(enum.Enum):
     """Choices of the `mode` attribute."""
 
     IDLE = 0
     RUN = 1
-
-
-class LabelledAttrRW(AttrRW[float]):
-    """An `AttrRW` with a label, as a service gives one for a client to show."""
-
-    def __init__(self, *args: Any, label: str, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.label = label
 
 
 class Axis(Controller):
