@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import sys
 from typing import TYPE_CHECKING, Any
@@ -115,17 +116,68 @@ def test_a_catalog_without_tiled_stops_a_check(
     mock_plugin: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Report a catalog the installed packages cannot serve as a session problem."""
-
-    def missing() -> None:
-        raise ImportError("install the catalog extra")
-
-    monkeypatch.setattr("redsun.session._base.require_tiled", missing)
+    find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        "importlib.util.find_spec",
+        lambda name, *args: None if name == "tiled" else find_spec(name, *args),
+    )
 
     report = check_report([{"session": "s", "storage": {"catalog": {}}}])
 
     [problem] = report.problems
     assert problem.kind == "session"
-    assert "catalog extra" in problem.message
+    assert "'tiled'" in problem.message
+
+
+def test_a_file_that_is_not_yaml_stops_a_check(tmp_path: Path) -> None:
+    """Report a file that cannot be parsed as a session problem."""
+    broken = tmp_path / "session.yaml"
+    broken.write_text("session: s\ndevices: {\n")
+
+    report = check_report([broken])
+
+    [problem] = report.problems
+    assert problem.kind == "session"
+
+
+def test_a_device_naming_an_undeclared_service_fails(mock_plugin: None) -> None:
+    """Fail a device whose entry names a service the session does not declare."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "devices": {
+                    "stage": {
+                        **BUNDLE,
+                        "plugin_id": "mock-stage",
+                        "services": {"axis": "nowhere"},
+                    }
+                },
+            }
+        ]
+    )
+
+    [stage] = report.components
+    assert stage.status == "failed"
+    assert stage.reason is not None and "'nowhere'" in stage.reason
+
+
+def test_a_check_records_each_provider(mock_plugin: None) -> None:
+    """Pass a provider whose plugin resolves, and fail one whose plugin does not."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "providers": {
+                    "shared": {**BUNDLE, "plugin_id": "mock-services"},
+                    "lost": {"plugin_name": "nope", "plugin_id": "x"},
+                },
+            }
+        ]
+    )
+
+    providers = {c.name: c.status for c in report.components if c.group == "providers"}
+    assert providers == {"shared": "passed", "lost": "failed"}
 
 
 def test_a_file_for_a_frontend_not_installed_stops_a_check(

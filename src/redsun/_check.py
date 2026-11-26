@@ -6,8 +6,10 @@ import logging
 from itertools import chain
 from typing import TYPE_CHECKING, Literal
 
+import yaml
+
 from redsun import __version__
-from redsun.errors import ConfigurationError, HookError, PluginError
+from redsun.errors import ConfigurationError, PluginError
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 
 from ._config import label
@@ -18,6 +20,7 @@ from .ports._wiring import class_ports
 from .session._base import Session, unaccepted
 from .session._declarations import Layer
 from .session._layout import resolved_layout
+from .session._plugins import resolve
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -55,13 +58,22 @@ def checked(files: Sequence[Source]) -> CheckReport:
     where = ", ".join(label(source) for source in files)
     try:
         session = Session.from_config(list(files))
-    except (ImportError, OSError, PluginError, TypeError, ValueError) as e:
+    # a YAMLError is neither: it is what parsing a file that is not YAML raises
+    except (
+        ImportError,
+        OSError,
+        PluginError,
+        TypeError,
+        ValueError,
+        yaml.YAMLError,
+    ) as e:
         return report([*problems, Problem(kind="session", where=where, message=str(e))])
     try:
         config = session._read()
     except ConfigurationError as e:
         return report([*problems, *value_problems(e)])
-    except (HookError, ImportError, TypeError, ValueError) as e:
+    # RuntimeError covers HookError and the missing packages of a catalog
+    except (ImportError, RuntimeError, TypeError, ValueError) as e:
         return report([*problems, Problem(kind="session", where=where, message=str(e))])
     return report(
         problems,
@@ -142,6 +154,11 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
         if entry is None and declaration.name in stack_of:
             entry = config.stacks.get(stack_of[declaration.name])
         failure = session._failed.get(declaration.name)
+        missing = [
+            s for s in declaration.services.values() if s not in session._services
+        ]
+        if failure is None and missing:
+            failure = LookupError(f"service {missing[0]!r} is not declared")
         if failure is None and declaration.refusal is None:
             refused = unaccepted(declaration.cls, declaration.cfg_kwargs)
             if refused:
@@ -166,6 +183,16 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
         yield component(
             name, "services", None, config.services.get(name), "failed", str(error)
         )
+    for name, entry in config.providers.items():
+        try:
+            cls = resolve(entry.plugin_name, entry.plugin_id, "providers")
+        except PluginError as e:
+            yield component(name, "providers", None, entry, "failed", str(e))
+            continue
+        if cls is None:
+            yield component(name, "providers", None, entry, "failed", "names no plugin")
+        else:
+            yield component(name, "providers", cls, entry, "passed")
     for provider in distinct(chain.from_iterable(session.hooks.values())):
         cls = type(provider)
         yield component(cls.__name__, "hooks", cls, None, "passed")

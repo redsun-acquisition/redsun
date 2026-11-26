@@ -95,7 +95,6 @@ from ._declarations import (
     service_attributes,
 )
 from ._factories import (
-    constructor,
     device_questions,
     factory,
     get_setup_params,
@@ -223,7 +222,8 @@ def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     that took its default and that no source named, and that key is correct.
     A constructor taking `**kwargs` accepts anything, so it refuses none.
     """
-    params = constructor(cls).parameters
+    # names alone: evaluating an annotation the build never reads could raise
+    params = inspect.signature(cls).parameters
     if any(p.kind is p.VAR_KEYWORD for p in params.values()):
         return []
     return sorted(set(entry) - {name for name in params if name != "name"})
@@ -926,10 +926,14 @@ class Session(BuildableSession):
 
         Raises
         ------
+        ConfigurationError
+            If the merged configuration has a value a session refuses.
+        HookError
+            If the hooks are installed at a point the session does not call.
         TypeError
             If a declaration, a stack or a service is refused as a whole.
-        ImportError
-            If the configuration keeps a catalog and `tiled` is not installed.
+        RuntimeError
+            If the configuration keeps a catalog and its packages are not installed.
         """
         installed.cache_clear()
         config = self._configuration()
