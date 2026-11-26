@@ -246,6 +246,12 @@ def test_a_check_of_a_qt_file_records_hooks_and_layout_names(mock_plugin: None) 
                 "frontend": "qt",
                 "views": {
                     "v": {**BUNDLE, "plugin_id": "mock-motor-view"},
+                    "docked": {
+                        **BUNDLE,
+                        "plugin_id": "panel",
+                        "placement": "right",
+                        "title": "Panel",
+                    },
                     "refused": {
                         **BUNDLE,
                         "plugin_id": "mock-motor-view",
@@ -266,5 +272,7 @@ def test_a_check_of_a_qt_file_records_hooks_and_layout_names(mock_plugin: None) 
     [hook] = [c for c in report.components if c.group == "hooks"]
     assert hook.status == "failed"
     assert lookups(report)["ghost"] == "failed"
+    [docked] = [c for c in report.components if c.name == "docked"]
+    assert docked.status == "passed"
     [refused] = [lookup for lookup in report.lookups if lookup.name == "refused"]
     assert refused.reason == "view 'refused' would not be built"

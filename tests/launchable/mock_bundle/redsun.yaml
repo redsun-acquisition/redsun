@@ -7,6 +7,7 @@ presenters:
 
 views:
   mock-motor-view: mock_bundle.views:MockMotorView
+  panel: mock_bundle.panels:Panel
 
 stacks:
   mock-motor: mock_bundle.stacks:MockMotorStack
