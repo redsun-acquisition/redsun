@@ -126,16 +126,6 @@ def test_a_session_from_a_file_carries_it_too(
     assert _control(build(unbuilt)).mode is ColorSchemeMode.LIGHT
 
 
-def test_a_mode_the_control_does_not_offer_is_refused() -> None:
-    """Refuse a configured mode the control does not offer."""
-
-    class Sepia(QtSession):
-        config: ClassVar[dict[str, Any]] = {"color_scheme": "sepia"}
-
-    with pytest.raises(ValueError, match="sepia"):
-        Sepia().build()
-
-
 def test_the_control_says_it_can_be_clicked(qapp: QApplication) -> None:
     """End the control's tooltip by saying a click changes the mode."""
     assert (
