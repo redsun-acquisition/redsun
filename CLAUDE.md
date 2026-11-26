@@ -11,7 +11,8 @@ redsun/
 |   |-- __init__.py            what a component author imports: Session, AsDevice, ...
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
-|   |-- _cli.py                the redsun command: --version, example, example --web
+|   |-- _cli.py                the redsun command: --version, example, example --web, plugins
+|   |-- _reports.py            what the command prints with --json, as models
 |   |-- examples/              ExampleApp, every built-in component over simulated devices:
 |   |                          _core.py the components, _app.py the Qt session,
 |   |                          _web.py the web session (the fastapi extra)
@@ -57,12 +58,14 @@ redsun/
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
 |-- clients/typescript/        the web session's TypeScript client; not part of the package, own CI job
-|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
+|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs, schemas/),
 |                              export_openapi.py (the client's CI job),
 |                              generate_asyncapi_models.py (src/redsun/fastapi/_asyncapi.py),
 |                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)
+|-- schemas/                   JSON Schema of each command report, exported by
+|                              scripts/export_schemas.py and checked by a test
 |-- changelog.d/               towncrier entry files, one per change
 |-- .github/workflows/         CI, changelog entry check, docs
 |-- .claude/                   agents, commands, docs-conventions skill

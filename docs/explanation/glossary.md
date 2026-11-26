@@ -421,6 +421,13 @@ A remote member is a [slot](#slot) or a property of a [presenter](#presenter)
 marked with [`remote`][redsun.remote], which a [web session](#web-session)
 lets clients outside the process call or read.
 
+### Report
+
+A report is what a subcommand of the `redsun` command prints when you give it
+`--json`: one JSON object written for a program to read, where the same
+subcommand without `--json` prints text for you. Every report starts with the same keys, which
+[The `redsun` command](../reference/command-line.md#reports) lists.
+
 ### Run
 
 A run is one recording made by a [plan](#plan): everything between a start
