@@ -5191,6 +5191,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#running-a-session-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running a session file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reports" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6304,6 +6315,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#running-a-session-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running a session file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reports" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6454,6 +6476,10 @@ scripts are not on the path.</p>
 <tr>
 <td><code>plugins --json</code></td>
 <td>prints the same list as a <a href="#reports">report</a></td>
+</tr>
+<tr>
+<td><code>run FILE...</code></td>
+<td>runs the session the files describe, with the frontend they name</td>
 </tr>
 <tr>
 <td>none</td>
@@ -6621,6 +6647,60 @@ the whole plugin out, and the command still exits with 0. It lists that
 plugin last, under <code>Skipped:</code>, with the reason. In a script, read
 <code>problems</code> in the <a href="#reports">report</a> rather than the exit code.</p>
 </div>
+<h2 id="running-a-session-file">Running a session file<a class="headerlink" href="#running-a-session-file" title="Permanent link">&para;</a></h2>
+<p><code>redsun run</code> starts a session from
+<a href="../../explanation/glossary/#session-file">session files</a>, so you don't need a
+Python script to open one. It merges the files in the order you give them,
+as <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;from_config&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-classmethod&quot;&gt;&lt;code&gt;classmethod&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../api/session/#redsun.Session.from_config"><code>Session.from_config</code></a> does, so a later file
+changes what an earlier one says, and the
+<a href="../../explanation/glossary/#frontend">frontend</a> the files name decides what
+opens:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>redsun<span class="w"> </span>run<span class="w"> </span>session.yaml
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>redsun<span class="w"> </span>run<span class="w"> </span>session.yaml<span class="w"> </span>this-computer.yaml<span class="w"> </span>--mock
+</span></code></pre></div>
+<p>The options set what a script would pass to <code>from_config</code> or write as a key
+of the file:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--mock</code></td>
+<td>adds <code>mock: true</code> after the files, which makes it a <a href="../../explanation/glossary/#mocked-session">mocked session</a></td>
+</tr>
+<tr>
+<td><code>--strict</code></td>
+<td>adds <code>strict: true</code> after the files, which makes it a <a href="../../explanation/glossary/#strict-session">strict session</a></td>
+</tr>
+<tr>
+<td><code>--log-level LEVEL</code></td>
+<td>sets the level the session logs at, such as <code>DEBUG</code></td>
+</tr>
+<tr>
+<td><code>--profile start</code> or <code>--profile run</code></td>
+<td>profiles the session's start or its whole run, as <a href="../../how-to/profile-a-session/">Profile a session</a> shows</td>
+</tr>
+<tr>
+<td><code>--profile-dir PATH</code></td>
+<td>names the folder the profile is written to</td>
+</tr>
+</tbody>
+</table>
+<p>The command runs a session that has a frontend. A file naming no <code>frontend</code>
+describes a session with nothing to show, so the command refuses it, exits
+with 1 and lists the frontends installed. You start such a session from
+Python instead, as <a href="../../how-to/run-without-a-gui/">Run a session without a GUI</a>
+shows. The command also exits with 1, printing the reason, when a file can't
+be read or the session can't be built.</p>
 <h2 id="reports">Reports<a class="headerlink" href="#reports" title="Permanent link">&para;</a></h2>
 <p>A <a href="../../explanation/glossary/#report">report</a> is what a subcommand prints
 when you give it <code>--json</code>, so that a program can read the answer where you
@@ -6654,22 +6734,22 @@ Adding a key leaves the number as it is, so write your program to skip the
 keys it doesn't know.</p>
 <p>The report of <code>redsun plugins --json</code> adds <code>plugins</code>, one object for each
 plugin whose manifest was read without a problem:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"redsun"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.19.0"</span><span class="p">,</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"problems"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">"plugin_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab"</span><span class="p">,</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">"distribution"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab-devices"</span><span class="p">,</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.0"</span><span class="p">,</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="nt">"entries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devices"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"motor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.devices:MyMotor"</span><span class="p">},</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"services"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stage-ioc"</span><span class="p">,</span><span class="w"> </span><span class="nt">"module"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.iocs.stage"</span><span class="p">}</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="p">]</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="p">]</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"redsun"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.19.0"</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">"problems"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span><span class="nt">"plugin_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab"</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">"distribution"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab-devices"</span><span class="p">,</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.0"</span><span class="p">,</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="nt">"entries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devices"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"motor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.devices:MyMotor"</span><span class="p">},</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="p">{</span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"services"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plugin_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stage-ioc"</span><span class="p">,</span><span class="w"> </span><span class="nt">"module"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mylab.iocs.stage"</span><span class="p">}</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="p">]</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><code>distribution</code> is the package that installs the plugin, and <code>version</code> is that
 package's version. Each entry names its class as <code>class</code>, written
@@ -6692,11 +6772,11 @@ in <abbr title="JavaScript Object Notation. A plain-text format for data that pr
 <tbody>
 <tr>
 <td>0</td>
-<td>the help, the version or the plugins were printed, or the example's window was closed</td>
+<td>the help, the version or the plugins were printed, or the window of the example or of the session run was closed</td>
 </tr>
 <tr>
 <td>1</td>
-<td>the example could not start</td>
+<td>the example or the session run could not start, or the files name no frontend</td>
 </tr>
 <tr>
 <td>2</td>
