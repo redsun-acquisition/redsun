@@ -69,13 +69,7 @@ _NUMERIC_KEYS: tuple[Literal["units", "min", "max", "min_alarm", "max_alarm"], .
 _BoxT = TypeVar("_BoxT", bound=SharedBox)
 
 
-class _Labelled:
-    """An attribute that carries a label."""
-
-    label: str
-
-
-class LabelledAttrR(AttrR[DType_T, AttributeIORefT], _Labelled):
+class LabelledAttrR(AttrR[DType_T, AttributeIORefT]):
     """A FastCS `AttrR` with a label, the name a client shows for it.
 
     `BoxTransport` serves the label beside the attribute's description.
@@ -95,7 +89,7 @@ class LabelledAttrR(AttrR[DType_T, AttributeIORefT], _Labelled):
         self.label = label
 
 
-class LabelledAttrW(AttrW[DType_T, AttributeIORefT], _Labelled):
+class LabelledAttrW(AttrW[DType_T, AttributeIORefT]):
     """A FastCS `AttrW` with a label, the name a client shows for it.
 
     `BoxTransport` serves the label beside the attribute's description.
@@ -114,7 +108,7 @@ class LabelledAttrW(AttrW[DType_T, AttributeIORefT], _Labelled):
         self.label = label
 
 
-class LabelledAttrRW(AttrRW[DType_T, AttributeIORefT], _Labelled):
+class LabelledAttrRW(AttrRW[DType_T, AttributeIORefT]):
     """A FastCS `AttrRW` with a label, the name a client shows for it.
 
     `BoxTransport` serves the label beside the attribute's description.
@@ -302,7 +296,9 @@ class BoxTransport(Transport):
                     attribute.datatype, "/".join((*api.path, name))
                 ),
                 "description": attribute.description or "",
-                "label": attribute.label if isinstance(attribute, _Labelled) else "",
+                "label": attribute.label
+                if isinstance(attribute, (LabelledAttrR, LabelledAttrW, LabelledAttrRW))
+                else "",
             }
             for name, attribute in api.attributes.items()
         }
