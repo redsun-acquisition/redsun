@@ -125,6 +125,8 @@ class AttributeDescription(TypedDict):
     access: Literal["r", "w", "rw"]
     datatype: DatatypeDescription
     description: str
+    label: str
+    """The name a client shows for the attribute, empty when the service gives none."""
 
 
 class ControllerDescription(TypedDict):

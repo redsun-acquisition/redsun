@@ -92,7 +92,10 @@ A signal's `describe()` carries what the service served for its attribute:
 the units, precision and limits of a number, the choices of an enum, and the
 text given to the attribute's `description=`, under the key `description`.
 That text is how a view can say what a setting does, so give it to the
-attributes a person will edit.
+attributes a person will edit. An attribute object that has a `label`
+attribute, such as one of a subclass of `fastcs`'s `AttrRW` that stores it,
+gets that text in its signal's data key as well, under the key `label`, for
+a view to show as the setting's name.
 
 One service can also back several devices, each taking a part of it, such as
 a flyer that runs a scan and a detector that records it. Give each of them

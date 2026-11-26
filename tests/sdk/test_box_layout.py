@@ -31,7 +31,12 @@ def describe(
         "path": ["ctrl"],
         "box": "ctrl-box",
         "attributes": {
-            name: {"access": access, "datatype": datatype, "description": ""}
+            name: {
+                "access": access,
+                "datatype": datatype,
+                "description": "",
+                "label": "",
+            }
         },
         "commands": ["go"],
         "children": {},
@@ -151,6 +156,7 @@ def test_each_attribute_is_one_field_named_after_it(
             "access": access,  # type: ignore[typeddict-item]
             "datatype": {"kind": "int"},
             "description": "",
+            "label": "",
         }
     cls = box_class(description)
     box: Any = cls.create(unique_name)
@@ -172,6 +178,7 @@ def test_an_attribute_named_like_a_box_method_gets_a_field_of_its_own(
         "access": "rw",
         "datatype": {"kind": "int"},
         "description": "",
+        "label": "",
     }
     cls = box_class(description)
     box: Any = cls.create(unique_name)
@@ -189,6 +196,7 @@ def test_two_attributes_mapping_to_one_field_are_refused() -> None:
         "access": "rw",
         "datatype": {"kind": "int"},
         "description": "",
+        "label": "",
     }
 
     with pytest.raises(ValueError, match=r"root:ctrl.*'name_'"):
@@ -226,7 +234,12 @@ def test_a_controller_with_too_many_fields_is_refused() -> None:
     """Refuse more than 256 attributes and commands, naming the controller and the count."""
     description = describe({"kind": "int"})
     description["attributes"] = {
-        f"a{i}": {"access": "r", "datatype": {"kind": "int"}, "description": ""}
+        f"a{i}": {
+            "access": "r",
+            "datatype": {"kind": "int"},
+            "description": "",
+            "label": "",
+        }
         for i in range(257)
     }
     description["commands"] = []
