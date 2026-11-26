@@ -413,8 +413,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
     async def get_datakey(self, source: str) -> DataKey:
         """Return the data key, with the units, precision, limits and choices served.
 
-        A description the service served for the attribute is added as
-        `description`; an attribute served without one gets no such key.
+        A description and a label the service served for the attribute are
+        added as `description` and `label`; an attribute served without one
+        gets no such key.
         """
         datatype = self._description["datatype"]
         # TODO: ask ophyd-async to export make_metadata from ophyd_async.core
@@ -436,6 +437,9 @@ class BoxSignalBackend(SignalBackend[SignalDatatypeT]):
         if text := self._description["description"]:
             # event-model's DataKey takes keys beyond those its TypedDict names
             datakey["description"] = text  # type: ignore[typeddict-unknown-key]
+        # the index of a service running an older redsun has no label
+        if label := self._description.get("label"):
+            datakey["label"] = label  # type: ignore[typeddict-unknown-key]
         return datakey
 
     async def get_reading(self) -> Reading[SignalDatatypeT]:

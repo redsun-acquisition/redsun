@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
+from typing import Any
 
 import numpy as np
 from fastcs.attributes import AttrR, AttrRW, AttrW
@@ -17,6 +18,14 @@ class Mode(enum.Enum):
 
     IDLE = 0
     RUN = 1
+
+
+class LabelledAttrRW(AttrRW[float]):
+    """An `AttrRW` with a label, as a service gives one for a client to show."""
+
+    def __init__(self, *args: Any, label: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.label = label
 
 
 class Axis(Controller):
@@ -37,8 +46,9 @@ class BoxController(Controller):
         self.put_started = asyncio.Event()
         self.put_gate: asyncio.Event | None = None
         self.runs = 0
-        self.exposure = AttrRW(
+        self.exposure = LabelledAttrRW(
             Float(units="ms", min=0.0, prec=2),
+            label="Exposure",
             description="How long each frame collects light.",
         )
         self.label = AttrR(String(length=8), initial_value="start")

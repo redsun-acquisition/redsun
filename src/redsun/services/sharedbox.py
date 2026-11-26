@@ -228,6 +228,8 @@ class BoxTransport(Transport):
                     attribute.datatype, "/".join((*api.path, name))
                 ),
                 "description": attribute.description or "",
+                # TODO: replace with a labelled attribute class that redsun owns and checks by type
+                "label": getattr(attribute, "label", ""),
             }
             for name, attribute in api.attributes.items()
         }
