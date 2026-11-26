@@ -46,6 +46,17 @@ To refuse a view class for another reason, such as a constructor your
 toolkit can't call, override
 [`check_view`][redsun.Frontend.check_view] and raise `TypeError`.
 
+The session refuses a view that marks an `async def` with `slot`, because most
+toolkits run a view's slots on their GUI thread, where a coroutine cannot run.
+If your toolkit can run them, set `async_view_slots` to true.
+
+A session file section that your frontend does not read, such as `remote`,
+which only a web session reads, is refused when the file sets it. List those
+sections in `foreign_sections`. The default refuses `remote` alone, and
+[`FastAPIFrontend`][redsun.fastapi.FastAPIFrontend], which serves an API and
+has no window, refuses `views`, `shortcuts`, `actions` and `color_scheme`
+instead.
+
 If your frontend binds keyboard shortcuts, override `key_problems`, to refuse
 a key your toolkit can't bind, and `canonical_key`, to write each key one way
 so two spellings of one key are seen as the same. A binding that

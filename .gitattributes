@@ -1,0 +1,3 @@
+# GitHub collapses generated files in pull request diffs and leaves both out of the language statistics
+scripts/asyncapi/asyncapi-3.0.0.json linguist-vendored linguist-generated
+src/redsun/fastapi/_asyncapi.py linguist-generated

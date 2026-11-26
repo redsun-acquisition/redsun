@@ -1,0 +1,11 @@
+schema_version: 1.0
+frontend: fastapi
+session: web-session
+
+presenters:
+  mover:
+    plugin_name: mock-bundle
+    plugin_id: mock-web
+
+remote:
+  port: 0

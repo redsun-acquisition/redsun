@@ -127,3 +127,9 @@ CLAUDE.local.md
 
 # graphify
 graphify-out/
+
+clients/typescript/node_modules/
+clients/typescript/src/generated/
+clients/typescript/src/api.d.ts
+clients/typescript/openapi.json
+clients/typescript/asyncapi.json

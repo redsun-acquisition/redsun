@@ -10,6 +10,7 @@ from redsun import (
     CallbackType,
     DeviceMapping,
     provides,
+    remote,
 )
 
 from .keys import Calibration, Readings
@@ -66,3 +67,15 @@ class MockRegistrar(DocumentRouter):
     ) -> tuple[str, dict[Any, Any]]:
         self.documents.append(name)
         return super().__call__(name, doc, validate)
+
+
+class MockWebPresenter:
+    """Presenter a web session serves: one remote property."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @property
+    @remote
+    def position(self) -> float:
+        return 0.0

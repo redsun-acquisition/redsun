@@ -5,7 +5,7 @@
 [[repos]]
 repo = "builtin"
 hooks = [
-  { id = "end-of-file-fixer" },
+  { id = "end-of-file-fixer", exclude = '^scripts/asyncapi/asyncapi-3\.0\.0\.json$' },
   { id = "trailing-whitespace" },
   { id = "check-yaml" },
   { id = "check-toml" },

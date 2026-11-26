@@ -34,6 +34,7 @@ EXAMPLES = [
     "napari_style",
     "positioner",
     "positioner_custom",
+    "web_session",
     *BOX_EXAMPLES,
 ]
 

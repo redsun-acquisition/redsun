@@ -63,6 +63,7 @@ dev = [
     "towncrier>=26.9.0",
     "pytest-xdist>=3.8.0",
     "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
+    "datamodel-code-generator>=0.102.0",
 ]
 docs = [
     "markdown-d2>=0.5.0",
@@ -147,6 +148,12 @@ sharedbox = [
     "fastcs>=0.14.4",
     "sharedbox>=0.10.0 ; sys_platform != 'darwin'",
 ]
+fastapi = [
+    "anyio>=4.16.0",
+    "fastapi>=0.164.0",
+    "uvicorn>=0.54.0",
+    "websockets>=17.4",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -210,6 +217,12 @@ sharedbox = [
     "sharedbox>=0.10.0",
 ]
 testing-qt = ["redsun[testing,qt-common]"]
+fastapi = [
+    "anyio>=4.16.0",
+    "fastapi>=0.164.0",
+    "uvicorn>=0.54.0",
+    "websockets>=17.4",
+]
 
 [project.scripts]
 redsun = "redsun._cli:app"
@@ -219,6 +232,7 @@ redsun = "plugins.yaml"
 
 [project.entry-points."redsun.frontends"]
 qt = "redsun.qt:QtSession"
+fastapi = "redsun.fastapi:FastAPISession"
 
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
@@ -325,6 +339,7 @@ ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public
 [tool.ruff.lint.flake8-type-checking]
 # pydantic reads a model's field annotations at runtime
 runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["redsun.remote", "redsun.ports.remote"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
@@ -360,32 +375,32 @@ dependency_groups = ["lint"]
 commands = [["prek", "run", "--all-files", "--show-diff-on-failure"]]
 
 [tool.tox.env.mypy-pyqt]
-dependency_groups = ["dev", "pyqt"]
+dependency_groups = ["dev", "pyqt", "fastapi"]
 set_env = { QT_API = "pyqt6" }
 commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 
 [tool.tox.env.mypy-pyside]
-dependency_groups = ["dev", "pyside"]
+dependency_groups = ["dev", "pyside", "fastapi"]
 set_env = { QT_API = "pyside6" }
 commands = [["python", "scripts/mypy_qt.py", "--ignore-missing-imports"]]
 
 [tool.tox.env.tests-pyqt]
-dependency_groups = ["dev", "pyqt"]
+dependency_groups = ["dev", "pyqt", "fastapi"]
 set_env = { QT_API = "pyqt6" }
 commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-pyside]
-dependency_groups = ["dev", "pyside"]
+dependency_groups = ["dev", "pyside", "fastapi"]
 set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "-n", "auto", "--dist", "loadfile", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-qlementine-pyqt]
-dependency_groups = ["dev", "qlementine-pyqt"]
+dependency_groups = ["dev", "qlementine-pyqt", "fastapi"]
 set_env = { QT_API = "pyqt6" }
 commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.tests-qlementine-pyside]
-dependency_groups = ["dev", "qlementine-pyside"]
+dependency_groups = ["dev", "qlementine-pyside", "fastapi"]
 set_env = { QT_API = "pyside6" }
 commands = [["pytest", "-q", "tests/test_qlementine_style.py", "tests/test_cli.py", { replace = "posargs", extend = true }]]
 

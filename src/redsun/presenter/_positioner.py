@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import dataclasses
 import math
+from collections.abc import Mapping
 from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
@@ -24,7 +25,7 @@ from psygnal import Signal
 
 from redsun.aio import cancel_task, run_coro
 from redsun.log import Loggable
-from redsun.ports import slot
+from redsun.ports import remote, slot
 from redsun.registry import DeviceMapping  # noqa: TC001
 from redsun.utils.devices import (
     AxisInfo,
@@ -38,7 +39,7 @@ from redsun.utils.devices import (
 from ._device_configuration import DeviceConfiguration
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterable, Mapping
+    from collections.abc import Awaitable, Callable, Iterable
 
     from bluesky.protocols import Reading
 
@@ -183,6 +184,7 @@ class PositionerPresenter(Loggable):
         self._stops = dict.fromkeys(self._axes, 0)
 
     @property
+    @remote
     def axes(self) -> dict[str, dict[str, AxisInfo]]:
         """The axes of each box, by row, by the name of the device holding them."""
         return self._info
@@ -215,6 +217,7 @@ class PositionerPresenter(Loggable):
             raise ValueError(f"{axis} target {target:g} is outside {low} to {high}")
 
     @slot(signal="sig_move")
+    @remote
     async def move(self, device: str, axis: str, delta: float) -> None:
         """Move *axis* of *device* by *delta*, in the axis' units.
 
@@ -242,6 +245,7 @@ class PositionerPresenter(Loggable):
         await self._run(device, (axis,), targets)
 
     @slot(signal="sig_move_to")
+    @remote
     async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
         """Move the axes of *device* in *positions* there, one after another.
 
@@ -260,6 +264,7 @@ class PositionerPresenter(Loggable):
         await self._run(device, positions, targets)
 
     @slot(signal="sig_stop_device")
+    @remote
     async def stop(self, device: str) -> None:
         """Stop *device* and each of its axes that can be stopped.
 

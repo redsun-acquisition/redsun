@@ -549,7 +549,7 @@ name -> settings
 
 ## Session protocols
 
-A session is written against two [protocols](glossary.md#protocol), and the
+A session is written against three [protocols](glossary.md#protocol), and the
 classes `redsun` ships fill them in:
 
 ```d2 title="Session protocols and classes"
@@ -559,26 +559,42 @@ buildable: BuildableSession {
   shape: class
   "one method per build step"
 }
-desktop: DesktopSession {
+web: WebSession {
   shape: class
-  "window"
-  "run()": "build, show the window, start the event loop"
+  "app"
+  "serve()": "build, serve the API until Ctrl+C"
 }
 session: Session {
   shape: class
   "start_runtime()": "set the backend of coroutine slots"
   "present()": "does nothing"
 }
+desktop: DesktopSession {
+  shape: class
+  "window"
+  "run()": "build, show the window, start the event loop"
+}
+fastapi: FastAPISession {
+  shape: class
+  "present()": "build a route per remote member"
+}
 qt: QtSession {
   shape: class
   "start_runtime()": "also make the QApplication"
   "present()": "show the main window and views"
 }
+web -> buildable: extends
 session -> buildable: implements
 desktop -> buildable: extends
+fastapi -> web: implements
+fastapi -> session: extends
 qt -> session: extends
 qt -> desktop: implements
 ```
 
 A session with no frontend shows nothing, which is what a test wants: `build()`
-alone gives you every component without opening a window.
+alone gives you every component without opening a window. A web session shows
+nothing either; it publishes its presenters' remote members to clients over
+the network instead, as
+[How to serve a session over the web](../how-to/serve-a-session-over-the-web.md)
+shows.

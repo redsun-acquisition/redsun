@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from importlib.metadata import EntryPoint
 from pathlib import Path
 
+import pytest
+
+from redsun import Session
+from redsun._config import FRONTEND_GROUP
 from tests.sdk.helpers import kept_under
 
 SCRIPT = Path(__file__).parent / "launchable" / "headless_session.py"
@@ -34,3 +39,13 @@ def test_a_session_runs_where_no_toolkit_is_installed(tmp_path: Path) -> None:
     assert "frontend 'qt', which cannot be imported" in ran.stdout
     assert "'pyqt'" in ran.stdout
     assert list(tmp_path.rglob("*.log")), "the session logged outside tmp_path"
+
+
+def test_a_frontend_whose_extra_is_missing_names_what_to_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Name `redsun[fastapi]` when the 'fastapi' frontend cannot be imported."""
+    missing = EntryPoint("fastapi", "no_such_package:Session", FRONTEND_GROUP)
+    monkeypatch.setattr("redsun._config.entry_points", lambda group: [missing])
+    with pytest.raises(ImportError, match=r"redsun\[fastapi\]"):
+        Session.from_config({"session": "lab", "frontend": "fastapi"})

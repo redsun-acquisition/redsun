@@ -20,7 +20,9 @@ from redsun import __version__
 from redsun._cli import app, styles
 from redsun.errors import BuildError, HookError
 from redsun.examples import ExampleApp, example_config
+from redsun.examples._core import ExampleCore
 from redsun.examples._devices import Axis, Plans
+from redsun.fastapi import FastAPISession
 from redsun.qt import QtHook, QtSession
 from redsun.qt.styles import qlementine
 
@@ -48,6 +50,17 @@ sys.modules["qtpy"] = None
 from redsun._cli import app
 
 app([])
+"""
+
+WEB_WITHOUT_QT = """
+import sys
+
+sys.modules["qtpy"] = None
+from redsun.fastapi import FastAPISession
+from redsun._cli import app
+
+FastAPISession.serve = lambda self: None
+app(["example", "--web"])
 """
 
 WIDE = {"COLUMNS": "200"}
@@ -307,6 +320,51 @@ def test_a_session_that_cannot_start_is_reported_without_a_traceback(
 
     assert done.exit_code == 1
     assert str(error) in done.output
+
+
+def test_example_web_serves_the_example(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Serve a session that is both a web session and the example's core."""
+    served: list[type] = []
+    monkeypatch.setattr(FastAPISession, "serve", lambda self: served.append(type(self)))
+
+    done = runner.invoke(app, ["example", "--web"])
+
+    assert done.exit_code == 0, done.output
+    (cls,) = served
+    assert issubclass(cls, FastAPISession)
+    assert issubclass(cls, ExampleCore)
+
+
+def test_the_web_example_with_a_style_is_refused() -> None:
+    """Refuse a style for the web example, which has no window to style."""
+    done = runner.invoke(app, ["example", "napari", "--web"], env=WIDE)
+
+    assert done.exit_code == 2
+    assert "has no style" in done.output
+
+
+def test_the_web_example_without_the_extra_names_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exit with 1 and name the extra to install when the web frontend cannot be imported."""
+    monkeypatch.setitem(sys.modules, "redsun.examples._web", None)
+
+    done = runner.invoke(app, ["example", "--web"])
+
+    assert done.exit_code == 1
+    assert "redsun[fastapi]" in done.output
+
+
+def test_the_web_example_needs_no_qt_binding() -> None:
+    """Serve the example in a process where no Qt binding can be imported."""
+    done = subprocess.run(
+        [sys.executable, "-c", WEB_WITHOUT_QT],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert done.returncode == 0, done.stderr
 
 
 @pytest.mark.qt

@@ -286,6 +286,7 @@ class Session(BuildableSession):
         "_is_built",
         "_merged",
         "_names",
+        "_not_served",
         "_not_set_up",
         "_path_provider",
         "_profile",
@@ -421,6 +422,8 @@ class Session(BuildableSession):
         self._built_components: dict[str, object] = {}
         # a component whose setup could not run: kept, and named in the report
         self._not_set_up: dict[str, BaseException] = {}
+        # a presenter a web frontend left out of its API: built and set up
+        self._not_served: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
         self._wiring = Wiring(
             self._built_components, self._names, self._failed, self.frontend
@@ -582,6 +585,8 @@ class Session(BuildableSession):
         for klass in reversed(type(self).__mro__):
             if (compute := klass.__dict__.get("compute")) is not None:
                 found.append({"compute": compute})
+            if (remote := klass.__dict__.get("remote")) is not None:
+                found.append({"remote": remote})
             found.extend(as_sources(klass.__dict__.get("config")))
         return found + as_sources(self._config)
 
@@ -908,6 +913,7 @@ class Session(BuildableSession):
         """Merge the sources, install the hooks, read the declarations, open the logs."""
         installed.cache_clear()
         config = self._configuration()
+        self._refuse_foreign_sections(config)
         self._log_hooks()
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
@@ -928,6 +934,23 @@ class Session(BuildableSession):
         for hook in distinct(chain.from_iterable(self.hooks.values())):
             if isinstance(hook, HasShutdown):
                 self.on_release(partial(self._shut_down_hook, hook))
+
+    def _refuse_foreign_sections(self, config: SessionFile) -> None:
+        """Refuse a section of *config* that only another frontend reads.
+
+        Raises
+        ------
+        ConfigurationError
+            Naming each section the configuration sets that the frontend lists
+            in `foreign_sections`.
+        """
+        problems = [
+            f"{section}: {self.frontend.__name__} does not read this section"
+            for section in sorted(self.frontend.foreign_sections)
+            if getattr(config, section) != SessionFile.model_fields[section].default
+        ]
+        if problems:
+            raise ConfigurationError([label(s) for s in self._sources()], problems)
 
     def _read_stacks(self, config: SessionFile) -> None:
         """Read the stacks and declare their halves beside the other declarations.
@@ -1404,7 +1427,11 @@ class Session(BuildableSession):
         """
         summary = self._summarise_build()
         missing = {
-            "components": [*self._failed.items(), *self._not_set_up.items()],
+            "components": [
+                *self._failed.items(),
+                *self._not_set_up.items(),
+                *self._not_served.items(),
+            ],
             "services": list(self._failed_services.items()),
             "hooks": [(failure.name, failure.reason) for failure in self._failed_hooks],
         }
@@ -1436,6 +1463,7 @@ class Session(BuildableSession):
         for heading, names in (
             ("Not built", self._failed),
             ("Not set up", self._not_set_up),
+            ("Not served", self._not_served),
         ):
             if names:
                 named = ", ".join(
@@ -1550,6 +1578,7 @@ class Session(BuildableSession):
         self._answered.clear()
         self._callbacks.clear()
         self._not_set_up.clear()
+        self._not_served.clear()
         self._built_components.clear()
         self._names.clear()
         self._shared.clear()
@@ -2711,7 +2740,8 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
         raise ImportError(
             f"the configuration names frontend {frontend!r}, which cannot be "
             f"imported: {e}. Install the packages it needs; the 'qt' frontend "
-            "comes with the 'pyqt' and the 'pyside' extra."
+            "comes with the 'pyqt' and the 'pyside' extra, the 'fastapi' "
+            "frontend with the 'fastapi' extra: `redsun[fastapi]`."
         ) from e
     if issubclass(cls, resolved):
         return cls

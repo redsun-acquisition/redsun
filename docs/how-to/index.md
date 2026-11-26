@@ -69,6 +69,7 @@ Run a session, follow what it does and keep its settings.
 - [How to profile a session](profile-a-session.md)
 - [How to change a device setting while a plan runs](change-a-setting-while-a-plan-runs.md)
 - [How to save a session](save-a-session.md)
+- [How to serve a session over the web](serve-a-session-over-the-web.md)
 
 ### Store data
 

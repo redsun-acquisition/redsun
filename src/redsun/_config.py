@@ -69,6 +69,7 @@ __all__ = [
     "CatalogConfig",
     "ComponentEntry",
     "DeviceEntry",
+    "RemoteConfig",
     "SessionFile",
     "Source",
     "StackEntry",
@@ -605,6 +606,19 @@ class LayoutEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
         return WindowLayout(self.nodes(), self.sizes, self.hidden)
 
 
+class RemoteConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
+    """The `remote` section of a session file."""
+
+    host: str = "127.0.0.1"
+    """The address a web session listens on."""
+
+    port: int = Field(default=8000, ge=0, le=65535)
+    """The port a web session listens on."""
+
+    origins: list[str] = []
+    """The origins a browser may call the API from; none are allowed if empty."""
+
+
 class ComputeConfig(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """The `compute` section of a session file."""
 
@@ -674,6 +688,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     compute: ComputeConfig = ComputeConfig()
     """Background computation: the preset and the cores it may use."""
+
+    remote: RemoteConfig | None = None
+    """Where a web session serves its API; only a web frontend reads it."""
 
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""

@@ -11,13 +11,16 @@ redsun/
 |   |-- __init__.py            what a component author imports: Session, AsDevice, ...
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
-|   |-- _cli.py                the redsun command: --version, example, plugins
+|   |-- _cli.py                the redsun command: --version, example, example --web, plugins
 |   |-- _reports.py            what the command prints with --json, as models
-|   |-- examples/              ExampleApp, every built-in component over simulated devices
+|   |-- examples/              ExampleApp, every built-in component over simulated devices:
+|   |                          _core.py the components, _app.py the Qt session,
+|   |                          _web.py the web session (the fastapi extra)
 |   |-- plugins.yaml           manifest of the built-in views
 |   |-- session/               Session, declarations, build steps, plugin loading
 |   |-- qt/                    QtSession, placements, actions, colour scheme
-|   |-- ports/                 slot, connections, wiring errors
+|   |-- fastapi/               FastAPISession, FastAPIFrontend, RemoteSettings (the fastapi extra)
+|   |-- ports/                 slot, remote, connections, wiring errors
 |   |-- compute/               pools, executors, Future, the counts
 |   |-- injection/             provides, DevicesOf, shared values, the session Registry
 |   |-- registry/              SessionConfig, PlanEntry, CallbackType, DeviceMapping
@@ -45,6 +48,7 @@ redsun/
 |   |   |-- mock_bundle/       fake plugin package the session tests discover
 |   |   `-- mock_pkg/          service stand-ins a test launches as processes
 |   |-- sdk/                   unit tests of the shared modules
+|   |-- web/                   the web session, served through fastapi's TestClient
 |   |-- compose/               an IOC in a container, for the tests marked compose
 |   `-- typing/                assert_type modules, checked by mypy, never run
 |-- docs/                      Diataxis site built by zensical
@@ -53,7 +57,10 @@ redsun/
 |   |-- examples/              whole scripts of the how-to guides, built by a test
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
+|-- clients/typescript/        the web session's TypeScript client; not part of the package, own CI job
 |-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs, schemas/),
+|                              export_openapi.py (the client's CI job),
+|                              generate_asyncapi_models.py (src/redsun/fastapi/_asyncapi.py),
 |                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (a release's notes),
 |                              screenshots.py (tutorial window pictures, docs build)

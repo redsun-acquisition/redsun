@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import gc
+import logging
 import re
 import subprocess
 import sys
 import threading
 import weakref
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Protocol, runtime_checkable
 
 import pytest
 import yaml
@@ -33,7 +34,7 @@ from qtpy.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator, Iterator
     from pathlib import Path
 
     from redsun.testing import BuildSession
@@ -47,9 +48,11 @@ from redsun import (
     AttachableComponent,
     Declare,
     DesktopSession,
+    Link,
     Placement,
     Session,
     WindowLayout,
+    remote,
     slot,
 )
 from redsun.qt import (
@@ -101,6 +104,77 @@ class Wired(QtSession):
 
     mover: AsPresenter[Mover]
     readout: AsView[Readout]
+
+
+class Stage:
+    """A presenter serving a move and a position, as a web frontend would reach them."""
+
+    sig_moved = Signal(float)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.moves: list[float] = []
+
+    @property
+    @remote
+    def position(self) -> float:
+        return 1.5
+
+    @slot
+    @remote
+    async def move(self, delta: float) -> float:
+        self.moves.append(delta)
+        self.sig_moved.emit(delta)
+        return delta
+
+
+@runtime_checkable
+class Positioned(Protocol):
+    """Something reporting a position."""
+
+    @property
+    def position(self) -> float: ...
+
+
+class StageView(QWidget):
+    """A view reading a position and asking for moves."""
+
+    placement: Placement = Dock("left")
+    sig_move = Signal(float)
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.shown: float | None = None
+
+    def setup(self, stage: Positioned) -> None:
+        self.shown = stage.position
+
+
+class RemoteApp(QtSession):
+    stage: AsPresenter[Stage]
+    view: AsView[StageView]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.view.sig_move, self.stage.move
+
+
+class Refreshing(QWidget):
+    """A view whose slot is a coroutine."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    @slot
+    async def refresh(self) -> None:
+        """Never run."""
+
+
+class AsyncSlotApp(QtSession):
+    refreshing: AsView[Refreshing]
 
 
 class Canvas(QWidget):
@@ -869,6 +943,16 @@ def test_a_view_not_shaped_for_qt_is_skipped(
     assert re.search(match, caplog.text)
 
 
+def test_a_qt_view_with_an_async_slot_is_refused(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a Qt view declaring an `async` slot, which would run off the GUI thread."""
+    app = build(AsyncSlotApp)
+
+    assert "refreshing" not in app.views
+    assert "has an async slot 'refresh'" in caplog.text
+
+
 def test_a_view_given_a_parent_by_its_configuration_is_skipped(
     qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -1342,3 +1426,25 @@ def test_a_qt_session_writes_its_start_profile(
     build(QtApp(profile="start", profile_dir=tmp_path)).shutdown()
 
     assert len(list(tmp_path.glob("*.html"))) == 1
+
+
+def test_a_qt_view_drives_a_remote_presenter(
+    qapp: QApplication,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Read a remote property in a view's setup and reach a remote slot from its signal."""
+    session = build(RemoteApp)
+
+    assert set(session.presenters) == {"stage"}
+    assert set(session.views) == {"view"}
+    assert session.view.shown == 1.5
+
+    session.view.sig_move.emit(2.0)
+    assert wait_until(lambda: session.stage.moves == [2.0], timeout=5.0)
+    # dispatched after the first call's done callbacks, so once the second
+    # move runs, the first call's returned value has been dropped
+    session.view.sig_move.emit(3.0)
+    assert wait_until(lambda: session.stage.moves == [2.0, 3.0], timeout=5.0)
+    assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []

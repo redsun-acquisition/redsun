@@ -18,6 +18,7 @@ redsun [--version] [SUBCOMMAND]
 | `--version` | prints the installed version |
 | `example` | opens the example session in your platform's look |
 | `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
+| `example --web` | serves the example session over HTTP on `127.0.0.1:8000` instead of opening a window, until Ctrl+C |
 | `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
 | `plugins --json` | prints the same list as a [report](#reports) |
 | `run FILE...` | runs the session the files describe, with the frontend they name |
@@ -43,6 +44,16 @@ reason.
 
 It is a session like any other, named `redsun-example`, so it writes its
 [log files](log-files.md) where every session does.
+
+With `--web`, the same devices and presenters are built on
+[`FastAPISession`][redsun.fastapi.FastAPISession], with no views. The
+positioner and the lights are served as routes under `/api`, and
+`http://127.0.0.1:8000/docs` lists them;
+[How to serve a session over the web](../how-to/serve-a-session-over-the-web.md)
+explains the routes. This needs the `fastapi` extra and no Qt binding.
+Without the extra the command says which extra to install and exits with 1,
+and it exits with 1 as well when the session cannot start, such as when the
+port is in use.
 
 ::: redsun.examples.ExampleApp
     options:
@@ -171,6 +182,6 @@ in JSON Schema 2020-12.
 
 | Code | When |
 | --- | --- |
-| 0 | the help, the version or the plugins were printed, or the window of the example or of the session run was closed |
-| 1 | the example or the session run could not start, or the files name no frontend |
-| 2 | an option or a style the command does not know |
+| 0 | the help, the version or the plugins were printed, the window of the example or of the session run was closed, or the served example was stopped with Ctrl+C |
+| 1 | the example or the session run could not start, the files name no frontend, or the extra the example needs is not installed |
+| 2 | an option or a style the command does not know, or `example --web` with a style |

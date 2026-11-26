@@ -93,8 +93,22 @@ def example(
             ),
         ),
     ] = None,
+    web: Annotated[
+        bool,
+        typer.Option(
+            "--web",
+            help="Serve the example over HTTP instead of opening a window.",
+        ),
+    ] = False,
 ) -> None:
     """Open the example session, every built-in component over simulated devices."""
+    if web:
+        if style is not None:
+            raise typer.BadParameter(
+                "the example served over HTTP has no style", param_hint="STYLE"
+            )
+        serve_example()
+        return
     try:
         # a Qt binding comes with an extra, and the command exists without one
         from redsun.examples import ExampleApp, example_config  # noqa: PLC0415
@@ -108,6 +122,32 @@ def example(
     try:
         ExampleApp(example_config(style)).run()
     except (BuildError, HookError, OSError) as e:
+        typer.echo(f"The example could not start. {e}", err=True)
+        raise typer.Exit(1) from e
+
+
+def serve_example() -> None:
+    """Serve the example session over HTTP until Ctrl+C.
+
+    Raises
+    ------
+    typer.Exit
+        With code 1 when the web frontend is missing or the session cannot
+        start.
+    """
+    try:
+        # the web frontend comes with an extra, and the command exists without one
+        from redsun.examples._web import ExampleWeb  # noqa: PLC0415
+    except ImportError as e:
+        typer.echo(
+            f"Serving the example needs the web frontend, which could not be loaded ({e}). "
+            "If it is not installed, install 'redsun[fastapi]'.",
+            err=True,
+        )
+        raise typer.Exit(1) from e
+    try:
+        ExampleWeb().serve()
+    except (BuildError, HookError, OSError, RuntimeError) as e:
         typer.echo(f"The example could not start. {e}", err=True)
         raise typer.Exit(1) from e
 

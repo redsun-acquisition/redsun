@@ -1,8 +1,8 @@
-"""A link's slot returns nothing, or is a coroutine function returning nothing.
+"""A link's slot returns nothing, or is a coroutine function returning a value or not.
 
 Never imported or executed; checked by the project's normal mypy invocation.
-A slot returning a value is refused, so the `type: ignore` below is needed:
-mypy's `warn_unused_ignores` fails this module if `Link` ever accepts it.
+A function slot returning a value is refused, so the `type: ignore` below is
+needed: mypy's `warn_unused_ignores` fails this module if `Link` ever accepts it.
 """
 
 from __future__ import annotations

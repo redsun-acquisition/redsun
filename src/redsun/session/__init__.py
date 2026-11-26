@@ -36,6 +36,7 @@ from ._protocols import (
     HasShutdown,
     NamedComponent,
     Serializable,
+    WebSession,
 )
 
 __all__ = [
@@ -64,4 +65,5 @@ __all__ = [
     "Serializable",
     "Serves",
     "Session",
+    "WebSession",
 ]
