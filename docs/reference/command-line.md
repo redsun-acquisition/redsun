@@ -117,18 +117,24 @@ rather than the constructor: `workers` for a presenter or a view,
 `autoconnect` for a device. A device's required keyword can also come from a
 service, so its line ends in "or from a service".
 
-The session fills a parameter whose type a file can't write, such as the
-devices or the session's settings, by looking it up by that type. A
-parameter whose type is one of its own, a `pydantic` model, a dataclass, a
-`TypedDict` or a `NewType`, is listed both as a key and among what the
-session fills: a provider of the
-session may share a value of that type, and when none does, the file has to
-give it.
+The session fills a presenter's or view's parameter whose type a file can't
+write, such as the devices or the session's settings, by looking it up by
+that type. A parameter whose type is one of its own, a `pydantic` model, a
+dataclass, a `TypedDict` or a `NewType`, is listed both as a key and among
+what the session fills: a provider of the session may share a value of that
+type, and when none does, the file has to give it. A parameter written
+`X | None` without a default gets `None` when nothing provides `X`, so you
+don't have to give it.
+
+A device is built differently. The session passes it the keys of its entry
+as they are and fills only its `path_provider`, by that name, so every other
+parameter of a device is a key you give, a model type included.
 
 A component that the session couldn't build fails, with the reason in place
 of its keys. That happens when its class can't be imported, when an
-annotation names something that exists only for a type checker, or when a
-parameter can only be given by position.
+annotation names something that exists only for a type checker, when a
+parameter can only be given by position, or when a device asks for a value
+no file can write, such as the devices.
 
 ## Checking a session file
 
@@ -152,7 +158,7 @@ hook provider a status, and each name the file looks up in `layout`,
 | --- | --- |
 | `passed` | it would be built, or found |
 | `failed` | it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take or leaves out one the session can't fill, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a `layout` name has no view to answer to |
-| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built, or a key the entry leaves out whose type a provider of the session may share |
+| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built, or a key the entry leaves out whose type a provider of the session may share, where the build stops if none does |
 
 ```text
 problems:
@@ -170,8 +176,17 @@ The check also compares each value an entry gives its constructor with the
 type and the limits the constructor declares for it, as
 [`redsun describe`](#describing-a-plugins-components) shows them. A value
 that breaks them is a `value` problem at its key path, such as
-`presenters.motor.step`, while the component stays `passed`: the build itself
-hands the value on unchecked.
+`presenters.motor.step`, or `stacks.motor.presenter.step` for a key a stack
+gives one of its halves. The component stays `passed`, because the build
+itself hands the value on unchecked.
+
+A presenter or view that leaves out a key the session can't fill, such as a
+`str`, stops the build, so no part of the session runs. Besides marking the
+entry `failed`, the check reports a `session` problem at its path, such as
+`presenters.motor`, with the sentence the build would stop with. It reports
+every such entry, where the build stops at the first. A device that
+leaves out a key only fails, since the build skips that device and carries
+on.
 
 Some things only a build can find, and the check lists them under
 `not checked`: what a constructor checks itself, what `setup` does, members of
@@ -280,9 +295,14 @@ it:
       "group": "presenters", "plugin_id": "controller",
       "class": "mylab.controllers:MyController", "status": "passed",
       "schema": {
-        "type": "object", "additionalProperties": false,
+        "title": "MyControllerEntry", "type": "object", "additionalProperties": false,
+        "dependentRequired": {"plugin_id": ["plugin_name"], "plugin_name": ["plugin_id"]},
+        "patternProperties": {"^plugin_(?!(name|id)$)": false},
         "properties": {
           "plugin_name": {"const": "mylab"}, "plugin_id": {"const": "controller"},
+          "workers": {"anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
+                      "default": null, "title": "Workers",
+                      "description": "How many worker processes the component's `ProcessExecutor` gets."},
           "step": {"type": "number", "exclusiveMinimum": 0, "default": 1.0,
                    "title": "Step", "unit": "um"}
         },
@@ -296,11 +316,15 @@ it:
 
 A parameter's `title`, `description` and `unit` in the schema come from its
 annotation, as [Write a component](../how-to/write-a-component.md) shows.
-Each `session` record has `file: true` when the file may give the value
-instead. A failed component has a `reason`, and no `schema` when its class
-couldn't be imported. Its `problems` can have one more kind than a plugin
-listing's: `parameter`, a constructor parameter that can't be described,
-with `plugin_id.parameter` as `where`. An unknown plugin or id is a
+Each `session` record writes its `type` as you would in Python, each name
+under the package that exports it, such as `redsun.DevicesOf[mylab.Motor]`,
+and has `file: true` when the file may give the value instead. A failed
+component has a `reason`, and no `schema` when its class couldn't be
+imported. Its `problems` can have one more kind than a plugin listing's:
+`parameter`, with `plugin_id.parameter` as `where`. It names a constructor
+parameter that can't be described, such as one whose type `pydantic` can't
+write a schema for, or a presenter's or view's parameter without an
+annotation, which the file then has to give. An unknown plugin or id is a
 `manifest` problem.
 
 The report of `redsun check --json` adds `components`, `lookups` and
