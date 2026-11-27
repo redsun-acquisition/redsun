@@ -20,6 +20,8 @@ redsun [--version] [SUBCOMMAND]
 | `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
 | `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
 | `plugins --json` | prints the same list as a [report](#reports) |
+| `describe PLUGIN [ID]` | describes the keys each device, presenter and view of a plugin takes |
+| `describe PLUGIN [ID] --json` | prints the same description as a [report](#reports) |
 | `check FILE...` | checks whether the session the files describe would build, without building it |
 | `check FILE... --json` | prints the same check as a [report](#reports) |
 | `run FILE...` | runs the session the files describe, with the frontend they name |
@@ -82,6 +84,50 @@ session file names.
     the whole plugin out, and the command still exits with 0. It lists that
     plugin last, under `Skipped:`, with the reason. In a script, read
     `problems` in the [report](#reports) rather than the exit code.
+
+## Describing a plugin's components
+
+`redsun describe` tells you which keys you can write in a session-file entry
+for each device, presenter and view of a plugin, and what the session fills
+by itself. It imports the plugin's classes and reads their constructors, so
+run it in the environment the session runs in. Give it an id as well to
+describe one entry only:
+
+```bash
+redsun describe mylab
+redsun describe mylab controller --json
+```
+
+It prints one block for each component, a line for each key, and then the
+parameters the session fills:
+
+```text
+mylab
+  presenters/controller (mylab.controllers:MyController)
+    workers: integer or null = null
+    step: number = 1.0
+    mode: one of fast, fine = "fine"
+    the session fills: devices (redsun.DeviceMapping)
+```
+
+A key has the type the constructor annotates it with, and its default, or
+says whether you must give it. Some keys come from the session file itself
+rather than the constructor: `workers` for a presenter or a view,
+`placement` and `title` for a view, and `service`, `services` and
+`autoconnect` for a device. A device's required keyword can also come from a
+service, so its line ends in "or from a service".
+
+The session fills a parameter whose type a file can't write, such as the
+devices or the session's settings, by looking it up by that type. A
+parameter written as a `pydantic` model, a dataclass or a `TypedDict` is
+listed both as a key and among what the session fills: a provider of the
+session may share a value of that type, and when none does, the file has to
+give it.
+
+A component that the session couldn't build fails, with the reason in place
+of its keys. That happens when its class can't be imported, when an
+annotation names something that exists only for a type checker, or when a
+parameter can only be given by position.
 
 ## Checking a session file
 
@@ -210,6 +256,45 @@ instead, the module the service is run from.
 A plugin that was left out isn't in `plugins`. It's one of the `problems`,
 with `manifest` as its `kind` and the plugin's name as `where`.
 
+The report of `redsun describe --json` adds `plugin_name` and `components`.
+Each component holds the JSON Schema of the keys its entry takes, as
+`schema`, so a program can draw a form from it and check an entry against
+it:
+
+```json
+{
+  "redsun": "0.19.0",
+  "format": 1,
+  "problems": [],
+  "plugin_name": "mylab",
+  "components": [
+    {
+      "group": "presenters", "plugin_id": "controller",
+      "class": "mylab.controllers:MyController", "status": "passed",
+      "schema": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "plugin_name": {"const": "mylab"}, "plugin_id": {"const": "controller"},
+          "step": {"type": "number", "exclusiveMinimum": 0, "default": 1.0,
+                   "title": "Step", "unit": "um"}
+        },
+        "required": ["plugin_name", "plugin_id"]
+      },
+      "session": [{"name": "devices", "type": "redsun.DeviceMapping", "required": true, "file": false}]
+    }
+  ]
+}
+```
+
+A parameter's `title`, `description` and `unit` in the schema come from its
+annotation, as [Write a component](../how-to/write-a-component.md) shows.
+Each `session` record has `file: true` when the file may give the value
+instead. A failed component has a `reason`, and no `schema` when its class
+couldn't be imported. Its `problems` can have one more kind than a plugin
+listing's: `parameter`, a constructor parameter that can't be described,
+with `plugin_id.parameter` as `where`. An unknown plugin or id is a
+`manifest` problem.
+
 The report of `redsun check --json` adds `components`, `lookups` and
 `skipped`:
 
@@ -240,7 +325,8 @@ frontend that isn't installed. After a `session` problem, `components` and
 
 Each report has a JSON Schema, a file that says exactly which keys the report
 can hold. They are published as
-[`plugins-report.schema.json`](schemas/plugins-report.schema.json) and
+[`plugins-report.schema.json`](schemas/plugins-report.schema.json),
+[`describe-report.schema.json`](schemas/describe-report.schema.json) and
 [`check-report.schema.json`](schemas/check-report.schema.json), written in
 JSON Schema 2020-12.
 
@@ -248,6 +334,6 @@ JSON Schema 2020-12.
 
 | Code | When |
 | --- | --- |
-| 0 | the help, the version or the plugins were printed, a check found nothing that failed, or the window of the example or of the session run was closed |
-| 1 | the example or the session run could not start, the files name no frontend, or a check found a problem or something that failed |
+| 0 | the help, the version or the plugins were printed, a description or a check found nothing that failed, or the window of the example or of the session run was closed |
+| 1 | the example or the session run could not start, the files name no frontend, or a description or a check found a problem or something that failed |
 | 2 | an option or a style the command does not know |
