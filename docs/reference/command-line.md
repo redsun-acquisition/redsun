@@ -20,6 +20,8 @@ redsun [--version] [SUBCOMMAND]
 | `example STYLE` | opens the example session in the style named: `napari` or `qlementine` |
 | `plugins` | lists the installed [plugins](../explanation/glossary.md#plugin) and what each one offers |
 | `plugins --json` | prints the same list as a [report](#reports) |
+| `describe PLUGIN [ID]` | describes the keys each device, presenter and view of a plugin takes |
+| `describe PLUGIN [ID] --json` | prints the same description as a [report](#reports) |
 | `check FILE...` | checks whether the session the files describe would build, without building it |
 | `check FILE... --json` | prints the same check as a [report](#reports) |
 | `run FILE...` | runs the session the files describe, with the frontend they name |
@@ -83,6 +85,57 @@ session file names.
     plugin last, under `Skipped:`, with the reason. In a script, read
     `problems` in the [report](#reports) rather than the exit code.
 
+## Describing a plugin's components
+
+`redsun describe` tells you which keys you can write in a session-file entry
+for each device, presenter and view of a plugin, and what the session fills
+by itself. It imports the plugin's classes and reads their constructors, so
+run it in the environment the session runs in. Give it an id as well to
+describe one entry only:
+
+```bash
+redsun describe mylab
+redsun describe mylab controller --json
+```
+
+It prints one block for each component, a line for each key, and then the
+parameters the session fills:
+
+```text
+mylab
+  presenters/controller (mylab.controllers:MyController)
+    workers: integer or null = null
+    step: number = 1.0
+    mode: one of fast, fine = "fine"
+    the session fills: devices (redsun.DeviceMapping)
+```
+
+A key has the type the constructor annotates it with, and its default, or
+says whether you must give it. Some keys come from the session file itself
+rather than the constructor: `workers` for a presenter or a view,
+`placement` and `title` for a view, and `service`, `services` and
+`autoconnect` for a device. A device's required keyword can also come from a
+service, so its line ends in "or from a service".
+
+The session fills a presenter's or view's parameter whose type a file can't
+write, such as the devices or the session's settings, by looking it up by
+that type. A parameter whose type is one of its own, a `pydantic` model, a
+dataclass, a `TypedDict` or a `NewType`, is listed both as a key and among
+what the session fills: a provider of the session may share a value of that
+type, and when none does, the file has to give it. A parameter written
+`X | None` without a default gets `None` when nothing provides `X`, so you
+don't have to give it.
+
+A device is built differently. The session passes it the keys of its entry
+as they are and fills only its `path_provider`, by that name, so every other
+parameter of a device is a key you give, a model type included.
+
+A component that the session couldn't build fails, with the reason in place
+of its keys. That happens when its class can't be imported, when an
+annotation names something that exists only for a type checker, when a
+parameter can only be given by position, or when a device asks for a value
+no file can write, such as the devices.
+
 ## Checking a session file
 
 `redsun check` tells you whether a session file would build, without building
@@ -104,8 +157,8 @@ hook provider a status, and each name the file looks up in `layout`,
 | Status | Means |
 | --- | --- |
 | `passed` | it would be built, or found |
-| `failed` | it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a `layout` name has no view to answer to |
-| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built |
+| `failed` | it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take or leaves out one the session can't fill, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a `layout` name has no view to answer to |
+| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built, or a key the entry leaves out whose type a provider of the session may share, where the build stops if none does |
 
 ```text
 problems:
@@ -116,11 +169,27 @@ components:
 lookups:
   undecided  wiring     camera.sig_frame -> viewer.show - 'camera' declares no signal 'sig_frame'; its signals: sig_done
 not checked:
-  the values given to constructors, what setup does, ...
+  what a constructor checks itself, what setup does, ...
 ```
 
+The check also compares each value an entry gives its constructor with the
+type and the limits the constructor declares for it, as
+[`redsun describe`](#describing-a-plugins-components) shows them. A value
+that breaks them is a `value` problem at its key path, such as
+`presenters.motor.step`, or `stacks.motor.presenter.step` for a key a stack
+gives one of its halves. The component stays `passed`, because the build
+itself hands the value on unchecked.
+
+A presenter or view that leaves out a key the session can't fill, such as a
+`str`, stops the build, so no part of the session runs. Besides marking the
+entry `failed`, the check reports a `session` problem at its path, such as
+`presenters.motor`, with the sentence the build would stop with. It reports
+every such entry, where the build stops at the first. A device that
+leaves out a key only fails, since the build skips that device and carries
+on.
+
 Some things only a build can find, and the check lists them under
-`not checked`: the values given to constructors, what `setup` does, members of
+`not checked`: what a constructor checks itself, what `setup` does, members of
 a `SignalGroup`, placements a view gives through a property, and services and
 device connections, which never start. A file that passes the check can still
 fail to build for one of those reasons.
@@ -210,6 +279,54 @@ instead, the module the service is run from.
 A plugin that was left out isn't in `plugins`. It's one of the `problems`,
 with `manifest` as its `kind` and the plugin's name as `where`.
 
+The report of `redsun describe --json` adds `plugin_name` and `components`.
+Each component holds the JSON Schema of the keys its entry takes, as
+`schema`, so a program can draw a form from it and check an entry against
+it:
+
+```json
+{
+  "redsun": "0.19.0",
+  "format": 1,
+  "problems": [],
+  "plugin_name": "mylab",
+  "components": [
+    {
+      "group": "presenters", "plugin_id": "controller",
+      "class": "mylab.controllers:MyController", "status": "passed",
+      "schema": {
+        "title": "MyControllerEntry", "type": "object", "additionalProperties": false,
+        "dependentRequired": {"plugin_id": ["plugin_name"], "plugin_name": ["plugin_id"]},
+        "patternProperties": {"^plugin_(?!(name|id)$)": false},
+        "properties": {
+          "plugin_name": {"const": "mylab"}, "plugin_id": {"const": "controller"},
+          "workers": {"anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
+                      "default": null, "title": "Workers",
+                      "description": "How many worker processes the component's `ProcessExecutor` gets."},
+          "step": {"type": "number", "exclusiveMinimum": 0, "default": 1.0,
+                   "title": "Step", "unit": "um"}
+        },
+        "required": ["plugin_name", "plugin_id"]
+      },
+      "session": [{"name": "devices", "type": "redsun.DeviceMapping", "required": true, "file": false}]
+    }
+  ]
+}
+```
+
+A parameter's `title`, `description` and `unit` in the schema come from its
+annotation, as [Write a component](../how-to/write-a-component.md) shows.
+Each `session` record writes its `type` as you would in Python, each name
+under the package that exports it, such as `redsun.DevicesOf[mylab.Motor]`,
+and has `file: true` when the file may give the value instead. A failed
+component has a `reason`, and no `schema` when its class couldn't be
+imported. Its `problems` can have one more kind than a plugin listing's:
+`parameter`, with `plugin_id.parameter` as `where`. It names a constructor
+parameter that can't be described, such as one whose type `pydantic` can't
+write a schema for, or a presenter's or view's parameter without an
+annotation, which the file then has to give. An unknown plugin or id is a
+`manifest` problem.
+
 The report of `redsun check --json` adds `components`, `lookups` and
 `skipped`:
 
@@ -228,7 +345,7 @@ The report of `redsun check --json` adds `components`, `lookups` and
     {"section": "wiring", "name": "camera.sig_frame -> viewer.show", "status": "undecided",
      "reason": "'camera' declares no signal 'sig_frame'; its signals: sig_done"}
   ],
-  "skipped": ["the values given to constructors", "what setup does"]
+  "skipped": ["what a constructor checks itself", "what setup does"]
 }
 ```
 
@@ -240,7 +357,8 @@ frontend that isn't installed. After a `session` problem, `components` and
 
 Each report has a JSON Schema, a file that says exactly which keys the report
 can hold. They are published as
-[`plugins-report.schema.json`](schemas/plugins-report.schema.json) and
+[`plugins-report.schema.json`](schemas/plugins-report.schema.json),
+[`describe-report.schema.json`](schemas/describe-report.schema.json) and
 [`check-report.schema.json`](schemas/check-report.schema.json), written in
 JSON Schema 2020-12.
 
@@ -248,6 +366,6 @@ JSON Schema 2020-12.
 
 | Code | When |
 | --- | --- |
-| 0 | the help, the version or the plugins were printed, a check found nothing that failed, or the window of the example or of the session run was closed |
-| 1 | the example or the session run could not start, the files name no frontend, or a check found a problem or something that failed |
+| 0 | the help, the version or the plugins were printed, a description or a check found nothing that failed, or the window of the example or of the session run was closed |
+| 1 | the example or the session run could not start, the files name no frontend, or a description or a check found a problem or something that failed |
 | 2 | an option or a style the command does not know |

@@ -3,9 +3,26 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    NewType,
+    get_args,
+    get_origin,
+    is_typeddict,
+)
 
-from .._structural import is_optional
+from pydantic import BaseModel, TypeAdapter
+from pydantic.errors import (
+    PydanticInvalidForJsonSchema,
+    PydanticSchemaGenerationError,
+    PydanticUserError,
+)
+from pydantic_core import SchemaError
+
+from .._structural import is_optional, is_union, without_none
+from ..compute._pool import PoolExecutor
 from ..injection._census import devices_protocol
 
 if TYPE_CHECKING:
@@ -297,3 +314,283 @@ def provider(cls: type, name: str) -> Callable[..., Any]:
         return cls(**supplied(deps, optional))
 
     return synthesize(build, params, cls, f"build_{name}")
+
+
+def positional_only(cls: type) -> list[str]:
+    """Return the parameters of *cls* only a positional argument can fill.
+
+    One carrying a default is left out, since leaving it unfilled is legal.
+    """
+    try:
+        params = inspect.signature(cls).parameters.values()
+    except (TypeError, ValueError):
+        return []
+    return [
+        param.name
+        for param in params
+        if param.kind is inspect.Parameter.POSITIONAL_ONLY
+        and param.default is inspect.Parameter.empty
+    ]
+
+
+@dataclasses.dataclass(frozen=True)
+class Filled:
+    """A constructor parameter the session fills itself."""
+
+    name: str
+    """The parameter's name."""
+
+    type: str
+    """Its type as a Python expression, each name under the public package that exports it."""
+
+    required: bool
+    """Whether it has no default, so the build fails when nothing fills it."""
+
+    file: bool
+    """Whether a session file may give it instead."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Parameters:
+    """A constructor's parameters, sorted by where their values come from."""
+
+    fields: dict[str, tuple[Any, Any]]
+    """The keys a session file gives, as `pydantic.create_model` takes them.
+
+    Each is the annotation and the default, `...` when there is none.
+    """
+
+    filled: list[Filled]
+    """The parameters the session fills itself."""
+
+    problems: dict[str, str]
+    """What is wrong with a parameter, by its name."""
+
+    open: bool
+    """Whether the constructor takes `**kwargs`, so any key is accepted."""
+
+    refusal: str | None
+    """Why the build cannot construct the class, or `None`."""
+
+
+def held_name(annotation: object, held: Mapping[object, str]) -> str | None:
+    """Return the name *held* gives *annotation*, or `None` when it is not held."""
+    return next((name for key, name in held.items() if key == annotation), None)
+
+
+def type_text(annotation: object, held: Mapping[object, str]) -> str:
+    """Return *annotation* as a Python type expression a user can look up.
+
+    A type the session holds is written by its held name. Every other class
+    or `NewType` is written under the shortest public package that exports
+    it, and unions and generic types are written part by part.
+    """
+    name = held_name(annotation, held)
+    if name is not None:
+        return name
+    protocol = devices_protocol(annotation)
+    if protocol is not None:
+        return f"redsun.DevicesOf[{type_text(protocol, held)}]"
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        return type_text(get_args(annotation)[0], held)
+    if is_union(annotation):
+        return " | ".join(type_text(arg, held) for arg in get_args(annotation))
+    if annotation is type(None):
+        return "None"
+    if origin is not None:
+        args = ", ".join(type_text(arg, held) for arg in get_args(annotation))
+        return f"{dotted(origin)}[{args}]"
+    if isinstance(annotation, (type, NewType)):
+        return dotted(annotation)
+    return str(annotation)
+
+
+def dotted(named: Any) -> str:
+    """Return the dotted name of *named* under the shortest public package exporting it.
+
+    Builtins and the types of `typing` and `collections.abc` keep their bare
+    names. A package counts only once it is imported, and a private module
+    ends the search, leaving the full path.
+    """
+    module = named.__module__
+    if module in ("builtins", "typing", "collections.abc"):
+        return str(named.__qualname__)
+    top = named.__qualname__.split(".")[0]
+    owner = getattr(sys.modules.get(module), top, None)
+    parts = module.split(".")
+    for end in range(1, len(parts)):
+        if parts[end - 1].startswith("_"):
+            break
+        package = sys.modules.get(".".join(parts[:end]))
+        if owner is not None and getattr(package, top, None) is owner:
+            return f"{'.'.join(parts[:end])}.{named.__qualname__}"
+    return f"{module}.{named.__qualname__}"
+
+
+def is_model(annotation: object) -> bool:
+    """Return whether *annotation* is a type of its own, which a provider can share.
+
+    That is a `pydantic` model, a dataclass, a `TypedDict` or a `NewType`.
+    """
+    while get_origin(annotation) is Annotated:
+        annotation = get_args(annotation)[0]
+    if isinstance(annotation, NewType):
+        return True
+    if not isinstance(annotation, type):
+        return False
+    return (
+        issubclass(annotation, BaseModel)
+        or dataclasses.is_dataclass(annotation)
+        or is_typeddict(annotation)
+    )
+
+
+def has_schema(annotation: Any) -> bool:
+    """Return whether `pydantic` can write a JSON Schema of *annotation*."""
+    try:
+        TypeAdapter(annotation).json_schema()
+    except (PydanticSchemaGenerationError, PydanticInvalidForJsonSchema):
+        return False
+    return True
+
+
+def pydantic_message(error: Exception) -> str:
+    """Return the message of a `pydantic` *error* on one line, without its link to the docs."""
+    return " ".join(
+        line.strip()
+        for line in str(error).splitlines()
+        if line.strip() and not line.startswith("For further information")
+    )
+
+
+def session_fills(annotation: Any, held: Mapping[object, str]) -> bool:
+    """Return whether only the session can give a parameter annotated *annotation*."""
+    if devices_protocol(annotation) is not None:
+        return True
+    hint = without_none(annotation)
+    if held_name(hint, held) is not None:
+        return True
+    if isinstance(hint, type) and issubclass(hint, PoolExecutor):
+        return True
+    return not has_schema(annotation)
+
+
+def parameters_of(
+    cls: type, held: Mapping[object, str], *, device: bool = False
+) -> Parameters:
+    """Sort the constructor parameters of *cls* by where their values come from.
+
+    Each annotation is resolved on its own, so a name missing at runtime is
+    reported for its parameter while the others are still sorted. Such a
+    name, or a positional-only parameter without a default, makes the class
+    one the build cannot construct. A key whose schema `pydantic` fails to
+    write is reported too, and takes any value.
+
+    Parameters
+    ----------
+    held
+        The types the session holds itself, by the name a user looks them up by.
+    device
+        Whether *cls* is a device. The session gives a device only its
+        `path_provider`, by name, so every other parameter is a file key, and
+        a required one with no schema makes the class one the build cannot
+        construct. A presenter or view is given what its types ask for, and
+        `X | None` without a default is given `None`.
+
+    Raises
+    ------
+    TypeError
+        If the signature of *cls* cannot be read, or a parameter carries a
+        malformed `DevicesOf`.
+    """
+    try:
+        signature = inspect.signature(cls)
+    except ValueError as error:
+        raise TypeError(f"cannot read the signature of {cls.__qualname__}") from error
+    fields: dict[str, tuple[Any, Any]] = {}
+    filled: list[Filled] = []
+    problems: dict[str, str] = {}
+    takes_any = False
+    refusals: list[str] = []
+    blocked = positional_only(cls)
+    if blocked:
+        refusals.append(
+            f"{cls.__qualname__} takes {', '.join(map(repr, blocked))} positionally "
+            "only, and the session passes keywords only"
+        )
+    for pname, param in signature.parameters.items():
+        if pname in ("self", "name") or param.kind is param.VAR_POSITIONAL:
+            continue
+        if param.kind is param.VAR_KEYWORD:
+            takes_any = True
+            continue
+        default = ... if param.default is param.empty else param.default
+        if param.kind is param.POSITIONAL_ONLY:
+            problems[pname] = "the session passes keywords only"
+            continue
+        if param.annotation is param.empty:
+            # a device's keys reach its constructor as they are; a presenter's
+            # or view's unannotated parameter stops the build unless given
+            if not device:
+                problems[pname] = (
+                    "it has no annotation, so the session file must give it, "
+                    "or the build stops"
+                )
+                default = ...
+            fields[pname] = (Any, default)
+            continue
+        try:
+            annotation = field_type(cls, param)
+        except NameError as error:
+            problems[pname] = (
+                f"its annotation names {error.name!r}, which is not available at runtime"
+            )
+            refusals.append(
+                f"cannot read the constructor of {cls.__qualname__}: {error.name!r} "
+                "is not available at runtime"
+            )
+            continue
+        if device and pname == "path_provider":
+            filled.append(
+                Filled(pname, type_text(annotation, held), default is ..., file=False)
+            )
+            continue
+        if not device and default is ... and is_optional(annotation):
+            default = None
+        required = default is ...
+        key: Any = annotation
+        try:
+            from_file = (
+                has_schema(annotation)
+                if device
+                else not session_fills(annotation, held)
+            )
+        except (PydanticUserError, SchemaError) as error:
+            problems[pname] = pydantic_message(error)
+            from_file, key = True, Any
+        if from_file:
+            fields[pname] = (key, default)
+            if not device and required and is_model(annotation):
+                filled.append(
+                    Filled(pname, type_text(annotation, held), True, file=True)
+                )
+        elif not device:
+            filled.append(
+                Filled(pname, type_text(annotation, held), required, file=False)
+            )
+        elif required and is_optional(annotation):
+            fields[pname] = (None, ...)
+        elif required:
+            refusals.append(
+                f"{cls.__qualname__} asks for {pname!r} "
+                f"({type_text(annotation, held)}), which no session file can "
+                "give, and the session gives a device nothing by type"
+            )
+    return Parameters(
+        fields=fields,
+        filled=filled,
+        problems=problems,
+        open=takes_any,
+        refusal="; ".join(refusals) or None,
+    )

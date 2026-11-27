@@ -1,9 +1,15 @@
 devices:
   mock-stage: mock_bundle.devices:MockStage
+  prefixed: mock_bundle.described:PrefixedDevice
+  calibrated: mock_bundle.described:CalibratedDevice
+  mapped: mock_bundle.described:MappedDevice
 
 presenters:
   mock-motor: mock_bundle.presenters:MockMotorPresenter
   mock-late: mock_bundle.presenters:MockLatePresenter
+  described: mock_bundle.described:DescribedPresenter
+  limited: mock_bundle.described:LimitedPresenter
+  labelled: mock_bundle.described:LabelledPresenter
 
 views:
   mock-motor-view: mock_bundle.views:MockMotorView

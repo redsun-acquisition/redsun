@@ -32,7 +32,7 @@ from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
 from ._compute import component_kinds
-from ._factories import constructor, resolved
+from ._factories import constructor, positional_only, resolved
 from ._frontend import Frontend
 from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
@@ -771,23 +771,6 @@ def accepts_name(cls: type) -> bool:
     except (TypeError, ValueError):
         return False
     return param is not None and param.kind in NAME_KINDS
-
-
-def positional_only(cls: type) -> list[str]:
-    """Return the parameters of *cls* only a positional argument can fill.
-
-    One carrying a default is left out, since leaving it unfilled is legal.
-    """
-    try:
-        params = inspect.signature(cls).parameters.values()
-    except (TypeError, ValueError):
-        return []
-    return [
-        param.name
-        for param in params
-        if param.kind is inspect.Parameter.POSITIONAL_ONLY
-        and param.default is inspect.Parameter.empty
-    ]
 
 
 def read(

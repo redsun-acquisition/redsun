@@ -149,6 +149,16 @@ P = TypeVar("P")
 CallbackCatalogue: TypeAlias = Mapping[str, CallbackType]
 """The key a component asks for to receive every document router the session built."""
 
+HELD: Final[Mapping[object, str]] = {
+    Settings: "redsun.Settings",
+    SessionConfig: "redsun.SessionConfig",
+    DeviceMapping: "redsun.DeviceMapping",
+    SessionPathProvider: "redsun.path_provider.SessionPathProvider",
+    CatalogAddress: "redsun.catalog.CatalogAddress",
+    CallbackCatalogue: "Mapping[str, redsun.CallbackType]",
+}
+"""The types the session registers under its own name, by the name a user looks them up by."""
+
 SAVED_SHORTCUTS: Final = "shortcuts"
 """The settings key holding the keys the user changed, by command."""
 

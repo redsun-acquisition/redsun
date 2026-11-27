@@ -26,6 +26,8 @@ from redsun.qt import QtHook, QtSession
 from redsun.qt.styles import qlementine
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from qtpy.QtWidgets import QApplication
 
     from redsun.testing import BuildSession
@@ -56,6 +58,23 @@ MOCK_BUNDLE = Path(__file__).parent / "launchable" / "mock_bundle"
 CONFIGS = Path(__file__).parent / "configs"
 
 runner = CliRunner()
+
+
+@pytest.fixture
+def a_plugin_with_services_only(tmp_path: Path) -> Generator[None, None, None]:
+    """Present a plugin whose manifest lists a service and no component."""
+    (tmp_path / "redsun.yaml").write_text(
+        "services:\n  ioc:\n    module: mock_pkg.service.stand_in\n"
+    )
+    entry = mock.Mock(spec=EntryPoint)
+    entry.name = "services-only"
+    entry.value = "redsun.yaml"
+    entry.dist = None
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=[entry]),
+        mock.patch("redsun._manifest.files", side_effect=lambda _: tmp_path),
+    ):
+        yield
 
 
 @pytest.mark.qt
@@ -234,7 +253,9 @@ def test_plugins_lists_the_ids_of_each_group_in_plain_text(mock_plugin: None) ->
 
     assert done.exit_code == 0
     assert "mock-bundle (mock-bundle-dist 1.2.3)" in done.output
-    assert "presenters: mock-late, mock-motor" in done.output
+    assert (
+        "presenters: described, labelled, limited, mock-late, mock-motor" in done.output
+    )
 
 
 def test_the_command_loads_without_a_qt_binding() -> None:
@@ -409,3 +430,30 @@ def test_run_reports_a_type_error_from_the_file_without_a_traceback(
     assert done.exit_code == 1
     assert "already" in done.output
     assert isinstance(done.exception, SystemExit)
+
+
+def test_describe_prints_one_entry_as_json(mock_plugin: None) -> None:
+    """Print the report of one entry as JSON, and exit with 0 when nothing is wrong."""
+    done = runner.invoke(app, ["describe", "mock-bundle", "mock-motor", "--json"])
+
+    assert done.exit_code == 0, done.output
+    report = json.loads(done.output)
+    assert [c["plugin_id"] for c in report["components"]] == ["mock-motor"]
+
+
+def test_describe_exits_1_on_a_problem(mock_plugin: None) -> None:
+    """Exit with 1 and name the parameter at fault when a component has a problem."""
+    done = runner.invoke(app, ["describe", "mock-bundle", "described"], env=WIDE)
+
+    assert done.exit_code == 1
+    assert "described.scale" in done.output
+
+
+def test_describe_of_a_plugin_without_components_exits_0(
+    a_plugin_with_services_only: None,
+) -> None:
+    """Describe nothing and exit with 0 for a plugin that lists no component."""
+    done = runner.invoke(app, ["describe", "services-only", "--json"])
+
+    assert done.exit_code == 0, done.output
+    assert json.loads(done.output)["components"] == []

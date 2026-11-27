@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from importlib.resources import files
 from pathlib import Path  # noqa: TC003
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 import yaml
@@ -14,7 +15,8 @@ from redsun.errors import BuildError, HookError
 
 from ._check import check_report
 from ._config import frontends
-from ._reports import GROUPS, CheckReport, plugins_report
+from ._describe import describe_report
+from ._reports import GROUPS, CheckReport, DescribeReport, plugins_report
 from .session._profile import ProfileKind  # noqa: TC001
 
 app = typer.Typer(
@@ -193,6 +195,83 @@ def print_check(report: CheckReport) -> None:
             typer.echo(line + (f" - {lookup.reason}" if lookup.reason else ""))
     typer.echo("not checked:")
     typer.echo(f"  {', '.join(report.skipped)}")
+
+
+@app.command()
+def describe(
+    plugin: Annotated[
+        str, typer.Argument(help="The plugin, as a session file names it.")
+    ],
+    plugin_id: Annotated[
+        str | None,
+        typer.Argument(
+            help="One device, presenter or view of the plugin; all of them when left out.",
+            metavar="ID",
+            show_default=False,
+        ),
+    ] = None,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the report as JSON.")
+    ] = False,
+) -> None:
+    """Describe the keys each device, presenter and view of a plugin takes."""
+    report = describe_report(plugin, plugin_id)
+    if as_json:
+        typer.echo(report.to_json())
+    else:
+        print_describe(report)
+    if report.problems or any(c.status == "failed" for c in report.components):
+        raise typer.Exit(1)
+
+
+def kind_of(schema: dict[str, Any]) -> str:
+    """Return the type a JSON Schema allows, in a few words."""
+    if "enum" in schema:
+        return "one of " + ", ".join(map(str, schema["enum"]))
+    if "type" in schema:
+        return str(schema["type"])
+    if "anyOf" in schema:
+        return " or ".join(kind_of(part) for part in schema["anyOf"])
+    if "$ref" in schema:
+        return str(schema["$ref"]).rsplit("/", 1)[-1]
+    return "any"
+
+
+def print_describe(report: DescribeReport) -> None:
+    """Print *report* as one block per component, then its problems."""
+    typer.echo(report.plugin_name)
+    for component in report.components:
+        typer.echo(
+            f"  {component.group}/{component.plugin_id} ({component.class_path})"
+        )
+        if component.status == "failed":
+            typer.echo(f"    failed: {component.reason}")
+            continue
+        schema = component.json_schema or {}
+        required = set(schema.get("required", []))
+        from_service = {
+            way["required"][0]
+            for item in schema.get("allOf", [])
+            for way in item["anyOf"][:1]
+        }
+        for key, value in schema.get("properties", {}).items():
+            if key in ("plugin_name", "plugin_id"):
+                continue
+            line = f"    {key}: {kind_of(value)}"
+            if "default" in value:
+                line += f" = {json.dumps(value['default'])}"
+            elif key in from_service:
+                line += ", required, or from a service"
+            else:
+                line += ", required" if key in required else ", optional"
+            typer.echo(line)
+        if component.session:
+            filled = ", ".join(f"{p.name} ({p.type})" for p in component.session)
+            typer.echo(f"    the session fills: {filled}")
+    if report.problems:
+        typer.echo("Problems:")
+        for problem in report.problems:
+            typer.echo(f"  {problem.where}: {problem.message}")
 
 
 # typer reads the annotations at runtime, so `Path` and `ProfileKind` are real imports

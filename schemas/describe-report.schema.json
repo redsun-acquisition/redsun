@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Described": {
+      "description": "One device, presenter or view of a manifest, and the keys its entry takes.",
+      "properties": {
+        "group": {
+          "description": "The group of the manifest it is listed under.",
+          "enum": [
+            "devices",
+            "presenters",
+            "views"
+          ],
+          "title": "Group",
+          "type": "string"
+        },
+        "plugin_id": {
+          "description": "The id a session file gives as `plugin_id`.",
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "class": {
+          "description": "The class the manifest names, as `module:ClassName`.",
+          "title": "Class",
+          "type": "string"
+        },
+        "status": {
+          "description": "Whether the session can build it, as far as its constructor tells.",
+          "enum": [
+            "passed",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The JSON Schema of the keys its session-file entry takes.\n\nAbsent when its class cannot be imported or its signature read.",
+          "title": "Schema"
+        },
+        "session": {
+          "default": [],
+          "description": "The constructor parameters the session fills by their type.",
+          "items": {
+            "$ref": "#/$defs/SessionParameter"
+          },
+          "title": "Session",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why it failed.",
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "group",
+        "plugin_id",
+        "class",
+        "status"
+      ],
+      "title": "Described",
+      "type": "object"
+    },
+    "Problem": {
+      "description": "Something a command found wrong.",
+      "properties": {
+        "kind": {
+          "description": "What the problem is about.\n\n`manifest` is a plugin manifest that was skipped, or a plugin or entry\nthat was not found; `value` a value of a session file that is refused,\nor that breaks the type or the limits its class declares;\n`session` a session that cannot be made or read at all; and `parameter` a\nconstructor parameter that cannot be described.",
+          "enum": [
+            "manifest",
+            "value",
+            "session",
+            "parameter"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "where": {
+          "description": "What it was found in: for a manifest, the name of the plugin; for a value, its key path; for a session, the files.",
+          "title": "Where",
+          "type": "string"
+        },
+        "message": {
+          "description": "What is wrong, as `redsun` logs it.",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "where",
+        "message"
+      ],
+      "title": "Problem",
+      "type": "object"
+    },
+    "SessionParameter": {
+      "description": "A constructor parameter the session fills itself.",
+      "properties": {
+        "name": {
+          "description": "The parameter's name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "description": "Its type as a Python expression, each name under the public package that exports it.",
+          "title": "Type",
+          "type": "string"
+        },
+        "required": {
+          "description": "Whether it has no default, so the build fails when nothing fills it.",
+          "title": "Required",
+          "type": "boolean"
+        },
+        "file": {
+          "description": "Whether a session file may give it instead.",
+          "title": "File",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "required",
+        "file"
+      ],
+      "title": "SessionParameter",
+      "type": "object"
+    }
+  },
+  "description": "The keys each device, presenter and view of a plugin takes.",
+  "properties": {
+    "redsun": {
+      "description": "The version of `redsun` that wrote the report.",
+      "title": "Redsun",
+      "type": "string"
+    },
+    "format": {
+      "description": "The value of `FORMAT` when the report was written.",
+      "title": "Format",
+      "type": "integer"
+    },
+    "problems": {
+      "description": "What the command found wrong, empty when nothing is.",
+      "items": {
+        "$ref": "#/$defs/Problem"
+      },
+      "title": "Problems",
+      "type": "array"
+    },
+    "plugin_name": {
+      "description": "The plugin described.",
+      "title": "Plugin Name",
+      "type": "string"
+    },
+    "components": {
+      "description": "Its devices, presenters and views, in the order of the manifest's groups.",
+      "items": {
+        "$ref": "#/$defs/Described"
+      },
+      "title": "Components",
+      "type": "array"
+    }
+  },
+  "required": [
+    "redsun",
+    "format",
+    "problems",
+    "plugin_name",
+    "components"
+  ],
+  "title": "DescribeReport",
+  "type": "object"
+}

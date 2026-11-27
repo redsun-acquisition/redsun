@@ -27,8 +27,11 @@ GROUPS: Final = get_args(Group)
 Status = Literal["passed", "failed", "undecided"]
 """The outcome of a check: certain to work, certain to fail, or not knowable without a build."""
 
+DescribedGroup = Literal["devices", "presenters", "views"]
+"""The groups of a manifest whose components `redsun describe` describes."""
+
 SKIPPED: Final = (
-    "the values given to constructors",
+    "what a constructor checks itself",
     "what setup does",
     "members of a SignalGroup",
     "placements a view gives through a property",
@@ -40,12 +43,14 @@ SKIPPED: Final = (
 class Problem(BaseModel, frozen=True, use_attribute_docstrings=True):
     """Something a command found wrong."""
 
-    kind: Literal["manifest", "value", "session"]
+    kind: Literal["manifest", "value", "session", "parameter"]
     """What the problem is about.
 
-    `manifest` is a plugin manifest that was skipped, `value` a value of a
-    session file that is refused, and `session` a session that cannot be made
-    or read at all.
+    `manifest` is a plugin manifest that was skipped, or a plugin or entry
+    that was not found; `value` a value of a session file that is refused,
+    or that breaks the type or the limits its class declares;
+    `session` a session that cannot be made or read at all; and `parameter` a
+    constructor parameter that cannot be described.
     """
 
     where: str
@@ -165,6 +170,60 @@ class PluginsReport(Report, frozen=True):
     """The plugins whose manifest loaded, in the order they were found."""
 
 
+class SessionParameter(BaseModel, frozen=True, use_attribute_docstrings=True):
+    """A constructor parameter the session fills itself."""
+
+    name: str
+    """The parameter's name."""
+
+    type: str
+    """Its type as a Python expression, each name under the public package that exports it."""
+
+    required: bool
+    """Whether it has no default, so the build fails when nothing fills it."""
+
+    file: bool
+    """Whether a session file may give it instead."""
+
+
+class Described(BaseModel, frozen=True, use_attribute_docstrings=True):
+    """One device, presenter or view of a manifest, and the keys its entry takes."""
+
+    group: DescribedGroup
+    """The group of the manifest it is listed under."""
+
+    plugin_id: str
+    """The id a session file gives as `plugin_id`."""
+
+    class_path: str = Field(alias="class")
+    """The class the manifest names, as `module:ClassName`."""
+
+    status: Literal["passed", "failed"]
+    """Whether the session can build it, as far as its constructor tells."""
+
+    json_schema: dict[str, Any] | None = Field(default=None, alias="schema")
+    """The JSON Schema of the keys its session-file entry takes.
+
+    Absent when its class cannot be imported or its signature read.
+    """
+
+    session: list[SessionParameter] = []
+    """The constructor parameters the session fills by their type."""
+
+    reason: str | None = None
+    """Why it failed."""
+
+
+class DescribeReport(Report, frozen=True):
+    """The keys each device, presenter and view of a plugin takes."""
+
+    plugin_name: str
+    """The plugin described."""
+
+    components: list[Described]
+    """Its devices, presenters and views, in the order of the manifest's groups."""
+
+
 def plugins_report() -> PluginsReport:
     """Return the installed plugins, with a problem for each manifest that was skipped."""
     plugins = []
@@ -205,6 +264,7 @@ def report_schemas() -> dict[str, dict[str, Any]]:
     reports: dict[str, type[Report]] = {
         "check-report": CheckReport,
         "plugins-report": PluginsReport,
+        "describe-report": DescribeReport,
     }
     return {
         name: {

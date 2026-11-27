@@ -57,8 +57,8 @@ def test_a_check_records_each_component_and_lookup(mock_plugin: None) -> None:
         "m": "passed",
         "ghost": "failed",
         "fast": "failed",
-        "pooled": "passed",
-        "m2": "passed",
+        "pooled": "undecided",
+        "m2": "undecided",
         "v": "passed",
         "ioc": "failed",
     }
@@ -276,3 +276,99 @@ def test_a_check_of_a_qt_file_records_hooks_and_layout_names(mock_plugin: None) 
     assert docked.status == "passed"
     [refused] = [lookup for lookup in report.lookups if lookup.name == "refused"]
     assert refused.reason == "view 'refused' would not be built"
+
+
+def test_a_check_validates_constructor_values(mock_plugin: None) -> None:
+    """Report a value outside its limits, and decide the status of missing keys."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "devices": {
+                    "bare": {**BUNDLE, "plugin_id": "prefixed"},
+                    "served": {
+                        **BUNDLE,
+                        "plugin_id": "prefixed",
+                        "services": {"prefix": "ioc"},
+                    },
+                },
+                "services": {"ioc": {**BUNDLE, "plugin_id": "stand-in"}},
+                "presenters": {"d": {**BUNDLE, "plugin_id": "limited", "step": 0}},
+            }
+        ]
+    )
+
+    assert records(report)["bare"] == "failed"
+    assert records(report)["served"] == "passed"
+    assert records(report)["d"] == "undecided"
+    assert [(p.kind, p.where) for p in report.problems] == [
+        ("value", "presenters.d.step")
+    ]
+
+
+def test_a_presenter_missing_a_plain_key_stops_the_build(mock_plugin: None) -> None:
+    """Report a `session` problem for a presenter missing a `str` key, and pass one missing an optional key."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "presenters": {
+                    "p": {**BUNDLE, "plugin_id": "labelled"},
+                    "q": {**BUNDLE, "plugin_id": "labelled", "label": "x"},
+                },
+            }
+        ]
+    )
+
+    assert records(report) == {"p": "failed", "q": "passed"}
+    [problem] = report.problems
+    assert (problem.kind, problem.where) == ("session", "presenters.p")
+    assert "'label' (str)" in problem.message
+
+
+def test_a_device_is_checked_as_given_nothing_by_type(mock_plugin: None) -> None:
+    """Fail a device missing a model-type key, and one asking for what no file gives."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "devices": {
+                    "c": {**BUNDLE, "plugin_id": "calibrated", "prefix": "X:"},
+                    "m": {**BUNDLE, "plugin_id": "mapped", "prefix": "X:"},
+                },
+            }
+        ]
+    )
+
+    reasons = {c.name: (c.status, c.reason) for c in report.components}
+    assert reasons["c"] == ("failed", "missing 'calibration'")
+    status, reason = reasons["m"]
+    assert status == "failed" and reason is not None and "'devices'" in reason
+    assert report.problems == []
+
+
+def test_a_value_problem_points_at_the_key_written(mock_plugin: None) -> None:
+    """Point a stack half's value problem at its stack and role, and report a model value missing a field."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "stacks": {
+                    "st": {
+                        **BUNDLE,
+                        "plugin_id": "mock-motor",
+                        "presenter": {"step": "abc"},
+                    }
+                },
+                "presenters": {
+                    "d": {**BUNDLE, "plugin_id": "limited", "calibration": {}}
+                },
+            }
+        ]
+    )
+
+    assert sorted((p.kind, p.where) for p in report.problems) == [
+        ("value", "presenters.d.calibration.offset"),
+        ("value", "stacks.st.presenter.step"),
+    ]
+    assert records(report)["d"] == "passed"

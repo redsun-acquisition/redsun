@@ -7,27 +7,31 @@ from itertools import chain
 from typing import TYPE_CHECKING, Literal
 
 import yaml
+from pydantic import PydanticUserError, ValidationError
 
 from redsun import __version__
 from redsun.errors import ConfigurationError, PluginError
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 
 from ._config import label
+from ._describe import ENTRY_MODELS, entry_model
 from ._hooks import distinct
 from ._manifest import survey
 from ._reports import FORMAT, SKIPPED, CheckReport, Component, Lookup, Problem
 from .ports._wiring import class_ports
-from .session._base import Session, unaccepted
+from .session._base import HELD, Session, unaccepted, unanswered_message
 from .session._declarations import Layer
+from .session._factories import parameters_of
 from .session._layout import resolved_layout
 from .session._plugins import resolve
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
 
     from ._config import SessionFile, Source
     from ._reports import Group, Status
     from .ports._wiring import PortNames
+    from .session._declarations import Declaration
 
 ORDER: dict[Status, int] = {"passed": 0, "undecided": 1, "failed": 2}
 """How bad each status is, so the worse of two ends decides a lookup."""
@@ -75,9 +79,10 @@ def checked(files: Sequence[Source]) -> CheckReport:
     # RuntimeError covers HookError and the missing packages of a catalog
     except (ImportError, RuntimeError, TypeError, ValueError) as e:
         return report([*problems, Problem(kind="session", where=where, message=str(e))])
+    found, decided = constructor_findings(session)
     return report(
-        problems,
-        components=list(components(session, config)),
+        [*problems, *found],
+        components=list(components(session, config, decided)),
         lookups=[
             *layout_lookups(session),
             *wiring_lookups(session, config),
@@ -140,8 +145,16 @@ def component(
     )
 
 
-def components(session: Session, config: SessionFile) -> Iterator[Component]:
-    """Yield a record for each component, stack, service and hook provider."""
+def components(
+    session: Session,
+    config: SessionFile,
+    decided: Mapping[str, tuple[Status, str]],
+) -> Iterator[Component]:
+    """Yield a record for each component, stack, service and hook provider.
+
+    A component the build's reading found nothing wrong with takes its
+    status from *decided*, what its constructor keys say, when it is there.
+    """
     stack_of = {
         half: stack.name for stack in session._stacks.values() for half in stack.roles
     }
@@ -173,14 +186,11 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
                 failure = TypeError(
                     f"its class takes no {', '.join(map(repr, refused))}"
                 )
-        yield component(
-            declaration.name,
-            group,
-            declaration.cls,
-            entry,
-            "passed" if failure is None else "failed",
-            None if failure is None else str(failure),
-        )
+        status: Status = "passed" if failure is None else "failed"
+        why = None if failure is None else str(failure)
+        if failure is None and declaration.name in decided:
+            status, why = decided[declaration.name]
+        yield component(declaration.name, group, declaration.cls, entry, status, why)
     for stack in session._stacks.values():
         yield component(
             stack.name, "stacks", stack.cls, config.stacks.get(stack.name), "passed"
@@ -216,6 +226,99 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
         yield component(cls.__name__, "hooks", cls, None, "passed")
     for hook in session._failed_hooks:
         yield component(hook.name, "hooks", None, None, "failed", str(hook.reason))
+
+
+def constructor_findings(
+    session: Session,
+) -> tuple[list[Problem], dict[str, tuple[Status, str]]]:
+    """Check the constructor keys of each device, presenter and view against its class.
+
+    Returns a `value` problem for each value of the wrong type or outside its
+    limits, and the status of each component its keys decide. A device
+    missing a key, or asking for one no file can give, is `failed`. A
+    presenter or view missing a key the session cannot fill stops the build,
+    so it is `failed` with a `session` problem; one missing a key the session
+    fills only if something provides its model type is `undecided`. A
+    component the build's reading already refused, or whose class cannot be
+    described, is left out.
+    """
+    problems: list[Problem] = []
+    decided: dict[str, tuple[Status, str]] = {}
+    halves = {
+        half: (stack.name, role)
+        for stack in session._stacks.values()
+        for half, role in stack.roles.items()
+    }
+    for declaration in session._declarations.values():
+        section = declaration.kind.section
+        if (
+            section not in ENTRY_MODELS
+            or declaration.cls is object
+            or declaration.refusal is not None
+            or declaration.name in session._failed
+        ):
+            continue
+        device = section == "devices"
+        try:
+            parameters = parameters_of(declaration.cls, HELD, device=device)
+            model = entry_model(declaration.cls, section, parameters)
+        except (PydanticUserError, TypeError, ValueError):
+            continue
+        if parameters.refusal is not None:
+            decided[declaration.name] = ("failed", parameters.refusal)
+            continue
+        try:
+            model.model_validate(dict(declaration.cfg_kwargs))
+            continue
+        except ValidationError as error:
+            errors = error.errors()
+        path = entry_path(declaration, halves)
+        providers = {
+            filled.name: filled.type for filled in parameters.filled if filled.file
+        }
+        missing: list[str] = []
+        undecided: list[str] = []
+        for found in errors:
+            key = ".".join(map(str, found["loc"]))
+            # a field missing inside a given value is a wrong value, not a missing key
+            if found["type"] != "missing" or len(found["loc"]) > 1:
+                problems.append(
+                    Problem(kind="value", where=f"{path}.{key}", message=found["msg"])
+                )
+            elif key in providers:
+                undecided.append(
+                    f"the session fills {key!r} only if something provides "
+                    f"{providers[key]}, and the build stops otherwise"
+                )
+            elif key not in declaration.services:
+                missing.append(key)
+        if missing and not device:
+            hints = [(key, parameters.fields[key][0]) for key in missing]
+            problems.append(
+                Problem(
+                    kind="session",
+                    where=path,
+                    message=unanswered_message(declaration.name, hints),
+                )
+            )
+        if missing:
+            reason = "; ".join(f"missing {key!r}" for key in missing)
+            decided[declaration.name] = ("failed", reason)
+        elif undecided:
+            decided[declaration.name] = ("undecided", "; ".join(undecided))
+    return problems, decided
+
+
+def entry_path(declaration: Declaration, halves: Mapping[str, tuple[str, str]]) -> str:
+    """Return the path of *declaration*'s entry in the session file.
+
+    A stack half's keys sit under its stack and role, as `stacks.<stack>.<role>`;
+    *halves* gives the stack and role of each half by its name.
+    """
+    if declaration.name in halves:
+        stack, role = halves[declaration.name]
+        return f"stacks.{stack}.{role}"
+    return f"{declaration.kind.section}.{declaration.name}"
 
 
 def layout_lookups(session: Session) -> Iterator[Lookup]:

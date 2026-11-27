@@ -152,6 +152,7 @@ nav = [
                 "explanation/decisions/0039-a-sharedbox-transport-serves-each-attribute-as-one-field.md",
                 "explanation/decisions/0040-a-view-has-a-title-apart-from-its-name.md",
                 "explanation/decisions/0041-a-view-can-sit-in-the-status-bar.md",
+                "explanation/decisions/0044-a-component-s-parameters-are-described-by-a-generated-pydantic-model.md",
         ]},
     ]},
     { "Reference" = [
