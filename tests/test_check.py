@@ -304,3 +304,71 @@ def test_a_check_validates_constructor_values(mock_plugin: None) -> None:
     assert [(p.kind, p.where) for p in report.problems] == [
         ("value", "presenters.d.step")
     ]
+
+
+def test_a_presenter_missing_a_plain_key_stops_the_build(mock_plugin: None) -> None:
+    """Report a `session` problem for a presenter missing a `str` key, and pass one missing an optional key."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "presenters": {
+                    "p": {**BUNDLE, "plugin_id": "labelled"},
+                    "q": {**BUNDLE, "plugin_id": "labelled", "label": "x"},
+                },
+            }
+        ]
+    )
+
+    assert records(report) == {"p": "failed", "q": "passed"}
+    [problem] = report.problems
+    assert (problem.kind, problem.where) == ("session", "presenters.p")
+    assert "'label' (str)" in problem.message
+
+
+def test_a_device_is_checked_as_given_nothing_by_type(mock_plugin: None) -> None:
+    """Fail a device missing a model-type key, and one asking for what no file gives."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "devices": {
+                    "c": {**BUNDLE, "plugin_id": "calibrated", "prefix": "X:"},
+                    "m": {**BUNDLE, "plugin_id": "mapped", "prefix": "X:"},
+                },
+            }
+        ]
+    )
+
+    reasons = {c.name: (c.status, c.reason) for c in report.components}
+    assert reasons["c"] == ("failed", "missing 'calibration'")
+    status, reason = reasons["m"]
+    assert status == "failed" and reason is not None and "'devices'" in reason
+    assert report.problems == []
+
+
+def test_a_value_problem_points_at_the_key_written(mock_plugin: None) -> None:
+    """Point a stack half's value problem at its stack and role, and report a model value missing a field."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "stacks": {
+                    "st": {
+                        **BUNDLE,
+                        "plugin_id": "mock-motor",
+                        "presenter": {"step": "abc"},
+                    }
+                },
+                "presenters": {
+                    "d": {**BUNDLE, "plugin_id": "limited", "calibration": {}}
+                },
+            }
+        ]
+    )
+
+    assert sorted((p.kind, p.where) for p in report.problems) == [
+        ("value", "presenters.d.calibration.offset"),
+        ("value", "stacks.st.presenter.step"),
+    ]
+    assert records(report)["d"] == "passed"
