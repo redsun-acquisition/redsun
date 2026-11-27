@@ -253,7 +253,7 @@ def test_plugins_lists_the_ids_of_each_group_in_plain_text(mock_plugin: None) ->
 
     assert done.exit_code == 0
     assert "mock-bundle (mock-bundle-dist 1.2.3)" in done.output
-    assert "presenters: described, mock-late, mock-motor" in done.output
+    assert "presenters: described, limited, mock-late, mock-motor" in done.output
 
 
 def test_the_command_loads_without_a_qt_binding() -> None:

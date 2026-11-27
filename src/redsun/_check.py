@@ -7,23 +7,26 @@ from itertools import chain
 from typing import TYPE_CHECKING, Literal
 
 import yaml
+from pydantic import PydanticUserError, ValidationError
 
 from redsun import __version__
 from redsun.errors import ConfigurationError, PluginError
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 
 from ._config import label
+from ._describe import ENTRY_MODELS, entry_model
 from ._hooks import distinct
 from ._manifest import survey
 from ._reports import FORMAT, SKIPPED, CheckReport, Component, Lookup, Problem
 from .ports._wiring import class_ports
-from .session._base import Session, unaccepted
+from .session._base import HELD, Session, unaccepted
 from .session._declarations import Layer
+from .session._factories import parameters_of
 from .session._layout import resolved_layout
 from .session._plugins import resolve
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
 
     from ._config import SessionFile, Source
     from ._reports import Group, Status
@@ -75,9 +78,10 @@ def checked(files: Sequence[Source]) -> CheckReport:
     # RuntimeError covers HookError and the missing packages of a catalog
     except (ImportError, RuntimeError, TypeError, ValueError) as e:
         return report([*problems, Problem(kind="session", where=where, message=str(e))])
+    found, decided = constructor_findings(session)
     return report(
-        problems,
-        components=list(components(session, config)),
+        [*problems, *found],
+        components=list(components(session, config, decided)),
         lookups=[
             *layout_lookups(session),
             *wiring_lookups(session, config),
@@ -140,8 +144,16 @@ def component(
     )
 
 
-def components(session: Session, config: SessionFile) -> Iterator[Component]:
-    """Yield a record for each component, stack, service and hook provider."""
+def components(
+    session: Session,
+    config: SessionFile,
+    decided: Mapping[str, tuple[Status, str]],
+) -> Iterator[Component]:
+    """Yield a record for each component, stack, service and hook provider.
+
+    A component the build's reading found nothing wrong with takes its
+    status from *decided*, what its constructor keys say, when it is there.
+    """
     stack_of = {
         half: stack.name for stack in session._stacks.values() for half in stack.roles
     }
@@ -173,14 +185,11 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
                 failure = TypeError(
                     f"its class takes no {', '.join(map(repr, refused))}"
                 )
-        yield component(
-            declaration.name,
-            group,
-            declaration.cls,
-            entry,
-            "passed" if failure is None else "failed",
-            None if failure is None else str(failure),
-        )
+        status: Status = "passed" if failure is None else "failed"
+        why = None if failure is None else str(failure)
+        if failure is None and declaration.name in decided:
+            status, why = decided[declaration.name]
+        yield component(declaration.name, group, declaration.cls, entry, status, why)
     for stack in session._stacks.values():
         yield component(
             stack.name, "stacks", stack.cls, config.stacks.get(stack.name), "passed"
@@ -216,6 +225,67 @@ def components(session: Session, config: SessionFile) -> Iterator[Component]:
         yield component(cls.__name__, "hooks", cls, None, "passed")
     for hook in session._failed_hooks:
         yield component(hook.name, "hooks", None, None, "failed", str(hook.reason))
+
+
+def constructor_findings(
+    session: Session,
+) -> tuple[list[Problem], dict[str, tuple[Status, str]]]:
+    """Check the constructor keys of each device, presenter and view against its class.
+
+    Returns a `value` problem for each value of the wrong type or outside its
+    limits, and the status of each component a missing key decides: `failed`
+    when the session cannot fill the key, `undecided` when it can only if
+    something provides the key's model type. A component the build's reading
+    already refused, or whose class cannot be described, is left out.
+    """
+    problems: list[Problem] = []
+    decided: dict[str, tuple[Status, str]] = {}
+    for declaration in session._declarations.values():
+        section = declaration.kind.section
+        if (
+            section not in ENTRY_MODELS
+            or declaration.cls is object
+            or declaration.refusal is not None
+            or declaration.name in session._failed
+        ):
+            continue
+        try:
+            parameters = parameters_of(declaration.cls, HELD)
+            model = entry_model(declaration.cls, section, parameters)
+        except (PydanticUserError, TypeError, ValueError):
+            continue
+        try:
+            model.model_validate(dict(declaration.cfg_kwargs))
+            continue
+        except ValidationError as error:
+            errors = error.errors()
+        providers = {
+            filled.name: filled.type for filled in parameters.filled if filled.file
+        }
+        failed: list[str] = []
+        undecided: list[str] = []
+        for found in errors:
+            key = ".".join(map(str, found["loc"]))
+            if found["type"] != "missing":
+                problems.append(
+                    Problem(
+                        kind="value",
+                        where=f"{section}.{declaration.name}.{key}",
+                        message=found["msg"],
+                    )
+                )
+            elif key in providers:
+                undecided.append(
+                    f"the session fills {key!r} only if something provides "
+                    f"{providers[key]}"
+                )
+            elif key not in declaration.services:
+                failed.append(f"missing {key!r}")
+        if failed:
+            decided[declaration.name] = ("failed", "; ".join(failed))
+        elif undecided:
+            decided[declaration.name] = ("undecided", "; ".join(undecided))
+    return problems, decided
 
 
 def layout_lookups(session: Session) -> Iterator[Lookup]:

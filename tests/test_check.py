@@ -57,8 +57,8 @@ def test_a_check_records_each_component_and_lookup(mock_plugin: None) -> None:
         "m": "passed",
         "ghost": "failed",
         "fast": "failed",
-        "pooled": "passed",
-        "m2": "passed",
+        "pooled": "undecided",
+        "m2": "undecided",
         "v": "passed",
         "ioc": "failed",
     }
@@ -276,3 +276,31 @@ def test_a_check_of_a_qt_file_records_hooks_and_layout_names(mock_plugin: None) 
     assert docked.status == "passed"
     [refused] = [lookup for lookup in report.lookups if lookup.name == "refused"]
     assert refused.reason == "view 'refused' would not be built"
+
+
+def test_a_check_validates_constructor_values(mock_plugin: None) -> None:
+    """Report a value outside its limits, and decide the status of missing keys."""
+    report = check_report(
+        [
+            {
+                "session": "s",
+                "devices": {
+                    "bare": {**BUNDLE, "plugin_id": "prefixed"},
+                    "served": {
+                        **BUNDLE,
+                        "plugin_id": "prefixed",
+                        "services": {"prefix": "ioc"},
+                    },
+                },
+                "services": {"ioc": {**BUNDLE, "plugin_id": "stand-in"}},
+                "presenters": {"d": {**BUNDLE, "plugin_id": "limited", "step": 0}},
+            }
+        ]
+    )
+
+    assert records(report)["bare"] == "failed"
+    assert records(report)["served"] == "passed"
+    assert records(report)["d"] == "undecided"
+    assert [(p.kind, p.where) for p in report.problems] == [
+        ("value", "presenters.d.step")
+    ]

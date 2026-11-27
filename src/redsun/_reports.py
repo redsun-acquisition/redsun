@@ -31,7 +31,7 @@ DescribedGroup = Literal["devices", "presenters", "views"]
 """The groups of a manifest whose components `redsun describe` describes."""
 
 SKIPPED: Final = (
-    "the values given to constructors",
+    "what a constructor checks itself",
     "what setup does",
     "members of a SignalGroup",
     "placements a view gives through a property",
@@ -47,7 +47,8 @@ class Problem(BaseModel, frozen=True, use_attribute_docstrings=True):
     """What the problem is about.
 
     `manifest` is a plugin manifest that was skipped, or a plugin or entry
-    that was not found; `value` a value of a session file that is refused;
+    that was not found; `value` a value of a session file that is refused,
+    or that breaks the type or the limits its class declares;
     `session` a session that cannot be made or read at all; and `parameter` a
     constructor parameter that cannot be described.
     """

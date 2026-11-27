@@ -150,8 +150,8 @@ hook provider a status, and each name the file looks up in `layout`,
 | Status | Means |
 | --- | --- |
 | `passed` | it would be built, or found |
-| `failed` | it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a `layout` name has no view to answer to |
-| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built |
+| `failed` | it would not, for one of these reasons: its plugin or class can't be found, its declaration is refused, its entry gives a key its class doesn't take or leaves out one the session can't fill, it names a service the session doesn't declare, a service or provider entry's plugin can't be found, a hook provider can't be built, a wiring path is malformed or names a component the session doesn't declare or won't build, a pair names such a component, or a `layout` name has no view to answer to |
+| `undecided` | reading the classes can't settle it, such as a port a class doesn't declare, which may still be a member of a [`SignalGroup`][psygnal.SignalGroup] made when the component is built, or a key the entry leaves out whose type a provider of the session may share |
 
 ```text
 problems:
@@ -162,11 +162,18 @@ components:
 lookups:
   undecided  wiring     camera.sig_frame -> viewer.show - 'camera' declares no signal 'sig_frame'; its signals: sig_done
 not checked:
-  the values given to constructors, what setup does, ...
+  what a constructor checks itself, what setup does, ...
 ```
 
+The check also compares each value an entry gives its constructor with the
+type and the limits the constructor declares for it, as
+[`redsun describe`](#describing-a-plugins-components) shows them. A value
+that breaks them is a `value` problem at its key path, such as
+`presenters.motor.step`, while the component stays `passed`: the build itself
+hands the value on unchecked.
+
 Some things only a build can find, and the check lists them under
-`not checked`: the values given to constructors, what `setup` does, members of
+`not checked`: what a constructor checks itself, what `setup` does, members of
 a `SignalGroup`, placements a view gives through a property, and services and
 device connections, which never start. A file that passes the check can still
 fail to build for one of those reasons.
@@ -313,7 +320,7 @@ The report of `redsun check --json` adds `components`, `lookups` and
     {"section": "wiring", "name": "camera.sig_frame -> viewer.show", "status": "undecided",
      "reason": "'camera' declares no signal 'sig_frame'; its signals: sig_done"}
   ],
-  "skipped": ["the values given to constructors", "what setup does"]
+  "skipped": ["what a constructor checks itself", "what setup does"]
 }
 ```
 

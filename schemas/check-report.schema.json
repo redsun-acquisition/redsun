@@ -149,7 +149,7 @@
       "description": "Something a command found wrong.",
       "properties": {
         "kind": {
-          "description": "What the problem is about.\n\n`manifest` is a plugin manifest that was skipped, or a plugin or entry\nthat was not found; `value` a value of a session file that is refused;\n`session` a session that cannot be made or read at all; and `parameter` a\nconstructor parameter that cannot be described.",
+          "description": "What the problem is about.\n\n`manifest` is a plugin manifest that was skipped, or a plugin or entry\nthat was not found; `value` a value of a session file that is refused,\nor that breaks the type or the limits its class declares;\n`session` a session that cannot be made or read at all; and `parameter` a\nconstructor parameter that cannot be described.",
           "enum": [
             "manifest",
             "value",

@@ -3,7 +3,15 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import sys
-from typing import TYPE_CHECKING, Annotated, Any, get_args, get_origin, is_typeddict
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    NewType,
+    get_args,
+    get_origin,
+    is_typeddict,
+)
 
 from pydantic import BaseModel, TypeAdapter
 from pydantic.errors import PydanticInvalidForJsonSchema, PydanticSchemaGenerationError
@@ -376,9 +384,14 @@ def type_text(annotation: object, held: Mapping[object, str]) -> str:
 
 
 def is_model(annotation: object) -> bool:
-    """Return whether *annotation* is a `pydantic` model, a dataclass or a `TypedDict`."""
+    """Return whether *annotation* is a type of its own, which a provider can share.
+
+    That is a `pydantic` model, a dataclass, a `TypedDict` or a `NewType`.
+    """
     while get_origin(annotation) is Annotated:
         annotation = get_args(annotation)[0]
+    if isinstance(annotation, NewType):
+        return True
     if not isinstance(annotation, type):
         return False
     return (

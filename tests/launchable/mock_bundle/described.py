@@ -57,3 +57,16 @@ class PrefixedDevice(Device):
     def __init__(self, prefix: str, name: str = "") -> None:
         self.prefix = prefix
         super().__init__(name=name)
+
+
+class LimitedPresenter:
+    """A presenter with a limited key and a model-type key, and nothing else to report."""
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        step: Annotated[float, Gt(0)] = 1.0,
+        calibration: Calibration,
+    ) -> None:
+        self.name = name

@@ -6,6 +6,7 @@ presenters:
   mock-motor: mock_bundle.presenters:MockMotorPresenter
   mock-late: mock_bundle.presenters:MockLatePresenter
   described: mock_bundle.described:DescribedPresenter
+  limited: mock_bundle.described:LimitedPresenter
 
 views:
   mock-motor-view: mock_bundle.views:MockMotorView
