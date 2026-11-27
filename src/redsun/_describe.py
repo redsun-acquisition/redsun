@@ -110,7 +110,7 @@ def described(
         cls = resolve(plugin_name, plugin_id, group)
         if cls is None:
             raise PluginError(f"{plugin_name!r} names no class for {plugin_id!r}")
-        parameters = parameters_of(cls, HELD)
+        parameters = parameters_of(cls, HELD, device=group == "devices")
     except (PluginError, TypeError) as error:
         failed = Described.model_validate(
             {**record, "status": "failed", "reason": str(error)}

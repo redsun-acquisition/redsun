@@ -113,7 +113,7 @@
       "type": "object"
     },
     "SessionParameter": {
-      "description": "A constructor parameter the session fills by its type.",
+      "description": "A constructor parameter the session fills itself.",
       "properties": {
         "name": {
           "description": "The parameter's name.",
@@ -121,7 +121,7 @@
           "type": "string"
         },
         "type": {
-          "description": "Its type, as text: `module:Name` for a class, the `typing` form otherwise.",
+          "description": "Its type as a Python expression, each name under the public package that exports it.",
           "title": "Type",
           "type": "string"
         },

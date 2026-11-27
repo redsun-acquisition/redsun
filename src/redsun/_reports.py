@@ -171,13 +171,13 @@ class PluginsReport(Report, frozen=True):
 
 
 class SessionParameter(BaseModel, frozen=True, use_attribute_docstrings=True):
-    """A constructor parameter the session fills by its type."""
+    """A constructor parameter the session fills itself."""
 
     name: str
     """The parameter's name."""
 
     type: str
-    """Its type, as text: `module:Name` for a class, the `typing` form otherwise."""
+    """Its type as a Python expression, each name under the public package that exports it."""
 
     required: bool
     """Whether it has no default, so the build fails when nothing fills it."""

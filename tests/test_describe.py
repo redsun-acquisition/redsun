@@ -99,7 +99,8 @@ def test_a_plugin_is_described_entry_by_entry(mock_plugin: None) -> None:
     assert {
         (p.kind, p.where) for p in report.problems if p.where.startswith("described.")
     } == {("parameter", "described.scale"), ("parameter", "described.missing")}
-    assert all(c.status == "passed" for c in report.components if c is not described)
+    failed = {c.plugin_id for c in report.components if c.status == "failed"}
+    assert failed == {"described", "mapped"}
 
 
 @pytest.mark.parametrize(
@@ -120,6 +121,28 @@ def test_a_device_keyword_may_come_from_a_service(
 
     full = {"plugin_name": "mock-bundle", "plugin_id": "prefixed", **entry}
     assert Draft202012Validator(schema).is_valid(full) is valid
+
+
+@pytest.mark.parametrize(
+    ("entry", "valid"),
+    [({}, False), ({"calibration": {"offset": 1.0}}, True)],
+    ids=["missing", "given"],
+)
+def test_a_device_takes_a_model_type_key_from_the_file(
+    mock_plugin: None, entry: dict[str, object], valid: bool
+) -> None:
+    """Require a device's model-type key in the file, since the session fills nothing of a device."""
+    report = describe_report("mock-bundle", "calibrated")
+    [component] = report.components
+
+    full = {
+        "plugin_name": "mock-bundle",
+        "plugin_id": "calibrated",
+        "prefix": "X:",
+        **entry,
+    }
+    assert Draft202012Validator(schema_of(report, "calibrated")).is_valid(full) is valid
+    assert component.session == []
 
 
 @pytest.mark.parametrize(("step", "valid"), [(0, False), (2, True)])

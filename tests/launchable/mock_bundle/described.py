@@ -70,3 +70,26 @@ class LimitedPresenter:
         calibration: Calibration,
     ) -> None:
         self.name = name
+
+
+class LabelledPresenter:
+    """A presenter needing a label, and taking a note it may go without."""
+
+    def __init__(self, name: str, *, label: str, note: str | None) -> None:
+        self.name = name
+
+
+class CalibratedDevice(Device):
+    """A device taking a model-type key, which the session never fills for a device."""
+
+    def __init__(self, prefix: str, calibration: Calibration, name: str = "") -> None:
+        self.prefix = prefix
+        super().__init__(name=name)
+
+
+class MappedDevice(Device):
+    """A device asking for the device map, which the session never gives a device."""
+
+    def __init__(self, prefix: str, devices: DeviceMapping, name: str = "") -> None:
+        self.prefix = prefix
+        super().__init__(name=name)
