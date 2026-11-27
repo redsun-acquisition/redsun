@@ -8,9 +8,9 @@ from unittest import mock
 
 import pytest
 from jsonschema import Draft202012Validator
-from redsun._describe import describe_report
 
 from redsun import Session
+from redsun._describe import describe_report
 from redsun.catalog import CatalogAddress
 from redsun.compute._pool import PoolExecutor
 from redsun.injection import Registry
