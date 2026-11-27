@@ -57,3 +57,4 @@ renamed name.
 - [39. A sharedbox transport serves each attribute as one field](0039-a-sharedbox-transport-serves-each-attribute-as-one-field.md)
 - [40. A view has a title apart from its name](0040-a-view-has-a-title-apart-from-its-name.md)
 - [41. A view can sit in the status bar](0041-a-view-can-sit-in-the-status-bar.md)
+- [44. A component's parameters are described by a generated `pydantic` model](0044-a-component-s-parameters-are-described-by-a-generated-pydantic-model.md)

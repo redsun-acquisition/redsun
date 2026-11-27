@@ -252,6 +252,48 @@ Your code reaches each one by its name, as `self.stage_x`. A component that
 needs every stage, however many there are, asks the session by what they can
 do: see [Questions](../explanation/questions.md).
 
+## Describe a parameter for a form
+
+A tool that writes [session files](../explanation/glossary.md#session-file)
+for people, drawing a form for each component, learns the keys a component
+takes from `redsun describe`, which reads them from its constructor. You can
+give each parameter a title, a description, a unit and limits there, and
+they reach the form as well:
+
+```python
+from typing import Annotated
+
+from annotated_types import Gt
+from pydantic import Field
+
+
+class StagePresenter:
+    def __init__(
+        self,
+        name: str,
+        *,
+        devices: DeviceMapping,
+        step: Annotated[
+            float,
+            Gt(0),
+            Field(
+                title="Step",
+                description="How far one press of Nudge moves the stage.",
+                json_schema_extra={"unit": "um"},
+            ),
+        ] = 1.0,
+    ) -> None: ...
+```
+
+The limit comes from `annotated-types`, as a plan's limits do, and the text
+from `pydantic`'s `Field`. A unit has no key of its own in JSON Schema, so it
+goes in `json_schema_extra` under `unit`. `redsun describe` then prints `step`
+with all of them, and `redsun check` reports a session file giving a `step`
+of 0 or less. Neither changes how the session builds the presenter: it still
+passes the file's value on as it is. The
+[command reference](../reference/command-line.md#describing-a-plugins-components)
+shows the whole report.
+
 ## Use another component
 
 A constructor runs before the other components exist, so you ask for another

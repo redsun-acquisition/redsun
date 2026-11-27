@@ -119,8 +119,9 @@ service, so its line ends in "or from a service".
 
 The session fills a parameter whose type a file can't write, such as the
 devices or the session's settings, by looking it up by that type. A
-parameter written as a `pydantic` model, a dataclass or a `TypedDict` is
-listed both as a key and among what the session fills: a provider of the
+parameter whose type is one of its own, a `pydantic` model, a dataclass, a
+`TypedDict` or a `NewType`, is listed both as a key and among what the
+session fills: a provider of the
 session may share a value of that type, and when none does, the file has to
 give it.
 
